@@ -1,0 +1,3550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaKit — 广告投放报告编辑器</title>
+<link href="https://fonts.googleapis.com/css2?family=Funnel+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== Design Tokens ===== */
+:root {
+  --surface-primary: #FFFFFF;
+  --surface-inverse: #0A0A0A;
+  --surface-subtle: #FAFAFA;
+  --surface-hover: #F9FAFB;
+  --foreground-primary: #1A1A1A;
+  --foreground-secondary: #666666;
+  --foreground-muted: #888888;
+  --foreground-inverse: #FFFFFF;
+  --border-subtle: #F3F4F6;
+  --border-default: #E5E7EB;
+  --accent-primary: #FF5C00;
+  --accent-secondary: #FF8533;
+  --green: #22C55E;
+  --red: #EF4444;
+  --red-bg: #FEF2F2;
+  --red-border: #FECACA;
+  --blue: #3B82F6;
+  --yellow: #F59E0B;
+  --purple: #8B5CF6;
+
+  --font-headings: 'Funnel Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-captions: 'Inter', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+
+  --rounded-lg: 8px;
+  --rounded-xl: 12px;
+  --rounded-3xl: 24px;
+  --rounded-full: 9999px;
+
+  --shadow-lg: 0 2px 4px rgba(0,0,0,0.03), 0 12px 32px rgba(0,0,0,0.06);
+
+  --sidebar-width: 240px;
+  --panel-width: 300px;
+  --topbar-height: 48px;
+  --toolbar-height: 44px;
+
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease-out;
+}
+
+/* ===== Reset ===== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--foreground-primary);
+  background: #F0F0F0;
+  overflow: hidden;
+  height: 100vh;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== App Container ===== */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== Top Bar ===== */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--topbar-height);
+  padding: 0 16px;
+  background: var(--surface-primary);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 16px;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: var(--accent-primary);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: #FFF;
+  font-family: var(--font-headings);
+  font-weight: 700;
+  font-size: 14px;
+}
+.logo-text {
+  font-family: var(--font-headings);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--foreground-primary);
+}
+.project-name {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground-secondary);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: text;
+  transition: border-color var(--transition-fast);
+  outline: none;
+  min-width: 180px;
+}
+.project-name:hover { border-color: var(--border-default); }
+.project-name:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 2px rgba(255,92,0,0.1); }
+
+.topbar-center { display: flex; align-items: center; gap: 6px; }
+.topbar-right { display: flex; align-items: center; gap: 6px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 32px; padding: 6px 10px;
+  border: none; border-radius: 6px;
+  font-family: var(--font-body); font-size: 12px;
+  cursor: pointer;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--foreground-secondary);
+}
+.btn:hover { background: var(--surface-hover); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn .icon { width: 16px; height: 16px; }
+.btn-primary {
+  background: var(--accent-primary); color: #FFF; font-weight: 600; padding: 6px 12px;
+}
+.btn-primary:hover { background: var(--accent-secondary); }
+.btn-outline {
+  border: 1px solid var(--border-default);
+  color: var(--foreground-primary); font-weight: 500;
+  font-size: 13px; padding: 6px 12px;
+}
+.btn-outline:hover { background: var(--surface-hover); }
+
+.vertical-divider { width: 1px; height: 20px; background: var(--border-subtle); }
+
+/* ===== Main Content ===== */
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ===== Left Sidebar ===== */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--surface-subtle);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  gap: 12px;
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+}
+.sidebar-title {
+  font-size: 12px; font-weight: 600; color: var(--foreground-muted);
+  letter-spacing: 0.5px;
+}
+.page-list { display: flex; flex-direction: column; gap: 8px; }
+
+.page-thumb {
+  display: flex; flex-direction: column;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--rounded-lg);
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  position: relative;
+}
+.page-thumb:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.page-thumb.active {
+  border: 2px solid var(--accent-primary);
+  padding: 7px;
+}
+.page-thumb-preview {
+  width: 100%; height: 60px;
+  background: var(--surface-hover);
+  border-radius: 4px;
+  position: relative; overflow: hidden;
+}
+.page-thumb-preview canvas { width: 100%; height: 100%; object-fit: contain; }
+.page-thumb-label {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 4px;
+}
+.page-thumb-name {
+  font-size: 11px; font-weight: 500; color: var(--foreground-primary);
+  outline: none; border: none; background: transparent;
+  width: 100%;
+}
+.page-thumb-name:focus { color: var(--accent-primary); }
+.page-thumb-actions { display: flex; gap: 2px; opacity: 0; transition: opacity var(--transition-fast); }
+.page-thumb:hover .page-thumb-actions { opacity: 1; }
+.page-thumb-action {
+  width: 18px; height: 18px; border: none; background: transparent; cursor: pointer;
+  border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  color: var(--foreground-muted); font-size: 10px;
+}
+.page-thumb-action:hover { background: var(--border-subtle); color: var(--foreground-primary); }
+.page-thumb-action.delete:hover { color: var(--red); }
+
+.page-thumb.active .page-thumb-preview { height: 72px; }
+
+.new-page-btn {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; height: 40px;
+  background: var(--surface-primary);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--rounded-lg);
+  cursor: pointer;
+  font-size: 13px; color: var(--foreground-muted);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.new-page-btn:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.new-page-btn .icon { width: 16px; height: 16px; }
+
+/* ===== Center Area ===== */
+.center-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ===== Component Toolbar ===== */
+.comp-toolbar {
+  display: flex;
+  align-items: center;
+  height: var(--toolbar-height);
+  padding: 0 16px;
+  gap: 4px;
+  background: var(--surface-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.comp-toolbar .btn {
+  font-size: 12px; font-weight: 500; height: 32px; padding: 6px 10px; gap: 6px;
+}
+.comp-toolbar .btn .icon { width: 14px; height: 14px; }
+.comp-toolbar .btn.active-tool { background: #FFF7F0; color: var(--accent-primary); }
+.toolbar-separator { width: 1px; height: 20px; background: var(--border-subtle); margin: 0 6px; }
+.business-library { position: relative; }
+.business-library-btn { color: var(--foreground-primary) !important; font-weight: 600; }
+.business-library-btn.open { background: #FFF7F0; color: var(--accent-primary) !important; }
+.business-menu {
+  display: none; position: absolute; top: 38px; left: 0; z-index: 300;
+  width: 660px; max-height: min(620px, calc(100vh - 120px)); overflow-y: auto;
+  padding: 14px; background: #FFF; border: 1px solid var(--border-default);
+  border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.14);
+}
+.business-menu.open { display: block; }
+.business-menu-head { display:flex; align-items:baseline; justify-content:space-between; margin:0 2px 10px; }
+.business-menu-title { font-family:var(--font-headings); font-size:14px; font-weight:700; }
+.business-menu-note { font-size:11px; color:var(--foreground-muted); }
+.business-group { border-top:1px solid var(--border-subtle); padding:10px 2px 2px; }
+.business-group:first-of-type { border-top:none; padding-top:0; }
+.business-group-title { font-size:11px; font-weight:600; color:var(--foreground-muted); margin-bottom:7px; }
+.business-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+.business-item { display:flex; align-items:center; gap:8px; min-height:42px; padding:7px 8px; background:#fff; border:1px solid var(--border-default); border-radius:7px; color:var(--foreground-primary); cursor:pointer; text-align:left; font:12px var(--font-body); }
+.business-item:hover { border-color:var(--accent-primary); background:#FFF7F0; }
+.business-item-icon { width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#FFF0E8; color:var(--accent-primary); font-size:13px; flex:none; }
+.business-item-copy { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.business-item-name { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.business-item-desc { font-size:10px; color:var(--foreground-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.business-style-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.business-style-option { min-height:62px; padding:6px; border:1px solid var(--border-default); border-radius:7px; background:#FFF; cursor:pointer; text-align:left; font:11px var(--font-body); color:var(--foreground-primary); }
+.business-style-option:hover { border-color:var(--accent-primary); background:#FFF7F0; }
+.business-style-option.active { border:2px solid var(--accent-primary); background:#FFF7F0; padding:5px; }
+.business-style-swatch { height:25px; margin-bottom:5px; border-radius:4px; border:1px solid rgba(0,0,0,.06); background:linear-gradient(135deg,#FFF 15%,#FF5C00 15%,#FF5C00 26%,#FFF7F0 26%); }
+.business-style-option[data-variant="light"] .business-style-swatch { background:linear-gradient(90deg,#FFF 60%,#FF5C00 60%); }
+.business-style-option[data-variant="cards"] .business-style-swatch { background:linear-gradient(90deg,#FFF7F0 47%,transparent 47%,transparent 53%,#FFF7F0 53%),linear-gradient(#FFF7F0 47%,transparent 47%,transparent 53%,#FFF7F0 53%); }
+.business-style-option[data-variant="results"] .business-style-swatch { background:linear-gradient(90deg,#1A1A1A 40%,#FFF0E8 40%); }
+.business-style-option[data-variant="stats"] .business-style-swatch { background:linear-gradient(#1A1A1A 46%,transparent 46%),linear-gradient(90deg,#FFF7F0 31%,transparent 31%,transparent 35%,#FFF7F0 35%,#FFF7F0 65%,transparent 65%,transparent 69%,#FFF7F0 69%); }
+.business-style-option[data-variant="table"] .business-style-swatch { background:repeating-linear-gradient(0deg,#FFF 0,#FFF 7px,#E5E7EB 7px,#E5E7EB 8px); }
+.datasource-btn { color: var(--accent-primary) !important; }
+.datasource-btn:hover { background: #FFF7F0 !important; }
+
+/* ===== Canvas Area ===== */
+.canvas-area {
+  flex: 1;
+  background: #F5F5F5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.canvas-viewport {
+  position: relative;
+  overflow: hidden;
+  background: #E0E0E0;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03), 0 8px 16px rgba(0,0,0,0.06);
+}
+.canvas {
+  background: #FFFFFF;
+  position: absolute;
+  transform-origin: 0 0;
+  overflow: visible;
+}
+.canvas-grid {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+.canvas-component {
+  position: absolute;
+  cursor: move;
+  transition: box-shadow var(--transition-fast);
+}
+.canvas-component:hover { outline: 1px dashed var(--blue); outline-offset: 0px; }
+.canvas-component.no-interact { pointer-events: none; z-index: 0; }
+.canvas-component.no-interact:hover { outline: none; }
+.canvas-component.selected {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 0px;
+}
+.business-direct-edit { outline:1px dashed transparent; outline-offset:2px; cursor:text; }
+.business-direct-edit:hover { outline-color:rgba(255,92,0,.55); }
+.business-direct-edit[data-business-edit="detail"] { cursor:grab; }
+.business-direct-edit[data-business-edit="detail"]:active { cursor:grabbing; }
+.business-direct-edit[contenteditable="true"] { outline:2px solid var(--accent-primary); outline-offset:2px; background:#FFF; cursor:text; }
+.business-direct-edit.is-dragging { opacity:.38; }
+.canvas-component .comp-hover-actions {
+  display: none; position: absolute; top: -28px; right: 0;
+  background: var(--surface-primary); border: 1px solid var(--border-default);
+  border-radius: 6px; padding: 2px; gap: 2px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.canvas-component:hover .comp-hover-actions { display: flex; }
+.comp-action-btn {
+  width: 24px; height: 24px; border: none; background: transparent; border-radius: 4px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--foreground-secondary);
+}
+.comp-action-btn:hover { background: var(--surface-hover); }
+.comp-action-btn.delete:hover { color: var(--red); }
+
+/* Resize handles */
+.resize-handle {
+  position: absolute;
+  width: 8px; height: 8px;
+  background: #FFF;
+  border: 2px solid var(--accent-primary);
+  border-radius: 1px;
+  z-index: 10;
+  display: none;
+}
+.canvas-component.selected .resize-handle { display: block; }
+.resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
+.resize-handle.n { top: -4px; left: 50%; margin-left: -4px; cursor: n-resize; }
+.resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
+.resize-handle.e { top: 50%; margin-top: -4px; right: -4px; cursor: e-resize; }
+.resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+.resize-handle.s { bottom: -4px; left: 50%; margin-left: -4px; cursor: s-resize; }
+.resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+.resize-handle.w { top: 50%; margin-top: -4px; left: -4px; cursor: w-resize; }
+
+/* Canvas Resize Handle */
+.canvas-resizer {
+  position: absolute; bottom: 0; right: 0;
+  width: 16px; height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--foreground-muted) 50%);
+  opacity: 0.5; z-index: 20;
+}
+.canvas-resizer:hover { opacity: 1; }
+
+/* Selection Marquee */
+.selection-marquee {
+  position: absolute;
+  border: 1px solid var(--blue);
+  background: rgba(59,130,246,0.08);
+  pointer-events: none;
+  z-index: 50;
+  display: none;
+}
+
+/* ===== Right Panel ===== */
+.panel {
+  width: 0;
+  min-width: 0;
+  background: var(--surface-primary);
+  border-left: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width var(--transition-normal), min-width var(--transition-normal);
+}
+.panel.open { width: var(--panel-width); min-width: var(--panel-width); }
+.panel-inner { width: var(--panel-width); padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+.panel-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-subtle); margin-bottom: 4px; }
+.panel-tab {
+  flex: 1; height: 36px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  border-bottom: 2px solid transparent;
+  color: var(--foreground-muted);
+  transition: all var(--transition-fast);
+}
+.panel-tab.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  font-weight: 600;
+}
+.panel-tab:not(.active):hover { color: var(--foreground-secondary); }
+
+.panel-section { display: flex; flex-direction: column; gap: 8px; }
+.panel-section-title {
+  font-size: 11px; font-weight: 600; color: var(--foreground-muted);
+  letter-spacing: 0.3px; margin-bottom: 2px;
+}
+.panel-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.panel-label { font-size: 12px; color: var(--foreground-secondary); }
+.panel-input-group { display: flex; gap: 8px; }
+.panel-input-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.panel-input-col label { font-size: 10px; color: var(--foreground-muted); }
+
+.input-field {
+  height: 28px; padding: 0 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-hover);
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--foreground-primary);
+  outline: none;
+  width: 100%;
+}
+textarea.input-field {
+  height: auto; padding: 6px 8px;
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+.input-field:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 2px rgba(255,92,0,0.1); }
+
+.select-field {
+  height: 28px; padding: 0 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-hover);
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--foreground-primary);
+  outline: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 4px;
+}
+.select-field:focus { border-color: var(--accent-primary); }
+
+.color-swatch {
+  width: 24px; height: 24px; border-radius: 4px;
+  border: 1px solid #D1D5DB;
+  cursor: pointer;
+}
+
+.color-dots { display: flex; gap: 10px; }
+.color-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  cursor: pointer; transition: transform var(--transition-fast);
+  border: 2px solid transparent;
+}
+.color-dot:hover { transform: scale(1.15); }
+.color-dot.active { border-color: #FFF; box-shadow: 0 0 0 2px var(--accent-primary); }
+
+.radio-group { display: flex; flex-direction: column; gap: 8px; }
+.radio-row { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; }
+.radio-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid #D1D5DB;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.radio-dot.checked { border-color: var(--accent-primary); }
+.radio-dot.checked::after {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+.btn-danger {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px; height: 36px; width: 100%;
+  border: 1px solid var(--red-border); border-radius: var(--rounded-lg);
+  background: var(--red-bg); color: var(--red);
+  font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.btn-danger:hover { background: #FEE2E2; }
+
+.btn-outline-sm {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px; height: 36px; padding: 0 16px;
+  border: 1px solid #FED7C8; border-radius: var(--rounded-lg);
+  background: #FFF7F0; color: var(--accent-primary);
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  cursor: pointer; width: 100%;
+}
+.btn-outline-sm:hover { background: #FFF0E8; }
+
+.sync-info { display: flex; align-items: center; justify-content: space-between; font-size: 10px; }
+.sync-time { color: var(--foreground-muted); }
+.sync-status { color: var(--green); }
+
+.preview-box {
+  background: var(--surface-hover);
+  border: 1px solid var(--border-default);
+  border-radius: var(--rounded-lg);
+  padding: 12px; display: flex; flex-direction: column; gap: 4px;
+}
+.preview-box-label { font-size: 10px; font-weight: 600; color: var(--foreground-muted); }
+.preview-box-value { font-size: 12px; font-weight: 500; font-family: var(--font-data); }
+
+/* Multi-select panel */
+.multi-select-panel { display: flex; flex-direction: column; gap: 12px; }
+.ms-header { font-size: 14px; font-weight: 600; color: var(--foreground-primary); }
+.align-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.align-btn {
+  height: 32px; border: 1px solid var(--border-default); border-radius: 6px;
+  background: var(--surface-primary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: background var(--transition-fast);
+}
+.align-btn:hover { background: var(--surface-hover); }
+.distribute-row { display: flex; gap: 8px; }
+.distribute-btn {
+  flex: 1; height: 28px; border: 1px solid var(--border-default); border-radius: 6px;
+  background: var(--surface-primary); cursor: pointer;
+  font-size: 11px; font-family: var(--font-body);
+}
+.distribute-btn:hover { background: var(--surface-hover); }
+.ms-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ms-action-btn {
+  height: 32px; border: 1px solid var(--border-default); border-radius: 6px;
+  background: var(--surface-primary); cursor: pointer;
+  font-size: 12px; font-family: var(--font-body);
+}
+.ms-action-btn:hover { background: var(--surface-hover); }
+.ms-action-btn.danger { color: var(--red); border-color: var(--red-border); background: var(--red-bg); }
+
+/* ===== Template Overlay ===== */
+.overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 150ms ease;
+}
+.overlay.hidden { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.overlay-modal {
+  background: var(--surface-primary);
+  border-radius: 16px;
+  padding: 24px 28px 20px;
+  width: 780px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03), 0 12px 32px rgba(0,0,0,0.06);
+  animation: slideUp 200ms ease-out;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.overlay-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.overlay-title { font-family: var(--font-headings); font-size: 18px; font-weight: 700; }
+.overlay-close {
+  width: 32px; height: 32px; border: none; background: transparent; cursor: pointer;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  color: var(--foreground-muted); font-size: 18px;
+}
+.overlay-close:hover { background: var(--surface-hover); }
+.overlay-subtitle { font-size: 12px; color: var(--foreground-muted); }
+
+.template-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.template-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.template-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; height: 100px;
+  background: var(--surface-hover); border: 1px solid var(--border-default);
+  border-radius: 10px; cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  position: relative; padding: 12px;
+}
+.template-card:hover { transform: scale(1.03); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.template-card.locked { opacity: 0.6; }
+.template-card.locked:hover { opacity: 0.8; }
+.template-card.active-template {
+  background: #FFF7F0; border: 2px solid var(--accent-primary); padding: 11px;
+}
+.template-card-icon { font-size: 24px; }
+.template-card-name {
+  font-size: 13px; font-weight: 600; font-family: var(--font-body);
+  color: var(--foreground-primary);
+  text-align: center; line-height: 1.2;
+}
+.template-card-subname { font-size: 12px; color: var(--foreground-primary); text-align: center; }
+
+.template-badge {
+  display: flex; align-items: center; gap: 3px;
+  padding: 2px 8px; border-radius: var(--rounded-full);
+  font-size: 10px;
+}
+.template-badge.locked {
+  background: var(--border-default); color: var(--foreground-muted);
+}
+.template-badge.available {
+  background: #FED7C8; color: var(--accent-primary); font-weight: 600;
+}
+.template-badge .badge-icon { font-size: 10px; }
+
+.overlay-skip {
+  display: flex; align-items: center; justify-content: center;
+  height: 40px; margin-top: 8px;
+  border: 1px solid var(--border-default); border-radius: var(--rounded-lg);
+  background: var(--surface-primary); cursor: pointer;
+  font-size: 13px; font-weight: 500; color: var(--foreground-secondary);
+}
+.overlay-skip:hover { background: var(--surface-hover); }
+
+/* ===== Context Menu ===== */
+.context-menu {
+  position: fixed;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 4px;
+  z-index: 2000;
+  min-width: 160px;
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+}
+.context-menu.visible { display: flex; }
+.context-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border: none; border-radius: 6px;
+  background: transparent; cursor: pointer;
+  font-size: 12px; font-family: var(--font-body);
+  color: var(--foreground-primary);
+  text-align: left;
+}
+.context-menu-item:hover { background: var(--surface-hover); }
+.context-menu-item.danger { color: var(--red); }
+.context-menu-separator { height: 1px; background: var(--border-subtle); margin: 3px 0; }
+
+/* ===== Data Source Dropdown ===== */
+.dropdown {
+  position: absolute;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 4px;
+  z-index: 100;
+  min-width: 280px;
+  display: none;
+  flex-direction: column;
+}
+.dropdown.visible { display: flex; }
+.dropdown-header {
+  font-size: 11px; font-weight: 600; color: var(--foreground-muted);
+  padding: 8px 12px 4px;
+}
+.dropdown-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border: none; border-radius: 6px;
+  background: transparent; cursor: pointer;
+  font-size: 12px; font-family: var(--font-body);
+  color: var(--foreground-primary);
+}
+.dropdown-item:hover { background: var(--surface-hover); }
+.dropdown-item .check { color: var(--accent-primary); font-weight: 700; }
+.dropdown-separator { height: 1px; background: var(--border-subtle); margin: 4px 0; }
+.dropdown-item.admin-only { color: var(--foreground-muted); }
+
+/* ===== Preview Mode ===== */
+.preview-mode {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--surface-inverse);
+  z-index: 5000;
+  flex-direction: column;
+}
+.preview-mode.active { display: flex; }
+.preview-topbar {
+  display: flex; align-items: center; justify-content: flex-end;
+  height: 48px; padding: 0 24px;
+}
+.preview-close {
+  display: flex; align-items: center; gap: 4px;
+  height: 32px; padding: 8px 16px;
+  border: none; border-radius: 6px;
+  background: #333; color: #FFF;
+  font-size: 13px; font-family: var(--font-body);
+  cursor: pointer;
+}
+.preview-close:hover { background: #444; }
+.preview-content {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px; gap: 24px;
+}
+.preview-canvas {
+  width: 960px; height: 540px;
+  background: #FFF; border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  position: relative; overflow: hidden;
+}
+.preview-component {
+  position: absolute; overflow: hidden;
+  pointer-events: none;
+}
+.preview-title { font-family: var(--font-headings); font-size: 28px; font-weight: 700; }
+.preview-subtitle { font-size: 14px; color: var(--foreground-muted); }
+.preview-stats { display: flex; gap: 32px; margin-top: 16px; }
+.preview-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.preview-stat-value { font-family: var(--font-data); font-size: 32px; font-weight: 700; }
+.preview-stat-label { font-size: 11px; color: var(--foreground-muted); }
+
+/* ===== CPS Multi-Select ===== */
+.cps-select { position: relative; margin-bottom: 12px; }
+.cps-select-trigger {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  min-height: 32px; padding: 4px 8px;
+  border: 1px solid var(--border-default); border-radius: 6px;
+  background: var(--surface-primary); cursor: pointer;
+  font-size: 12px;
+}
+.cps-select-trigger:hover { border-color: var(--accent-primary); }
+.cps-select-trigger:focus { outline: none; border-color: var(--accent-primary); }
+.cps-placeholder { color: var(--foreground-muted); font-size: 12px; }
+.cps-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: #FFF7F0; color: var(--accent-primary);
+  padding: 2px 6px; border-radius: 4px;
+  font-size: 11px; font-weight: 500;
+}
+.cps-tag-remove { cursor: pointer; font-size: 13px; line-height: 1; opacity: 0.6; }
+.cps-tag-remove:hover { opacity: 1; }
+.cps-dropdown {
+  display: none; position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--surface-primary); border: 1px solid var(--border-default);
+  border-radius: 8px; box-shadow: var(--shadow-lg);
+  z-index: 100; margin-top: 4px; max-height: 240px; overflow: hidden;
+}
+.cps-dropdown.open { display: block; }
+.cps-search {
+  padding: 8px; border-bottom: 1px solid var(--border-subtle);
+}
+.cps-search input {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border-default);
+  border-radius: 6px; font-size: 12px; outline: none;
+  font-family: var(--font-body);
+}
+.cps-search input:focus { border-color: var(--accent-primary); }
+.cps-options { overflow-y: auto; max-height: 180px; padding: 4px 0; }
+.cps-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; cursor: pointer; font-size: 12px;
+  transition: background var(--transition-fast);
+}
+.cps-option:hover { background: var(--surface-hover); }
+.cps-option.selected { background: #FFF7F0; }
+.cps-option input[type="checkbox"] { accent-color: var(--accent-primary); }
+.cps-option-id { color: var(--foreground-muted); font-family: var(--font-data); font-size: 11px; min-width: 30px; }
+.cps-option-name { flex: 1; }
+.cps-no-results { padding: 12px; text-align: center; color: var(--foreground-muted); font-size: 12px; }
+
+/* ===== Custom Single-Select Dropdown ===== */
+.custom-select { position: relative; }
+.custom-select-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 32px; padding: 0 10px;
+  border: 1px solid var(--border-default); border-radius: 6px;
+  background: var(--surface-primary); cursor: pointer;
+  font-size: 12px; font-family: var(--font-body);
+  transition: border-color var(--transition-fast);
+}
+.custom-select-trigger:hover { border-color: var(--accent-primary); }
+.custom-select-trigger.open { border-color: var(--accent-primary); }
+.custom-select-trigger .arrow { font-size: 10px; color: var(--foreground-muted); transition: transform var(--transition-fast); }
+.custom-select-trigger.open .arrow { transform: rotate(180deg); }
+.custom-select-placeholder { color: var(--foreground-muted); }
+.custom-select-dropdown {
+  display: none; position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--surface-primary); border: 1px solid var(--border-default);
+  border-radius: 8px; box-shadow: var(--shadow-lg);
+  z-index: 100; margin-top: 4px; max-height: 200px; overflow: hidden;
+}
+.custom-select-dropdown.open { display: block; }
+.custom-select-search {
+  padding: 6px 8px; border-bottom: 1px solid var(--border-subtle);
+}
+.custom-select-search input {
+  width: 100%; padding: 5px 8px; border: 1px solid var(--border-default);
+  border-radius: 6px; font-size: 11px; outline: none; font-family: var(--font-body);
+}
+.custom-select-search input:focus { border-color: var(--accent-primary); }
+.custom-select-options { overflow-y: auto; max-height: 150px; padding: 4px 0; }
+.custom-select-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; cursor: pointer; font-size: 12px;
+  transition: background var(--transition-fast);
+}
+.custom-select-option:hover { background: var(--surface-hover); }
+.custom-select-option.selected { background: #FFF7F0; color: var(--accent-primary); font-weight: 500; }
+.custom-select-option .option-id { color: var(--foreground-muted); font-family: var(--font-data); font-size: 11px; }
+.custom-select-option.selected .option-id { color: var(--accent-primary); }
+.custom-select-no-results { padding: 10px; text-align: center; color: var(--foreground-muted); font-size: 11px; }
+
+.preview-nav {
+  display: flex; align-items: center; gap: 16px;
+  color: var(--foreground-muted);
+}
+.preview-nav-btn {
+  width: 36px; height: 36px; border: none; border-radius: 50%;
+  background: #333; color: var(--foreground-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.preview-nav-btn:hover { background: #444; color: #FFF; }
+.preview-nav-info { font-family: var(--font-body); font-size: 13px; }
+
+/* ===== Chart Styles (inside canvas) ===== */
+.chart-bars { display: flex; align-items: flex-end; gap: 16px; height: 100%; padding: 8px 0 0; }
+.chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
+.chart-bar { width: 100%; border-radius: 4px 4px 0 0; opacity: 0.9; min-height: 4px; }
+.chart-bar-label { font-size: 9px; color: var(--foreground-muted); }
+.card-trend { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; }
+.card-trend.up { color: var(--green); }
+.card-trend.down { color: var(--green); }
+.table-row { display: flex; align-items: center; }
+.table-cell { display: flex; align-items: center; }
+.table-cell.start { justify-content: flex-start; }
+.table-cell.end { justify-content: flex-end; }
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+  background: var(--foreground-primary); color: #FFF;
+  padding: 10px 20px; border-radius: var(--rounded-lg);
+  font-size: 13px; font-family: var(--font-body);
+  z-index: 9999; opacity: 0; transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ===== App ===== -->
+<div class="app" id="app">
+
+  <!-- Top Bar -->
+  <div class="topbar" id="topbar">
+    <div class="topbar-left">
+      <div class="logo-area" id="logoBtn" title="返回项目列表">
+        <div class="logo-icon">M</div>
+        <span class="logo-text">MediaKit</span>
+      </div>
+      <span class="project-name" id="projectName" contenteditable="true" spellcheck="false">美妆品牌Q4投放复盘</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn" id="undoBtn" disabled title="撤销 (Ctrl+Z)">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        撤销
+      </button>
+      <button class="btn" id="redoBtn" disabled title="重做 (Ctrl+Shift+Z)">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        重做
+      </button>
+      <div class="vertical-divider"></div>
+      <button class="btn btn-outline" id="previewBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        预览
+      </button>
+      <button class="btn btn-primary" id="exportBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        导出
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Left Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title" id="pageCount">页面 (3)</span>
+      </div>
+      <div class="page-list" id="pageList">
+        <!-- Pages rendered by JS -->
+      </div>
+      <button class="new-page-btn" id="newPageBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新建页面
+      </button>
+    </div>
+
+    <!-- Center Area -->
+    <div class="center-area" id="centerArea">
+      <!-- Component Toolbar -->
+      <div class="comp-toolbar" id="compToolbar">
+        <div class="business-library">
+          <button class="btn business-library-btn" id="businessLibraryBtn" title="业务组件库">
+            <span style="font-size:15px;line-height:1">▦</span> 业务组件 <span style="font-size:10px">▾</span>
+          </button>
+          <div class="business-menu" id="businessMenu">
+            <div class="business-menu-head"><span class="business-menu-title">营销业务组件库</span><span class="business-menu-note">添加后可在右侧绑定数据</span></div>
+            <div id="businessMenuGroups"></div>
+          </div>
+        </div>
+        <div class="toolbar-separator"></div>
+        <button class="btn" data-comp="text" title="文本">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          文本
+        </button>
+        <button class="btn" data-comp="image" title="图片">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          图片
+        </button>
+        <button class="btn" data-comp="bar-chart" title="柱状图">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          柱状图
+        </button>
+        <button class="btn" data-comp="line-chart" title="折线图">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          折线图
+        </button>
+        <button class="btn" data-comp="pie-chart" title="饼图">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+          饼图
+        </button>
+        <button class="btn" data-comp="indicator-card" title="指标卡">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          指标卡
+        </button>
+        <button class="btn" data-comp="table" title="表格">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          表格
+        </button>
+        <button class="btn" id="bgBtn" title="背景">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          背景
+        </button>
+        <input type="file" id="bgFileInput" accept="image/*" style="display:none;">
+        <div class="toolbar-separator"></div>
+        <button class="btn datasource-btn" id="dsDropdownBtn" title="数据源">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          数据源
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+
+      <!-- Data Source Dropdown -->
+      <div class="dropdown" id="dsDropdown" style="top:96px;right:320px;">
+        <div class="dropdown-header">已配置的数据源</div>
+        <button class="dropdown-item"><span>📊 投放效果数据(GMV/点击/CPA)</span><span class="check">✓</span></button>
+        <button class="dropdown-item"><span>📊 达人数据(达人/粉丝量)</span><span class="check">✓</span></button>
+        <button class="dropdown-item"><span>📊 渠道触达数据(平台/受众)</span><span class="check">✓</span></button>
+        <button class="dropdown-item"><span>📊 Q4活动数据(静态)</span><span class="check">✓</span></button>
+        <div class="dropdown-separator"></div>
+        <button class="dropdown-item admin-only"><span>🔒 管理数据源...</span></button>
+      </div>
+
+      <!-- Canvas Area -->
+      <div class="canvas-area" id="canvasArea">
+        <div class="canvas-viewport" id="canvasViewport">
+          <div class="canvas" id="canvas">
+            <div class="canvas-grid"></div>
+            <!-- Components rendered by JS -->
+          </div>
+          <div class="canvas-resizer" id="canvasResizer" title="拖拽调整画布尺寸"></div>
+        </div>
+        <div class="selection-marquee" id="selectionMarquee"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="panel" id="panel">
+      <div class="panel-inner" id="panelInner">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template Overlay -->
+<div class="overlay hidden" id="templateOverlay">
+  <div class="overlay-modal" id="overlayModal">
+    <div class="overlay-header">
+      <span class="overlay-title">选择页面模板</span>
+      <button class="overlay-close" id="overlayClose">✕</button>
+    </div>
+    <span class="overlay-subtitle">选择预设模板快速开始，或从空白页面自由创建</span>
+    <div class="template-grid" id="templateGrid">
+      <!-- Rendered by JS -->
+    </div>
+    <button class="overlay-skip" id="overlaySkip">跳过，从空白开始</button>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div class="context-menu" id="contextMenu"></div>
+
+<!-- Preview Mode -->
+<div class="preview-mode" id="previewMode">
+  <div class="preview-topbar">
+    <button class="preview-close" id="previewClose">✕ 关闭预览</button>
+  </div>
+  <div class="preview-content" id="previewContent">
+    <div class="preview-canvas" id="previewCanvas"></div>
+    <div class="preview-nav">
+      <button class="preview-nav-btn" id="previewPrev">←</button>
+      <span class="preview-nav-info" id="previewPageInfo">第 1 页 / 共 3 页</span>
+      <button class="preview-nav-btn" id="previewNext">→</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== SVG Icons (inline for easy reference) =====
+const ICONS = {
+  eye: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  x: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  copy: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  trash: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  lock: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  check: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
+};
+
+// ===== State =====
+const state = {
+  canvasWidth: 1280,
+  canvasHeight: 720,
+  zoom: 1,
+  pages: [
+    { id: 'p1', name: '第1页 · 分维度业绩拆解', components: [] },
+    { id: 'p2', name: '第2页', components: [] },
+    { id: 'p3', name: '第3页', components: [] },
+  ],
+  currentPageId: 'p1',
+  selectedComponentIds: [],
+  history: [], // undo stack
+  historyIndex: -1,
+  clipboard: null,
+  draggedComponent: null,
+  dragType: null, // 'move' | 'resize' | 'canvas-resize'
+  dragStart: null,
+  resizeDir: null,
+  marqueeSelect: null,
+  isPanning: false,
+  panStart: null,
+  isShiftDown: false,
+  draggedBusinessContent: null,
+};
+
+// ===== Template Data for Page 1 =====
+const TEMPLATE_COMPONENTS = [
+  { id: 'c-title', type: 'text', x: 60, y: 30, w: 1160, h: 40, data: { content: '分维度业绩拆解', fontSize: 20, fontWeight: '700', fontFamily: 'Funnel Sans', color: '#1A1A1A' } },
+  { id: 'c-subtitle', type: 'text', x: 60, y: 75, w: 1160, h: 24, data: { content: '多维度数据复盘 · GMV / 点击 / 转化全链路分析', fontSize: 11, fontFamily: 'Inter', color: '#888888' } },
+  { id: 'c-gmv', type: 'indicator-card', x: 60, y: 125, w: 260, h: 85, data: { title: '总 GMV', value: '¥2,345,678', trend: '↑ 12.5%', trendUp: true, colorTheme: 'orange' } },
+  { id: 'c-clicks', type: 'indicator-card', x: 336, y: 125, w: 260, h: 85, data: { title: '总点击量', value: '45,678,900', trend: '↑ 8.3%', trendUp: true, colorTheme: 'blue' } },
+  { id: 'c-cpa', type: 'indicator-card', x: 612, y: 125, w: 260, h: 85, data: { title: 'CPA', value: '¥23.50', trend: '↓ 5.2%', trendUp: false, colorTheme: 'green' } },
+  { id: 'c-cvr', type: 'indicator-card', x: 888, y: 125, w: 260, h: 85, data: { title: '转化率', value: '5.2%', trend: '↑ 3.1%', trendUp: true, colorTheme: 'purple' } },
+  { id: 'c-newrate', type: 'indicator-card', x: 60, y: 225, w: 260, h: 85, data: { title: '新客率', value: '38.5%', trend: '↑ 6.2%', trendUp: true, colorTheme: 'green' } },
+  { id: 'c-reach', type: 'indicator-card', x: 336, y: 225, w: 420, h: 85, data: { title: '累计触达受众', value: '12,000 万', trend: null, trendUp: null, colorTheme: 'blue' } },
+  { id: 'c-fans', type: 'indicator-card', x: 772, y: 225, w: 420, h: 85, data: { title: '达人粉丝量', value: '6,500 万', trend: null, trendUp: null, colorTheme: 'purple' } },
+  { id: 'c-barchart', type: 'bar-chart', x: 60, y: 335, w: 560, h: 260, data: { title: '各平台业绩对比', bars: [{ label: '抖音', value: 90, color: '#FF5C00' }, { label: '千川', value: 72, color: '#F59E0B' }, { label: '腾讯', value: 50, color: '#3B82F6' }, { label: '快手', value: 38, color: '#8B5CF6' }] } },
+  { id: 'c-table', type: 'table', x: 640, y: 335, w: 580, h: 260, data: { headers: ['达人', 'GMV', '点击量', 'CPA'], rows: [['李佳琦', '¥892,341', '12,456,789', '¥18.90'], ['张大仙', '¥654,210', '9,234,100', '¥22.30'], ['王五四', '¥432,098', '5,678,200', '¥15.40']] } },
+  { id: 'c-summary', type: 'text', x: 60, y: 615, w: 1160, h: 85, data: { content: '分析小结：本季度GMV达成率118%，抖音渠道贡献占比最高，达42.3%；CPA较上季度优化15.2%，新客获取效率显著提升。', fontSize: 11, fontFamily: 'Inter', color: '#1A1A1A', bgColor: '#F9FAFB', padding: 14 } },
+];
+
+// ===== Templates =====
+const TEMPLATES = [
+  { name: '公司介绍', icon: '🏢', available: false },
+  { name: '公司实力', icon: '💪', available: false },
+  { name: '联盟资源', icon: '🤝', available: false },
+  { name: '技术优势', icon: '🔧', available: false },
+  { name: '品类案例', icon: '📦', available: false },
+  { name: '分维度业绩拆解', icon: '📊', available: true },
+  { name: null, icon: '✍️', name1: '创作者/渠道', name2: '深度分析', available: false },
+  { name: null, icon: '📈', name1: '市场与渠道', name2: '深度分析', available: false },
+  { name: null, icon: '📝', name1: '内容与运营', name2: '分析', available: false },
+  { name: '下阶段合作提案', icon: '🤝', available: false },
+];
+
+// ===== Marketing business component library =====
+// Every entry is a presentation-oriented composite block, not merely a primitive shape.
+const BUSINESS_COMPONENTS = [
+  { group: '基础页面', items: [
+    { id: 'cover', icon: '◆', name: '封面信息', desc: 'Logo / Slogan / 主题 / 季度', title: 'GlowLab TikTok 增长提案', meta: 'BUSINESS PRESENTATION · 2026 Q4', details: ['MEDIATEK · BEAUTY', '让每一条真实内容，都转化为可衡量的品牌增长'] },
+    { id: 'agenda', icon: '☷', name: '目录导航', desc: '序号 / 标题 / 页码', title: 'PROJECT ROADMAP', meta: '品牌诊断 → 策略路径 → 内容执行 → 增长复盘', details: [] },
+  ]},
+  { group: '公司与服务', items: [
+    { id: 'milestone', icon: '↗', name: '公司里程碑', desc: '奖项与关键事件', title: '成长里程碑', meta: '2019 — 2026', details: ['2019 业务启航', '2022 服务 100+ 品牌', '2024 AI 营销能力上线', '2026 覆盖全球市场'] },
+    { id: 'global', icon: '◎', name: '全球布局', desc: '区域分布与关键数据', title: '全球化业务网络', meta: '12 个市场 · 6 个区域办公室 · 1000+ 创作者资源', details: ['亚太', '北美', '欧洲', '中东'] },
+    { id: 'brand-wall', icon: '▦', name: '合作品牌墙', desc: '品牌 Logo 与影响力', title: '与 300+ 增长型品牌共创', meta: '覆盖美妆、生活方式、3C、零售与旅游五大行业', details: ['LUMIÈRE', 'NOVA HOME', 'MOTION', 'EVERYDAY', 'WANDER'] },
+    { id: 'org', icon: '⌘', name: '团队组织架构', desc: '团队配比与专业能力', title: '策略 × 创意 × 运营 × 数据', meta: '35 人项目组 · 每个 Campaign 配置 1 名增长负责人', details: ['策略咨询 · 20%', '创意内容 · 25%', '媒介运营 · 35%', '数据技术 · 20%'] },
+    { id: 'service', icon: '✦', name: '核心服务矩阵', desc: '网红 / 社媒 / 数据服务', title: '从人群洞察到生意增长', meta: '以内容为核心，连接达人资源、媒体资源与转化数据', details: ['达人策略与招募', 'TikTok 内容投放', '社媒媒体采买', 'AI 数据归因'] },
+  ]},
+  { group: '策略与方案', items: [
+    { id: 'challenge', icon: '!', name: '机会与挑战', desc: '洞察、画像、市场份额', title: '年轻肌肤赛道的增长窗口', meta: 'Z 世代消费者更信任真实测评与即时可验证的功效表达', details: ['18–24 岁高潜人群', '竞品内容同质化', '敏感肌细分机会', 'UGC 可信背书'] },
+    { id: 'process', icon: '→', name: '合作评估流程', desc: '商业模式与入驻流程', title: '4 周完成从需求到上线', meta: '明确增长目标后，以创作者匹配度与内容可复制性作为决策标准', details: ['品牌增长诊断', '达人资源评估', '内容方案共创', '上线复盘迭代'] },
+    { id: 'calendar', icon: '□', name: '营销活动日历', desc: '季节节点与推广计划', title: '2026 年度内容营销节奏', meta: '围绕关键消费节点提前 4–6 周进行人群预热与内容蓄水', details: ['春季焕新 · 上新种草', '618 · 集中转化', '开学季 · 场景渗透', '黑五圣诞 · 礼赠爆发'] },
+    { id: 'campaign-plan', icon: '⌁', name: 'Campaign 方案', desc: '时间线、资源位、曝光', title: '30 天 TikTok 增长路径', meta: '70 位创作者 · 120 条内容 · 3 个媒体资源位 · 全程数据追踪', details: ['种子达人预热', '头部达人引爆', 'Spark Ads 扩散', 'GMV 与评论复盘'] },
+  ]},
+  { group: '案例与结案', items: [
+    { id: 'case-showcase', icon: '▣', name: '合作案例', desc: '素材、策略、结果亮点', title: 'LUMIÈRE 敏感肌精华上市', meta: '以“7 天肌肤状态日记”内容线串联测评、种草与即时转化', details: ['7 天真实挑战', '70 位 TikTok 创作者', '12.6M 累计曝光', 'GMV 达成 138%'] },
+    { id: 'campaign-overview', icon: '◉', name: 'Campaign 概览', desc: '曝光、触达、参与、转化', title: 'LUMIÈRE Campaign 核心成效', meta: '投放周期：2026.10.12 – 2026.11.10 · TikTok / Spark Ads', details: ['曝光量 12.6M', '触达人数 8.1M', '互动率 8.7%', '转化率 3.8%'] },
+    { id: 'creator-list', icon: '◒', name: '达人名单', desc: '头像、昵称、链接、数据', title: '创作者合作矩阵', meta: '共 70 位创作者 · 头部 6 / 腰部 24 / KOC 40 · 以敏感肌人群为核心', details: ['Mia Chen · 1.28M', 'Sofia Lane · 684K', 'Ava Park · 312K', 'Jamie Wu · 86K'] },
+    { id: 'creator-profile', icon: '●', name: '达人介绍', desc: 'TikTok 创作者媒体资料卡', title: 'Mia Chen', meta: 'Beauty & Skincare Creator · @miaglowup', details: ['Macro Creator', '1.28M followers', '8.7% engagement', '12.6M campaign views', 'Women 18–34 · US / UK'] },
+    { id: 'content-analysis', icon: '◔', name: '作品分析', desc: '平台、作品、互动、词云', title: '内容表现与转化分析', meta: '“7 天日记”视频贡献 46% 播放量，评论高频词为 gentle / glow / repurchase', details: ['UGC 测评 · 46%', '达人演示 · 31%', '成分科普 · 15%', '礼赠场景 · 8%'] },
+    { id: 'retrospective', icon: '↻', name: '复盘与建议', desc: '策略复盘与达人推荐', title: '从爆款内容到下一轮增长', meta: '功效可视化内容显著提升收藏与加购；下一阶段应放大中腰部创作者的持续转化', details: ['保留 7 天日记机制', '缩短前 3 秒功效表达', '追加 12 位敏感肌达人', '目标 GMV +35%'] },
+  ]},
+  { group: '报价与工具', items: [
+    { id: 'package', icon: '≡', name: '套餐对比', desc: 'A/B/C、价格、资源配置', title: 'TikTok 整合营销套餐', meta: '适配新品试水、增长加速与品牌整合三种阶段', details: ['20–80 位达人', 'Spark Ads 资源位', '8–15% CPS 佣金', '4–8 周服务周期'] },
+    { id: 'report', icon: '▤', name: '周报 / 月报', desc: '指标进度与历史趋势', title: '第 3 周 Campaign 进度', meta: '目标曝光 10M · 当前完成 8.6M · 核心创作者内容已全部上线', details: ['GMV ¥1.24M', '互动率 8.7%', '内容上线 84%', '下周追加 Spark Ads'] },
+    { id: 'funnel', icon: '▽', name: '增长漏斗', desc: '曝光到转化的漏斗分析', title: '内容驱动的转化漏斗', meta: '从品牌曝光到店铺下单，每一步都匹配内容和媒体动作', details: ['12.6M 曝光', '8.1M 触达', '1.1M 互动', '84K 下单'] },
+  ]},
+];
+
+const BUSINESS_BY_ID = Object.fromEntries(BUSINESS_COMPONENTS.flatMap(group => group.items.map(item => [item.id, item])));
+
+// Intentional canvas dimensions: the content model determines the component's default footprint.
+// Narrative modules are large; comparison, process and data modules favor their natural reading direction.
+const BUSINESS_COMPONENT_LAYOUTS = {
+  cover: { w: 760, h: 430, form: '品牌叙事' },
+  agenda: { w: 660, h: 340, form: '章节导航' },
+  milestone: { w: 760, h: 240, form: '横向时间轴' },
+  global: { w: 620, h: 320, form: '区域布局' },
+  'brand-wall': { w: 760, h: 250, form: '品牌矩阵' },
+  org: { w: 680, h: 270, form: '组织分栏' },
+  service: { w: 760, h: 270, form: '能力矩阵' },
+  challenge: { w: 650, h: 320, form: '洞察矩阵' },
+  process: { w: 780, h: 230, form: '流程步骤' },
+  calendar: { w: 760, h: 310, form: '季度日历' },
+  'campaign-plan': { w: 800, h: 240, form: '推广路径' },
+  'case-showcase': { w: 760, h: 360, form: '案例叙事' },
+  'campaign-overview': { w: 700, h: 250, form: '指标概览' },
+  'creator-list': { w: 680, h: 320, form: '达人清单' },
+  'creator-profile': { w: 700, h: 270, form: '媒体资料卡' },
+  'content-analysis': { w: 620, h: 300, form: '表现漏斗' },
+  retrospective: { w: 680, h: 290, form: '行动结论' },
+  package: { w: 760, h: 310, form: '套餐对比' },
+  report: { w: 680, h: 260, form: '进度摘要' },
+  funnel: { w: 560, h: 320, form: '转化漏斗' },
+};
+
+const BUSINESS_STYLE_OPTIONS = {
+  cover: [['standard', '品牌叙事'], ['light', '极简留白'], ['accent', '视觉重点']],
+  agenda: [['standard', '双栏导航'], ['cards', '章节卡片'], ['light', '轻量目录']],
+  milestone: [['standard', '横向时间轴'], ['cards', '里程碑卡片'], ['accent', '高亮节点']],
+  global: [['standard', '区域布局'], ['light', '数据留白'], ['accent', '市场聚焦']],
+  'brand-wall': [['standard', '品牌矩阵'], ['cards', '品牌卡片'], ['light', '极简墙面']],
+  org: [['standard', '组织分栏'], ['cards', '团队卡片'], ['accent', '比例重点']],
+  service: [['standard', '能力矩阵'], ['cards', '服务卡片'], ['accent', '重点服务']],
+  challenge: [['standard', '洞察矩阵'], ['cards', '机会卡片'], ['accent', '策略优先']],
+  process: [['standard', '横向路径'], ['cards', '节点卡片'], ['accent', '当前阶段']],
+  calendar: [['standard', '季度日历'], ['cards', '节点卡片'], ['light', '轻量排期']],
+  'campaign-plan': [['standard', '推广路径'], ['cards', '阶段卡片'], ['accent', '引爆重点']],
+  'case-showcase': [['standard', '杂志叙事'], ['results', '成效优先'], ['light', '留白案例']],
+  'campaign-overview': [['standard', '指标概览'], ['stats', '主数值'], ['cards', '数据卡片']],
+  'creator-list': [['standard', '达人清单'], ['cards', '达人卡片'], ['accent', '重点达人']],
+  'creator-profile': [['standard', '媒体资料'], ['stats', '数据优先'], ['light', '极简档案']],
+  'content-analysis': [['standard', '表现漏斗'], ['cards', '内容矩阵'], ['accent', '爆款重点']],
+  retrospective: [['standard', '行动结论'], ['cards', '复盘卡片'], ['accent', '目标优先']],
+  package: [['standard', '套餐对比'], ['table', '对比表格'], ['accent', '推荐套餐']],
+  report: [['standard', '进度摘要'], ['stats', '达成优先'], ['cards', '行动卡片']],
+  funnel: [['standard', '转化漏斗'], ['cards', '阶段卡片'], ['accent', '转化重点']],
+};
+
+function getBusinessStyleOptions(kind) {
+  return BUSINESS_STYLE_OPTIONS[kind] || [['standard', '标准样式'], ['cards', '卡片样式'], ['accent', '重点样式']];
+}
+
+function renderBusinessMenu() {
+  const container = document.getElementById('businessMenuGroups');
+  container.innerHTML = BUSINESS_COMPONENTS.map(group => `
+    <section class="business-group">
+      <div class="business-group-title">${group.group}</div>
+      <div class="business-grid">${group.items.map(item => `
+        <button class="business-item" data-business-comp="${item.id}" title="添加${item.name}">
+          <span class="business-item-icon">${item.icon}</span>
+          <span class="business-item-copy"><span class="business-item-name">${item.name}</span><span class="business-item-desc">${BUSINESS_COMPONENT_LAYOUTS[item.id]?.form || item.desc} · ${BUSINESS_COMPONENT_LAYOUTS[item.id]?.w || 580}×${BUSINESS_COMPONENT_LAYOUTS[item.id]?.h || 220}</span></span>
+        </button>`).join('')}</div>
+    </section>`).join('');
+}
+
+function renderBusinessBlock(data, scale = 1) {
+  const item = BUSINESS_BY_ID[data.businessKind] || { icon: '▦', name: '业务组件', title: data.title || '业务组件', meta: data.meta || '', details: data.details || [] };
+  const details = data.details || item.details || [];
+  const variant = data.variant || 'standard';
+  const px = n => n * scale;
+  const title = data.title || item.title;
+  const meta = data.meta || item.meta;
+  const base = (body, tone = '#FFF') => `<div style="width:100%;height:100%;overflow:hidden;border:${variant === 'accent' ? '2px solid #FF5C00' : '1px solid #F0E7E2'};border-radius:${px(10)}px;background:${variant === 'light' ? '#FFFFFF' : tone};font-family:Inter,sans-serif;${variant === 'accent' ? `box-shadow:0 ${px(8)}px ${px(22)}px rgba(255,92,0,.16);` : ''}">${body}</div>`;
+  const label = `<div style="font-size:${px(10)}px;font-weight:700;letter-spacing:.7px;color:#FF5C00;">${item.name.toUpperCase()}</div>`;
+  const titleStyle = `font-family:'Funnel Sans',sans-serif;font-size:${px(21)}px;line-height:1.12;font-weight:700;color:#1A1A1A;`;
+  const chips = (list, color = '#FFF7F0') => list.map((x, i) => `<div style="padding:${px(8)}px;background:${color};border-radius:${px(6)}px;color:${i === 0 ? '#FF5C00' : '#555'};font-size:${px(10)}px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${x}</div>`).join('');
+  const hasDedicatedVariant =
+    (data.businessKind === 'cover' && variant === 'light') ||
+    ((data.businessKind === 'process' || data.businessKind === 'campaign-plan') && variant === 'cards') ||
+    (data.businessKind === 'case-showcase' && variant === 'results') ||
+    (data.businessKind === 'campaign-overview' && variant === 'stats') ||
+    (data.businessKind === 'creator-profile' && variant === 'stats') ||
+    (data.businessKind === 'package' && variant === 'table');
+
+  // Every non-dedicated business component has visible alternative layouts.
+  // These are structural rearrangements, not cosmetic color changes.
+  if (variant === 'cards' && !hasDedicatedVariant) return base(`<div style="height:100%;padding:${px(18)}px;display:grid;grid-template-columns:${px(185)}px 1fr;gap:${px(16)}px;"><div style="display:flex;flex-direction:column;"><div>${label}<div style="${titleStyle}margin-top:${px(6)}px;">${title}</div></div><div style="margin-top:auto;font-size:${px(10)}px;line-height:1.5;color:#777;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${px(7)}px;align-content:center;">${details.map((x,i)=>`<div style="min-height:${px(52)}px;padding:${px(10)}px;background:${['#1A1A1A','#FFF0E8','#FFF7F0','#FAFAFA'][i%4]};color:${i===0?'#FFF':'#333'};border-radius:${px(7)}px;"><div style="font:700 ${px(10)}px 'IBM Plex Mono';opacity:.62;">0${i+1}</div><div style="font-size:${px(11)}px;font-weight:700;margin-top:${px(6)}px;line-height:1.25;">${x}</div></div>`).join('')}</div></div>`);
+  if (variant === 'light' && !hasDedicatedVariant) return base(`<div style="height:100%;padding:${px(22)}px;display:grid;grid-template-columns:1fr ${px(128)}px;gap:${px(16)}px;"><div style="display:flex;flex-direction:column;"><div style="font:800 ${px(42)}px 'IBM Plex Mono';line-height:.8;color:#FF5C00;">${String(data.businessKind || '').slice(0,2).toUpperCase()}</div><div style="${titleStyle}margin-top:${px(12)}px;max-width:85%;">${title}</div><div style="font-size:${px(10)}px;line-height:1.55;color:#777;margin-top:${px(9)}px;max-width:82%;">${meta}</div></div><div style="border-left:1px solid #F0E7E2;padding-left:${px(12)}px;display:flex;flex-direction:column;justify-content:center;gap:${px(7)}px;">${details.slice(0,4).map((x,i)=>`<div style="font-size:${px(10)}px;font-weight:${i===0?'700':'500'};color:${i===0?'#FF5C00':'#555'};">${x}</div>`).join('')}</div></div>`);
+  if (variant === 'accent' && !hasDedicatedVariant) return base(`<div style="height:100%;display:grid;grid-template-columns:${px(150)}px 1fr;background:#1A1A1A;color:#FFF;"><div style="padding:${px(18)}px;background:#FF5C00;display:flex;flex-direction:column;justify-content:space-between;"><div style="font-size:${px(10)}px;font-weight:800;letter-spacing:.8px;">${item.name.toUpperCase()}</div><div style="font:800 ${px(38)}px 'Funnel Sans';line-height:.9;">${details.length}</div><div style="font-size:${px(10)}px;line-height:1.4;">关键增长<br>动作</div></div><div style="padding:${px(18)}px;display:flex;flex-direction:column;"><div style="font:700 ${px(22)}px 'Funnel Sans';line-height:1.1;">${title}</div><div style="font-size:${px(10)}px;color:#D1D5DB;line-height:1.5;margin-top:${px(8)}px;">${meta}</div><div style="margin-top:auto;display:flex;gap:${px(6)}px;flex-wrap:wrap;">${details.map((x,i)=>`<span style="padding:${px(6)}px ${px(8)}px;border:1px solid ${i===0?'#FF5C00':'#4B5563'};border-radius:${px(20)}px;color:${i===0?'#FFB27D':'#E5E7EB'};font-size:${px(9)}px;">${x}</span>`).join('')}</div></div></div>`, '#1A1A1A');
+
+  if (data.businessKind === 'cover' && variant === 'light') return base(`<div style="height:100%;padding:${px(30)}px;display:grid;grid-template-columns:1fr ${px(160)}px;gap:${px(16)}px;background:#FFF;"><div style="display:flex;flex-direction:column;"><div style="color:#FF5C00;font-size:${px(11)}px;font-weight:800;letter-spacing:1px;">${details[0] || 'MEDIATEK'}</div><div style="margin-top:auto;${titleStyle}font-size:${px(33)}px;max-width:88%;">${title}</div><div style="margin-top:${px(14)}px;font-size:${px(12)}px;color:#666;max-width:76%;line-height:1.5;">${details[1] || meta}</div></div><div style="background:#FF5C00;color:#FFF;border-radius:${px(9)}px;padding:${px(14)}px;display:flex;flex-direction:column;justify-content:space-between;"><span style="font-size:${px(10)}px;font-weight:700;">2026<br>Q4</span><span style="font-size:${px(10)}px;line-height:1.4;">TikTok<br>Growth Plan</span></div></div>`);
+  if (data.businessKind === 'cover') return base(`<div style="height:100%;padding:${px(24)}px;display:flex;flex-direction:column;background:linear-gradient(125deg,#1A1A1A 0%,#352116 58%,#FF5C00 150%);color:#FFF;"><div style="display:flex;justify-content:space-between;font-size:${px(10)}px;letter-spacing:1px;"><span>MEDIATEK / BUSINESS</span><span>2026 Q4</span></div><div style="margin-top:auto;font-family:'Funnel Sans',sans-serif;font-size:${px(31)}px;line-height:1.04;font-weight:800;max-width:75%;">${title}</div><div style="margin-top:${px(12)}px;font-size:${px(12)}px;opacity:.78;">${details[1] || meta}</div><div style="margin-top:auto;padding-top:${px(12)}px;border-top:1px solid rgba(255,255,255,.25);font-size:${px(10)}px;display:flex;justify-content:space-between;"><span>${details[0] || '业务线 Logo'}</span><span>www.mediakit.com</span></div></div>`, '#1A1A1A');
+  if (data.businessKind === 'agenda') return base(`<div style="padding:${px(20)}px;display:grid;grid-template-columns:1fr 2fr;gap:${px(20)}px;height:100%;"><div style="border-right:1px solid #F0E7E2;display:flex;flex-direction:column;justify-content:space-between;"><div>${label}<div style="${titleStyle}margin-top:${px(7)}px;">${title}</div></div><div style="font-size:${px(10)}px;color:#888;">MediaKit Presentation</div></div><div style="display:flex;flex-direction:column;justify-content:center;gap:${px(8)}px;">${['公司概览','服务与能力','合作案例','Campaign 结案'].map((x,i)=>`<div style="display:grid;grid-template-columns:${px(26)}px 1fr ${px(24)}px;align-items:center;font-size:${px(12)}px;"><span style="color:#FF5C00;font-family:monospace;">0${i+1}</span><span style="font-weight:600;">${x}</span><span style="color:#999;text-align:right;">0${i+2}</span></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'milestone') return base(`<div style="padding:${px(18)}px;height:100%;display:flex;flex-direction:column;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:${px(8)}px;margin-top:auto;padding-top:${px(20)}px;border-top:2px solid #FFDAC5;">${details.map((x,i)=>`<div style="position:relative;padding-top:${px(10)}px;"><span style="position:absolute;top:${px(-7)}px;left:0;width:${px(10)}px;height:${px(10)}px;border-radius:50%;background:${i===details.length-1?'#FF5C00':'#1A1A1A'};"></span><div style="font:700 ${px(14)}px 'Funnel Sans';">${['2019','2022','2024','2026'][i]||''}</div><div style="font-size:${px(10)}px;color:#666;margin-top:${px(3)}px;">${x}</div></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'brand-wall') return base(`<div style="padding:${px(18)}px;height:100%;display:flex;flex-direction:column;"><div style="display:flex;justify-content:space-between;align-items:end;"> <div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="font-size:${px(11)}px;color:#777;">${meta}</div></div><div style="margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:${px(8)}px;">${details.map((x,i)=>`<div style="height:${px(42)}px;border:1px solid #EEE;border-radius:${px(6)}px;display:flex;align-items:center;justify-content:center;font:700 ${px(12)}px 'Funnel Sans';color:${['#1A1A1A','#FF5C00','#6B7280','#1A1A1A','#9CA3AF'][i]};">${x}</div>`).join('')}</div></div>`);
+  if (data.businessKind === 'org' || data.businessKind === 'service') return base(`<div style="padding:${px(18)}px;height:100%;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;color:#777;margin-top:${px(4)}px;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:${px(8)}px;margin-top:${px(18)}px;">${details.map((x,i)=>`<div style="padding:${px(13)}px ${px(10)}px;border-top:3px solid ${['#FF5C00','#F59E0B','#3B82F6','#8B5CF6'][i]};background:#FAFAFA;"><div style="font-size:${px(11)}px;font-weight:700;">${x}</div><div style="margin-top:${px(6)}px;font-size:${px(9)}px;color:#888;">${data.businessKind==='org'?['20%','25%','35%','20%'][i]:'策略 · 执行 · 复盘'}</div></div>`).join('')}</div></div>`);
+  if ((data.businessKind === 'process' || data.businessKind === 'campaign-plan') && variant === 'cards') return base(`<div style="padding:${px(18)}px;height:100%;display:grid;grid-template-columns:${px(190)}px 1fr;gap:${px(18)}px;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;color:#777;line-height:1.5;margin-top:${px(8)}px;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${px(7)}px;">${details.map((x,i)=>`<div style="padding:${px(10)}px;background:${i===0?'#1A1A1A':'#FFF7F0'};color:${i===0?'#FFF':'#333'};border-radius:${px(7)}px;"><div style="font:700 ${px(13)}px 'IBM Plex Mono';opacity:.65;">0${i+1}</div><div style="font-size:${px(11)}px;font-weight:700;margin-top:${px(7)}px;">${x}</div></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'process' || data.businessKind === 'campaign-plan') return base(`<div style="padding:${px(18)}px;height:100%;display:flex;flex-direction:column;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;color:#777;margin-top:${px(4)}px;">${meta}</div></div><div style="display:flex;align-items:center;gap:${px(6)}px;margin-top:auto;">${details.map((x,i)=>`<div style="display:flex;align-items:center;gap:${px(6)}px;flex:${i===details.length-1?1:1.15};"><div style="flex:1;min-height:${px(54)}px;padding:${px(9)}px;background:${i===0?'#FF5C00':'#FFF7F0'};color:${i===0?'#FFF':'#333'};border-radius:${px(7)}px;"><div style="font-size:${px(9)}px;opacity:.7;">0${i+1}</div><div style="font-size:${px(11)}px;font-weight:700;margin-top:${px(4)}px;">${x}</div></div>${i<details.length-1?`<span style="color:#FF5C00;font-size:${px(14)}px;">→</span>`:''}</div>`).join('')}</div></div>`);
+  if (data.businessKind === 'calendar') return base(`<div style="padding:${px(18)}px;height:100%;"><div style="display:flex;justify-content:space-between;"> <div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="font-size:${px(10)}px;color:#777;max-width:42%;text-align:right;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:${px(5)}px;margin-top:${px(18)}px;">${details.map((x,i)=>`<div style="border:1px solid #EEE;border-radius:${px(6)}px;overflow:hidden;"><div style="background:${['#FFF0E8','#FEF3C7','#DBEAFE','#EDE9FE'][i]};padding:${px(5)}px;font-size:${px(9)}px;font-weight:700;color:#666;">Q${i+1}</div><div style="padding:${px(9)}px;font-size:${px(11)}px;font-weight:700;min-height:${px(42)}px;">${x}</div></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'campaign-overview' && variant === 'stats') return base(`<div style="height:100%;display:grid;grid-template-columns:1.05fr 1fr;"><div style="padding:${px(20)}px;background:#1A1A1A;color:#FFF;display:flex;flex-direction:column;"><div style="font-size:${px(10)}px;letter-spacing:.8px;opacity:.65;">CAMPAIGN HERO METRIC</div><div style="margin-top:auto;font:800 ${px(38)}px 'IBM Plex Mono';">12.6M</div><div style="font-size:${px(12)}px;margin-top:${px(4)}px;">Campaign impressions</div><div style="font-size:${px(10)}px;opacity:.65;margin-top:${px(9)}px;">+26% vs. original target</div></div><div style="padding:${px(18)}px;display:grid;grid-template-columns:repeat(3,1fr);gap:${px(8)}px;align-content:center;">${details.slice(1).map((x,i)=>{const p=x.split(' ');return `<div style="padding:${px(10)}px;background:#FFF7F0;border-radius:${px(7)}px;"><div style="font:700 ${px(17)}px 'IBM Plex Mono';color:#FF5C00;">${p[p.length-1]}</div><div style="font-size:${px(9)}px;color:#666;margin-top:${px(5)}px;">${p.slice(0,-1).join(' ')}</div></div>`}).join('')}</div></div>`);
+  if (data.businessKind === 'campaign-overview') return base(`<div style="padding:${px(18)}px;height:100%;"><div style="display:flex;justify-content:space-between;align-items:end;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="font-size:${px(10)}px;color:#777;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:${px(8)}px;margin-top:${px(17)}px;">${details.map((x,i)=>{const p=x.split(' ');return `<div style="border-left:3px solid ${['#FF5C00','#F59E0B','#3B82F6','#8B5CF6'][i]};padding-left:${px(9)}px;"><div style="font:700 ${px(18)}px 'IBM Plex Mono';">${p[p.length-1]}</div><div style="font-size:${px(10)}px;color:#777;margin-top:${px(4)}px;">${p.slice(0,-1).join(' ')}</div></div>`}).join('')}</div></div>`);
+  if (data.businessKind === 'creator-profile' && variant === 'stats') return base(`<div style="height:100%;display:grid;grid-template-rows:${px(112)}px 1fr;"><div style="padding:${px(16)}px ${px(20)}px;background:#1A1A1A;color:#FFF;display:flex;align-items:center;gap:${px(15)}px;"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=480&q=85" alt="Mia Chen" style="width:${px(68)}px;height:${px(68)}px;border-radius:50%;object-fit:cover;"><div><div style="font:700 ${px(23)}px 'Funnel Sans';">${title}</div><div style="font-size:${px(10)}px;opacity:.7;margin-top:${px(3)}px;">${meta}</div><div style="font-size:${px(9)}px;color:#FFB27D;margin-top:${px(7)}px;">TIKTOK · ${details[0]}</div></div><div style="margin-left:auto;font:700 ${px(11)}px 'IBM Plex Mono';color:#FFB27D;">TOP<br>PERFORMER</div></div><div style="padding:${px(14)}px ${px(20)}px;display:grid;grid-template-columns:repeat(4,1fr);gap:${px(9)}px;">${[...details.slice(1,4), details[4]].map((x,i)=>{const p=x.split(' ');return `<div style="border-left:2px solid ${['#FF5C00','#F59E0B','#3B82F6','#8B5CF6'][i]};padding-left:${px(8)}px;"><div style="font:700 ${px(17)}px 'IBM Plex Mono';">${i===3?'18–34':p[0]}</div><div style="font-size:${px(9)}px;color:#777;margin-top:${px(4)}px;">${i===3?'Women · US / UK':p.slice(1).join(' ')}</div></div>`}).join('')}</div></div>`);
+  if (data.businessKind === 'creator-profile') return base(`<div style="height:100%;display:grid;grid-template-columns:${px(150)}px 1fr ${px(205)}px;background:#FFF;"><div style="position:relative;background:#F6E4DC;overflow:hidden;"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=480&q=85" alt="Mia Chen" style="width:100%;height:100%;object-fit:cover;object-position:center top;"><div style="position:absolute;left:${px(12)}px;bottom:${px(12)}px;width:${px(28)}px;height:${px(28)}px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;"><img src="https://cdn.simpleicons.org/tiktok/white" alt="TikTok" style="width:${px(15)}px;height:${px(15)}px;"></div></div><div style="padding:${px(18)}px ${px(16)}px;display:flex;flex-direction:column;"><div style="display:flex;align-items:center;gap:${px(7)}px;"><span style="font:700 ${px(23)}px 'Funnel Sans';color:#1A1A1A;">${title}</span><span style="width:${px(15)}px;height:${px(15)}px;border-radius:50%;background:#3B82F6;color:#FFF;display:flex;align-items:center;justify-content:center;font-size:${px(9)}px;">✓</span></div><div style="margin-top:${px(3)}px;font-size:${px(11)}px;color:#666;">${meta}</div><div style="margin-top:${px(13)}px;display:flex;align-items:center;gap:${px(6)}px;"><span style="padding:${px(5)}px ${px(8)}px;background:#111;color:#FFF;border-radius:${px(4)}px;font-size:${px(9)}px;font-weight:700;">TIKTOK</span><span style="padding:${px(5)}px ${px(8)}px;background:#FFF0E8;color:#C2410C;border-radius:${px(4)}px;font-size:${px(9)}px;font-weight:700;">${details[0]}</span></div><div style="margin-top:auto;font-size:${px(10)}px;color:#777;line-height:1.5;">Audience profile: ${details[4]}</div></div><div style="padding:${px(16)}px ${px(15)}px;background:#FAFAFA;display:grid;grid-template-columns:repeat(2,1fr);gap:${px(7)}px;border-left:1px solid #EEE;"><div style="grid-column:span 2;padding-bottom:${px(4)}px;border-bottom:1px solid #E5E7EB;font-size:${px(9)}px;font-weight:700;color:#888;letter-spacing:.5px;">CREATOR PERFORMANCE</div>${details.slice(1,4).map((x,i)=>{const p=x.split(' ');return `<div style="${i===2?'grid-column:span 2;':''}"><div style="font:700 ${px(i===2?17:15)}px 'IBM Plex Mono';color:#1A1A1A;">${p[0]}</div><div style="font-size:${px(9)}px;color:#777;margin-top:${px(2)}px;">${p.slice(1).join(' ')}</div></div>`}).join('')}</div></div>`);
+  if (data.businessKind === 'creator-list') return base(`<div style="padding:${px(16)}px;height:100%;display:flex;gap:${px(16)}px;"><div style="width:32%;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="font-size:${px(10)}px;color:#777;margin-top:${px(10)}px;">${meta}</div></div><div style="flex:1;display:flex;flex-direction:column;gap:${px(5)}px;">${details.map((x,i)=>`<div style="display:grid;grid-template-columns:${px(28)}px 1fr ${px(80)}px;align-items:center;padding:${px(6)}px;background:#FAFAFA;border-radius:${px(6)}px;"><div style="width:${px(22)}px;height:${px(22)}px;border-radius:50%;background:${['#FFDAC5','#FDE68A','#BFDBFE','#DDD6FE'][i]};"></div><div style="font-size:${px(11)}px;font-weight:600;">${x}</div><div style="font-size:${px(9)}px;color:#888;text-align:right;">内容力 / 画像匹配</div></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'content-analysis' || data.businessKind === 'funnel') return base(`<div style="padding:${px(18)}px;height:100%;display:grid;grid-template-columns:1fr 1.45fr;gap:${px(18)}px;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;line-height:1.5;color:#777;margin-top:${px(8)}px;">${meta}</div></div><div style="display:flex;flex-direction:column;justify-content:center;gap:${px(6)}px;">${details.map((x,i)=>`<div style="height:${px(24)}px;width:${100-i*13}%;margin:auto;background:${['#FF5C00','#FF8533','#FDBA74','#FED7AA'][i]};display:flex;align-items:center;justify-content:space-between;padding:0 ${px(9)}px;color:${i<2?'#FFF':'#7C2D12'};font-size:${px(10)}px;font-weight:700;"><span>${x}</span><span>${[100,72,46,28][i]}%</span></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'package' && variant === 'table') return base(`<div style="padding:${px(18)}px;height:100%;"><div style="display:flex;justify-content:space-between;align-items:end;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="font-size:${px(10)}px;color:#777;">${meta}</div></div><div style="margin-top:${px(12)}px;border:1px solid #EEE;border-radius:${px(7)}px;overflow:hidden;">${[['服务周期','4 周','6 周','8 周'],['创作者数量','20 位','50 位','80 位'],['媒体资源位','—','2 个','4 个'],['套餐价格','¥30K','¥80K','¥150K']].map((row,i)=>`<div style="display:grid;grid-template-columns:1.3fr repeat(3,1fr);background:${i===3?'#FFF7F0':i===0?'#FAFAFA':'#FFF'};border-bottom:${i<3?'1px solid #EEE':'none'};"><div style="padding:${px(7)}px ${px(9)}px;font-size:${px(10)}px;font-weight:600;">${row[0]}</div>${row.slice(1).map((x,j)=>`<div style="padding:${px(7)}px ${px(9)}px;text-align:center;font:${i===3?'700':'500'} ${px(10)}px ${i===3?'IBM Plex Mono':'Inter'};color:${j===1?'#FF5C00':'#555'};">${x}</div>`).join('')}</div>`).join('')}</div></div>`);
+  if (data.businessKind === 'package') return base(`<div style="padding:${px(18)}px;height:100%;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:${px(7)}px;margin-top:${px(14)}px;">${['A 轻量试水','B 增长进阶','C 品牌整合'].map((x,i)=>`<div style="border:1px solid ${i===1?'#FF5C00':'#EEE'};border-radius:${px(7)}px;padding:${px(10)}px;background:${i===1?'#FFF7F0':'#FFF'};"><div style="font-size:${px(11)}px;font-weight:700;">${x}</div><div style="font:700 ${px(18)}px 'IBM Plex Mono';margin-top:${px(5)}px;">¥${[30,80,150][i]}K</div><div style="font-size:${px(9)}px;color:#777;margin-top:${px(8)}px;line-height:1.5;">${details.slice(0,2).join(' · ')}</div></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'report') return base(`<div style="padding:${px(18)}px;height:100%;display:grid;grid-template-columns:1.25fr 1fr;gap:${px(15)}px;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;color:#777;margin-top:${px(5)}px;">${meta}</div><div style="display:flex;gap:${px(6)}px;margin-top:${px(16)}px;">${chips(details.slice(0,3))}</div></div><div style="border-left:1px solid #EEE;padding-left:${px(14)}px;display:flex;flex-direction:column;justify-content:center;gap:${px(7)}px;">${['本期达成 112%','环比 +18.4%','下期动作 3 项'].map((x,i)=>`<div style="font-size:${px(11)}px;font-weight:${i===0?'700':'500'};color:${i===0?'#FF5C00':'#555'};">${x}</div>`).join('')}</div></div>`);
+  if (data.businessKind === 'global') return base(`<div style="padding:${px(18)}px;height:100%;display:grid;grid-template-columns:1.2fr 1fr;gap:${px(16)}px;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;color:#777;margin-top:${px(6)}px;">${meta}</div><div style="margin-top:${px(12)}px;display:flex;gap:${px(5)}px;">${['12 市场','6 办公室','1000+ 达人'].map(x=>`<div style="font-size:${px(9)}px;padding:${px(5)}px;background:#FFF0E8;color:#9A3412;border-radius:${px(5)}px;">${x}</div>`).join('')}</div></div><div style="position:relative;background:#FFF7F0;border-radius:50%;width:${px(130)}px;height:${px(130)}px;margin:auto;transform:scale(1,.64);">${details.map((x,i)=>`<span style="position:absolute;left:${[22,78,50,96][i]}%;top:${[26,40,68,65][i]}%;width:${px(13)}px;height:${px(13)}px;background:${i===0?'#FF5C00':'#F59E0B'};border:2px solid #FFF;border-radius:50%;"></span>`).join('')}</div></div>`);
+  if (data.businessKind === 'challenge') return base(`<div style="padding:${px(18)}px;height:100%;"><div style="display:flex;justify-content:space-between;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="font-size:${px(10)}px;color:#777;max-width:36%;text-align:right;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${px(7)}px;margin-top:${px(13)}px;">${details.map((x,i)=>`<div style="padding:${px(10)}px;border:1px solid #EEE;border-radius:${px(7)}px;display:flex;gap:${px(9)}px;"><span style="font:700 ${px(18)}px 'IBM Plex Mono';color:#FF5C00;">0${i+1}</span><div><div style="font-size:${px(11)}px;font-weight:700;">${x}</div><div style="font-size:${px(9)}px;color:#888;margin-top:${px(3)}px;">识别信号与行动方向</div></div></div>`).join('')}</div></div>`);
+  if (data.businessKind === 'case-showcase' && variant === 'results') return base(`<div style="height:100%;display:grid;grid-template-columns:1fr 1.1fr;"><div style="padding:${px(22)}px;background:#FF5C00;color:#FFF;display:flex;flex-direction:column;"><div style="font-size:${px(10)}px;font-weight:700;letter-spacing:.8px;opacity:.75;">CASE RESULT</div><div style="margin-top:auto;font:800 ${px(43)}px 'IBM Plex Mono';">138%</div><div style="font-size:${px(13)}px;margin-top:${px(5)}px;">GMV target achieved</div><div style="font-size:${px(10)}px;line-height:1.5;opacity:.8;margin-top:${px(10)}px;">70 位 TikTok 创作者共同完成 30 天上市增长。</div></div><div style="padding:${px(18)}px;display:flex;flex-direction:column;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;color:#777;line-height:1.4;margin-top:${px(6)}px;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${px(7)}px;margin-top:auto;">${chips(details)}</div></div></div>`);
+  if (data.businessKind === 'case-showcase') return base(`<div style="padding:${px(16)}px;height:100%;display:grid;grid-template-columns:1.1fr 1fr;gap:${px(14)}px;"><div style="position:relative;background:linear-gradient(145deg,rgba(124,45,18,.15),rgba(255,92,0,.52)),url('https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=900&q=85') center/cover;border-radius:${px(8)}px;padding:${px(13)}px;overflow:hidden;"><div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(50,16,4,.72),transparent 64%);"></div><div style="position:relative;color:#FFF;font-size:${px(10)}px;font-weight:700;letter-spacing:.7px;">CASE STUDY · BEAUTY</div><div style="position:relative;margin-top:${px(8)}px;font:700 ${px(20)}px 'Funnel Sans';color:#FFF;max-width:78%;text-shadow:0 1px 12px rgba(0,0,0,.24);">${title}</div><div style="position:absolute;bottom:${px(12)}px;left:${px(13)}px;color:#FFF;font-size:${px(10)}px;">品牌 × 内容 × 增长</div></div><div style="display:flex;flex-direction:column;"><div>${label}<div style="font-size:${px(10)}px;color:#777;line-height:1.45;margin-top:${px(4)}px;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${px(6)}px;margin-top:auto;">${chips(details)}</div></div></div>`);
+  if (data.businessKind === 'retrospective') return base(`<div style="padding:${px(18)}px;height:100%;display:grid;grid-template-columns:1fr 1.35fr;gap:${px(16)}px;"><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div><div style="font-size:${px(10)}px;color:#777;line-height:1.5;margin-top:${px(8)}px;">${meta}</div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${px(7)}px;align-content:center;">${details.map((x,i)=>`<div style="padding:${px(10)}px;background:${i===0?'#1A1A1A':'#FAFAFA'};color:${i===0?'#FFF':'#333'};border-radius:${px(7)}px;min-height:${px(48)}px;"><div style="font-size:${px(9)}px;opacity:.65;">${['保留','优化','推荐','目标'][i]}</div><div style="font-size:${px(11)}px;font-weight:700;margin-top:${px(4)}px;">${x}</div></div>`).join('')}</div></div>`);
+  return base(`<div style="padding:${px(18)}px;height:100%;display:grid;grid-template-columns:1.1fr 1fr;gap:${px(18)}px;"><div><div>${label}<div style="${titleStyle}margin-top:${px(5)}px;">${title}</div></div><div style="font-size:${px(10)}px;line-height:1.55;color:#777;margin-top:${px(10)}px;">${meta}</div><div style="height:${px(6)}px;width:45%;background:#FF5C00;margin-top:${px(16)}px;"></div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${px(7)}px;align-content:center;">${chips(details, '#FAFAFA')}</div></div>`);
+}
+
+// ===== Initialize =====
+function init() {
+  state.canvasWidth = 1280;
+  state.canvasHeight = 720;
+
+  // Load template into page 1
+  state.pages[0].components = TEMPLATE_COMPONENTS.map(c => ({ ...c, data: { ...c.data } }));
+  renderBusinessMenu();
+
+  // Push initial state to history
+  pushHistory();
+
+  renderPageList();
+  renderCanvas();
+  fitCanvasToViewport();
+  updatePanel();
+
+  // Event listeners
+  setupEventListeners();
+}
+
+// ===== History (Undo/Redo) =====
+function pushHistory() {
+  state.history = state.history.slice(0, state.historyIndex + 1);
+  state.history.push(JSON.parse(JSON.stringify({
+    pages: state.pages,
+    currentPageId: state.currentPageId,
+  })));
+  state.historyIndex = state.history.length - 1;
+  if (state.history.length > 50) { state.history.shift(); state.historyIndex--; }
+  updateUndoRedo();
+}
+
+function undo() {
+  if (state.historyIndex <= 0) return;
+  state.historyIndex--;
+  restoreHistory();
+}
+
+function redo() {
+  if (state.historyIndex >= state.history.length - 1) return;
+  state.historyIndex++;
+  restoreHistory();
+}
+
+function restoreHistory() {
+  const snap = JSON.parse(JSON.stringify(state.history[state.historyIndex]));
+  state.pages = snap.pages;
+  state.currentPageId = snap.currentPageId;
+  state.selectedComponentIds = [];
+  renderPageList();
+  renderCanvas();
+  updatePanel();
+  updateUndoRedo();
+}
+
+function updateUndoRedo() {
+  document.getElementById('undoBtn').disabled = state.historyIndex <= 0;
+  document.getElementById('redoBtn').disabled = state.historyIndex >= state.history.length - 1;
+}
+
+// ===== Page List =====
+function getCurrentPage() {
+  return state.pages.find(p => p.id === state.currentPageId) || state.pages[0];
+}
+
+function renderPageList() {
+  const container = document.getElementById('pageList');
+  container.innerHTML = state.pages.map((page, i) => {
+    const isActive = page.id === state.currentPageId;
+    return `
+      <div class="page-thumb${isActive ? ' active' : ''}" data-page-id="${page.id}" draggable="true">
+        <div class="page-thumb-preview">
+          ${renderPageThumbPreview(page)}
+        </div>
+        <div class="page-thumb-label">
+          <span class="page-thumb-name" contenteditable="true" spellcheck="false">${page.name}</span>
+          <span class="page-thumb-actions">
+            <button class="page-thumb-action" data-action="copy" data-page-id="${page.id}" title="复制">📋</button>
+            ${state.pages.length > 1 ? `<button class="page-thumb-action delete" data-action="delete" data-page-id="${page.id}" title="删除">✕</button>` : ''}
+          </span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('pageCount').textContent = `页面 (${state.pages.length})`;
+}
+
+function renderPageThumbPreview(page) {
+  if (!page.components || page.components.length === 0) {
+    return '<span style="color:#ddd;font-size:10px;">空白页</span>';
+  }
+  // Scale to fit 206×60 preview area from canvas 1280×720
+  const scaleX = 200 / state.canvasWidth;
+  const scaleY = 56 / state.canvasHeight;
+  const scale = Math.min(scaleX, scaleY);
+
+  return page.components.map(comp => {
+    const d = comp.data || {};
+    const x = comp.x * scale;
+    const y = comp.y * scale;
+    const w = comp.w * scale;
+    const h = comp.h * scale;
+    let bg = '#F3F4F6';
+    let inner = '';
+    if (comp.type === 'indicator-card') {
+      bg = '#FFF7F0';
+      inner = `<div style="font-size:${Math.max(4, 6 * scale)}px;color:#FF5C00;font-weight:600;padding:1px 2px;overflow:hidden;white-space:nowrap;">${(d.title || '').substring(0, 3)}</div>`;
+    } else if (comp.type === 'text') {
+      bg = '#F9FAFB';
+      inner = `<div style="font-size:${Math.max(4, 6 * scale)}px;color:#888;padding:1px 2px;overflow:hidden;white-space:nowrap;">${(d.content || '').substring(0, 6)}</div>`;
+    } else if (comp.type === 'bar-chart') {
+      bg = '#E8F0FE';
+    } else if (comp.type === 'table') {
+      bg = '#F0FDF4';
+    }
+    return `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${bg};border:1px solid rgba(0,0,0,0.06);border-radius:${2 * scale}px;overflow:hidden;">${inner}</div>`;
+  }).join('');
+}
+
+// ===== Canvas Rendering =====
+function renderCanvas() {
+  const canvas = document.getElementById('canvas');
+  const page = getCurrentPage();
+
+  canvas.style.width = state.canvasWidth + 'px';
+  canvas.style.height = state.canvasHeight + 'px';
+  canvas.style.transform = `scale(${state.zoom})`;
+
+  // Build component HTML
+  let html = '<div class="canvas-grid"></div>';
+  page.components.forEach(comp => {
+    html += renderComponent(comp);
+  });
+
+  // Resize handles and hover actions for selected
+  state.selectedComponentIds.forEach(id => {
+    // Resize handles rendered inside selected components via CSS
+  });
+
+  canvas.innerHTML = html;
+
+  // Attach event listeners to components (skip background)
+  page.components.forEach(comp => {
+    if (comp.type === 'canvas-bg') return;
+    const el = document.getElementById(comp.id);
+    if (!el) return;
+    el.addEventListener('mousedown', (e) => onComponentMouseDown(e, comp));
+    el.addEventListener('dblclick', (e) => onComponentDoubleClick(e, comp));
+    el.addEventListener('contextmenu', (e) => onComponentContextMenu(e, comp));
+    if (comp.type === 'business-block') setupBusinessDirectEditing(el, comp);
+  });
+}
+
+function setupBusinessDirectEditing(el, comp) {
+  const d = comp.data || {};
+  const targets = [
+    { field: 'title', value: d.title },
+    { field: 'meta', value: d.meta },
+    ...(d.details || []).map((value, index) => ({ field: 'detail', value, index })),
+  ];
+  targets.forEach(target => {
+    if (!target.value) return;
+    const leaves = [...el.querySelectorAll('*')].filter(candidate => candidate.children.length === 0 && candidate.textContent.trim());
+    const node = leaves.find(candidate => candidate.textContent.trim() === target.value) ||
+      leaves.filter(candidate => target.value.includes(candidate.textContent.trim())).sort((a, b) => b.textContent.trim().length - a.textContent.trim().length)[0];
+    if (!node) return;
+    node.classList.add('business-direct-edit');
+    node.dataset.businessEdit = target.field;
+    node.dataset.businessFragment = node.textContent.trim();
+    const contentKey = target.field === 'detail' ? `detail-${target.index}` : target.field;
+    node.dataset.contentKey = contentKey;
+    const position = d.contentPositions?.[contentKey] || { x: 0, y: 0 };
+    node.style.position = 'relative';
+    node.style.left = `${position.x}px`;
+    node.style.top = `${position.y}px`;
+    node.style.zIndex = '5';
+    if (target.field === 'detail') {
+      node.dataset.detailIndex = String(target.index);
+    }
+    node.addEventListener('mousedown', e => {
+      if (node.contentEditable === 'true') return;
+      e.stopPropagation();
+      state.draggedBusinessContent = {
+        comp, node, contentKey, startX: e.clientX, startY: e.clientY,
+        originX: position.x, originY: position.y, moved: false,
+      };
+    });
+    node.addEventListener('dblclick', e => {
+      e.preventDefault(); e.stopPropagation();
+      node.contentEditable = 'true';
+      node.focus();
+      const range = document.createRange(); range.selectNodeContents(node);
+      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    });
+    node.addEventListener('blur', () => {
+      if (node.contentEditable === 'true') {
+        saveBusinessContentItem(comp, node);
+      }
+    });
+    node.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); node.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); renderCanvas(); }
+    });
+  });
+}
+
+function saveBusinessContentItem(comp, item) {
+  const value = item.textContent.trim();
+  if (!value) { renderCanvas(); return; }
+  const field = item.dataset.businessEdit;
+  if (field === 'detail') {
+    const index = Number(item.dataset.detailIndex);
+    const previous = comp.data.details[index];
+    const fragment = item.dataset.businessFragment || previous;
+    comp.data.details[index] = previous === fragment ? value : previous.replace(fragment, value);
+  }
+  else comp.data[field] = value;
+  item.contentEditable = 'false';
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+}
+
+function renderComponent(comp) {
+  const isSelected = state.selectedComponentIds.includes(comp.id);
+  const selClass = isSelected ? ' selected' : '';
+  const resizers = isSelected ? `
+    <div class="resize-handle nw" data-dir="nw"></div>
+    <div class="resize-handle n" data-dir="n"></div>
+    <div class="resize-handle ne" data-dir="ne"></div>
+    <div class="resize-handle e" data-dir="e"></div>
+    <div class="resize-handle se" data-dir="se"></div>
+    <div class="resize-handle s" data-dir="s"></div>
+    <div class="resize-handle sw" data-dir="sw"></div>
+    <div class="resize-handle w" data-dir="w"></div>
+  ` : '';
+
+  const hoverActions = `
+    <div class="comp-hover-actions">
+      <button class="comp-action-btn" data-action="copy" title="复制">📋</button>
+      <button class="comp-action-btn delete" data-action="delete" title="删除">🗑</button>
+    </div>
+  `;
+
+  let inner = '';
+  const d = comp.data || {};
+
+  switch (comp.type) {
+    case 'text':
+      inner = `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;${d.bgColor ? 'background:' + d.bgColor + ';border-radius:8px;padding:' + (d.padding || 0) + 'px;' : ''}${d.bgColor ? 'border:1px solid #F3F4F6;' : ''}">
+          <div style="font-family:${d.fontFamily || 'Inter'};font-size:${d.fontSize || 14}px;font-weight:${d.fontWeight || '400'};color:${d.color || '#1A1A1A'};overflow:hidden;word-break:break-word;">${d.content || '文本内容'}</div>
+        </div>`;
+      break;
+
+    case 'indicator-card':
+      inner = `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;gap:2px;padding:12px 14px;background:#FFF;border:1px solid #F3F4F6;border-radius:8px;">
+          <div style="font-size:10px;color:#888;font-weight:500;">${d.title || '指标'}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:#1A1A1A;">${d.value || '---'}</div>
+          ${d.trend ? `<div class="card-trend ${d.trendUp ? 'up' : 'down'}"><span>${d.trendUp ? '↑' : '↓'}</span> ${d.trend}</div>` : ''}
+        </div>`;
+      break;
+
+    case 'bar-chart':
+      inner = `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;gap:8px;padding:14px;background:#FFF;border:1px solid #F3F4F6;border-radius:8px;">
+          <div style="font-family:'Funnel Sans',sans-serif;font-size:13px;font-weight:600;color:#1A1A1A;">${d.title || '柱状图'}</div>
+          <div style="flex:1;display:flex;align-items:flex-end;gap:20px;padding-top:4px;">
+            ${(d.bars || []).map(b => `
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;">
+                <div style="width:100%;height:${b.value}%;background:${b.color};border-radius:4px 4px 0 0;opacity:0.9;min-height:4px;"></div>
+                <div style="font-size:9px;color:#888;">${b.label}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+      break;
+
+    case 'table':
+      inner = `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;background:#FFF;border:1px solid #F3F4F6;border-radius:8px;overflow:hidden;">
+          <div style="display:flex;height:34px;background:#F9FAFB;align-items:center;padding:0 14px;border-bottom:1px solid #F3F4F6;">
+            ${(d.headers || []).map((h, i) => `<div style="flex:1;font-size:10px;font-weight:600;color:#666;text-align:${i === 0 ? 'left' : 'right'};">${h}</div>`).join('')}
+          </div>
+          ${(d.rows || []).map((row, ri) => `
+            <div style="display:flex;height:34px;align-items:center;padding:0 14px;${ri < (d.rows || []).length - 1 ? 'border-bottom:1px solid #F3F4F6;' : ''}">
+              ${row.map((cell, ci) => `<div style="flex:1;font-size:11px;font-family:${ci === 0 ? 'Inter' : 'IBM Plex Mono'},monospace;font-weight:${ci === 0 ? '500' : '400'};color:#1A1A1A;text-align:${ci === 0 ? 'left' : 'right'};">${cell}</div>`).join('')}
+            </div>
+          `).join('')}
+        </div>`;
+      break;
+
+    case 'line-chart':
+      inner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#FFF;border:1px solid #F3F4F6;border-radius:8px;color:#888;font-size:12px;">📈 折线图组件</div>`;
+      break;
+
+    case 'pie-chart':
+      inner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#FFF;border:1px solid #F3F4F6;border-radius:8px;color:#888;font-size:12px;">🥧 饼图组件</div>`;
+      break;
+
+    case 'image':
+      inner = d.src
+        ? `<img src="${d.src}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="">`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F9FAFB;border:1px dashed #E5E7EB;border-radius:8px;color:#888;font-size:12px;">🖼 点击替换图片</div>`;
+      break;
+
+    case 'business-block':
+      inner = renderBusinessBlock(d);
+      break;
+
+    case 'canvas-bg':
+      inner = d.src
+        ? `<img src="${d.src}" style="width:100%;height:100%;object-fit:cover;" draggable="false" alt="">`
+        : '';
+      break;
+
+    default:
+      inner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F9FAFB;border:1px dashed #E5E7EB;border-radius:8px;color:#888;">${comp.type}</div>`;
+  }
+
+  const isBg = comp.type === 'canvas-bg';
+  const noInteract = isBg ? ' no-interact' : '';
+  return `
+    <div class="canvas-component${selClass}${noInteract}" id="${comp.id}" style="left:${comp.x}px;top:${comp.y}px;width:${comp.w}px;height:${comp.h}px;${isBg ? 'pointer-events:none;z-index:0;' : ''}">
+      ${inner}
+      ${isBg ? '' : hoverActions}
+      ${isBg ? '' : resizers}
+    </div>`;
+}
+
+// ===== Canvas Zoom & Fit =====
+function fitCanvasToViewport() {
+  const viewport = document.getElementById('canvasViewport');
+  const area = document.getElementById('canvasArea');
+  const maxW = area.clientWidth - 48; // 24px padding each side
+  const maxH = area.clientHeight - 48;
+  const scaleW = maxW / state.canvasWidth;
+  const scaleH = maxH / state.canvasHeight;
+  state.zoom = Math.min(scaleW, scaleH, 1);
+  viewport.style.width = (state.canvasWidth * state.zoom) + 'px';
+  viewport.style.height = (state.canvasHeight * state.zoom) + 'px';
+  renderCanvas();
+}
+
+function zoomCanvas(delta, mouseX, mouseY) {
+  const oldZoom = state.zoom;
+  state.zoom = Math.max(0.1, Math.min(2, state.zoom - delta * 0.001));
+  state.zoom = Math.round(state.zoom * 100) / 100;
+  const viewport = document.getElementById('canvasViewport');
+  viewport.style.width = (state.canvasWidth * state.zoom) + 'px';
+  viewport.style.height = (state.canvasHeight * state.zoom) + 'px';
+  renderCanvas();
+}
+
+// ===== Component Selection =====
+function selectComponent(compId, addToSelection = false) {
+  if (addToSelection) {
+    const idx = state.selectedComponentIds.indexOf(compId);
+    if (idx >= 0) {
+      state.selectedComponentIds.splice(idx, 1);
+    } else {
+      state.selectedComponentIds.push(compId);
+    }
+  } else {
+    state.selectedComponentIds = [compId];
+  }
+  renderCanvas();
+  updatePanel();
+}
+
+function clearSelection() {
+  state.selectedComponentIds = [];
+  renderCanvas();
+  updatePanel();
+}
+
+function getSelectedComponents() {
+  const page = getCurrentPage();
+  return page.components.filter(c => state.selectedComponentIds.includes(c.id));
+}
+
+// ===== Panel =====
+function updatePanel() {
+  const panel = document.getElementById('panel');
+  const panelInner = document.getElementById('panelInner');
+  const selected = getSelectedComponents();
+
+  if (selected.length === 0) {
+    panel.classList.remove('open');
+    panelInner.innerHTML = '';
+    return;
+  }
+
+  panel.classList.add('open');
+
+  if (selected.length === 1) {
+    renderSinglePanel(panelInner, selected[0]);
+  } else {
+    renderMultiPanel(panelInner, selected);
+  }
+}
+
+function renderSinglePanel(container, comp) {
+  const d = comp.data || {};
+  container.innerHTML = `
+    <div class="panel-tabs">
+      <div class="panel-tab active" data-tab="style">样式</div>
+      <div class="panel-tab" data-tab="datasource">数据源</div>
+    </div>
+    <div class="panel-section">
+      <span style="font-size:11px;color:var(--foreground-muted);">组件类型: ${comp.type === 'business-block' ? (BUSINESS_BY_ID[d.businessKind]?.name || '业务组件') : comp.type === 'indicator-card' ? '指标卡' : comp.type === 'bar-chart' ? '柱状图' : comp.type === 'table' ? '表格' : comp.type === 'line-chart' ? '折线图' : comp.type === 'pie-chart' ? '饼图' : comp.type === 'image' ? '图片' : '文本'}</span>
+      ${comp.type === 'business-block' ? `<span style="font-size:10px;color:var(--accent-primary);">展示形式: ${d.layoutForm || BUSINESS_COMPONENT_LAYOUTS[d.businessKind]?.form || '业务模块'}</span>` : ''}
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">位置 & 尺寸</div>
+      <div class="panel-input-group">
+        <div class="panel-input-col"><label>X</label><input class="input-field" type="number" value="${comp.x}" data-prop="x"></div>
+        <div class="panel-input-col"><label>Y</label><input class="input-field" type="number" value="${comp.y}" data-prop="y"></div>
+        <div class="panel-input-col"><label>W</label><input class="input-field" type="number" value="${comp.w}" data-prop="w"></div>
+        <div class="panel-input-col"><label>H</label><input class="input-field" type="number" value="${comp.h}" data-prop="h"></div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">外观</div>
+      <div class="panel-row"><span class="panel-label">背景色</span><div class="color-swatch" style="background:#FFF;"></div></div>
+      <div class="panel-row"><span class="panel-label">圆角</span><div class="select-field"><span>8px</span><span>▾</span></div></div>
+      <div class="panel-row"><span class="panel-label">阴影</span><div class="select-field"><span>无</span><span>▾</span></div></div>
+      <div class="panel-row"><span class="panel-label">透明度</span><div class="select-field"><span>100%</span><span>▾</span></div></div>
+    </div>
+    ${renderCompSpecificPanel(comp)}
+    <button class="btn-danger" id="deleteCompBtn" type="button">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      删除组件
+    </button>
+  `;
+
+  // Tab switching
+  container.querySelectorAll('.panel-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      container.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      if (this.dataset.tab === 'datasource') {
+        renderDatasourcePanel(container, comp);
+      } else {
+        renderSinglePanel(container, comp);
+      }
+    });
+  });
+
+  // Input change handlers
+  container.querySelectorAll('.input-field[data-prop]').forEach(input => {
+    input.addEventListener('change', function() {
+      const prop = this.dataset.prop;
+      const val = parseInt(this.value) || 0;
+      comp[prop] = val;
+      pushHistory();
+      renderCanvas();
+    });
+  });
+
+  container.querySelectorAll('[data-business-variant]').forEach(option => {
+    option.addEventListener('click', function() {
+      comp.data.variant = this.dataset.businessVariant;
+      pushHistory();
+      renderCanvas();
+      renderSinglePanel(container, comp);
+    });
+  });
+
+  // Delete button
+  const delBtn = container.querySelector('#deleteCompBtn');
+  if (delBtn) {
+    delBtn.addEventListener('click', () => deleteComponent(comp.id));
+  }
+}
+
+function renderCompSpecificPanel(comp) {
+  const d = comp.data || {};
+  switch (comp.type) {
+    case 'text':
+      return `
+        <div class="panel-section">
+          <div class="panel-section-title">文本设置</div>
+          <div class="panel-row"><span class="panel-label">内容</span></div>
+          <textarea class="input-field" style="width:100%;height:60px;resize:vertical;font-family:var(--font-body);font-size:12px;" data-comp-prop="content">${d.content || ''}</textarea>
+          <div class="panel-row" style="margin-top:8px;"><span class="panel-label">字体</span><div class="select-field"><span>${d.fontFamily || 'Inter'}</span><span>▾</span></div></div>
+          <div class="panel-row"><span class="panel-label">字号</span><div class="select-field"><span>${d.fontSize || 14}px</span><span>▾</span></div></div>
+          <div class="panel-row"><span class="panel-label">粗细</span><div class="select-field"><span>${d.fontWeight || '400'}</span><span>▾</span></div></div>
+          <div class="panel-row"><span class="panel-label">颜色</span><div class="color-swatch" style="background:${d.color || '#1A1A1A'};"></div></div>
+        </div>`;
+    case 'indicator-card':
+      return `
+        <div class="panel-section">
+          <div class="panel-section-title">卡片设置</div>
+          <div class="panel-row"><span class="panel-label">标题</span><input class="input-field" style="width:140px" value="${d.title || ''}" data-comp-prop="title"></div>
+          <div class="panel-row"><span class="panel-label">主数值</span><input class="input-field" style="width:140px" value="${d.value || ''}" data-comp-prop="value"></div>
+          <div class="panel-row"><span class="panel-label">主数值格式</span><div class="select-field"><span>¥ 货币</span><span>▾</span></div></div>
+          <div class="panel-row"><span class="panel-label">副文本</span><input class="input-field" style="width:140px" value="${d.trend || ''}" data-comp-prop="trend"></div>
+          <div class="panel-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+            <span class="panel-label">颜色主题</span>
+            <div class="color-dots">
+              <div class="color-dot${d.colorTheme === 'blue' ? ' active' : ''}" style="background:#3B82F6;" data-theme="blue"></div>
+              <div class="color-dot${d.colorTheme === 'green' ? ' active' : ''}" style="background:#22C55E;" data-theme="green"></div>
+              <div class="color-dot${d.colorTheme === 'orange' || !d.colorTheme ? ' active' : ''}" style="background:#FF5C00;" data-theme="orange"></div>
+              <div class="color-dot${d.colorTheme === 'purple' ? ' active' : ''}" style="background:#8B5CF6;" data-theme="purple"></div>
+            </div>
+          </div>
+        </div>`;
+    case 'bar-chart':
+      return `
+        <div class="panel-section">
+          <div class="panel-section-title">图表设置</div>
+          <div class="panel-row"><span class="panel-label">标题</span><input class="input-field" style="width:140px" value="${d.title || ''}" data-comp-prop="title"></div>
+          <div class="panel-row"><span class="panel-label">显示图例</span><input type="checkbox" checked></div>
+          <div class="panel-row"><span class="panel-label">显示数值</span><input type="checkbox" checked></div>
+        </div>`;
+    case 'table':
+      return `
+        <div class="panel-section">
+          <div class="panel-section-title">表格设置</div>
+          <div class="panel-row"><span class="panel-label">行数</span><span>${(d.rows || []).length}</span></div>
+          <div class="panel-row"><span class="panel-label">列数</span><span>${(d.headers || []).length}</span></div>
+          <div class="panel-row"><span class="panel-label">显示表头</span><input type="checkbox" checked></div>
+        </div>`;
+    case 'business-block':
+      const variants = getBusinessStyleOptions(d.businessKind);
+      return `
+        <div class="panel-section">
+          <div class="panel-section-title">组件排版样式</div>
+          <div class="business-style-grid">${variants.map(([id, name]) => `<button class="business-style-option${(d.variant || 'standard') === id ? ' active' : ''}" type="button" data-business-variant="${id}"><span class="business-style-swatch"></span>${name}</button>`).join('')}</div>
+          <div style="font-size:10px;color:var(--foreground-muted);line-height:1.45;">选择后直接切换当前业务组件的版式结构。</div>
+        </div>
+        <div class="panel-section">
+          <div class="panel-section-title">业务组件内容</div>
+          <div class="panel-row"><span class="panel-label">标题</span><input class="input-field" style="width:140px" value="${d.title || ''}" data-comp-prop="title"></div>
+          <div class="panel-row"><span class="panel-label">说明</span><input class="input-field" style="width:140px" value="${d.meta || ''}" data-comp-prop="meta"></div>
+          <div style="font-size:10px;color:var(--foreground-muted);line-height:1.5;">这是可复用的业务复合组件。可在“数据源”标签绑定 Campaign、达人或渠道数据。</div>
+        </div>`;
+    default:
+      return '';
+  }
+}
+
+function renderDataEditFields(comp) {
+  const d = comp.data || {};
+  switch (comp.type) {
+    case 'indicator-card':
+      return `
+        <div class="panel-row"><span class="panel-label">标题</span><input class="input-field" style="width:140px" value="${d.title || ''}" data-comp-prop="title"></div>
+        <div class="panel-row"><span class="panel-label">主数值</span><input class="input-field" style="width:140px" value="${d.value || ''}" data-comp-prop="value"></div>
+        <div class="panel-row"><span class="panel-label">副文本</span><input class="input-field" style="width:140px" value="${d.trend || ''}" data-comp-prop="trend"></div>`;
+    case 'text':
+      return `
+        <div class="panel-row"><span class="panel-label">内容</span></div>
+        <textarea class="input-field" style="width:100%;height:60px;resize:vertical;font-family:var(--font-body);font-size:12px;" data-comp-prop="content">${d.content || ''}</textarea>`;
+    case 'bar-chart':
+      return `
+        <div class="panel-row"><span class="panel-label">标题</span><input class="input-field" style="width:140px" value="${d.title || ''}" data-comp-prop="title"></div>
+        <div class="panel-row"><span class="panel-label">柱状图数据 (JSON)</span></div>
+        <textarea class="input-field" style="width:100%;height:80px;resize:vertical;font-family:var(--font-data);font-size:11px;" data-comp-prop="barsJson">${JSON.stringify(d.bars || [], null, 1)}</textarea>
+        <div style="font-size:10px;color:var(--foreground-muted);margin-top:2px;">格式: [{"label":"名称","value":高度,"color":"#颜色"},...]</div>`;
+    case 'table':
+      const rowsJson = JSON.stringify(d.rows || [], null, 1);
+      const headersJson = JSON.stringify(d.headers || [], null, 1);
+      return `
+        <div class="panel-row"><span class="panel-label">表头 (JSON)</span></div>
+        <textarea class="input-field" style="width:100%;height:40px;resize:vertical;font-family:var(--font-data);font-size:11px;" data-comp-prop="headersJson">${headersJson}</textarea>
+        <div class="panel-row" style="margin-top:8px;"><span class="panel-label">数据行 (JSON)</span></div>
+        <textarea class="input-field" style="width:100%;height:80px;resize:vertical;font-family:var(--font-data);font-size:11px;" data-comp-prop="rowsJson">${rowsJson}</textarea>
+        <div style="font-size:10px;color:var(--foreground-muted);margin-top:2px;">二维数组格式: [["行1列1","行1列2"],...]</div>`;
+    default:
+      return '<div style="font-size:11px;color:var(--foreground-muted);">该组件类型暂无数据编辑项</div>';
+  }
+}
+
+function renderDatasourcePanel(container, comp) {
+  const d = comp.data || {};
+  const selectedCps = d.cpsPlans || [];
+
+  container.innerHTML = `
+    <div class="panel-tabs">
+      <div class="panel-tab" data-tab="style">样式</div>
+      <div class="panel-tab active" data-tab="datasource">数据源</div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title" style="font-size:11px;">CPS 计划选择</div>
+      <div class="cps-select" id="cpsSelect">
+        <div class="cps-select-trigger" id="cpsTrigger" tabindex="0">
+          ${selectedCps.length === 0 ? '<span class="cps-placeholder">请选择 CPS 计划</span>' : selectedCps.map(cp => `<span class="cps-tag" data-cps-id="${cp.id}">${cp.id}/${cp.name}<span class="cps-tag-remove" data-cps-id="${cp.id}">×</span></span>`).join('')}
+        </div>
+        <div class="cps-dropdown" id="cpsDropdown">
+          <div class="cps-search"><input type="text" id="cpsSearchInput" placeholder="搜索 ID 或名称..."></div>
+          <div class="cps-options" id="cpsOptions"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title" style="font-size:11px;">数据绑定</div>
+      <div class="panel-row"><span class="panel-label">数据源</span></div>
+      <div class="custom-select" id="dsMetricSelect">
+        <div class="custom-select-trigger" id="dsMetricTrigger">
+          <span class="${d.dsMetric ? '' : 'custom-select-placeholder'}">${d.dsMetric || '请选择数据源'}</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="custom-select-dropdown" id="dsMetricDropdown">
+          <div class="custom-select-search"><input type="text" id="dsMetricSearch" placeholder="搜索..."></div>
+          <div class="custom-select-options" id="dsMetricOptions"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title" style="font-size:11px;">达人选择</div>
+      <div class="custom-select" id="creatorSelect">
+        <div class="custom-select-trigger" id="creatorTrigger">
+          <span class="${d.creator ? '' : 'custom-select-placeholder'}">${d.creator ? d.creator.id + '/' + d.creator.name : '请选择达人'}</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="custom-select-dropdown" id="creatorDropdown">
+          <div class="custom-select-search"><input type="text" id="creatorSearch" placeholder="搜索 ID 或名称..."></div>
+          <div class="custom-select-options" id="creatorOptions"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-section" id="creatorDataSection" style="display:${d.creator ? 'block' : 'none'};">
+      <div class="panel-section-title" style="font-size:11px;">达人数据</div>
+      <div class="custom-select" id="creatorDataSelect">
+        <div class="custom-select-trigger" id="creatorDataTrigger">
+          <span class="${d.creatorData ? '' : 'custom-select-placeholder'}">${d.creatorData || '请选择达人数据'}</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="custom-select-dropdown" id="creatorDataDropdown">
+          <div class="custom-select-search"><input type="text" id="creatorDataSearch" placeholder="搜索..."></div>
+          <div class="custom-select-options" id="creatorDataOptions"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title" style="font-size:11px;">刷新策略</div>
+      <div class="radio-group">
+        <label class="radio-row"><div class="radio-dot checked"></div><span>手动刷新</span></label>
+        <label class="radio-row"><div class="radio-dot"></div><span>每小时自动刷新</span></label>
+        <label class="radio-row"><div class="radio-dot"></div><span>每天自动刷新</span></label>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title" style="font-size:11px;">数据编辑</div>
+      ${renderDataEditFields(comp)}
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title" style="font-size:11px;">字段映射</div>
+      <div class="panel-row"><span class="panel-label">标题</span><span style="font-family:var(--font-data);font-size:12px;color:var(--accent-primary);">← platform</span></div>
+      <div class="panel-row"><span class="panel-label">主数值</span><span style="font-family:var(--font-data);font-size:12px;color:var(--accent-primary);">← gmv</span></div>
+      <div class="panel-row"><span class="panel-label">副数值</span><span style="font-family:var(--font-data);font-size:12px;color:var(--accent-primary);">← cvr</span></div>
+      <div class="panel-row"><span class="panel-label">趋势</span><span style="font-family:var(--font-data);font-size:12px;color:var(--foreground-muted);">← clicks</span></div>
+    </div>
+    <button class="btn-outline-sm">🔄 立即刷新</button>
+    <div class="sync-info">
+      <span class="sync-time">上次同步: 10:30:15</span>
+      <span class="sync-status">✅ 同步成功</span>
+    </div>
+    <div class="preview-box">
+      <div class="preview-box-label">预览数据</div>
+      <div class="preview-box-value">总GMV: ¥2,345,678</div>
+    </div>
+    <button class="btn-danger">⚠️ 断开数据绑定</button>
+  `;
+
+  // Tab switching back
+  container.querySelectorAll('.panel-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      if (this.dataset.tab === 'style') {
+        renderSinglePanel(container, comp);
+      }
+    });
+  });
+
+  // Radio buttons
+  container.querySelectorAll('.radio-row').forEach(row => {
+    row.addEventListener('click', function() {
+      container.querySelectorAll('.radio-dot').forEach(d => d.classList.remove('checked'));
+      this.querySelector('.radio-dot').classList.add('checked');
+    });
+  });
+
+  // CPS multi-select
+  initCpsSelect(container, comp);
+
+  // Data source selects (metric, creator, creator data)
+  initDataSourceSelects(container, comp);
+}
+
+function renderMultiPanel(container, selected) {
+  container.innerHTML = `
+    <div class="multi-select-panel">
+      <div class="ms-header">已选中 ${selected.length} 个组件</div>
+      <div class="panel-section">
+        <div class="panel-section-title">对齐</div>
+        <div class="align-grid">
+          <button class="align-btn" data-align="top-left">↖</button>
+          <button class="align-btn" data-align="top">↑</button>
+          <button class="align-btn" data-align="top-right">↗</button>
+          <button class="align-btn" data-align="left">←</button>
+          <button class="align-btn" data-align="center">⬤</button>
+          <button class="align-btn" data-align="right">→</button>
+          <button class="align-btn" data-align="bottom-left">↙</button>
+          <button class="align-btn" data-align="bottom">↓</button>
+          <button class="align-btn" data-align="bottom-right">↘</button>
+        </div>
+        <div class="distribute-row">
+          <button class="distribute-btn" data-dist="horiz">水平均分</button>
+          <button class="distribute-btn" data-dist="vert">垂直均分</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">尺寸</div>
+        <div class="distribute-row">
+          <button class="distribute-btn" data-size="equal-w">等宽</button>
+          <button class="distribute-btn" data-size="equal-h">等高</button>
+        </div>
+      </div>
+      <div class="ms-actions">
+        <button class="ms-action-btn" id="groupBtn">组合 (G)</button>
+        <button class="ms-action-btn danger" id="deleteSelectedBtn">删除选中</button>
+      </div>
+    </div>
+  `;
+
+  // Align buttons
+  container.querySelectorAll('.align-btn').forEach(btn => {
+    btn.addEventListener('click', () => alignComponents(btn.dataset.align, selected));
+  });
+
+  container.querySelectorAll('.distribute-btn[data-dist]').forEach(btn => {
+    btn.addEventListener('click', () => distributeComponents(btn.dataset.dist, selected));
+  });
+
+  container.querySelectorAll('.distribute-btn[data-size]').forEach(btn => {
+    btn.addEventListener('click', () => equalizeSize(btn.dataset.size, selected));
+  });
+
+  const delBtn = container.querySelector('#deleteSelectedBtn');
+  if (delBtn) delBtn.addEventListener('click', () => deleteSelectedComponents());
+}
+
+// ===== Component Operations =====
+function addComponent(type) {
+  const page = getCurrentPage();
+
+  // Default sizes
+  const defaults = {
+    'text': { w: 300, h: 60 },
+    'image': { w: 300, h: 200 },
+    'bar-chart': { w: 500, h: 300 },
+    'line-chart': { w: 500, h: 300 },
+    'pie-chart': { w: 300, h: 300 },
+    'indicator-card': { w: 240, h: 100 },
+    'table': { w: 500, h: 250 },
+  };
+  const def = defaults[type] || { w: 300, h: 200 };
+
+  // Center in canvas view
+  const viewport = document.getElementById('canvasViewport');
+  const vpW = state.canvasWidth / state.zoom;
+  // const vpH = state.canvasHeight / state.zoom;
+  const x = Math.max(0, (state.canvasWidth - def.w) / 2);
+  const y = Math.max(0, (state.canvasHeight - def.h) / 2);
+
+  const id = 'comp-' + Date.now();
+  const comp = {
+    id, type, x, y, w: def.w, h: def.h,
+    data: getDefaultData(type),
+  };
+
+  page.components.push(comp);
+  state.selectedComponentIds = [id];
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+  showToast(`已添加${type === 'indicator-card' ? '指标卡' : type === 'bar-chart' ? '柱状图' : type === 'table' ? '表格' : type === 'line-chart' ? '折线图' : type === 'pie-chart' ? '饼图' : type === 'image' ? '图片' : '文本'}组件`);
+}
+
+function addBusinessComponent(kind) {
+  const item = BUSINESS_BY_ID[kind];
+  if (!item) return;
+  const page = getCurrentPage();
+  const layout = BUSINESS_COMPONENT_LAYOUTS[kind] || { w: 580, h: 220, form: '业务模块' };
+  const { w, h } = layout;
+  const id = 'business-' + Date.now();
+  page.components.push({
+    id, type: 'business-block', x: Math.round((state.canvasWidth - w) / 2), y: Math.round((state.canvasHeight - h) / 2), w, h,
+    data: { businessKind: kind, layoutForm: layout.form, title: item.title, meta: item.meta, details: [...item.details] },
+  });
+  state.selectedComponentIds = [id];
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+  showToast(`已添加「${item.name}」业务组件`);
+}
+
+function getDefaultData(type) {
+  switch (type) {
+    case 'text': return { content: '文本内容', fontSize: 14, fontFamily: 'Inter', fontWeight: '400', color: '#1A1A1A' };
+    case 'indicator-card': return { title: '指标名称', value: '---', trend: null, trendUp: null, colorTheme: 'blue' };
+    case 'bar-chart': return { title: '柱状图', bars: [{ label: 'A', value: 80, color: '#FF5C00' }, { label: 'B', value: 60, color: '#3B82F6' }, { label: 'C', value: 40, color: '#22C55E' }] };
+    case 'table': return { headers: ['列1', '列2', '列3'], rows: [['--', '--', '--'], ['--', '--', '--']] };
+    case 'line-chart': return {};
+    case 'pie-chart': return {};
+    case 'image': return {};
+    default: return {};
+  }
+}
+
+function deleteComponent(compId) {
+  const page = getCurrentPage();
+  page.components = page.components.filter(c => c.id !== compId);
+  state.selectedComponentIds = state.selectedComponentIds.filter(id => id !== compId);
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+  showToast('已删除组件');
+}
+
+function deleteSelectedComponents() {
+  const page = getCurrentPage();
+  page.components = page.components.filter(c => !state.selectedComponentIds.includes(c.id));
+  state.selectedComponentIds = [];
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+  showToast('已删除选中组件');
+}
+
+function duplicateComponent(compId) {
+  const page = getCurrentPage();
+  const orig = page.components.find(c => c.id === compId);
+  if (!orig) return;
+  const newComp = JSON.parse(JSON.stringify(orig));
+  newComp.id = 'comp-' + Date.now();
+  newComp.x += 20;
+  newComp.y += 20;
+  page.components.push(newComp);
+  pushHistory();
+  renderCanvas();
+  showToast('已复制组件');
+}
+
+// ===== Alignment =====
+function alignComponents(align, selected) {
+  if (selected.length < 2) return;
+  const first = selected[0];
+  let refX = first.x, refY = first.y, refR = first.x + first.w, refB = first.y + first.h;
+
+  // Find bounding box
+  selected.forEach(c => {
+    refX = Math.min(refX, c.x);
+    refY = Math.min(refY, c.y);
+    refR = Math.max(refR, c.x + c.w);
+    refB = Math.max(refB, c.y + c.h);
+  });
+
+  selected.forEach(c => {
+    switch (align) {
+      case 'top-left': c.x = refX; c.y = refY; break;
+      case 'top': c.y = refY; break;
+      case 'top-right': c.x = refR - c.w; c.y = refY; break;
+      case 'left': c.x = refX; break;
+      case 'center': c.x = refX + (refR - refX - c.w) / 2; c.y = refY + (refB - refY - c.h) / 2; break;
+      case 'right': c.x = refR - c.w; break;
+      case 'bottom-left': c.x = refX; c.y = refB - c.h; break;
+      case 'bottom': c.y = refB - c.h; break;
+      case 'bottom-right': c.x = refR - c.w; c.y = refB - c.h; break;
+    }
+  });
+
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+}
+
+function distributeComponents(dist, selected) {
+  if (selected.length < 3) return;
+  if (dist === 'horiz') {
+    selected.sort((a, b) => a.x - b.x);
+    const totalW = selected.reduce((s, c) => s + c.w, 0);
+    const startX = selected[0].x;
+    const endX = selected[selected.length - 1].x + selected[selected.length - 1].w;
+    const gap = (endX - startX - totalW) / (selected.length - 1);
+    let cx = startX;
+    selected.forEach(c => { c.x = Math.round(cx); cx += c.w + gap; });
+  } else {
+    selected.sort((a, b) => a.y - b.y);
+    const totalH = selected.reduce((s, c) => s + c.h, 0);
+    const startY = selected[0].y;
+    const endY = selected[selected.length - 1].y + selected[selected.length - 1].h;
+    const gap = (endY - startY - totalH) / (selected.length - 1);
+    let cy = startY;
+    selected.forEach(c => { c.y = Math.round(cy); cy += c.h + gap; });
+  }
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+}
+
+function equalizeSize(size, selected) {
+  if (size === 'equal-w') {
+    const maxW = Math.max(...selected.map(c => c.w));
+    selected.forEach(c => c.w = maxW);
+  } else {
+    const maxH = Math.max(...selected.map(c => c.h));
+    selected.forEach(c => c.h = maxH);
+  }
+  pushHistory();
+  renderCanvas();
+  updatePanel();
+}
+
+// ===== Canvas Resize =====
+function resizeCanvas(newW, newH) {
+  state.canvasWidth = Math.max(320, newW);
+  state.canvasHeight = Math.max(200, newH);
+  const viewport = document.getElementById('canvasViewport');
+  viewport.style.width = (state.canvasWidth * state.zoom) + 'px';
+  viewport.style.height = (state.canvasHeight * state.zoom) + 'px';
+  renderCanvas();
+}
+
+// ===== Mouse/Touch Event Handlers =====
+function onComponentMouseDown(e, comp) {
+  if (e.button !== 0) return;
+
+  // Check if clicking resize handle
+  const handle = e.target.closest('.resize-handle');
+  if (handle) {
+    e.preventDefault();
+    e.stopPropagation();
+    state.dragType = 'resize';
+    state.draggedComponent = comp;
+    state.resizeDir = handle.dataset.dir;
+    state.dragStart = { x: e.clientX, y: e.clientY, compX: comp.x, compY: comp.y, compW: comp.w, compH: comp.h };
+    return;
+  }
+
+  // Check if clicking hover action button
+  if (e.target.closest('.comp-action-btn')) {
+    const action = e.target.closest('.comp-action-btn').dataset.action;
+    if (action === 'copy') duplicateComponent(comp.id);
+    if (action === 'delete') deleteComponent(comp.id);
+    return;
+  }
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Selection
+  if (state.isShiftDown) {
+    selectComponent(comp.id, true);
+  } else if (!state.selectedComponentIds.includes(comp.id)) {
+    selectComponent(comp.id, false);
+  }
+
+  // Drag
+  state.dragType = 'move';
+  state.draggedComponent = comp;
+  state.dragStart = { x: e.clientX, y: e.clientY, compX: comp.x, compY: comp.y };
+}
+
+function onComponentDoubleClick(e, comp) {
+  if (comp.type === 'business-block') {
+    e.preventDefault();
+    e.stopPropagation();
+    showToast('双击具体文字即可编辑；拖拽文字可自由调整排版');
+    return;
+  }
+  if (comp.type === 'text' || comp.type === 'indicator-card') {
+    // Start inline editing
+    const el = document.getElementById(comp.id);
+    if (!el) return;
+    const inner = el.querySelector('div > div'); // target text content
+    if (inner && (comp.type === 'text')) {
+      inner.contentEditable = 'true';
+      inner.focus();
+      // Select all text
+      const range = document.createRange();
+      range.selectNodeContents(inner);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const saveEdit = () => {
+        inner.contentEditable = 'false';
+        comp.data.content = inner.textContent;
+        pushHistory();
+        renderCanvas();
+        updatePanel();
+        inner.removeEventListener('blur', saveEdit);
+        document.removeEventListener('keydown', escCancel);
+      };
+      const escCancel = (ev) => {
+        if (ev.key === 'Escape') {
+          inner.contentEditable = 'false';
+          renderCanvas();
+          inner.removeEventListener('blur', saveEdit);
+          document.removeEventListener('keydown', escCancel);
+        }
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          saveEdit();
+        }
+      };
+      inner.addEventListener('blur', saveEdit);
+      document.addEventListener('keydown', escCancel);
+    }
+  }
+  if (comp.type === 'bar-chart' || comp.type === 'table') {
+    showToast('已绑定数据源，手动编辑将断开数据绑定');
+  }
+}
+
+function onComponentContextMenu(e, comp) {
+  e.preventDefault();
+  showContextMenu(e.clientX, e.clientY, comp);
+}
+
+// ===== Canvas Mouse Events =====
+function setupEventListeners() {
+  const canvasArea = document.getElementById('canvasArea');
+
+  // Canvas click (deselect)
+  canvasArea.addEventListener('mousedown', function(e) {
+    if (e.target === canvasArea || e.target.id === 'canvasViewport') {
+      if (!state.isShiftDown) {
+        clearSelection();
+      }
+      // Start marquee selection
+      const viewport = document.getElementById('canvasViewport');
+      const rect = viewport.getBoundingClientRect();
+      state.marqueeSelect = {
+        startX: e.clientX,
+        startY: e.clientY,
+        viewportX: rect.left,
+        viewportY: rect.top,
+      };
+    }
+  });
+
+  // Canvas resize handle
+  const resizer = document.getElementById('canvasResizer');
+  resizer.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    state.dragType = 'canvas-resize';
+    state.dragStart = { x: e.clientX, y: e.clientY, w: state.canvasWidth, h: state.canvasHeight };
+  });
+
+  // Global mouse move
+  document.addEventListener('mousemove', function(e) {
+    if (state.draggedBusinessContent) {
+      const drag = state.draggedBusinessContent;
+      const dx = Math.round((e.clientX - drag.startX) / state.zoom);
+      const dy = Math.round((e.clientY - drag.startY) / state.zoom);
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) drag.moved = true;
+      const next = { x: drag.originX + dx, y: drag.originY + dy };
+      drag.comp.data.contentPositions = drag.comp.data.contentPositions || {};
+      drag.comp.data.contentPositions[drag.contentKey] = next;
+      drag.node.style.left = `${next.x}px`;
+      drag.node.style.top = `${next.y}px`;
+      return;
+    }
+    if (state.dragType === 'move' && state.draggedComponent) {
+      const dx = (e.clientX - state.dragStart.x) / state.zoom;
+      const dy = (e.clientY - state.dragStart.y) / state.zoom;
+      state.draggedComponent.x = Math.round(state.dragStart.compX + dx);
+      state.draggedComponent.y = Math.round(state.dragStart.compY + dy);
+      // Snap to grid
+      state.draggedComponent.x = Math.round(state.draggedComponent.x / 10) * 10;
+      state.draggedComponent.y = Math.round(state.draggedComponent.y / 10) * 10;
+      renderCanvas();
+    }
+
+    if (state.dragType === 'resize' && state.draggedComponent) {
+      const dx = (e.clientX - state.dragStart.x) / state.zoom;
+      const dy = (e.clientY - state.dragStart.y) / state.zoom;
+      const c = state.draggedComponent;
+      const dir = state.resizeDir;
+
+      if (dir.includes('e')) { c.w = Math.max(40, state.dragStart.compW + dx); }
+      if (dir.includes('w')) { c.w = Math.max(40, state.dragStart.compW - dx); c.x = state.dragStart.compX + state.dragStart.compW - c.w; }
+      if (dir.includes('s')) { c.h = Math.max(20, state.dragStart.compH + dy); }
+      if (dir.includes('n')) { c.h = Math.max(20, state.dragStart.compH - dy); c.y = state.dragStart.compY + state.dragStart.compH - c.h; }
+
+      c.w = Math.round(c.w);
+      c.h = Math.round(c.h);
+      c.x = Math.round(c.x);
+      c.y = Math.round(c.y);
+      renderCanvas();
+    }
+
+    if (state.dragType === 'canvas-resize') {
+      const dx = e.clientX - state.dragStart.x;
+      const dy = e.clientY - state.dragStart.y;
+      const newW = Math.max(320, state.dragStart.w + dx / state.zoom);
+      const newH = Math.max(200, state.dragStart.h + dy / state.zoom);
+      const ratio = state.dragStart.w / state.dragStart.h;
+      resizeCanvas(e.shiftKey ? Math.round(newH * ratio) : Math.round(newW), Math.round(newH));
+    }
+
+    // Marquee selection
+    if (state.marqueeSelect) {
+      const marquee = document.getElementById('selectionMarquee');
+      const minX = Math.min(state.marqueeSelect.startX, e.clientX);
+      const minY = Math.min(state.marqueeSelect.startY, e.clientY);
+      const w = Math.abs(e.clientX - state.marqueeSelect.startX);
+      const h = Math.abs(e.clientY - state.marqueeSelect.startY);
+
+      if (w > 5 || h > 5) {
+        marquee.style.display = 'block';
+        marquee.style.left = minX + 'px';
+        marquee.style.top = minY + 'px';
+        marquee.style.width = w + 'px';
+        marquee.style.height = h + 'px';
+      }
+    }
+
+    // Canvas panning
+    if (state.isPanning) {
+      const viewport = document.getElementById('canvasViewport');
+      const dx = e.clientX - state.panStart.x;
+      const dy = e.clientY - state.panStart.y;
+      viewport.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+  });
+
+  // Global mouse up
+  document.addEventListener('mouseup', function(e) {
+    if (state.draggedBusinessContent) {
+      const drag = state.draggedBusinessContent;
+      state.draggedBusinessContent = null;
+      if (drag.moved) {
+        pushHistory();
+        updatePanel();
+        showToast('内容位置已更新');
+      }
+      return;
+    }
+    // End marquee selection
+    if (state.marqueeSelect) {
+      const marquee = document.getElementById('selectionMarquee');
+      marquee.style.display = 'none';
+      const w = Math.abs(e.clientX - state.marqueeSelect.startX);
+      const h = Math.abs(e.clientY - state.marqueeSelect.startY);
+
+      if (w > 10 || h > 10) {
+        const minX = Math.min(state.marqueeSelect.startX, e.clientX);
+        const minY = Math.min(state.marqueeSelect.startY, e.clientY);
+
+        // Convert screen coords to canvas coords
+        const viewport = document.getElementById('canvasViewport');
+        const vpRect = viewport.getBoundingClientRect();
+        const canvasMinX = (minX - vpRect.left) / state.zoom;
+        const canvasMinY = (minY - vpRect.top) / state.zoom;
+        const canvasMaxX = canvasMinX + w / state.zoom;
+        const canvasMaxY = canvasMinY + h / state.zoom;
+
+        const page = getCurrentPage();
+        const selected = page.components.filter(c => {
+          return c.x >= canvasMinX && c.y >= canvasMinY &&
+                 c.x + c.w <= canvasMaxX && c.y + c.h <= canvasMaxY;
+        });
+
+        if (state.isShiftDown) {
+          selected.forEach(c => {
+            if (!state.selectedComponentIds.includes(c.id)) {
+              state.selectedComponentIds.push(c.id);
+            }
+          });
+        } else {
+          state.selectedComponentIds = selected.map(c => c.id);
+        }
+        renderCanvas();
+        updatePanel();
+      }
+
+      state.marqueeSelect = null;
+    }
+
+    if (state.dragType && state.draggedComponent) {
+      pushHistory();
+    }
+    if (state.dragType === 'canvas-resize') {
+      pushHistory();
+    }
+    state.dragType = null;
+    state.draggedComponent = null;
+    state.resizeDir = null;
+
+    // End panning
+    if (state.isPanning) {
+      state.isPanning = false;
+      document.body.style.cursor = '';
+    }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    // Shift tracking
+    if (e.key === 'Shift') state.isShiftDown = true;
+
+    // Ctrl+Z undo
+    if (e.ctrlKey && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+    // Ctrl+Shift+Z redo
+    if (e.ctrlKey && e.key === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
+    // Ctrl+D duplicate
+    if (e.ctrlKey && e.key === 'd' && state.selectedComponentIds.length === 1) {
+      e.preventDefault();
+      duplicateComponent(state.selectedComponentIds[0]);
+      return;
+    }
+    // Ctrl+C copy
+    if (e.ctrlKey && e.key === 'c' && state.selectedComponentIds.length > 0) {
+      const page = getCurrentPage();
+      state.clipboard = state.selectedComponentIds.map(id => {
+        const orig = page.components.find(c => c.id === id);
+        return orig ? JSON.parse(JSON.stringify(orig)) : null;
+      }).filter(Boolean);
+      showToast('已复制 ' + state.clipboard.length + ' 个组件');
+    }
+    // Ctrl+V paste
+    if (e.ctrlKey && e.key === 'v' && state.clipboard) {
+      e.preventDefault();
+      const page = getCurrentPage();
+      const newIds = [];
+      state.clipboard.forEach(c => {
+        const nc = JSON.parse(JSON.stringify(c));
+        nc.id = 'comp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+        nc.x += 20; nc.y += 20;
+        page.components.push(nc);
+        newIds.push(nc.id);
+      });
+      state.selectedComponentIds = newIds;
+      pushHistory();
+      renderCanvas();
+      updatePanel();
+      showToast('已粘贴 ' + newIds.length + ' 个组件');
+    }
+    // Delete — skip if focus is in any text-editing element
+    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedComponentIds.length > 0) {
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.contentEditable === 'true')) return;
+      e.preventDefault();
+      deleteSelectedComponents();
+    }
+    // Escape
+    if (e.key === 'Escape') {
+      clearSelection();
+      document.getElementById('templateOverlay').classList.add('hidden');
+      document.getElementById('contextMenu').classList.remove('visible');
+      document.getElementById('dsDropdown').classList.remove('visible');
+    }
+    // Arrow keys nudge — skip if focus is in any text-editing element
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && state.selectedComponentIds.length > 0) {
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.contentEditable === 'true')) return;
+      e.preventDefault();
+      const delta = e.shiftKey ? 10 : 1;
+      const selected = getSelectedComponents();
+      selected.forEach(c => {
+        if (e.key === 'ArrowUp') c.y -= delta;
+        if (e.key === 'ArrowDown') c.y += delta;
+        if (e.key === 'ArrowLeft') c.x -= delta;
+        if (e.key === 'ArrowRight') c.x += delta;
+      });
+      pushHistory();
+      renderCanvas();
+    }
+    // Space + drag pan
+    if (e.key === ' ' && !state.isPanning) {
+      e.preventDefault();
+      state.isPanning = true;
+      state.panStart = { x: e.clientX, y: e.clientY };
+      document.body.style.cursor = 'grab';
+    }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    if (e.key === 'Shift') state.isShiftDown = false;
+    if (e.key === ' ') {
+      state.isPanning = false;
+      document.body.style.cursor = '';
+    }
+  });
+
+  // Canvas zoom with Ctrl+scroll
+  const canvasViewport = document.getElementById('canvasViewport');
+  canvasViewport.addEventListener('wheel', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const rect = canvasViewport.getBoundingClientRect();
+      zoomCanvas(e.deltaY, e.clientX - rect.left, e.clientY - rect.top);
+    }
+  }, { passive: false });
+
+  // Window resize → refit canvas
+  window.addEventListener('resize', () => {
+    fitCanvasToViewport();
+  });
+
+  // ===== UI Button Events =====
+
+  // Logo click
+  document.getElementById('logoBtn').addEventListener('click', () => {
+    showToast('返回项目列表（功能开发中）');
+  });
+
+  // Project name edit
+  const projectName = document.getElementById('projectName');
+  projectName.addEventListener('blur', function() {
+    if (!this.textContent.trim()) this.textContent = '未命名项目';
+    showToast('项目名称已保存');
+  });
+  projectName.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+  });
+
+  // Undo/Redo
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('redoBtn').addEventListener('click', redo);
+
+  // Preview
+  document.getElementById('previewBtn').addEventListener('click', () => {
+    document.getElementById('previewMode').classList.add('active');
+    updatePreviewPageInfo();
+  });
+  document.getElementById('previewClose').addEventListener('click', () => {
+    document.getElementById('previewMode').classList.remove('active');
+  });
+  document.getElementById('previewPrev').addEventListener('click', previewPrevPage);
+  document.getElementById('previewNext').addEventListener('click', previewNextPage);
+
+  // Preview keyboard navigation
+  document.addEventListener('keydown', function(e) {
+    const preview = document.getElementById('previewMode');
+    if (!preview.classList.contains('active')) return;
+    if (e.key === 'Escape') { preview.classList.remove('active'); return; }
+    if (e.key === 'ArrowLeft') { previewPrevPage(); return; }
+    if (e.key === 'ArrowRight') { previewNextPage(); return; }
+  });
+
+  // Export
+  document.getElementById('exportBtn').addEventListener('click', function(e) {
+    // Simple export dropdown
+    const x = this.getBoundingClientRect().left;
+    const y = this.getBoundingClientRect().bottom + 4;
+    const menu = document.createElement('div');
+    menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:#FFF;border:1px solid #E5E7EB;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);padding:4px;z-index:3000;min-width:140px;`;
+    menu.innerHTML = `
+      <button style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;border:none;background:transparent;cursor:pointer;border-radius:6px;font-size:12px;font-family:Inter;color:#1A1A1A;" data-export="pptx">
+        📄 导出 PPTX
+      </button>
+      <button style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;border:none;background:transparent;cursor:pointer;border-radius:6px;font-size:12px;font-family:Inter;color:#1A1A1A;" data-export="pdf">
+        📑 导出 PDF
+      </button>
+    `;
+    document.body.appendChild(menu);
+
+    const closeMenu = () => { menu.remove(); document.removeEventListener('click', closeMenu); };
+    setTimeout(() => document.addEventListener('click', closeMenu), 10);
+
+    menu.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        showToast(`导出 ${btn.dataset.export.toUpperCase()}（功能开发中）`);
+        closeMenu();
+      });
+      btn.addEventListener('mouseenter', () => { btn.style.background = '#F9FAFB'; });
+      btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
+    });
+  });
+
+  // Data source dropdown
+  const dsBtn = document.getElementById('dsDropdownBtn');
+  const dsDropdown = document.getElementById('dsDropdown');
+  dsBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    dsDropdown.classList.toggle('visible');
+  });
+  document.addEventListener('click', function(e) {
+    if (!dsBtn.contains(e.target) && !dsDropdown.contains(e.target)) {
+      dsDropdown.classList.remove('visible');
+    }
+    // Close any open CPS dropdowns and custom select dropdowns
+    document.querySelectorAll('.cps-dropdown.open').forEach(dd => {
+      const parent = dd.parentElement;
+      if (parent && !parent.contains(e.target)) {
+        dd.classList.remove('open');
+      }
+    });
+    document.querySelectorAll('.custom-select-dropdown.open').forEach(dd => {
+      const parent = dd.parentElement;
+      if (parent && !parent.contains(e.target)) {
+        dd.classList.remove('open');
+        parent.querySelector('.custom-select-trigger')?.classList.remove('open');
+      }
+    });
+  });
+  dsDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', function() {
+      if (this.classList.contains('admin-only')) {
+        showToast('仅管理员可管理数据源');
+      } else {
+        // Toggle check
+        const check = this.querySelector('.check');
+        if (check) check.textContent = check.textContent === '✓' ? '' : '✓';
+      }
+    });
+  });
+
+  // New page button
+  document.getElementById('newPageBtn').addEventListener('click', openTemplateOverlay);
+
+  // Template overlay
+  document.getElementById('overlayClose').addEventListener('click', closeTemplateOverlay);
+  document.getElementById('overlaySkip').addEventListener('click', function() {
+    closeTemplateOverlay();
+    createBlankPage();
+  });
+  document.getElementById('templateOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeTemplateOverlay();
+  });
+
+  // Background button
+  document.getElementById('bgBtn').addEventListener('click', function() {
+    document.getElementById('bgFileInput').click();
+  });
+  document.getElementById('bgFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      setCanvasBackground(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+    this.value = '';
+  });
+
+  // Business component library: a semantic layer above text, image and chart primitives.
+  const businessBtn = document.getElementById('businessLibraryBtn');
+  const businessMenu = document.getElementById('businessMenu');
+  businessBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const open = businessMenu.classList.toggle('open');
+    businessBtn.classList.toggle('open', open);
+  });
+  businessMenu.addEventListener('click', function(e) {
+    const item = e.target.closest('[data-business-comp]');
+    if (!item) return;
+    addBusinessComponent(item.dataset.businessComp);
+    businessMenu.classList.remove('open');
+    businessBtn.classList.remove('open');
+  });
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.business-library')) {
+      businessMenu.classList.remove('open');
+      businessBtn.classList.remove('open');
+    }
+  });
+
+  // Component toolbar buttons
+  document.querySelectorAll('.comp-toolbar .btn[data-comp]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      // Toggle active
+      document.querySelectorAll('.comp-toolbar .btn[data-comp]').forEach(b => b.classList.remove('active-tool'));
+      this.classList.add('active-tool');
+      addComponent(this.dataset.comp);
+      setTimeout(() => this.classList.remove('active-tool'), 1000);
+    });
+  });
+
+  // Page list delegation
+  document.getElementById('pageList').addEventListener('click', function(e) {
+    const thumb = e.target.closest('.page-thumb');
+    if (!thumb) return;
+
+    // Page action buttons
+    const actionBtn = e.target.closest('.page-thumb-action');
+    if (actionBtn) {
+      e.stopPropagation();
+      const pageId = actionBtn.dataset.pageId;
+      if (actionBtn.dataset.action === 'delete') {
+        deletePage(pageId);
+      }
+      if (actionBtn.dataset.action === 'copy') {
+        copyPage(pageId);
+      }
+      return;
+    }
+
+    // Switch page
+    const pageId = thumb.dataset.pageId;
+    if (pageId && pageId !== state.currentPageId) {
+      state.currentPageId = pageId;
+      state.selectedComponentIds = [];
+      pushHistory();
+      renderPageList();
+      renderCanvas();
+      updatePanel();
+      fitCanvasToViewport();
+    }
+  });
+
+  // Page name editing
+  document.getElementById('pageList').addEventListener('dblclick', function(e) {
+    const nameEl = e.target.closest('.page-thumb-name');
+    if (nameEl) {
+      nameEl.focus();
+      // Select all text
+      const range = document.createRange();
+      range.selectNodeContents(nameEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  });
+
+  // Page name save on blur
+  document.getElementById('pageList').addEventListener('blur', function(e) {
+    const nameEl = e.target.closest('.page-thumb-name');
+    if (nameEl) {
+      const pageId = nameEl.closest('.page-thumb').dataset.pageId;
+      const page = state.pages.find(p => p.id === pageId);
+      if (page) {
+        page.name = nameEl.textContent.trim() || page.name;
+        pushHistory();
+        renderPageList();
+      }
+    }
+  }, true);
+
+  // Page name Enter to save
+  document.getElementById('pageList').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      const nameEl = e.target.closest('.page-thumb-name');
+      if (nameEl) { e.preventDefault(); nameEl.blur(); }
+    }
+  });
+
+  // Drag and drop page reorder
+  let dragPageId = null;
+  document.getElementById('pageList').addEventListener('dragstart', function(e) {
+    const thumb = e.target.closest('.page-thumb');
+    if (!thumb) return;
+    dragPageId = thumb.dataset.pageId;
+    thumb.style.opacity = '0.5';
+  });
+  document.getElementById('pageList').addEventListener('dragend', function(e) {
+    const thumb = e.target.closest('.page-thumb');
+    if (thumb) thumb.style.opacity = '1';
+    dragPageId = null;
+  });
+  document.getElementById('pageList').addEventListener('dragover', function(e) {
+    e.preventDefault();
+  });
+  document.getElementById('pageList').addEventListener('drop', function(e) {
+    e.preventDefault();
+    const targetThumb = e.target.closest('.page-thumb');
+    if (!targetThumb || !dragPageId || dragPageId === targetThumb.dataset.pageId) return;
+
+    const fromIdx = state.pages.findIndex(p => p.id === dragPageId);
+    const toIdx = state.pages.findIndex(p => p.id === targetThumb.dataset.pageId);
+    if (fromIdx < 0 || toIdx < 0) return;
+
+    const [moved] = state.pages.splice(fromIdx, 1);
+    state.pages.splice(toIdx, 0, moved);
+    pushHistory();
+    renderPageList();
+    showToast('页面顺序已更新');
+  });
+
+  // Context menu - close on click outside
+  document.addEventListener('click', function(e) {
+    const menu = document.getElementById('contextMenu');
+    if (!menu.contains(e.target)) {
+      menu.classList.remove('visible');
+    }
+  });
+
+  // Property panel input bindings
+  document.getElementById('panelInner').addEventListener('change', function(e) {
+    const input = e.target.closest('[data-comp-prop]');
+    if (!input) return;
+    const prop = input.dataset.compProp;
+    const selected = getSelectedComponents();
+    if (selected.length !== 1) return;
+    // Handle JSON fields
+    if (prop === 'barsJson') {
+      try {
+        selected[0].data.bars = JSON.parse(input.value);
+      } catch (err) {
+        showToast('JSON 格式错误，请检查');
+        return;
+      }
+    } else if (prop === 'headersJson') {
+      try {
+        selected[0].data.headers = JSON.parse(input.value);
+      } catch (err) {
+        showToast('JSON 格式错误，请检查');
+        return;
+      }
+    } else if (prop === 'rowsJson') {
+      try {
+        selected[0].data.rows = JSON.parse(input.value);
+      } catch (err) {
+        showToast('JSON 格式错误，请检查');
+        return;
+      }
+    } else {
+      selected[0].data[prop] = input.value;
+    }
+    pushHistory();
+    renderCanvas();
+  });
+}
+
+// ===== Background =====
+function setCanvasBackground(imageSrc) {
+  const page = getCurrentPage();
+  if (!page) return;
+  // Remove existing background
+  page.components = page.components.filter(c => c.type !== 'canvas-bg');
+  // Create new background at layer 0
+  const bgComp = {
+    id: 'comp-bg-' + Date.now(),
+    type: 'canvas-bg',
+    x: 0, y: 0,
+    w: state.canvasWidth,
+    h: state.canvasHeight,
+    data: { src: imageSrc, locked: true },
+  };
+  page.components.unshift(bgComp);
+  pushHistory();
+  renderCanvas();
+  showToast('背景已更新');
+}
+
+// ===== Page Operations =====
+let _deletingPage = false;
+function deletePage(pageId) {
+  if (_deletingPage) return;
+  if (state.pages.length <= 1) {
+    showToast('至少保留一个页面');
+    return;
+  }
+  _deletingPage = true;
+  const idx = state.pages.findIndex(p => p.id === pageId);
+  if (idx < 0) { _deletingPage = false; return; }
+  state.pages.splice(idx, 1);
+  if (state.currentPageId === pageId) {
+    state.currentPageId = state.pages[0].id;
+  }
+  state.selectedComponentIds = [];
+  pushHistory();
+  renderPageList();
+  renderCanvas();
+  fitCanvasToViewport();
+  updatePanel();
+  showToast('已删除页面');
+  setTimeout(function() { _deletingPage = false; }, 300);
+}
+
+function copyPage(pageId) {
+  const orig = state.pages.find(p => p.id === pageId);
+  if (!orig) return;
+  const newPage = {
+    id: 'p-' + Date.now(),
+    name: orig.name + ' (副本)',
+    components: JSON.parse(JSON.stringify(orig.components)),
+  };
+  newPage.components.forEach(c => c.id = 'comp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5));
+  state.pages.push(newPage);
+  pushHistory();
+  renderPageList();
+  showToast('已复制页面');
+}
+
+// ===== Template Overlay =====
+function openTemplateOverlay() {
+  renderTemplateGrid();
+  document.getElementById('templateOverlay').classList.remove('hidden');
+}
+
+function closeTemplateOverlay() {
+  document.getElementById('templateOverlay').classList.add('hidden');
+}
+
+let _creatingPage = false;
+function createBlankPage() {
+  if (_creatingPage) return;
+  _creatingPage = true;
+  const newPage = {
+    id: 'p-' + Date.now(),
+    name: '新页面',
+    components: [],
+  };
+  state.pages.push(newPage);
+  state.currentPageId = newPage.id;
+  state.selectedComponentIds = [];
+  pushHistory();
+  renderPageList();
+  renderCanvas();
+  fitCanvasToViewport();
+  updatePanel();
+  showToast('已创建空白页面');
+  setTimeout(function() { _creatingPage = false; }, 300);
+}
+
+function renderTemplateGrid() {
+  const grid = document.getElementById('templateGrid');
+  let html = '';
+  for (let i = 0; i < TEMPLATES.length; i += 3) {
+    html += '<div class="template-row">';
+    for (let j = i; j < i + 3 && j < TEMPLATES.length; j++) {
+      const t = TEMPLATES[j];
+      html += `
+        <div class="template-card${t.available ? ' active-template' : ' locked'}" data-template-idx="${j}">
+          <div class="template-card-icon">${t.icon}</div>
+          ${t.name ? `<div class="template-card-name">${t.name}</div>` : `<div class="template-card-name">${t.name1}</div><div class="template-card-subname">${t.name2}</div>`}
+          <div class="template-badge ${t.available ? 'available' : 'locked'}">
+            ${t.available ? '<span class="badge-icon">✓</span> 可用' : '<span class="badge-icon">🔒</span> 即将上线'}
+          </div>
+        </div>`;
+    }
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+
+  // Card click
+  grid.querySelectorAll('.template-card').forEach(card => {
+    card.addEventListener('click', function() {
+      const idx = parseInt(this.dataset.templateIdx);
+      const t = TEMPLATES[idx];
+      if (!t.available) {
+        showToast('该模板即将上线，敬请期待');
+        return;
+      }
+      // Apply template
+      const newPage = {
+        id: 'p-' + Date.now(),
+        name: t.name || (t.name1 + t.name2),
+        components: JSON.parse(JSON.stringify(TEMPLATE_COMPONENTS)),
+      };
+      newPage.components.forEach(c => c.id = 'comp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5));
+      state.pages.push(newPage);
+      state.currentPageId = newPage.id;
+      state.selectedComponentIds = [];
+      pushHistory();
+      renderPageList();
+      renderCanvas();
+      fitCanvasToViewport();
+      updatePanel();
+      closeTemplateOverlay();
+      document.getElementById('templateOverlay').classList.add('hidden');
+      showToast('已应用模板：' + (t.name || (t.name1 + t.name2)));
+    });
+  });
+}
+
+// ===== Context Menu =====
+function showContextMenu(x, y, comp) {
+  const menu = document.getElementById('contextMenu');
+  const isLocked = comp.data && comp.data.locked;
+
+  menu.innerHTML = `
+    <button class="context-menu-item" data-action="copy">📋 复制</button>
+    <button class="context-menu-item" data-action="cut">✂️ 剪切</button>
+    <button class="context-menu-item danger" data-action="delete">🗑 删除</button>
+    <div class="context-menu-separator"></div>
+    <button class="context-menu-item" data-action="layer-up">⬆ 上移一层</button>
+    <button class="context-menu-item" data-action="layer-down">⬇ 下移一层</button>
+    <button class="context-menu-item" data-action="layer-top">⬆⬆ 置顶</button>
+    <button class="context-menu-item" data-action="layer-bottom">⬇⬇ 置底</button>
+    <div class="context-menu-separator"></div>
+    <button class="context-menu-item" data-action="lock">${isLocked ? '🔓 解锁位置' : '🔒 锁定位置'}</button>
+  `;
+
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.classList.add('visible');
+
+  // Menu item actions
+  menu.querySelectorAll('.context-menu-item').forEach(item => {
+    item.addEventListener('click', function() {
+      const action = this.dataset.action;
+      handleContextAction(action, comp);
+      menu.classList.remove('visible');
+    });
+  });
+}
+
+function handleContextAction(action, comp) {
+  const page = getCurrentPage();
+  switch (action) {
+    case 'copy':
+      duplicateComponent(comp.id);
+      break;
+    case 'cut':
+      state.clipboard = [JSON.parse(JSON.stringify(comp))];
+      deleteComponent(comp.id);
+      showToast('已剪切组件');
+      break;
+    case 'delete':
+      deleteComponent(comp.id);
+      break;
+    case 'layer-up': {
+      const idx = page.components.indexOf(comp);
+      if (idx < page.components.length - 1) {
+        page.components.splice(idx, 1);
+        page.components.splice(idx + 1, 0, comp);
+        pushHistory();
+        renderCanvas();
+      }
+      break;
+    }
+    case 'layer-down': {
+      const idx = page.components.indexOf(comp);
+      if (idx > 0) {
+        page.components.splice(idx, 1);
+        page.components.splice(idx - 1, 0, comp);
+        pushHistory();
+        renderCanvas();
+      }
+      break;
+    }
+    case 'layer-top':
+      page.components = page.components.filter(c => c.id !== comp.id).concat(comp);
+      pushHistory();
+      renderCanvas();
+      break;
+    case 'layer-bottom':
+      page.components = [comp].concat(page.components.filter(c => c.id !== comp.id));
+      pushHistory();
+      renderCanvas();
+      break;
+    case 'lock':
+      comp.data.locked = !comp.data.locked;
+      if (comp.data.locked) {
+        state.selectedComponentIds = state.selectedComponentIds.filter(id => id !== comp.id);
+        updatePanel();
+      }
+      pushHistory();
+      renderCanvas();
+      showToast(comp.data.locked ? '已锁定组件位置' : '已解锁组件位置');
+      break;
+  }
+}
+
+// ===== Data Source Selects (Metric, Creator, Creator Data) =====
+const DS_METRICS = ['总GMV', '总点击量', 'CPA', '转化率', '新客率'];
+const CREATORS = [
+  { id: '2212', name: '小何静子' },
+  { id: '3344', name: '鱼鱼' },
+  { id: '345577', name: '豆豆' },
+];
+const CREATOR_DATA_OPTIONS = ['粉丝量', '作品'];
+
+function initCustomSelect(container, selectId, options, opts) {
+  const { isObject, showId, onSelect, selectedValue } = opts || {};
+  const trigger = container.querySelector('#' + selectId + 'Trigger');
+  const dropdown = container.querySelector('#' + selectId + 'Dropdown');
+  const searchInput = container.querySelector('#' + selectId + 'Search');
+  const optionsContainer = container.querySelector('#' + selectId + 'Options');
+  if (!trigger || !dropdown) return;
+
+  function getLabel(opt) {
+    if (isObject) return showId ? (opt.id + '/' + opt.name) : opt.name;
+    return opt;
+  }
+
+  function filterOptions(q) {
+    const query = (q || '').toLowerCase().trim();
+    if (!query) return options;
+    return options.filter(opt => {
+      const label = getLabel(opt).toLowerCase();
+      if (isObject) return label.includes(query) || String(opt.id).includes(query);
+      return label.includes(query);
+    });
+  }
+
+  function renderOptions(filter) {
+    const filtered = filterOptions(filter);
+    if (filtered.length === 0) {
+      optionsContainer.innerHTML = '<div class="custom-select-no-results">无匹配结果</div>';
+    } else {
+      optionsContainer.innerHTML = filtered.map(opt => {
+        const label = getLabel(opt);
+        const optId = isObject ? opt.id : null;
+        const isSel = isObject ? (selectedValue && selectedValue().id === optId) : (selectedValue && selectedValue() === opt);
+        return `
+          <div class="custom-select-option${isSel ? ' selected' : ''}" data-value="${isObject ? optId : opt}">
+            ${isObject && showId ? `<span class="option-id">${opt.id}</span>` : ''}
+            <span>${label}</span>
+          </div>`;
+      }).join('');
+    }
+
+    optionsContainer.querySelectorAll('.custom-select-option').forEach(opt => {
+      opt.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const val = this.dataset.value;
+        let selected;
+        if (isObject) {
+          selected = options.find(o => String(o.id) === String(val));
+        } else {
+          selected = val;
+        }
+        if (onSelect) onSelect(selected);
+        dropdown.classList.remove('open');
+        trigger.classList.remove('open');
+      });
+    });
+  }
+
+  // Toggle
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.contains('open');
+    // Close all other custom selects
+    container.querySelectorAll('.custom-select-dropdown.open').forEach(d => d.classList.remove('open'));
+    container.querySelectorAll('.custom-select-trigger.open').forEach(t => t.classList.remove('open'));
+    if (!isOpen) {
+      dropdown.classList.add('open');
+      trigger.classList.add('open');
+      renderOptions(searchInput ? searchInput.value : '');
+      if (searchInput) searchInput.focus();
+    }
+  });
+
+  // Search
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      renderOptions(this.value);
+    });
+  }
+
+  // Initial render
+  renderOptions('');
+}
+
+function initDataSourceSelects(container, comp) {
+  const d = comp.data || {};
+
+  // 1. Data source metric select
+  initCustomSelect(container, 'dsMetric', DS_METRICS, {
+    isObject: false,
+    selectedValue: function() { return (comp.data && comp.data.dsMetric) || null; },
+    onSelect: function(val) {
+      if (!comp.data) comp.data = {};
+      comp.data.dsMetric = val;
+      updateTriggerLabel(container, 'dsMetric', val);
+      renderCanvas();
+    }
+  });
+
+  // 2. Creator select
+  initCustomSelect(container, 'creator', CREATORS, {
+    isObject: true,
+    showId: true,
+    selectedValue: function() { return (comp.data && comp.data.creator) || null; },
+    onSelect: function(val) {
+      if (!comp.data) comp.data = {};
+      comp.data.creator = val;
+      updateTriggerLabel(container, 'creator', val ? val.id + '/' + val.name : null);
+      // Show/hide creator data section
+      const cds = container.querySelector('#creatorDataSection');
+      if (cds) cds.style.display = val ? 'block' : 'none';
+      if (!val) {
+        comp.data.creatorData = null;
+        updateTriggerLabel(container, 'creatorData', null);
+      }
+      renderCanvas();
+    }
+  });
+
+  // 3. Creator data select
+  initCustomSelect(container, 'creatorData', CREATOR_DATA_OPTIONS, {
+    isObject: false,
+    selectedValue: function() { return (comp.data && comp.data.creatorData) || null; },
+    onSelect: function(val) {
+      if (!comp.data) comp.data = {};
+      comp.data.creatorData = val;
+      updateTriggerLabel(container, 'creatorData', val);
+      renderCanvas();
+    }
+  });
+}
+
+function updateTriggerLabel(container, selectId, value) {
+  const trigger = container.querySelector('#' + selectId + 'Trigger');
+  if (!trigger) return;
+  const span = trigger.querySelector('span:not(.arrow)');
+  if (!span) return;
+  if (value) {
+    span.textContent = value;
+    span.classList.remove('custom-select-placeholder');
+  } else {
+    const placeholders = {
+      dsMetric: '请选择数据源',
+      creator: '请选择达人',
+      creatorData: '请选择达人数据',
+    };
+    span.textContent = placeholders[selectId] || '请选择';
+    span.classList.add('custom-select-placeholder');
+  }
+}
+
+// ===== CPS Multi-Select =====
+const CPS_PLANS = [
+  { id: '123', name: 'ERLY计划' },
+  { id: '345', name: 'nick计划' },
+  { id: '4422', name: 'HBM计划' },
+];
+
+function initCpsSelect(container, comp) {
+  const trigger = container.querySelector('#cpsTrigger');
+  const dropdown = container.querySelector('#cpsDropdown');
+  const searchInput = container.querySelector('#cpsSearchInput');
+  const optionsContainer = container.querySelector('#cpsOptions');
+
+  function getSelectedCps() {
+    return (comp.data && comp.data.cpsPlans) ? comp.data.cpsPlans : [];
+  }
+
+  function setSelectedCps(plans) {
+    if (!comp.data) comp.data = {};
+    comp.data.cpsPlans = plans;
+  }
+
+  function renderCpsTrigger() {
+    const selected = getSelectedCps();
+    if (selected.length === 0) {
+      trigger.innerHTML = '<span class="cps-placeholder">请选择 CPS 计划</span>';
+    } else {
+      trigger.innerHTML = selected.map(cp =>
+        `<span class="cps-tag" data-cps-id="${cp.id}">${cp.id}/${cp.name}<span class="cps-tag-remove" data-cps-id="${cp.id}">×</span></span>`
+      ).join('');
+    }
+    // Re-attach remove listeners
+    trigger.querySelectorAll('.cps-tag-remove').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const cpsId = this.dataset.cpsId;
+        const plans = getSelectedCps().filter(c => c.id !== cpsId);
+        setSelectedCps(plans);
+        renderCpsTrigger();
+        renderCpsOptions();
+        renderCanvas();
+      });
+    });
+  }
+
+  function renderCpsOptions(filter) {
+    const selected = getSelectedCps();
+    const selectedIds = selected.map(s => s.id);
+    const q = (filter || '').toLowerCase().trim();
+
+    let filtered = CPS_PLANS;
+    if (q) {
+      filtered = CPS_PLANS.filter(cp =>
+        cp.id.toLowerCase().includes(q) || cp.name.toLowerCase().includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      optionsContainer.innerHTML = '<div class="cps-no-results">无匹配结果</div>';
+    } else {
+      optionsContainer.innerHTML = filtered.map(cp => `
+        <div class="cps-option${selectedIds.includes(cp.id) ? ' selected' : ''}" data-cps-id="${cp.id}">
+          <input type="checkbox" ${selectedIds.includes(cp.id) ? 'checked' : ''}>
+          <span class="cps-option-id">${cp.id}</span>
+          <span class="cps-option-name">${cp.name}</span>
+        </div>
+      `).join('');
+    }
+
+    optionsContainer.querySelectorAll('.cps-option').forEach(opt => {
+      opt.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const cpsId = this.dataset.cpsId;
+        const plan = CPS_PLANS.find(c => c.id === cpsId);
+        if (!plan) return;
+        let plans = getSelectedCps();
+        const existingIdx = plans.findIndex(c => c.id === cpsId);
+        if (existingIdx >= 0) {
+          plans = plans.filter(c => c.id !== cpsId);
+        } else {
+          plans = [...plans, plan];
+        }
+        setSelectedCps(plans);
+        renderCpsTrigger();
+        renderCpsOptions(searchInput.value);
+        renderCanvas();
+      });
+    });
+  }
+
+  // Toggle dropdown
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.contains('open');
+    if (isOpen) {
+      dropdown.classList.remove('open');
+    } else {
+      dropdown.classList.add('open');
+      renderCpsOptions(searchInput.value);
+      searchInput.focus();
+    }
+  });
+
+  // Search input
+  searchInput.addEventListener('input', function() {
+    renderCpsOptions(this.value);
+  });
+
+  // Initial render
+  renderCpsTrigger();
+  renderCpsOptions();
+}
+
+// ===== Preview =====
+let previewCurrentPage = 0;
+const PREVIEW_W = 960;
+const PREVIEW_H = 540;
+
+function updatePreviewPageInfo() {
+  previewCurrentPage = state.pages.findIndex(p => p.id === state.currentPageId);
+  if (previewCurrentPage < 0) previewCurrentPage = 0;
+  renderPreviewPage();
+}
+
+function renderPreviewPage() {
+  const info = document.getElementById('previewPageInfo');
+  const canvas = document.getElementById('previewCanvas');
+  const page = state.pages[previewCurrentPage];
+
+  if (!page) {
+    info.textContent = '第 0 页 / 共 0 页';
+    canvas.innerHTML = '';
+    return;
+  }
+
+  info.textContent = `第 ${previewCurrentPage + 1} 页 / 共 ${state.pages.length} 页`;
+
+  const scaleX = PREVIEW_W / state.canvasWidth;
+  const scaleY = PREVIEW_H / state.canvasHeight;
+  const scale = Math.min(scaleX, scaleY);
+
+  let html = '';
+  page.components.forEach(comp => {
+    html += renderPreviewComponent(comp, scale);
+  });
+  canvas.innerHTML = html;
+}
+
+function renderPreviewComponent(comp, scale) {
+  const d = comp.data || {};
+  const x = comp.x * scale;
+  const y = comp.y * scale;
+  const w = comp.w * scale;
+  const h = comp.h * scale;
+
+  let inner = '';
+  switch (comp.type) {
+    case 'text':
+      inner = `<div style="width:100%;height:100%;display:flex;flex-direction:column;${d.bgColor ? 'background:' + d.bgColor + ';border-radius:' + ((d.borderRadius || 6) * scale) + 'px;padding:' + ((d.padding || 0) * scale) + 'px;' : ''}${d.bgColor ? 'border:1px solid #F3F4F6;' : ''}">
+        <div style="font-family:${d.fontFamily || 'Inter'};font-size:${(d.fontSize || 14) * Math.max(scale, 0.6)}px;font-weight:${d.fontWeight || '400'};color:${d.color || '#1A1A1A'};overflow:hidden;word-break:break-word;">${d.content || '文本内容'}</div>
+      </div>`;
+      break;
+    case 'indicator-card':
+      inner = `<div style="width:100%;height:100%;display:flex;flex-direction:column;gap:${2 * scale}px;padding:${12 * scale}px ${14 * scale}px;background:#FFF;border:1px solid #F3F4F6;border-radius:${8 * scale}px;">
+        <div style="font-size:${10 * Math.max(scale, 0.6)}px;color:#888;font-weight:500;">${d.title || '指标'}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:${18 * Math.max(scale, 0.6)}px;font-weight:600;color:#1A1A1A;">${d.value || '---'}</div>
+        ${d.trend ? `<div class="card-trend ${d.trendUp ? 'up' : 'down'}" style="font-size:${10 * Math.max(scale, 0.6)}px;"><span>${d.trendUp ? '↑' : '↓'}</span> ${d.trend}</div>` : ''}
+      </div>`;
+      break;
+    case 'bar-chart':
+      inner = `<div style="width:100%;height:100%;display:flex;flex-direction:column;gap:${8 * scale}px;padding:${14 * scale}px;background:#FFF;border:1px solid #F3F4F6;border-radius:${8 * scale}px;">
+        <div style="font-family:'Funnel Sans',sans-serif;font-size:${13 * Math.max(scale, 0.6)}px;font-weight:600;color:#1A1A1A;">${d.title || '柱状图'}</div>
+        <div style="flex:1;display:flex;align-items:flex-end;gap:${20 * scale}px;padding-top:${4 * scale}px;">
+          ${(d.bars || []).map(b => `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:${4 * scale}px;height:100%;">
+              <div style="width:100%;height:${b.value}%;background:${b.color};border-radius:${4 * scale}px ${4 * scale}px 0 0;opacity:0.9;min-height:${4 * scale}px;"></div>
+              <div style="font-size:${9 * Math.max(scale, 0.6)}px;color:#888;">${b.label}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+      break;
+    case 'table':
+      inner = `<div style="width:100%;height:100%;display:flex;flex-direction:column;background:#FFF;border:1px solid #F3F4F6;border-radius:${8 * scale}px;overflow:hidden;">
+        <div style="display:flex;height:${34 * scale}px;background:#F9FAFB;align-items:center;padding:0 ${14 * scale}px;border-bottom:1px solid #F3F4F6;">
+          ${(d.headers || []).map((hdr, i) => `<div style="flex:1;font-size:${10 * Math.max(scale, 0.6)}px;font-weight:600;color:#666;text-align:${i === 0 ? 'left' : 'right'};">${hdr}</div>`).join('')}
+        </div>
+        ${(d.rows || []).map((row, ri) => `
+          <div style="display:flex;height:${34 * scale}px;align-items:center;padding:0 ${14 * scale}px;${ri < (d.rows || []).length - 1 ? 'border-bottom:1px solid #F3F4F6;' : ''}">
+            ${row.map((cell, ci) => `<div style="flex:1;font-size:${11 * Math.max(scale, 0.6)}px;font-family:${ci === 0 ? 'Inter' : 'IBM Plex Mono'},monospace;font-weight:${ci === 0 ? '500' : '400'};color:#1A1A1A;text-align:${ci === 0 ? 'left' : 'right'};">${cell}</div>`).join('')}
+          </div>
+        `).join('')}
+      </div>`;
+      break;
+    case 'line-chart':
+      inner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#FFF;border:1px solid #F3F4F6;border-radius:${8 * scale}px;color:#888;font-size:${12 * Math.max(scale, 0.6)}px;">📈 折线图组件</div>`;
+      break;
+    case 'pie-chart':
+      inner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#FFF;border:1px solid #F3F4F6;border-radius:${8 * scale}px;color:#888;font-size:${12 * Math.max(scale, 0.6)}px;">🥧 饼图组件</div>`;
+      break;
+    case 'image':
+      inner = d.src
+        ? `<img src="${d.src}" style="width:100%;height:100%;object-fit:cover;" alt="">`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F9FAFB;border:1px dashed #E5E7EB;border-radius:${8 * scale}px;color:#888;font-size:${12 * Math.max(scale, 0.6)}px;">🖼 图片</div>`;
+      break;
+    case 'business-block':
+      inner = renderBusinessBlock(d, scale);
+      break;
+    case 'canvas-bg':
+      inner = d.src ? `<img src="${d.src}" style="width:100%;height:100%;object-fit:cover;" draggable="false" alt="">` : '';
+      break;
+    default:
+      inner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F9FAFB;border:1px dashed #E5E7EB;border-radius:${8 * scale}px;color:#888;font-size:${12 * Math.max(scale, 0.6)}px;">${comp.type}</div>`;
+  }
+
+  return `<div class="preview-component" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;">${inner}</div>`;
+}
+
+function previewPrevPage() {
+  if (previewCurrentPage > 0) {
+    previewCurrentPage--;
+    renderPreviewPage();
+  }
+}
+
+function previewNextPage() {
+  if (previewCurrentPage < state.pages.length - 1) {
+    previewCurrentPage++;
+    renderPreviewPage();
+  }
+}
+
+// ===== Toast =====
+let toastTimer;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// ===== Init =====
+init();
+</script>
+</body>
+</html>
