@@ -40,6 +40,25 @@ export interface UpdateProjectRequest {
 export interface ProjectSummary {
   id: string
   name: string
+  canvasWidth: number
+  canvasHeight: number
   userId: string
+  updatedAt: string
+}
+
+export interface ProjectPage {
+  id: string
+  name: string
+  components: unknown[]
+}
+
+export interface ProjectDetail {
+  id: string
+  userId: string
+  name: string
+  canvasWidth: number
+  canvasHeight: number
+  pages: ProjectPage[]
+  createdAt: string
   updatedAt: string
 }
