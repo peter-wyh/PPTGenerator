@@ -22,7 +22,7 @@ export async function login(username: string, password = 'pw12345') {
   const res = await api().post('/api/v1/auth/login').send({ username, password })
   return {
     status: res.status,
-    body: res.body as { accessToken?: string },
+    body: res.body as { accessToken?: string; error?: { code: string } },
     cookie: res.headers['set-cookie'],
   }
 }

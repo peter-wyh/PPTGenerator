@@ -17,7 +17,7 @@ describe('auth', () => {
     await createUser({ username: 'alice' })
     const res = await login('alice', 'wrong')
     expect(res.status).toBe(401)
-    expect(res.body.error.code).toBe('INVALID_CREDENTIALS')
+    expect(res.body.error!.code).toBe('INVALID_CREDENTIALS')
   })
 
   it('login fails for unknown user (401)', async () => {

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../prisma'
 import { ApiError } from '../../utils/ApiError'
 import type { Role } from '@ppt-generator/shared'
@@ -56,7 +57,10 @@ export async function create(user: RequestUser, name: string) {
 
 export async function update(id: string, user: RequestUser, data: UpdateInput) {
   await getOwnedProject(id, user)
-  return prisma.project.update({ where: { id }, data })
+  const { pages, ...rest } = data
+  const updateData: Prisma.ProjectUpdateInput = { ...rest }
+  if (pages !== undefined) updateData.pages = pages as Prisma.InputJsonValue
+  return prisma.project.update({ where: { id }, data: updateData })
 }
 
 export async function remove(id: string, user: RequestUser) {
@@ -72,7 +76,7 @@ export async function duplicate(id: string, user: RequestUser) {
       name: `${src.name} 副本`,
       canvasWidth: src.canvasWidth,
       canvasHeight: src.canvasHeight,
-      pages: src.pages as object,
+      pages: src.pages as Prisma.InputJsonValue,
     },
   })
 }
