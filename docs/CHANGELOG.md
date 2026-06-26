@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-06-26
+
+### 新增
+
+- P0 后端骨架（API + 集成测试）：pnpm monorepo + `apps/server`（Express + TS + Prisma）+ `packages/shared`（type-only），分支 `p0-backend`
+- 认证：JWT access/refresh + refresh 轮换 + Redis 黑名单，`apps/server/src/modules/auth/auth.service.ts`
+- 管理员用户管理 CRUD（`/api/v1/admin/users`），`apps/server/src/modules/users/users.routes.ts`
+- 项目 CRUD + 所有权隔离（404 不泄露存在性）+ 复制（`/api/v1/projects`），`apps/server/src/modules/projects/projects.service.ts`
+- 本地基础设施 `docker-compose.yml`（mysql:8 + redis:7）+ 测试库 init 脚本；宿主端口参数化 `MYSQL_PORT`/`REDIS_PORT`
+- 种子脚本创建默认 admin（admin/admin123），`apps/server/prisma/seed.ts`
+- 实施计划 `docs/superpowers/plans/2026-06-26-p0-backend-foundation.md`、`README.md`
+
+### 变更
+
+- 仓库改造为 pnpm monorepo（根 `package.json` + `pnpm-workspace.yaml` + 根 `tsconfig.json`）
+- env 布局：应用变量入 `apps/server/.env`（dotenv 按 cwd 读、Prisma CLI 默认读），根 `.env` 仅留 compose 变量；`.env.example` 双份模板
+
+### 修复
+
+- express 类型增强：`@types/express` 本版需 `declare module 'express'`，`apps/server/src/types/express.d.ts`；中间件 `req` 显式标注以通过 tsc
+- `projects.service.ts` pages 字段用 `Prisma.InputJsonValue` 强转通过 tsc
+- vitest `singleFork` 串行避免共享测试库竞态
+
 ## 2026-06-25
 
 ### 新增

@@ -1,6 +1,6 @@
 # MediaKit PPTGenerator — 立项信息
 
-> 最后更新：2026-06-25
+> 最后更新：2026-06-26
 
 ## 项目背景与目标
 
@@ -45,21 +45,19 @@
 
 ## 当前状态
 
-**v0.1 原型**（2026-06-25）
+**v0.2 — P0 后端骨架完成**（2026-06-26，分支 `p0-backend`）
 
-- `demo.html` 单文件约 3550 行
-- 3 个示例页面（"美妆品牌Q4投放复盘"为默认项目名）
-- 5 类业务组件可拖入画布并绑定数据
-- 基础组件 7 种
-- 撤销/重做、复制/粘贴、页面增删可用
-- 无构建、无持久化、无版本号、无测试
+- 后端 API（Express + TS + Prisma）上线：认证（JWT access/refresh + Redis 黑名单 + 轮换）、管理员用户管理、项目 CRUD（含所有权隔离）
+- 数据模型：`User` / `Project` / `Role`（MySQL 8）；`Dataset` / `ExportJob` / `shareSlug` 待后续阶段
+- 完整集成测试（supertest + vitest，22 项）通过；`tsc` 类型检查与构建通过
+- 仓库改造为 pnpm monorepo（`apps/server` + `packages/shared` type-only）
+- 本地基础设施：`docker-compose.yml`（mysql:8 + redis:7）+ 种子脚本（admin/admin123）
+- `demo.html` 原型保留未动，作为前端重写（P1）的视觉参考
 
 ## 后续计划
 
-待用户补充。已知占位功能（从 `demo.html` 的 toast 提示反推）：
-
-1. 导出 PPT / PDF（`demo.html:2661`）
-2. 项目列表 / 多项目管理（`demo.html:2602`）
-3. 持久化（localStorage 或后端）
-4. 组件库扩展（更多业务组件变体）
-5. 模板保存与复用
+1. **P1：React 编辑器内核** — Vite + TS + Tailwind + Zustand，复刻 `demo.html` 三栏 + 7 个基础组件 + 持久化对接 P0 API
+2. **P2：业务组件库** — 20+ 业务组件 + 注册表，完整复刻 `demo.html`
+3. **P3：数据源** — 上传 CSV/Excel + API 拉取 + 组件 binding（真实数据接入）
+4. **P4：导出 + 分享** — Puppeteer PDF + 公开分享链接
+5. 数据源 API 拉取鉴权头、乐观锁、审计日志等（spec §16 待定项）
