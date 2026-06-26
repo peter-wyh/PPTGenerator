@@ -22,7 +22,7 @@ describe('axios client', () => {
   })
 
   it('injects bearer token into requests', async () => {
-    mock.onGet('/projects').reply((cfg) => [200, { ok: cfg.headers.Authorization === 'Bearer access-1' }])
+    mock.onGet('/projects').reply((cfg) => [200, { ok: cfg.headers?.Authorization === 'Bearer access-1' }])
     const res = await api.get('/projects')
     expect(res.data.ok).toBe(true)
   })
