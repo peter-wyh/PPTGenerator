@@ -25,3 +25,21 @@ export interface UpdateUserRequest {
   password?: string
   role?: Role
 }
+
+export interface CreateProjectRequest {
+  name: string
+}
+
+export interface UpdateProjectRequest {
+  name?: string
+  canvasWidth?: number
+  canvasHeight?: number
+  pages?: unknown // P1 编辑器会给出强类型 Page[]；P0 透传
+}
+
+export interface ProjectSummary {
+  id: string
+  name: string
+  userId: string
+  updatedAt: string
+}
