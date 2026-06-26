@@ -62,3 +62,33 @@ export interface ProjectDetail {
   createdAt: string
   updatedAt: string
 }
+
+export type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw'
+
+export interface TextData {
+  content: string
+  fontSize: number
+  fontWeight?: number
+  color?: string
+  bgColor?: string
+}
+
+export interface ImageData {
+  src: string
+}
+
+export interface EditorComponent {
+  id: string
+  type: 'text' | 'image'
+  x: number
+  y: number
+  w: number
+  h: number
+  data: TextData | ImageData
+}
+
+export interface EditorPage {
+  id: string
+  name: string
+  components: EditorComponent[]
+}
