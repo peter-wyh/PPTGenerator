@@ -23,6 +23,8 @@
 - 登录页 `/login` + 项目列表 `/projects`（新建/重命名/删除）+ 项目外壳占位 + 受保护路由 + 刷新页 session 恢复，`apps/web/src/router.tsx`
 - axios 401 自动 refresh + 重试（去重），`apps/web/src/api/client.ts`
 - 前端设计 spec 与实施计划：`docs/superpowers/specs/2026-06-26-frontend-thin-ui-design.md`、`docs/superpowers/plans/2026-06-26-frontend-thin-ui.md`
+- 编辑器内核 MVP：`apps/web/src/editor/*`，1280×720 画布 + zoom + 文本/图片组件 + 选中/拖动/8 向缩放 + 属性面板 + debounce(1.5s) 自动保存；`/projects/:id` 升级为真编辑器
+- 编辑器 spec 与实施计划：`docs/superpowers/specs/2026-06-26-editor-mvp-design.md`、`docs/superpowers/plans/2026-06-26-editor-mvp.md`
 
 ### 变更
 

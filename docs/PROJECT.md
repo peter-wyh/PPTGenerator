@@ -45,19 +45,20 @@
 
 ## 当前状态
 
-**v0.3 — 前端薄 UI 完成**（2026-06-26，分支 `frontend-thin-ui`）
+**v0.4 — 编辑器内核 MVP 完成**（2026-06-26，分支 `editor-mvp`）
 
 - 后端 API（Express + TS + Prisma）上线：认证（JWT access/refresh + Redis 黑名单 + 轮换）、管理员用户管理、项目 CRUD（含所有权隔离）
-- 前端薄 UI（`apps/web`，Vite + React + TS + Tailwind + Zustand + React Router + axios）上线：登录、项目列表（新建/重命名/删除）、项目外壳占位页、受保护路由、刷新页 session 恢复、axios 401 自动 refresh
+- 前端薄 UI（`apps/web`，Vite + React + TS + Tailwind + Zustand + React Router + axios）上线：登录、项目列表（新建/重命名/删除）、受保护路由、刷新页 session 恢复、axios 401 自动 refresh
+- 编辑器内核 MVP（`apps/web/src/editor/*`）上线：1280×720 画布 + zoom + 文本/图片组件 + 选中/拖动/8 向缩放 + 属性面板 + debounce 自动保存；`/projects/:id` 为真编辑器
 - 数据模型：`User` / `Project` / `Role`（MySQL 8）；`Dataset` / `ExportJob` / `shareSlug` 待后续阶段
-- 测试：后端 22 项（supertest + vitest）、前端 10 项（vitest + testing-library）通过；`tsc` 类型检查与构建通过
+- 测试：后端 22 项（supertest + vitest）、前端 28 项（vitest + testing-library）通过；`tsc` 类型检查与构建通过
 - 仓库为 pnpm monorepo（`apps/server` + `apps/web` + `packages/shared` type-only）
 - 本地基础设施：`docker-compose.yml`（mysql:8 + redis:7）+ 种子脚本（admin/admin123）
-- `demo.html` 原型保留未动，作为编辑器内核（下一期）的视觉参考
+- `demo.html` 原型保留未动，作为后续扩 P1 全交互（多选/撤销重做/更多组件）的参考
 
 ## 后续计划
 
-1. **P1：React 编辑器内核** — Vite + TS + Tailwind + Zustand，复刻 `demo.html` 三栏 + 7 个基础组件 + 持久化对接 P0 API
+1. **P1 扩展**：多选/框选、撤销重做、复制粘贴、页面增删、更多基础组件（柱状/折线/饼图/指标卡/表格）
 2. **P2：业务组件库** — 20+ 业务组件 + 注册表，完整复刻 `demo.html`
 3. **P3：数据源** — 上传 CSV/Excel + API 拉取 + 组件 binding（真实数据接入）
 4. **P4：导出 + 分享** — Puppeteer PDF + 公开分享链接
