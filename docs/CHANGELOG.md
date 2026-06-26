@@ -19,11 +19,16 @@
 - 本地基础设施 `docker-compose.yml`（mysql:8 + redis:7）+ 测试库 init 脚本；宿主端口参数化 `MYSQL_PORT`/`REDIS_PORT`
 - 种子脚本创建默认 admin（admin/admin123），`apps/server/prisma/seed.ts`
 - 实施计划 `docs/superpowers/plans/2026-06-26-p0-backend-foundation.md`、`README.md`
+- 前端薄 UI（`apps/web`）：Vite + React 18 + TS + TailwindCSS（主色 `#FF099E`，视觉取自 `ai_studio_code-40.html`）+ Zustand + React Router + axios，分支 `frontend-thin-ui`
+- 登录页 `/login` + 项目列表 `/projects`（新建/重命名/删除）+ 项目外壳占位 + 受保护路由 + 刷新页 session 恢复，`apps/web/src/router.tsx`
+- axios 401 自动 refresh + 重试（去重），`apps/web/src/api/client.ts`
+- 前端设计 spec 与实施计划：`docs/superpowers/specs/2026-06-26-frontend-thin-ui-design.md`、`docs/superpowers/plans/2026-06-26-frontend-thin-ui.md`
 
 ### 变更
 
 - 仓库改造为 pnpm monorepo（根 `package.json` + `pnpm-workspace.yaml` + 根 `tsconfig.json`）
 - env 布局：应用变量入 `apps/server/.env`（dotenv 按 cwd 读、Prisma CLI 默认读），根 `.env` 仅留 compose 变量；`.env.example` 双份模板
+- `packages/shared` 增 `ProjectDetail` / `ProjectPage`，校正 `ProjectSummary` 对齐后端列表响应（供前端消费）
 
 ### 修复
 

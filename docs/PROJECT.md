@@ -45,14 +45,15 @@
 
 ## 当前状态
 
-**v0.2 — P0 后端骨架完成**（2026-06-26，分支 `p0-backend`）
+**v0.3 — 前端薄 UI 完成**（2026-06-26，分支 `frontend-thin-ui`）
 
 - 后端 API（Express + TS + Prisma）上线：认证（JWT access/refresh + Redis 黑名单 + 轮换）、管理员用户管理、项目 CRUD（含所有权隔离）
+- 前端薄 UI（`apps/web`，Vite + React + TS + Tailwind + Zustand + React Router + axios）上线：登录、项目列表（新建/重命名/删除）、项目外壳占位页、受保护路由、刷新页 session 恢复、axios 401 自动 refresh
 - 数据模型：`User` / `Project` / `Role`（MySQL 8）；`Dataset` / `ExportJob` / `shareSlug` 待后续阶段
-- 完整集成测试（supertest + vitest，22 项）通过；`tsc` 类型检查与构建通过
-- 仓库改造为 pnpm monorepo（`apps/server` + `packages/shared` type-only）
+- 测试：后端 22 项（supertest + vitest）、前端 10 项（vitest + testing-library）通过；`tsc` 类型检查与构建通过
+- 仓库为 pnpm monorepo（`apps/server` + `apps/web` + `packages/shared` type-only）
 - 本地基础设施：`docker-compose.yml`（mysql:8 + redis:7）+ 种子脚本（admin/admin123）
-- `demo.html` 原型保留未动，作为前端重写（P1）的视觉参考
+- `demo.html` 原型保留未动，作为编辑器内核（下一期）的视觉参考
 
 ## 后续计划
 
