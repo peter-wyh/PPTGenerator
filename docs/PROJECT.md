@@ -45,11 +45,12 @@
 
 ## 当前状态
 
-**v0.4 — 编辑器内核 MVP 完成**（2026-06-26，分支 `editor-mvp`）
+**v0.5 — 邮件编辑器还原完成**（2026-06-27，分支 `email-editor`）
 
 - 后端 API（Express + TS + Prisma）上线：认证（JWT access/refresh + Redis 黑名单 + 轮换）、管理员用户管理、项目 CRUD（含所有权隔离）
 - 前端薄 UI（`apps/web`，Vite + React + TS + Tailwind + Zustand + React Router + axios）上线：登录、项目列表（新建/重命名/删除）、受保护路由、刷新页 session 恢复、axios 401 自动 refresh
 - 编辑器内核 MVP（`apps/web/src/editor/*`）上线：1280×720 画布 + zoom + 文本/图片组件 + 选中/拖动/8 向缩放 + 属性面板 + debounce 自动保存；`/projects/:id` 为真编辑器
+- 邮件编辑器（还原 `ai_studio_code-40.html`）上线：`/email-editor`，左侧表单分区 + 右侧 iframe `srcDoc` 实时预览 + 复制 HTML，纯前端
 - 数据模型：`User` / `Project` / `Role`（MySQL 8）；`Dataset` / `ExportJob` / `shareSlug` 待后续阶段
 - 测试：后端 22 项（supertest + vitest）、前端 28 项（vitest + testing-library）通过；`tsc` 类型检查与构建通过
 - 仓库为 pnpm monorepo（`apps/server` + `apps/web` + `packages/shared` type-only）

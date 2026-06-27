@@ -8,6 +8,14 @@
 
 ---
 
+## 2026-06-27
+
+### 新增
+
+- 邮件编辑器（还原 `ai_studio_code-40.html`）：`/email-editor` 新路由，左侧表单分区（Header/Top Deals/Featured/Fashion/Beauty）+ 右侧 iframe `srcDoc` 实时预览 + 复制 HTML，纯前端、内存数据预填原文件，`apps/web/src/email-editor/*`
+- `generateEmailHtml(data)` 纯函数（port 自原文件，table+内联样式+移动端 stack），`apps/web/src/email-editor/generateHtml.ts`
+- 设计与实施计划：`docs/superpowers/specs/2026-06-27-email-editor-design.md`、`docs/superpowers/plans/2026-06-27-email-editor.md`
+
 ## 2026-06-26
 
 ### 新增
