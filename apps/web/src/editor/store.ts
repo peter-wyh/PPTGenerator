@@ -6,7 +6,7 @@ import type {
   ProjectDetail,
   ResizeDir,
 } from '@ppt-generator/shared'
-import { REGISTRY, fallbackBlock } from './blocks'
+import { getBlock } from './blocks'
 
 const MIN_W = 40
 const MIN_H = 20
@@ -60,7 +60,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   addComponent: (type) =>
     set((s) => {
-      const def = (REGISTRY as Record<string, typeof fallbackBlock>)[type] ?? fallbackBlock
+      const def = getBlock(type)
       const comp: EditorComponent = {
         id: newId(),
         type,
