@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import Login from './routes/Login'
 import Projects from './routes/Projects'
 import ProjectShell from './routes/ProjectShell'
+import EmailEditor from './email-editor/EmailEditor'
 import { useAuthStore } from './stores/auth'
 import { refresh } from './api/auth'
 
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
         { index: true, element: <Navigate to="/projects" replace /> },
         { path: 'projects', element: <Projects /> },
         { path: 'projects/:id', element: <ProjectShell /> },
+        { path: 'email-editor', element: <EmailEditor /> },
       ]},
     ],
   },

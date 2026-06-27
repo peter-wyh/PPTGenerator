@@ -62,7 +62,10 @@ export default function Projects() {
     <div className="mx-auto max-w-5xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold">我的项目</h1>
-        <Button onClick={() => setCreating(true)}>+ 新建项目</Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => navigate('/email-editor')}>邮件编辑器</Button>
+          <Button onClick={() => setCreating(true)}>+ 新建项目</Button>
+        </div>
       </div>
 
       {creating && (
