@@ -19,6 +19,8 @@
 - 组件注册表 `apps/web/src/editor/blocks/`：`BlockDef`/`PropertyField` 类型 (`types.ts`)、`REGISTRY` (`index.ts`) + `getBlock()` 降级到 fallback；text/image 真实 def，其余 5 类暂用 fallback 桩（Task 3-5 替换）
 - `recharts ^3.9.0` 依赖（Task 5 图表用），`apps/web/package.json:32`
 - 注册表测试 `apps/web/tests/editor/registry.test.ts`（7 类完整 def + fallback + text 默认数据）
+- G2 · Task 3 指标卡：`indicator-card` 由 fallback 桩替换为真实 `BlockDef`（左色条 + 标题 + 数值 + 涨跌趋势，4 色 theme），`apps/web/src/editor/blocks/indicator-card.tsx`
+- 共享块测试 `apps/web/tests/editor/blocks.test.tsx`：顶部 `recharts` `vi.mock`（`ResponsiveContainer` 注入固定宽高，Task 5 图表用例复用）+ `renderBlock` 辅助；首例 indicator-card 默认数据渲染断言（Task 4/5 追加 describe）
 
 ### 变更
 
