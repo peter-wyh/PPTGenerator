@@ -21,6 +21,7 @@
 - 注册表测试 `apps/web/tests/editor/registry.test.ts`（7 类完整 def + fallback + text 默认数据）
 - G2 · Task 3 指标卡：`indicator-card` 由 fallback 桩替换为真实 `BlockDef`（左色条 + 标题 + 数值 + 涨跌趋势，4 色 theme），`apps/web/src/editor/blocks/indicator-card.tsx`
 - 共享块测试 `apps/web/tests/editor/blocks.test.tsx`：顶部 `recharts` `vi.mock`（`ResponsiveContainer` 注入固定宽高，Task 5 图表用例复用）+ `renderBlock` 辅助；首例 indicator-card 默认数据渲染断言（Task 4/5 追加 describe）
+- G2 · Task 4 表格：`table` 由 fallback 桩替换为真实 `BlockDef`（th/thead + tbody 斑马纹 + 表头右对齐/首列左对齐 + `font-mono` 数字列），`apps/web/src/editor/blocks/table.tsx`；追加 table 测试（每 header 一个 `<th>`、默认 2×3 共 6 个 `<td>`），`apps/web/tests/editor/blocks.test.tsx`
 
 ### 变更
 

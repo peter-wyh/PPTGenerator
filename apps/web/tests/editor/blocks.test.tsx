@@ -25,3 +25,16 @@ describe('indicator-card block', () => {
     expect(getByText('---')).toBeInTheDocument()
   })
 })
+
+describe('table block', () => {
+  it('renders one <th> per header', () => {
+    const { container } = renderBlock('table')
+    expect(container.querySelectorAll('th')).toHaveLength(3)
+  })
+
+  it('renders a <td> per cell across all rows', () => {
+    const { container } = renderBlock('table')
+    // 默认 2 行 × 3 列
+    expect(container.querySelectorAll('td')).toHaveLength(6)
+  })
+})
