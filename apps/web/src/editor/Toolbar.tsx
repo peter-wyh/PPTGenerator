@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useEditorStore } from './store'
 import { Button } from '../components/Button'
+import { REGISTRY } from './blocks'
+import type { BasicComponentType } from '@ppt-generator/shared'
 
 export function Toolbar() {
   const navigate = useNavigate()
@@ -14,8 +16,13 @@ export function Toolbar() {
         <span className="text-lg font-extrabold text-primary">MediaKit</span>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" onClick={() => addComponent('text')}>+ 文本</Button>
-        <Button variant="ghost" onClick={() => addComponent('image')}>+ 图片</Button>
+        {(Object.entries(REGISTRY) as [BasicComponentType, (typeof REGISTRY)[BasicComponentType]][]).map(
+          ([type, def]) => (
+            <Button key={type} variant="ghost" onClick={() => addComponent(type)}>
+              + {def.label}
+            </Button>
+          ),
+        )}
         <Button variant="ghost" disabled>撤销</Button>
         <Button variant="ghost" disabled>重做</Button>
         <span className="w-20 text-xs text-neutral-500">{label}</span>
