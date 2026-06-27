@@ -38,3 +38,29 @@ describe('table block', () => {
     expect(container.querySelectorAll('td')).toHaveLength(6)
   })
 })
+
+describe('bar-chart block', () => {
+  it('renders a recharts chart with default data', () => {
+    const { container, getByText } = renderBlock('bar-chart')
+    expect(getByText('柱状图')).toBeInTheDocument()
+    expect(container.querySelector('.recharts-wrapper')).toBeTruthy()
+  })
+  it('shows 无数据 when bars is empty', () => {
+    const { getByText } = renderBlock('bar-chart', { title: '柱状图', bars: [] })
+    expect(getByText('无数据')).toBeInTheDocument()
+  })
+})
+
+describe('line-chart block', () => {
+  it('renders a recharts chart with default data', () => {
+    const { container } = renderBlock('line-chart')
+    expect(container.querySelector('.recharts-wrapper')).toBeTruthy()
+  })
+})
+
+describe('pie-chart block', () => {
+  it('renders a recharts chart with default data', () => {
+    const { container } = renderBlock('pie-chart')
+    expect(container.querySelector('.recharts-wrapper')).toBeTruthy()
+  })
+})
