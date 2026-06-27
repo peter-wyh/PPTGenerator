@@ -8,6 +8,18 @@
 
 ---
 
+## 2026-06-28
+
+### 新增
+
+- G2 · Task 6 Toolbar 注册表驱动：新增 `apps/web/tests/editor/toolbar.test.tsx`（每条 REGISTRY 一个 `+ ${label}` 按钮 + 点击 `+ 柱状图` 触发 `addComponent('bar-chart')` 断言）
+
+### 变更
+
+- `Toolbar` 改为注册表驱动：删除硬编码 `+ 文本`/`+ 图片` 按钮，改为 `Object.entries(REGISTRY).map(...)` 渲染 7 个添加按钮（+ 文本/+ 图片/+ 指标卡/+ 柱状图/+ 折线图/+ 饼图/+ 表格），保留 `撤销`/`重做`（disabled）与 save-status 标签，`apps/web/src/editor/Toolbar.tsx:19`
+
+---
+
 ## 2026-06-27
 
 ### 新增
