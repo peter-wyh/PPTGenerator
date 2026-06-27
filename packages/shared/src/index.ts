@@ -77,14 +77,72 @@ export interface ImageData {
   src: string
 }
 
+export type BasicComponentType =
+  | 'text'
+  | 'image'
+  | 'indicator-card'
+  | 'bar-chart'
+  | 'line-chart'
+  | 'pie-chart'
+  | 'table'
+
+export interface IndicatorCardData {
+  title: string
+  value: string
+  trend: string
+  trendUp: boolean
+  colorTheme: 'blue' | 'green' | 'orange' | 'purple'
+}
+
+export interface BarChartDatum {
+  label: string
+  value: number
+  color: string
+}
+export interface BarChartData {
+  title: string
+  bars: BarChartDatum[]
+}
+
+export interface LineChartPoint {
+  label: string
+  value: number
+}
+export interface LineChartData {
+  title: string
+  points: LineChartPoint[]
+}
+
+export interface PieChartSlice {
+  label: string
+  value: number
+  color: string
+}
+export interface PieChartData {
+  title: string
+  slices: PieChartSlice[]
+}
+
+export interface TableData {
+  headers: string[]
+  rows: string[][]
+}
+
 export interface EditorComponent {
   id: string
-  type: 'text' | 'image'
+  type: BasicComponentType
   x: number
   y: number
   w: number
   h: number
-  data: TextData | ImageData
+  data:
+    | TextData
+    | ImageData
+    | IndicatorCardData
+    | BarChartData
+    | LineChartData
+    | PieChartData
+    | TableData
 }
 
 export interface EditorPage {

@@ -3,8 +3,7 @@ import type { EditorComponent, ResizeDir } from '@ppt-generator/shared'
 import { useEditorStore } from './store'
 import { screenToCanvas } from './screenToCanvas'
 import type { DragState } from './types'
-import { TextBlock } from './blocks/TextBlock'
-import { ImageBlock } from './blocks/ImageBlock'
+import { getBlock } from './blocks'
 
 const HANDLES: ResizeDir[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
 
@@ -66,9 +65,10 @@ export function ComponentView({ comp }: { comp: EditorComponent }) {
     position: 'absolute', left: comp.x, top: comp.y, width: comp.w, height: comp.h,
     outline: selected ? '2px solid #FF099E' : 'none', cursor: 'move',
   }
+  const Block = getBlock(comp.type).Block
   return (
     <div data-comp-id={comp.id} style={style} className="select-none" onPointerDown={onPointerDown}>
-      {comp.type === 'text' ? <TextBlock data={comp.data as never} /> : <ImageBlock data={comp.data as never} />}
+      <Block data={comp.data} />
       {selected &&
         HANDLES.map((dir) => (
           <span

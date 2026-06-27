@@ -1,40 +1,18 @@
 import { create } from 'zustand'
 import type {
+  BasicComponentType,
   EditorComponent,
   EditorPage,
   ProjectDetail,
   ResizeDir,
 } from '@ppt-generator/shared'
+import { REGISTRY, fallbackBlock } from './blocks'
 
 const MIN_W = 40
 const MIN_H = 20
 
 export function newId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
-}
-
-function defaultText(): EditorComponent {
-  return {
-    id: newId(),
-    type: 'text',
-    x: 100,
-    y: 100,
-    w: 240,
-    h: 60,
-    data: { content: '双击编辑文本', fontSize: 18, color: '#222', bgColor: '#fff' },
-  }
-}
-
-function defaultImage(): EditorComponent {
-  return {
-    id: newId(),
-    type: 'image',
-    x: 120,
-    y: 120,
-    w: 240,
-    h: 160,
-    data: { src: '' },
-  }
 }
 
 interface EditorState {
@@ -47,7 +25,7 @@ interface EditorState {
   selectedIds: string[]
   saveStatus: 'idle' | 'saving' | 'saved' | 'error'
   load: (project: ProjectDetail) => void
-  addComponent: (type: 'text' | 'image') => void
+  addComponent: (type: BasicComponentType) => void
   updateComponent: (id: string, patch: Partial<EditorComponent>) => void
   removeComponent: (id: string) => void
   select: (id: string | null) => void
@@ -82,7 +60,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   addComponent: (type) =>
     set((s) => {
-      const comp = type === 'text' ? defaultText() : defaultImage()
+      const def = (REGISTRY as Record<string, typeof fallbackBlock>)[type] ?? fallbackBlock
+      const comp: EditorComponent = {
+        id: newId(),
+        type,
+        x: 140,
+        y: 140,
+        w: def.defaultSize.w,
+        h: def.defaultSize.h,
+        data: def.defaultData() as EditorComponent['data'],
+      }
       const pages = s.pages.map((p) =>
         p.id === s.currentPageId ? { ...p, components: [...p.components, comp] } : p,
       )

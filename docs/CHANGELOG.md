@@ -15,6 +15,19 @@
 - 邮件编辑器（还原 `ai_studio_code-40.html`）：`/email-editor` 新路由，左侧表单分区（Header/Top Deals/Featured/Fashion/Beauty）+ 右侧 iframe `srcDoc` 实时预览 + 复制 HTML，纯前端、内存数据预填原文件，`apps/web/src/email-editor/*`
 - `generateEmailHtml(data)` 纯函数（port 自原文件，table+内联样式+移动端 stack），`apps/web/src/email-editor/generateHtml.ts`
 - 设计与实施计划：`docs/superpowers/specs/2026-06-27-email-editor-design.md`、`docs/superpowers/plans/2026-06-27-email-editor.md`
+- G2 基础组件骨架（Task 1+2）：`BasicComponentType` 联合（text/image/indicator-card/bar-chart/line-chart/pie-chart/table）+ 各类型 `Data` 接口，`packages/shared/src/index.ts:80`
+- 组件注册表 `apps/web/src/editor/blocks/`：`BlockDef`/`PropertyField` 类型 (`types.ts`)、`REGISTRY` (`index.ts`) + `getBlock()` 降级到 fallback；text/image 真实 def，其余 5 类暂用 fallback 桩（Task 3-5 替换）
+- `recharts ^3.9.0` 依赖（Task 5 图表用），`apps/web/package.json:32`
+- 注册表测试 `apps/web/tests/editor/registry.test.ts`（7 类完整 def + fallback + text 默认数据）
+
+### 变更
+
+- `store.addComponent` 改为注册表驱动：删除 `defaultText()`/`defaultImage()`，按 `REGISTRY[type].defaultSize/defaultData` 构建组件（位置固定 140,140），签名放宽为 `BasicComponentType`，`apps/web/src/editor/store.ts:61`
+- `ComponentView` 改为注册表驱动：`getBlock(comp.type).Block` 取代 `TextBlock`/`ImageBlock` 分支，`apps/web/src/editor/ComponentView.tsx:69`
+
+### 重构
+
+- 删除旧 `apps/web/src/editor/blocks/TextBlock.tsx`、`ImageBlock.tsx`，逻辑迁入 `blocks/text.tsx`、`blocks/image.tsx`（同 `FC<{data:unknown}>` 签名 + `BlockDef` 元信息）
 
 ## 2026-06-26
 
