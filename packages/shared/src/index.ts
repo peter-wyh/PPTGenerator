@@ -92,3 +92,43 @@ export interface EditorPage {
   name: string
   components: EditorComponent[]
 }
+
+export interface EmailDealItem {
+  brand: string
+  text: string
+  img: string
+  link: string
+}
+
+export interface EmailProductItem {
+  brand: string
+  name: string
+  discount: string
+  img: string
+  link: string
+}
+
+export interface EmailFeatureDetail {
+  img: string
+  text: string
+}
+
+export interface EmailFeature {
+  title: string
+  intro: string
+  mainImg: string
+  prodName: string
+  btnText: string
+  btnLink: string
+  details: EmailFeatureDetail[]
+}
+
+export interface EmailData {
+  header: { logo: string; subtitle: string }
+  hero: { title: string }
+  topDeals: EmailDealItem[]
+  date: string
+  feature: EmailFeature
+  fashion: EmailProductItem[]
+  beauty: EmailProductItem[]
+}
