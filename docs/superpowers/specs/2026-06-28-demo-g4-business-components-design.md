@@ -113,57 +113,43 @@ export interface BusinessKindMeta {
 
 ---
 
-## 5. 布局渲染（`apps/web/src/editor/blocks/business/`）
+## 5. 布局渲染（HTML-port 全量忠实）
 
-### 5.1 缩放 util
+**实现策略（pivot）**：原 brainstorm 定为「hybrid：手写 8 个 signature JSX 布局 + generic JSX」。读 demo 源码后发现 `renderBusinessBlock` 本身是 ~60 行、返回 HTML 字符串的 JS 函数（template literals）。直接把该函数整块 port 成 TS、用 `dangerouslySetInnerHTML` 渲染，即可让**全部 20 种 kind 像素级忠实**（含所有专用变体），工作量约为 hybrid 的 generic 布局一块。故本期改用 **HTML-port 全量忠实**——fidelity 更高、代码更少，严格优于 hybrid。
 
-demo 用 `px = n => n * scale`（`demo.html:1243`），`scale` 按组件实际宽 vs 基准宽计算，使模板自适应组件框。本期提供：
+**scale=1（spec 微调）**：demo 在画布编辑器里调用 `renderBusinessBlock(d)`（`demo.html:1599`）**不带 scale**（默认 1）——业务组件按原生 px 值渲染，不随组件宽缩放；缩放仅出现在缩略图（`:1383`）/ 预览（`:3510`），属 G3/G6。故 port 里 `px(n) = n`，不引入 per-component 缩放，原 spec 的 `useScale` 取消。
+
+### 5.1 `renderBusinessBlockHtml(data): string`（`blocks/business/renderHtml.ts`）
+
+把 demo `renderBusinessBlock`（`demo.html:1239-1300`）逐分支 port 为 TS：
+- `BUSINESS_BY_ID` 查表 → 改用 catalog（§4，`catalog[kind] ?? fallbackMeta`）
+- `px = (n) => n`（scale=1）
+- 辅助 `base / label / titleStyle / chips / hasDedicatedVariant` 原样保留
+- 20+ 个 `if (businessKind === ... ) return base(\`...\`)` 分支原样保留（含专用变体：cover/light、process|campaign-plan/cards、case-showcase/results、campaign-overview/stats、creator-profile/stats、package/table，以及非专用 cards/light/accent 兜底分支与末尾 default base）
+- 返回完整 HTML 字符串
+
+### 5.2 `esc()` —— 防注入
+
+demo 用受信原型数据，直接插值 `${title}`。本期编辑器里 `title`/`meta`/`details` 是**用户输入**，`dangerouslySetInnerHTML` 会执行其中的 HTML（多用户应用里，报告被他人查看时即存储型 XSS）。故 port 时对所有**用户来源字符串**（title、meta、details[i]、catalog.name 派生的 label）过 `esc()`；catalog 内静态文案（`'MEDIATEK / BUSINESS'`、`'2026 Q4'`、套餐表数据等）不需转义。
 
 ```ts
-// blocks/business/scale.ts
-export function useScale(w: number, base = 580): (n: number) => number {
-  return (n) => (n * w) / base
+function esc(s: unknown): string {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
+  ))
 }
 ```
 
-signature 布局接收组件 `w`（来自 `EditorComponent.w`），用 `px()` 缩放内边距/字号/网格列宽。generic 布局用 Tailwind 流式 + flex，不强依赖 px 缩放。
+### 5.3 React 包装（`blocks/business/BusinessBlock.tsx`）
 
-### 5.2 Signature 布局（忠实 port，~8 模板覆盖 10 kind）
-
-demo 多 kind 共享同一布局（org≡service、process≡campaign-plan、content-analysis≡funnel），故实际只需 ~8 个模板：
-
-| 布局文件 | 覆盖 kind | 专用变体 |
-|---|---|---|
-| `layouts/cover.tsx` | cover | `light` |
-| `layouts/campaign-overview.tsx` | campaign-overview | `stats` |
-| `layouts/creator-profile.tsx` | creator-profile | `stats` |
-| `layouts/funnel.tsx` | funnel, content-analysis | — |
-| `layouts/process.tsx` | process, campaign-plan | `cards` |
-| `layouts/milestone.tsx` | milestone | — |
-| `layouts/brand-wall.tsx` | brand-wall | — |
-| `layouts/package.tsx` | package | `table` |
-
-每个布局：JSX port 自 demo 对应 `renderBusinessBlock` 分支，保留配色（`#FF5C00`/`#1A1A1A`/...）、网格（`grid-template-columns`）、`IBM Plex Mono`/`Funnel Sans` 字体引用、专用变体分支。空 details 时降级（不崩）。
-
-### 5.3 Generic 布局（兜底 ~9 kind）
-
-`layouts/generic.tsx`：通用主题布局，接收 `{title, meta, details, variant, businessKind}`，按 `variant` 选三套：
-
-- `standard`：标题 + meta + details 纵向条目列表（左边框强调）
-- `cards`：details 卡片网格
-- `accent`：橙色边框 + 阴影强调版 standard
-
-兜底 kind：agenda, global, org, service, challenge, calendar, creator-list, case-showcase, retrospective, report。（注：org≡service 也走 generic——demo 里它们布局简单，generic 足够；若实测差距大可后续提升为 signature。）
-
-### 5.4 分发
-
-`BusinessBlock`（`REGISTRY['business-block'].Block`）：
-
-```ts
-const SIGNATURE = { cover, 'campaign-overview', 'creator-profile', funnel, 'content-analysis',
-                    process, 'campaign-plan', milestone, 'brand-wall', package }
-// 按 data.businessKind 命中 signature 用对应布局，否则 generic
+```tsx
+export function BusinessBlock({ data }: { data: unknown }) {
+  const html = renderBusinessBlockHtml(data as BusinessBlockData)
+  return <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: html }} />
+}
 ```
+
+`REGISTRY['business-block'].Block = BusinessBlock`。无 signature/generic 之分——一个函数渲染全部 20 种（与 demo 完全一致）。未知 kind / 空 details 由函数内既有兜底处理（`catalog[kind] ?? fallbackMeta`、`details || []`、末尾 default base），与 §8 一致。
 
 ---
 
@@ -207,9 +193,8 @@ const SIGNATURE = { cover, 'campaign-overview', 'creator-profile', funnel, 'cont
 
 - **catalog 完整性**：20 kind 齐全，每个有 group/icon/name/defaultSize/defaultData/variants。
 - **注册表**：`REGISTRY['business-block']` 存在；`EditorComponent.type` 联合含 `'business-block'`。
-- **signature 布局渲染**：每个 signature 布局用默认 data 渲染，断言关键文案/结构（如 cover 显示 title；campaign-overview 显示 details 数；package 渲染套餐卡）。
-- **generic 布局**：兜底 kind（如 agenda）渲染 title + details；空 details 显示占位。
-- **分发**：`BusinessBlock` 对 signature kind 与 generic kind 分别命中正确布局。
+- **`renderBusinessBlockHtml` 渲染**：用默认 data 对若干代表性 kind（cover / campaign-overview / package / funnel / agenda）断言输出 HTML 含关键文案（title、details 项）与结构（`grid-template-columns`、专用变体分支）；含 HTML 字符的 title 经 `esc()` 转义（`<` → `&lt;`），不执行注入。
+- **`BusinessBlock` 包装**：默认 data 经 `dangerouslySetInnerHTML` 渲染出对应 HTML；未知 kind / 空 details 不崩。
 - **store.addBusinessBlock(kind)**：生成 `type:'business-block'` + 正确 `businessKind` + defaultData + defaultSize。
 - **库面板**：渲染 5 组 20 项；点击某项触发 `addBusinessBlock(kind)`。
 - **属性面板**：选 business-block → 改 title/details/variant → store 更新；variant 选项随 businessKind 变化。
