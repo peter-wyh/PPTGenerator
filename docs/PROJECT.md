@@ -1,6 +1,6 @@
 # MediaKit PPTGenerator — 立项信息
 
-> 最后更新：2026-06-26
+> 最后更新：2026-06-28
 
 ## 项目背景与目标
 
@@ -45,22 +45,32 @@
 
 ## 当前状态
 
-**v0.5 — 邮件编辑器还原完成**（2026-06-27，分支 `email-editor`）
+**v0.6 — demo.html 还原 G2 基础组件补齐完成**（2026-06-28，分支 `demo-g2`）
 
 - 后端 API（Express + TS + Prisma）上线：认证（JWT access/refresh + Redis 黑名单 + 轮换）、管理员用户管理、项目 CRUD（含所有权隔离）
 - 前端薄 UI（`apps/web`，Vite + React + TS + Tailwind + Zustand + React Router + axios）上线：登录、项目列表（新建/重命名/删除）、受保护路由、刷新页 session 恢复、axios 401 自动 refresh
 - 编辑器内核 MVP（`apps/web/src/editor/*`）上线：1280×720 画布 + zoom + 文本/图片组件 + 选中/拖动/8 向缩放 + 属性面板 + debounce 自动保存；`/projects/:id` 为真编辑器
+- **G2 基础组件补齐**（`apps/web/src/editor/blocks/*`）：引入组件注册表 `REGISTRY`（`getBlock` 降级 fallback），画布从 text/image 扩到 **7 类基础组件**（文本/图片/指标卡/柱状图/折线图/饼图/表格，图表用 recharts + 空数据占位）；`store.addComponent` / `ComponentView` / `Toolbar` / `PropertyPanel` 全部改为注册表/schema 驱动（属性面板支持 text/textarea/number/color/select/list/table 七种 kind）
 - 邮件编辑器（还原 `ai_studio_code-40.html`）上线：`/email-editor`，左侧表单分区 + 右侧 iframe `srcDoc` 实时预览 + 复制 HTML，纯前端
 - 数据模型：`User` / `Project` / `Role`（MySQL 8）；`Dataset` / `ExportJob` / `shareSlug` 待后续阶段
-- 测试：后端 22 项（supertest + vitest）、前端 28 项（vitest + testing-library）通过；`tsc` 类型检查与构建通过
+- 测试：后端 22 项（supertest + vitest）、前端 62 项（vitest + testing-library，含 G2 注册表/块/工具栏/属性面板）通过；`tsc` 类型检查与 `vite build` 通过
 - 仓库为 pnpm monorepo（`apps/server` + `apps/web` + `packages/shared` type-only）
 - 本地基础设施：`docker-compose.yml`（mysql:8 + redis:7）+ 种子脚本（admin/admin123）
-- `demo.html` 原型保留未动，作为后续扩 P1 全交互（多选/撤销重做/更多组件）的参考
+- `demo.html` 原型保留未动，作为完整还原的参考（G2 已完成；G4/G1/G3/G5/G6 待续）
 
 ## 后续计划
 
-1. **P1 扩展**：多选/框选、撤销重做、复制粘贴、页面增删、更多基础组件（柱状/折线/饼图/指标卡/表格）
-2. **P2：业务组件库** — 20+ 业务组件 + 注册表，完整复刻 `demo.html`
-3. **P3：数据源** — 上传 CSV/Excel + API 拉取 + 组件 binding（真实数据接入）
-4. **P4：导出 + 分享** — Puppeteer PDF + 公开分享链接
-5. 数据源 API 拉取鉴权头、乐观锁、审计日志等（spec §16 待定项）
+> demo.html 完整还原路线图（执行顺序已与用户确认：依赖/价值序）
+
+1. ✅ **G2 基础组件**（已完成，分支 `demo-g2`，2026-06-28）：组件注册表 + 7 类基础组件（recharts 图表）+ schema 驱动属性面板。
+2. **G4 业务组件库**：把 `demo.html` 的 20 种 business-block（cover/agenda/milestone/global/brand-wall/org/service/challenge/process/calendar/campaign-plan/case-showcase/campaign-overview/creator-list/creator-profile/content-analysis/retrospective/package/report/funnel，含 standard/cards/accent/stats 等变体）用注册表模式移植；复用 G2 的 `REGISTRY`。**移植前需 brainstorm 忠实度（像素级复刻 demo 手写 HTML vs 数据驱动近似）**。
+3. **G1 交互补全**：多选/框选、撤销重做（history 栈）、复制/剪切/粘贴、键盘快捷键、图层上移/下移/置顶/置底、锁定。
+4. **G3 页面管理**：增删/改名/排序/缩略图/模板。
+5. **G5 数据源**：上传 CSV/Excel + API 拉取 + 组件 binding（真实数据接入）。
+6. **G6 预览 + 导出**：只读演示模式 + Puppeteer PDF / PPT 导出 + 公开分享链接。
+
+### 已知技术债（G2）
+
+- `PropertyPanel` 的 `list`/`table` 编辑器用数组索引作 React `key`：受控输入（值始终来自 store）下功能正确，但删除中间项时不是最佳（后续若加非受控子组件需换稳定 key）。
+- `select` 布尔字段（仅 `indicator-card.trendUp`）用 `typeof val === 'boolean'` 嗅探：当前可行，后续扩展 schema 时改为声明式（`PropertyField.coerce` / `booleanMap`）。
+- recharts 拉高首包体积（build 产物 ~693kB）：后续 G6 或性能优化时按需 code-split。

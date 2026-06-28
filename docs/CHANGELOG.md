@@ -17,7 +17,7 @@
 
 ### 变更
 
-- `Toolbar` 改为注册表驱动：删除硬编码 `+ 文本`/`+ 图片` 按钮，改为 `Object.entries(REGISTRY).map(...)` 渲染 7 个添加按钮（+ 文本/+ 图片/+ 指标卡/+ 柱状图/+ 折线图/+ 饼图/+ 表格），保留 `撤销`/`重做`（disabled）与 save-status 标签，`apps/web/src/editor/toolbar.tsx:19`
+- `Toolbar` 改为注册表驱动：删除硬编码 `+ 文本`/`+ 图片` 按钮，改为 `Object.entries(REGISTRY).map(...)` 渲染 7 个添加按钮（+ 文本/+ 图片/+ 指标卡/+ 柱状图/+ 折线图/+ 饼图/+ 表格），保留 `撤销`/`重做`（disabled）与 save-status 标签，`apps/web/src/editor/Toolbar.tsx:19`
 - `PropertyPanel` 改为 schema 驱动：删除 `text`/`image` 硬编码分支，改为遍历 `REGISTRY[type].propertySchema` 通过 `FieldEditor`/`ListEditor`/`TableEditor` 通用渲染（text/textarea/number/color/select/list/table 七种 kind），select 布尔值映射 '↑'→true/'↓'→false，保留 X/Y/宽/高 网格与 `删除组件` 按钮与 `未选中组件` 占位，`apps/web/src/editor/PropertyPanel.tsx`
 
 ---
@@ -36,6 +36,7 @@
 - G2 · Task 3 指标卡：`indicator-card` 由 fallback 桩替换为真实 `BlockDef`（左色条 + 标题 + 数值 + 涨跌趋势，4 色 theme），`apps/web/src/editor/blocks/indicator-card.tsx`
 - 共享块测试 `apps/web/tests/editor/blocks.test.tsx`：顶部 `recharts` `vi.mock`（`ResponsiveContainer` 注入固定宽高，Task 5 图表用例复用）+ `renderBlock` 辅助；首例 indicator-card 默认数据渲染断言（Task 4/5 追加 describe）
 - G2 · Task 4 表格：`table` 由 fallback 桩替换为真实 `BlockDef`（th/thead + tbody 斑马纹 + 表头右对齐/首列左对齐 + `font-mono` 数字列），`apps/web/src/editor/blocks/table.tsx`；追加 table 测试（每 header 一个 `<th>`、默认 2×3 共 6 个 `<td>`），`apps/web/tests/editor/blocks.test.tsx`
+- G2 · Task 5 图表（柱状/折线/饼图）：`bar-chart`/`line-chart`/`pie-chart` 由 fallback 桩替换为真实 recharts `BlockDef`（`ResponsiveContainer` 撑满 + `Cell` 逐项配色 + 空数据「无数据」占位 + 折线单系列 + 饼图 Legend），`apps/web/src/editor/blocks/{bar-chart,line-chart,pie-chart}.tsx`；测试 setup 加 `ResizeObserver` 桩 `apps/web/tests/setup.ts`；blocks 测试追加 `.recharts-wrapper` 渲染 + bar 空数据断言 `apps/web/tests/editor/blocks.test.tsx`
 
 ### 变更
 
