@@ -1,35 +1,37 @@
+name: mediakit
+
 services:
   mysql:
-    image: mysql:8.0
-    container_name: ppt-mysql
+    image: mysql:8
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
-      MYSQL_DATABASE: ppt_generator
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mediakit_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mediakit}
+      MYSQL_USER: ${MYSQL_USER:-mediakit}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mediakit_pw}
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${MYSQL_PORT:-3316}:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+      - mediakit_mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-mediakit_root}"]
       interval: 5s
+      timeout: 5s
       retries: 20
-      start_period: 20s
 
   redis:
-    image: redis:7-alpine
-    container_name: ppt-redis
+    image: redis:7
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6389}:6379"
     volumes:
-      - redis_data:/data
+      - mediakit_redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      retries: 10
+      timeout: 3s
+      retries: 20
 
 volumes:
-  mysql_data:
-  redis_data:
+  mediakit_mysql:
+  mediakit_redis:

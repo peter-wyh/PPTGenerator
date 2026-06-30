@@ -1,44 +1,37 @@
-# Dependencies
+# dependencies
 node_modules/
 .pnpm-store/
 
-# Build output
+# build output
 dist/
 build/
 *.tsbuildinfo
 
-# Environment
+# prisma generated client (committed on demand; ignore local builds)
+apps/server/prisma/migrations/dev.db*
+
+# env
 .env
 .env.local
 .env.*.local
-.env.test
+!*.env.example
+!**/.env.example
 
-# User uploads & exports (server runtime data)
-apps/server/uploads/
-apps/server/exports/
-
-# Logs
+# logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+logs/
+pino-*.log
 
-# Editor
-.vscode/
-.idea/
-*.swp
-*.swo
+# editor / OS
 .DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
 
-# Test output
+# coverage
 coverage/
-.nyc_output/
+.vitest/
 
-# Cache
-.cache/
-.eslintcache
-*.pem
-
-# OS
-Thumbs.db
+# vite
+.vite/

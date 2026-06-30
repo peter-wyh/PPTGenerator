@@ -1,14 +1,20 @@
 {
-  "name": "ppt-generator",
-  "version": "0.0.0",
+  "name": "mediakit",
+  "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
-  "engines": { "node": ">=20" },
+  "description": "MediaKit — 广告投放报告编辑器（demo.html 全新重写，全栈）",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev:server": "pnpm --filter @ppt-generator/server dev",
-    "test": "pnpm -r --if-present test",
-    "typecheck": "pnpm -r --if-present typecheck",
-    "db:migrate": "pnpm --filter @ppt-generator/server prisma:migrate",
-    "db:seed": "pnpm --filter @ppt-generator/server seed"
+    "dev": "pnpm -r --parallel --stream run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @mediakit/server prisma migrate deploy",
+    "db:seed": "pnpm --filter @mediakit/server db:seed"
   }
 }
