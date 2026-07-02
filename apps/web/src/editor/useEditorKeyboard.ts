@@ -51,9 +51,19 @@ export function useEditorKeyboard(): void {
         st.copy();
         return;
       }
+      if (mod && e.key.toLowerCase() === 'x') {
+        e.preventDefault();
+        st.cut();
+        return;
+      }
       if (mod && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         st.paste();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        st.selectAll();
         return;
       }
 

@@ -22,6 +22,7 @@ export interface Snapshot {
 }
 
 export type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+export type Alignment = 'left' | 'center-h' | 'right' | 'top' | 'middle-v' | 'bottom';
 
 export interface EditorState {
   projectId: string | null;
@@ -92,6 +93,13 @@ export interface EditorState {
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   toggleLock: (id: string) => void;
+
+  // ---- 多选：对齐 / 分布 / 等宽等高 ----
+  alignComponents: (ids: string[], alignment: Alignment) => void;
+  distributeH: (ids: string[]) => void;
+  distributeV: (ids: string[]) => void;
+  equalWidth: (ids: string[]) => void;
+  equalHeight: (ids: string[]) => void;
 
   // ---- pages ----
   setPage: (id: string) => void;
@@ -382,6 +390,31 @@ export const useEditorStore = create<EditorState>((set, get) => {
         ),
       })),
 
+    alignComponents: (ids, alignment) =>
+      mutateAndCommit((s) => ({
+        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => alignInPlace(cs, ids, alignment)),
+      })),
+
+    distributeH: (ids) =>
+      mutateAndCommit((s) => ({
+        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'h')),
+      })),
+
+    distributeV: (ids) =>
+      mutateAndCommit((s) => ({
+        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'v')),
+      })),
+
+    equalWidth: (ids) =>
+      mutateAndCommit((s) => ({
+        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'w')),
+      })),
+
+    equalHeight: (ids) =>
+      mutateAndCommit((s) => ({
+        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'h')),
+      })),
+
     setPage: (id) => mutateAndCommit(() => ({ currentPageId: id, selectedIds: [] })),
 
     addPage: () =>
@@ -449,4 +482,59 @@ function moveItem(comps: EditorComponent[], id: string, step: 1 | -1): EditorCom
   const next = [...comps];
   [next[idx], next[target]] = [next[target], next[idx]];
   return next;
+}
+
+/** 多选对齐：按选中组件 bbox 计算，原地改 x/y。 */
+function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignment): EditorComponent[] {
+  const sel = comps.filter((c) => ids.includes(c.id));
+  if (sel.length < 2) return comps;
+  const minX = Math.min(...sel.map((c) => c.x));
+  const maxX = Math.max(...sel.map((c) => c.x + c.w));
+  const minY = Math.min(...sel.map((c) => c.y));
+  const maxY = Math.max(...sel.map((c) => c.y + c.h));
+  return comps.map((c) => {
+    if (!ids.includes(c.id)) return c;
+    let { x, y } = c;
+    if (alignment === 'left') x = minX;
+    else if (alignment === 'right') x = maxX - c.w;
+    else if (alignment === 'center-h') x = Math.round((minX + maxX) / 2 - c.w / 2);
+    else if (alignment === 'top') y = minY;
+    else if (alignment === 'bottom') y = maxY - c.h;
+    else if (alignment === 'middle-v') y = Math.round((minY + maxY) / 2 - c.h / 2);
+    return { ...c, x: Math.round(x), y: Math.round(y) };
+  });
+}
+
+/** 多选分布：沿水平/垂直方向均匀排布间距（保持顺序，首尾不动）。 */
+function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v'): EditorComponent[] {
+  const sel = comps.filter((c) => ids.includes(c.id));
+  if (sel.length < 3) return comps;
+  const pos = (c: EditorComponent, start: boolean) => (axis === 'h' ? (start ? c.x : c.x + c.w) : start ? c.y : c.y + c.h);
+  const sorted = [...sel].sort((a, b) => pos(a, true) - pos(b, true));
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const startEdge = pos(first, true);
+  const endEdge = pos(last, false);
+  const totalSize = sorted.reduce((acc, c) => acc + (axis === 'h' ? c.w : c.h), 0);
+  const gap = (endEdge - startEdge - totalSize) / (sorted.length - 1);
+  let cursor = startEdge;
+  const newPos = new Map<string, number>();
+  for (const c of sorted) {
+    newPos.set(c.id, cursor);
+    cursor += (axis === 'h' ? c.w : c.h) + gap;
+  }
+  return comps.map((c) => {
+    if (!ids.includes(c.id)) return c;
+    const np = newPos.get(c.id);
+    if (np === undefined) return c;
+    return axis === 'h' ? { ...c, x: Math.round(np) } : { ...c, y: Math.round(np) };
+  });
+}
+
+/** 多选等宽/等高：全部设为均值。 */
+function equalize(comps: EditorComponent[], ids: string[], dim: 'w' | 'h'): EditorComponent[] {
+  const sel = comps.filter((c) => ids.includes(c.id));
+  if (sel.length < 2) return comps;
+  const avg = Math.round(sel.reduce((acc, c) => acc + c[dim], 0) / sel.length);
+  return comps.map((c) => (ids.includes(c.id) ? { ...c, [dim]: avg } : c));
 }

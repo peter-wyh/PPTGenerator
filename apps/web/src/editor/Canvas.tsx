@@ -1,12 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEditorStore, type ResizeDir } from './store';
 import type { EditorComponent } from '@mediakit/shared';
 import { CanvasComponent } from './components/CanvasComponent';
+import { ContextMenu, type MenuItem } from './components/ContextMenu';
 
 type DragState =
   | { kind: 'move'; mouseX: number; mouseY: number; comps: { id: string; x: number; y: number; locked?: boolean }[] }
   | { kind: 'resize'; mouseX: number; mouseY: number; comp: { x: number; y: number; w: number; h: number }; id: string; dir: ResizeDir }
-  | { kind: 'pan'; mouseX: number; mouseY: number; panX0: number; panY0: number };
+  | { kind: 'pan'; mouseX: number; mouseY: number; panX0: number; panY0: number }
+  | { kind: 'marquee'; startCanvasX: number; startCanvasY: number; shift: boolean };
 
 const SNAP = 10;
 
@@ -22,6 +24,15 @@ export function Canvas() {
   const components = useEditorStore((s) => s.currentComponents());
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const isPanning = useEditorStore((s) => s.isPanning);
+  const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; compId: string } | null>(null);
+
+  /** 屏幕 → 画布坐标（含 pan，因为 viewport 的 rect 反映了 translate）。 */
+  function clientToCanvas(clientX: number, clientY: number) {
+    const rect = viewportRef.current!.getBoundingClientRect();
+    const z = useEditorStore.getState().zoom;
+    return { x: (clientX - rect.left) / z, y: (clientY - rect.top) / z };
+  }
 
   /* ----------------------------- 拖动编排 ----------------------------- */
   useEffect(() => {
@@ -45,12 +56,47 @@ export function Canvas() {
         st.resize(drag.id, drag.dir, dx, dy, drag.comp);
       } else if (drag.kind === 'pan') {
         st.setPan(drag.panX0 + (e.clientX - drag.mouseX), drag.panY0 + (e.clientY - drag.mouseY));
+      } else if (drag.kind === 'marquee') {
+        const cur = clientToCanvas(e.clientX, e.clientY);
+        setMarqueeRect({
+          x: Math.min(drag.startCanvasX, cur.x),
+          y: Math.min(drag.startCanvasY, cur.y),
+          w: Math.abs(cur.x - drag.startCanvasX),
+          h: Math.abs(cur.y - drag.startCanvasY),
+        });
       }
     }
     function onUp() {
       const drag = dragRef.current;
-      if (drag && (drag.kind === 'move' || drag.kind === 'resize')) {
+      if (drag?.kind === 'move' || drag?.kind === 'resize') {
         useEditorStore.getState().commit();
+      } else if (drag?.kind === 'marquee') {
+        const rect = marqueeRect;
+        const st = useEditorStore.getState();
+        if (rect && (rect.w > 5 || rect.h > 5)) {
+          // 框选：选中完全落入矩形的组件。
+          const enclosed = st
+            .currentComponents()
+            .filter(
+              (c) =>
+                c.x >= rect.x &&
+                c.y >= rect.y &&
+                c.x + c.w <= rect.x + rect.w &&
+                c.y + c.h <= rect.y + rect.h,
+            )
+            .map((c) => c.id);
+          if (drag.shift) {
+            const base = new Set(st.selectedIds);
+            for (const id of enclosed) base.add(id);
+            useEditorStore.setState({ selectedIds: [...base] });
+          } else {
+            useEditorStore.setState({ selectedIds: enclosed });
+          }
+        } else {
+          // 纯点击空白 → 取消选中。
+          st.clearSelection();
+        }
+        setMarqueeRect(null);
       }
       dragRef.current = null;
     }
@@ -60,7 +106,7 @@ export function Canvas() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, []);
+  }, [marqueeRect]);
 
   /* ----------------------------- wheel 缩放 ---------------------------- */
   useEffect(() => {
@@ -119,6 +165,45 @@ export function Canvas() {
     };
   }
 
+  function handleContextMenu(e: React.MouseEvent, comp: EditorComponent) {
+    e.preventDefault();
+    e.stopPropagation();
+    useEditorStore.getState().select(comp.id);
+    setMenu({ x: e.clientX, y: e.clientY, compId: comp.id });
+  }
+
+  function handleHoverCopy(comp: EditorComponent) {
+    const st = useEditorStore.getState();
+    st.select(comp.id);
+    st.duplicateSelected();
+  }
+
+  function handleHoverDelete(comp: EditorComponent) {
+    const st = useEditorStore.getState();
+    st.select(comp.id);
+    st.deleteSelected();
+  }
+
+  const menuItems: (MenuItem | 'separator')[] = menu
+    ? (() => {
+        const st = useEditorStore.getState();
+        const comp = st.currentComponents().find((c) => c.id === menu.compId);
+        const id = menu.compId;
+        return [
+          { label: '复制', onClick: () => { st.select(id); st.copy(); } },
+          { label: '剪切', onClick: () => { st.select(id); st.cut(); } },
+          { label: '删除', danger: true, onClick: () => { st.select(id); st.deleteSelected(); } },
+          'separator',
+          { label: '上移一层', onClick: () => st.bringForward(id) },
+          { label: '下移一层', onClick: () => st.sendBackward(id) },
+          { label: '置顶', onClick: () => st.bringToFront(id) },
+          { label: '置底', onClick: () => st.sendToBack(id) },
+          'separator',
+          { label: comp?.locked ? '解锁位置' : '锁定位置', onClick: () => st.toggleLock(id) },
+        ];
+      })()
+    : [];
+
   function handleBackgroundMouseDown(e: React.MouseEvent) {
     const st = useEditorStore.getState();
     if (st.isPanning) {
@@ -131,8 +216,9 @@ export function Canvas() {
       };
       return;
     }
-    // 点空白：取消选中。
-    st.clearSelection();
+    // 空白处：开始框选（mouseup 时据位移决定框选或取消选中）。
+    const start = clientToCanvas(e.clientX, e.clientY);
+    dragRef.current = { kind: 'marquee', startCanvasX: start.x, startCanvasY: start.y, shift: e.shiftKey };
   }
 
   return (
@@ -175,10 +261,27 @@ export function Canvas() {
               selected={selectedIds.includes(comp.id)}
               onMouseDown={handleComponentMouseDown}
               onResizeStart={handleResizeStart}
+              onContextMenu={handleContextMenu}
+              onHoverCopy={handleHoverCopy}
+              onHoverDelete={handleHoverDelete}
             />
           ))}
+          {marqueeRect && (
+            <div
+              className="pointer-events-none absolute border border-accent-primary bg-accent-primary/10"
+              style={{
+                left: marqueeRect.x,
+                top: marqueeRect.y,
+                width: marqueeRect.w,
+                height: marqueeRect.h,
+              }}
+            />
+          )}
         </div>
       </div>
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
+      )}
     </div>
   );
 }
