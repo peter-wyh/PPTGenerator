@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* demo.html :root 设计 token —— 单一事实源（Tailwind 再引用）。 */
+:root {
+  --surface-primary: #ffffff;
+  --surface-inverse: #0a0a0a;
+  --surface-subtle: #fafafa;
+  --surface-hover: #f9fafb;
+  --foreground-primary: #1a1a1a;
+  --foreground-secondary: #666666;
+  --foreground-muted: #888888;
+  --foreground-inverse: #ffffff;
+  --border-subtle: #f3f4f6;
+  --border-default: #e5e7eb;
+  --accent-primary: #ff5c00;
+  --accent-secondary: #ff8533;
+  --green: #22c55e;
+  --red: #ef4444;
+  --red-bg: #fef2f2;
+  --red-border: #fecaca;
+  --blue: #3b82f6;
+  --yellow: #f59e0b;
+  --purple: #8b5cf6;
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.03), 0 12px 32px rgba(0, 0, 0, 0.06);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  color: var(--foreground-primary);
+  background: var(--surface-subtle);
+  -webkit-font-smoothing: antialiased;
+}

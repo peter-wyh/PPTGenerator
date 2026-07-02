@@ -1,0 +1,49 @@
+import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/stores/auth';
+import { Button } from './Button';
+
+interface LayoutProps {
+  children: ReactNode;
+}
+
+/** 受保护页面的外壳：顶栏（logo / 项目名占位 / 当前用户 / 登出）。 */
+export function Layout({ children }: LayoutProps) {
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+
+  async function handleLogout() {
+    await logout();
+    navigate('/login', { replace: true });
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <header className="flex h-12 items-center justify-between border-b border-border-default bg-surface-primary px-4">
+        <button
+          onClick={() => navigate('/projects')}
+          className="font-headings text-base font-semibold tracking-tight text-foreground-primary"
+        >
+          MediaKit
+        </button>
+        <div className="flex items-center gap-3">
+          {user && (
+            <span className="text-sm text-foreground-secondary">
+              {user.name ?? user.email}
+              {user.role === 'ADMIN' && (
+                <span className="ml-1 rounded-full bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent-primary">
+                  ADMIN
+                </span>
+              )}
+            </span>
+          )}
+          <Button variant="ghost" onClick={handleLogout}>
+            登出
+          </Button>
+        </div>
+      </header>
+      <main className="flex-1 overflow-auto">{children}</main>
+    </div>
+  );
+}
