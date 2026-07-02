@@ -172,6 +172,23 @@ export interface EditorComponent {
   data: ComponentData;
   locked?: boolean;
   z?: number;
+  /** 数据源绑定（M5）：绑定后组件按列从数据源渲染。 */
+  binding?: ComponentBinding;
+}
+
+/** 数据源绑定：选数据源 + 取值/标签列。 */
+export interface ComponentBinding {
+  datasourceId: string;
+  labelColumn?: string;
+  valueColumn?: string;
+}
+
+/** 数据源：上传的 CSV/Excel 解析为表格。 */
+export interface Datasource {
+  id: string;
+  name: string;
+  columns: string[];
+  rows: Record<string, string>[];
 }
 
 export interface Page {

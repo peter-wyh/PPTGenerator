@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-07-02 — M5：数据源 ✅
+
+CSV/Excel 上传 → 解析 → 组件按列绑定，真实驱动图表/表格。
+
+### 新增（apps/web）
+
+- **shared 类型**：`ComponentBinding`、`EditorComponent.binding?`、`Datasource`。
+- **解析**（`datasource/parse.ts`）：自写 CSV 解析（支持引号/转义/CRLF）+ Excel 解析（xlsx/SheetJS，取首 sheet）；`parseFile` 按扩展名分发。
+- **store 数据源**：`datasources[]` + `addDatasource`/`removeDatasource`/`bindComponent`（会话级，未持久化到后端）。
+- **绑定解析**（`datasource/resolve.ts`）：bar/line/pie 按 label/value 列派生，table 整表渲染；数字列自动去千分位、非数字归 0。
+- **工具栏数据源下拉**（`DatasourceMenu`）：列出数据源 + 上传入口 + 删除。
+- **属性面板绑定编辑器**：bar/line/pie/table 选中时选数据源 + label/value 列，可断开。
+- `ComponentRenderer` 接入 resolve（绑定后按数据源渲染）。
+
+### 取舍
+
+- 数据源为**会话级**（未落库）——后端 Project 模型无数据源字段；持久化留后续。
+
+### 测试 / 门禁
+
+- 新增 16 个 web 测试：CSV 解析 + store 6、绑定解析 6、数据源下拉/绑定 UI 4（web 累计 115）。
+- `pnpm typecheck` + `pnpm test`（server 35 / web 115 = 150）+ `pnpm build` 全绿。
+
 ## 2026-07-02 — M4：业务组件 ✅
 
 20 类业务组件 × 多变体，原生 React 像素级忠实 demo。

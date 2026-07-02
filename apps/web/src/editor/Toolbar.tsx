@@ -1,5 +1,6 @@
 import { useEditorStore } from './store';
 import { BusinessLibrary } from './components/BusinessLibrary';
+import { DatasourceMenu } from './components/DatasourceMenu';
 
 const TOOLS: { type: 'text' | 'image' | 'bar-chart' | 'line-chart' | 'pie-chart' | 'indicator-card' | 'table'; label: string }[] = [
   { type: 'text', label: '文本' },
@@ -26,6 +27,8 @@ export function Toolbar() {
           {t.label}
         </button>
       ))}
+      <span className="mx-1 h-4 w-px bg-border-default" />
+      <DatasourceMenu />
     </div>
   );
 }

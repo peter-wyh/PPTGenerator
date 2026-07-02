@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import type {
+  ComponentBinding,
   ComponentData,
   ComponentType,
+  Datasource,
   EditorComponent,
   Page,
   ProjectDetail,
@@ -42,6 +44,9 @@ export interface EditorState {
   panX: number;
   panY: number;
   isPanning: boolean;
+
+  /** 数据源（M5，会话级，未持久化到后端）。 */
+  datasources: Datasource[];
 
   loaded: boolean;
   /** 自上次保存后是否有未落库变更（供 autosave）。 */
@@ -115,6 +120,11 @@ export interface EditorState {
   // ---- history ----
   undo: () => void;
   redo: () => void;
+
+  // ---- 数据源（M5）----
+  addDatasource: (ds: Datasource) => void;
+  removeDatasource: (id: string) => void;
+  bindComponent: (id: string, binding: ComponentBinding | null) => void;
 }
 
 function newId(): string {
@@ -171,6 +181,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     panX: 0,
     panY: 0,
     isPanning: false,
+    datasources: [],
     loaded: false,
     dirty: false,
 
@@ -198,6 +209,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         zoom: 1,
         panX: 0,
         panY: 0,
+        datasources: [],
         loaded: true,
         dirty: false,
       });
@@ -525,6 +537,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
         historyIndex: i,
       });
     },
+
+    addDatasource: (ds) => set((s) => ({ datasources: [...s.datasources, ds] })),
+
+    removeDatasource: (id) =>
+      set((s) => ({ datasources: s.datasources.filter((d) => d.id !== id) })),
+
+    bindComponent: (id, binding) =>
+      mutateAndCommit((s) => ({
+        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+          cs.map((c) => (c.id === id ? { ...c, binding: binding ?? undefined } : c)),
+        ),
+      })),
   };
 });
 

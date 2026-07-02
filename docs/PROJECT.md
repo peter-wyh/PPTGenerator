@@ -66,7 +66,7 @@ pnpm build       # server noEmit + web vite build
 | **M2** | 交互补全（多选/框选/对齐/右键/锁定） | ✅ 完成 |
 | **M3** | 页面管理（缩略图/模板/复制/排序） | ✅ 完成 |
 | **M4** | 业务组件（20 类 × 变体） | ✅ 完成 |
-| M5 | 数据源（CSV/Excel 上传 + 绑定） | 待启动 |
-| M6 | 预览 + 导出（PDF / 分享链接） | — |
+| **M5** | 数据源（CSV/Excel 上传 + 绑定） | ✅ 完成 |
+| M6 | 预览 + 导出（PDF / 分享链接） | 待启动 |
 
 每期独立 design → plan → implement → verify。

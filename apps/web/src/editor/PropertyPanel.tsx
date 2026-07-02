@@ -59,6 +59,11 @@ export function PropertyPanel() {
 
       {comp.type === 'business-block' && <BusinessFields comp={comp} />}
 
+      {(comp.type === 'bar-chart' ||
+        comp.type === 'line-chart' ||
+        comp.type === 'pie-chart' ||
+        comp.type === 'table') && <BindingEditor comp={comp} />}
+
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button
           variant="danger"
@@ -155,6 +160,99 @@ function BusinessFields({ comp }: { comp: EditorComponent }) {
         </button>
       </FieldGroup>
     </>
+  );
+}
+
+/* ----------------------------- 绑定编辑器 ----------------------------- */
+
+function BindingEditor({ comp }: { comp: EditorComponent }) {
+  const datasources = useEditorStore((s) => s.datasources);
+  const bindComponent = useEditorStore((s) => s.bindComponent);
+  const binding = comp.binding;
+  const ds = binding ? datasources.find((d) => d.id === binding.datasourceId) : null;
+  const isTable = comp.type === 'table';
+  const columns = ds?.columns ?? [];
+
+  if (datasources.length === 0) {
+    return (
+      <FieldGroup title="数据源绑定">
+        <p className="text-xs text-foreground-muted">先从工具栏上传 CSV/Excel 创建数据源。</p>
+      </FieldGroup>
+    );
+  }
+
+  return (
+    <FieldGroup title="数据源绑定">
+      <label className="block text-xs text-foreground-secondary">
+        <span className="mb-1 block">数据源</span>
+        <select
+          value={binding?.datasourceId ?? ''}
+          onChange={(e) => {
+            const id = e.target.value;
+            if (!id) {
+              bindComponent(comp.id, null);
+            } else {
+              const cols = datasources.find((d) => d.id === id)?.columns ?? [];
+              bindComponent(comp.id, {
+                datasourceId: id,
+                labelColumn: isTable ? undefined : cols[0],
+                valueColumn: isTable ? undefined : cols[1] ?? cols[0],
+              });
+            }
+          }}
+          className="w-full rounded border border-border-default bg-surface-primary px-2 py-1"
+        >
+          <option value="">（未绑定）</option>
+          {datasources.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}（{d.columns.length}列 · {d.rows.length}行）
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {binding && !isTable && (
+        <>
+          <label className="block text-xs text-foreground-secondary">
+            <span className="mb-1 block">标签列</span>
+            <select
+              value={binding.labelColumn ?? ''}
+              onChange={(e) => bindComponent(comp.id, { ...binding, labelColumn: e.target.value })}
+              className="w-full rounded border border-border-default bg-surface-primary px-2 py-1"
+            >
+              {columns.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs text-foreground-secondary">
+            <span className="mb-1 block">数值列</span>
+            <select
+              value={binding.valueColumn ?? ''}
+              onChange={(e) => bindComponent(comp.id, { ...binding, valueColumn: e.target.value })}
+              className="w-full rounded border border-border-default bg-surface-primary px-2 py-1"
+            >
+              {columns.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
+
+      {binding && (
+        <button
+          onClick={() => bindComponent(comp.id, null)}
+          className="text-xs text-foreground-muted hover:text-red"
+        >
+          断开绑定
+        </button>
+      )}
+    </FieldGroup>
   );
 }
 
