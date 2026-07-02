@@ -7,7 +7,7 @@ import { ProtectedLayout, useRestoreSession } from './routes/ProtectedLayout';
 export function App() {
   useRestoreSession();
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedLayout />}>
