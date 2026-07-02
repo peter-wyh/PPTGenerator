@@ -104,6 +104,8 @@ export interface EditorState {
   // ---- pages ----
   setPage: (id: string) => void;
   addPage: () => void;
+  addPageWithComponents: (name: string, components: EditorComponent[]) => void;
+  copyPage: (id: string) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
   reorderPage: (from: number, to: number) => void;
@@ -421,6 +423,30 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => {
         const page: Page = { id: newId(), name: `第 ${s.pages.length + 1} 页`, components: [] };
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
+      }),
+
+    addPageWithComponents: (name, components) =>
+      mutateAndCommit((s) => {
+        // 模板带入的组件重新分配 id，避免与现有冲突。
+        const reid = components.map((c) => ({ ...clone(c), id: newId() }));
+        const page: Page = { id: newId(), name, components: reid };
+        return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
+      }),
+
+    copyPage: (id) =>
+      mutateAndCommit((s) => {
+        const src = s.pages.find((p) => p.id === id);
+        if (!src) return {};
+        const copied: Page = {
+          id: newId(),
+          name: `${src.name} (副本)`,
+          components: src.components.map((c) => ({ ...clone(c), id: newId() })),
+        };
+        // 插入到原页之后。
+        const idx = s.pages.findIndex((p) => p.id === id);
+        const pages = [...s.pages];
+        pages.splice(idx + 1, 0, copied);
+        return { pages };
       }),
 
     deletePage: (id) =>

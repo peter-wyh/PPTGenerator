@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-02 — M3：页面管理 ✅
+
+### 新增（apps/web）
+
+- **页面缩略图**（`PageThumbnail`）：按 `min(w/cw, h/ch)` 缩放，每个组件渲染为按类型着色的色块（indicator-card/text/bar-chart/table 各一色，忠实 demo）；空白页显示「空白页」。
+- **模板浮层**（`TemplateOverlay` + `templates.ts`）：「新建页面」打开浮层，含 空白页 / 标题页 / 数据概览 / 表格页 4 个由基础组件拼成的模板；apply 时组件重新分配 id。（demo 完整业务模板依赖业务组件，留 M4。）
+- **复制页面**（store `copyPage`）：克隆页面（新页面 id + 新组件 id），插入原页之后，不切换当前页。
+- **store `addPageWithComponents`**：模板带入组件时重新分配 id。
+- **页面栏升级**：缩略图卡片 + 📋 复制 + 拖拽排序（HTML5 DnD → `reorderPage`）+ 双击改名 + 删除。
+
+### 测试 / 门禁
+
+- 新增 9 个 web 测试：copyPage/addPageWithComponents 4、缩略图 + 模板浮层 5（web 累计 81）。
+- `pnpm typecheck` + `pnpm test`（server 35 / web 81 = 116）+ `pnpm build` 全绿。
+
 ## 2026-07-02 — M2：交互补全 ✅
 
 编辑器交互对齐 demo G1。

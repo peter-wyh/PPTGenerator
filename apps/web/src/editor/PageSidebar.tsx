@@ -1,34 +1,65 @@
 import { useState } from 'react';
 import { useEditorStore } from './store';
+import { PageThumbnail } from './components/PageThumbnail';
+import { TemplateOverlay } from './components/TemplateOverlay';
+import type { Template } from './templates';
 
+/** 页面栏：缩略图卡片 + 切换/改名/复制/删除 + 拖拽排序 + 模板新建。 */
 export function PageSidebar() {
   const pages = useEditorStore((s) => s.pages);
   const currentPageId = useEditorStore((s) => s.currentPageId);
+  const canvasWidth = useEditorStore((s) => s.canvasWidth);
+  const canvasHeight = useEditorStore((s) => s.canvasHeight);
   const setPage = useEditorStore((s) => s.setPage);
-  const addPage = useEditorStore((s) => s.addPage);
   const deletePage = useEditorStore((s) => s.deletePage);
+  const copyPage = useEditorStore((s) => s.copyPage);
   const renamePage = useEditorStore((s) => s.renamePage);
+  const reorderPage = useEditorStore((s) => s.reorderPage);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  function applyTemplate(tpl: Template) {
+    if (tpl.id === 'blank') {
+      useEditorStore.getState().addPage();
+    } else {
+      useEditorStore.getState().addPageWithComponents(tpl.name, tpl.components());
+    }
+    setShowTemplates(false);
+  }
+
+  function onDrop(targetIndex: number) {
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      return;
+    }
+    reorderPage(dragIndex, targetIndex);
+    setDragIndex(null);
+  }
 
   return (
-    <div className="flex w-[200px] flex-col border-r border-border-default bg-surface-primary">
-      <div className="flex items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-        <span>页面 ({pages.length})</span>
+    <div className="flex w-[220px] flex-col border-r border-border-default bg-surface-primary">
+      <div className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">
+        页面 ({pages.length})
       </div>
-      <div className="flex-1 space-y-1 overflow-auto px-2">
+      <div className="flex-1 space-y-2 overflow-auto px-2 pb-2">
         {pages.map((p, i) => (
           <div
             key={p.id}
+            draggable
+            onDragStart={() => setDragIndex(i)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => onDrop(i)}
             onClick={() => setPage(p.id)}
-            className={`cursor-pointer rounded-lg border px-2 py-1.5 text-sm ${
+            className={`group cursor-pointer rounded-lg border p-2 transition ${
               p.id === currentPageId
-                ? 'border-accent-primary bg-accent-primary/5 text-foreground-primary'
-                : 'border-transparent text-foreground-secondary hover:bg-surface-hover'
-            }`}
+                ? 'border-accent-primary bg-accent-primary/5'
+                : 'border-border-default hover:bg-surface-hover'
+            } ${dragIndex === i ? 'opacity-40' : ''}`}
           >
-            <div className="flex items-center justify-between">
+            <div className="mb-1 flex items-center justify-between">
               {editingId === p.id ? (
                 <input
                   autoFocus
@@ -54,32 +85,49 @@ export function PageSidebar() {
                     setEditingId(p.id);
                     setDraft(p.name);
                   }}
-                  className="truncate"
+                  className="truncate text-xs font-medium text-foreground-primary"
                 >
                   {i + 1}. {p.name}
                 </span>
               )}
-              {pages.length > 1 && (
+              <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
                 <button
+                  title="复制页面"
                   onClick={(e) => {
                     e.stopPropagation();
-                    deletePage(p.id);
+                    copyPage(p.id);
                   }}
-                  className="ml-1 text-foreground-muted hover:text-red"
+                  className="text-foreground-muted hover:text-foreground-primary"
                 >
-                  ✕
+                  📋
                 </button>
-              )}
+                {pages.length > 1 && (
+                  <button
+                    title="删除页面"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePage(p.id);
+                    }}
+                    className="text-foreground-muted hover:text-red"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
+            <PageThumbnail page={p} canvasWidth={canvasWidth} canvasHeight={canvasHeight} />
           </div>
         ))}
       </div>
       <button
-        onClick={() => addPage()}
+        onClick={() => setShowTemplates(true)}
         className="m-2 rounded-lg border border-dashed border-border-default px-2 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
       >
         + 新建页面
       </button>
+      {showTemplates && (
+        <TemplateOverlay onApply={applyTemplate} onClose={() => setShowTemplates(false)} />
+      )}
     </div>
   );
 }
