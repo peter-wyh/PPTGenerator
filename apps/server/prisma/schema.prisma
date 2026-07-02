@@ -1,0 +1,43 @@
+// MediaKit Prisma schema (MySQL 8)
+// 对齐 design spec §3.3 — pages 为不透明 JSON，组件类型扩展不触发迁移。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  role         Role      @default(USER)
+  projects     Project[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  pages     Json
+  width     Int      @default(1280)
+  height    Int      @default(720)
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
