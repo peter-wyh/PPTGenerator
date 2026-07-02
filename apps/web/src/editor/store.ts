@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type {
+  ComponentData,
   ComponentType,
   EditorComponent,
   Page,
@@ -52,6 +53,7 @@ export interface EditorState {
 
   // ---- lifecycle ----
   loadProject: (detail: ProjectDetail, name: string) => void;
+  setProjectName: (name: string) => void;
   markSaved: () => void;
 
   // ---- view ----
@@ -191,6 +193,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     markSaved: () => set({ dirty: false }),
 
+    setProjectName: (name) => set({ projectName: name, dirty: true }),
+
     setZoom: (z) => set({ zoom: Math.round(z * 100) / 100 }),
     zoomByDelta: (delta) =>
       set((s) => ({
@@ -243,7 +247,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => ({
         pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
           cs.map((c) =>
-            c.id === id ? { ...c, data: { ...(c.data as object), ...dataPatch } } : c,
+            c.id === id
+              ? { ...c, data: { ...(c.data as object), ...dataPatch } as unknown as ComponentData }
+              : c,
           ),
         ),
       })),
@@ -376,8 +382,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         ),
       })),
 
-    setPage: (id) =>
-      mutateAndCommit((s) => ({ currentPageId: id, selectedIds: [] })),
+    setPage: (id) => mutateAndCommit(() => ({ currentPageId: id, selectedIds: [] })),
 
     addPage: () =>
       mutateAndCommit((s) => {

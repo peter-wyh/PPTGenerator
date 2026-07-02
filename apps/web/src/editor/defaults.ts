@@ -37,7 +37,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
         color: '#1A1A1A',
       };
     case 'indicator-card':
-      return { title: '指标名称', value: '---', trend: null, trendUp: null, colorTheme: 'blue' };
+      return { title: '指标名称', value: '---', colorTheme: 'blue' };
     case 'bar-chart':
       return {
         title: '柱状图',

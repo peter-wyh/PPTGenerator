@@ -1,0 +1,28 @@
+import { useEditorStore } from './store';
+
+const TOOLS: { type: 'text' | 'image' | 'bar-chart' | 'line-chart' | 'pie-chart' | 'indicator-card' | 'table'; label: string }[] = [
+  { type: 'text', label: '文本' },
+  { type: 'image', label: '图片' },
+  { type: 'bar-chart', label: '柱状图' },
+  { type: 'line-chart', label: '折线图' },
+  { type: 'pie-chart', label: '饼图' },
+  { type: 'indicator-card', label: '指标卡' },
+  { type: 'table', label: '表格' },
+];
+
+export function Toolbar() {
+  const addComponent = useEditorStore((s) => s.addComponent);
+  return (
+    <div className="flex h-11 items-center gap-1 border-b border-border-default bg-surface-primary px-3">
+      {TOOLS.map((t) => (
+        <button
+          key={t.type}
+          onClick={() => addComponent(t.type)}
+          className="rounded-lg px-3 py-1.5 text-sm text-foreground-secondary transition hover:bg-surface-hover hover:text-foreground-primary"
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
