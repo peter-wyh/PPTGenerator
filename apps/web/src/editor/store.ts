@@ -14,6 +14,7 @@ import {
   MIN_W,
   MOVE_SNAP,
 } from './defaults';
+import { getBusinessItem, getLayout } from './business/catalog';
 
 /** history 快照：仅 pages + currentPageId（忠实 demo：zoom/尺寸/选中不进 history）。 */
 export interface Snapshot {
@@ -70,6 +71,7 @@ export interface EditorState {
 
   // ---- components ----
   addComponent: (type: ComponentType) => void;
+  addBusinessBlock: (kind: string) => void;
   updateComponent: (id: string, patch: Partial<EditorComponent>) => void;
   updateComponentData: (id: string, dataPatch: Record<string, unknown>) => void;
   move: (ids: string[], dx: number, dy: number) => void;
@@ -237,6 +239,33 @@ export const useEditorStore = create<EditorState>((set, get) => {
           w: size.w,
           h: size.h,
           data: getDefaultData(type),
+        };
+        return {
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
+          selectedIds: [comp.id],
+        };
+      }),
+
+    addBusinessBlock: (kind) =>
+      mutateAndCommit((s) => {
+        const layout = getLayout(kind);
+        const item = getBusinessItem(kind);
+        const { x, y } = centered(layout.w, layout.h, s.canvasWidth, s.canvasHeight);
+        const comp: EditorComponent = {
+          id: newId(),
+          type: 'business-block',
+          x,
+          y,
+          w: layout.w,
+          h: layout.h,
+          data: {
+            businessKind: kind,
+            layoutForm: layout.form,
+            title: item.title,
+            meta: item.meta,
+            details: [...item.details],
+            variant: 'standard',
+          },
         };
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
