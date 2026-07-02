@@ -3,7 +3,6 @@ import type { ComponentType, EditorComponent } from '@mediakit/shared';
 import { DEFAULT_SIZES, getDefaultData } from './defaults';
 import {
   BarChartComponent,
-  BusinessBlockPlaceholder,
   ImageComponent,
   IndicatorCardComponent,
   LineChartComponent,
@@ -11,6 +10,7 @@ import {
   TableComponent,
   TextComponent,
 } from './components/BasicComponents';
+import { BusinessBlockRenderer } from './business/render';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -137,7 +137,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     propertySchema: [{ key: '', label: '表格内容', kind: 'table' }],
   },
   'business-block': {
-    Component: BusinessBlockPlaceholder,
+    Component: BusinessBlockRenderer,
     defaultSize: DEFAULT_SIZES['business-block'],
     defaultData: () => getDefaultData('business-block'),
     propertySchema: [
