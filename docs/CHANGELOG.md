@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-07-02 — M4：业务组件 ✅
+
+20 类业务组件 × 多变体，原生 React 像素级忠实 demo。
+
+### 新增（apps/web）
+
+- **catalog**（`business/catalog.ts`）：`BUSINESS_GROUPS`（5 组 20 项）/ `BUSINESS_BY_ID` / `BUSINESS_LAYOUTS`（w/h/form）/ `BUSINESS_STYLE_OPTIONS` + `getStyleOptions`，完整 port demo。
+- **渲染器**（`business/render.tsx` + `shared.tsx`）：`Base`/`Label`/`Title`/`Chips` 共享件；通用 `cards`/`light`/`accent` 兜底；**20 类 standard** + **6 个专用变体**（cover/light、process·campaign-plan/cards、case-showcase/results、campaign-overview/stats、creator-profile/stats、package/table）；分发优先级忠实 demo。用 inline style 保留精确 px。
+- **store `addBusinessBlock(kind)`**：按 LAYOUTS 尺寸居中，data 用 catalog 默认。
+- **业务组件库**（`BusinessLibrary`）：分组浮层，点击建块；工具栏接入。
+- **属性面板**：business-block 的变体选择器（按 kind 动态选项）+ details 条目编辑器。
+- **registry** 接入 `BusinessBlockRenderer`。
+
+### 取舍
+
+- 画布上按文字节点 contentEditable 的内联编辑（demo 的 DOM 命中法）在 React 下复杂且脆弱，**延后**；属性面板已覆盖全部字段编辑（title/meta/details/variant）。
+
+### 测试 / 门禁
+
+- 新增 18 个 web 测试：catalog 8、渲染器 8（每类 + 每变体不抛错）、库面板 2（web 累计 99）。
+- `pnpm typecheck` + `pnpm test`（server 35 / web 99 = 134）+ `pnpm build` 全绿。
+
 ## 2026-07-02 — M3：页面管理 ✅
 
 ### 新增（apps/web）
