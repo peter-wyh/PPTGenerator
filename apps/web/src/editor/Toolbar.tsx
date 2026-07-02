@@ -1,4 +1,5 @@
 import { useEditorStore } from './store';
+import { BusinessLibrary } from './components/BusinessLibrary';
 
 const TOOLS: { type: 'text' | 'image' | 'bar-chart' | 'line-chart' | 'pie-chart' | 'indicator-card' | 'table'; label: string }[] = [
   { type: 'text', label: '文本' },
@@ -14,6 +15,8 @@ export function Toolbar() {
   const addComponent = useEditorStore((s) => s.addComponent);
   return (
     <div className="flex h-11 items-center gap-1 border-b border-border-default bg-surface-primary px-3">
+      <BusinessLibrary />
+      <span className="mx-1 h-4 w-px bg-border-default" />
       {TOOLS.map((t) => (
         <button
           key={t.type}
