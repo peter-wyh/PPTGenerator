@@ -21,12 +21,20 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-12 items-center justify-between border-b border-border-default bg-surface-primary px-4">
-        <button
-          onClick={() => navigate('/projects')}
-          className="font-headings text-base font-semibold tracking-tight text-foreground-primary"
-        >
-          MediaKit
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/projects')}
+            className="font-headings text-base font-semibold tracking-tight text-foreground-primary"
+          >
+            MediaKit
+          </button>
+          <button
+            onClick={() => navigate('/data')}
+            className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+          >
+            Mock 数据
+          </button>
+        </div>
         <div className="flex items-center gap-3">
           {user && (
             <span className="text-sm text-foreground-secondary">

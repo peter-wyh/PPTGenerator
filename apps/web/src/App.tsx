@@ -3,6 +3,7 @@ import { Login } from './routes/Login';
 import { Projects } from './routes/Projects';
 import { ProjectShell } from './routes/ProjectShell';
 import { SharePage } from './routes/SharePage';
+import { MockData } from './routes/MockData';
 import { ProtectedLayout, useRestoreSession } from './routes/ProtectedLayout';
 
 export function App() {
@@ -16,6 +17,7 @@ export function App() {
         <Route element={<ProtectedLayout />}>
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectShell />} />
+          <Route path="/data" element={<MockData />} />
         </Route>
         <Route path="*" element={<Login />} />
       </Routes>
