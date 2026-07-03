@@ -30,6 +30,8 @@ export type Alignment = 'left' | 'center-h' | 'right' | 'top' | 'middle-v' | 'bo
 export interface EditorState {
   projectId: string | null;
   projectName: string;
+  /** 项目元数据（业务线/场景等），供顶栏展示。 */
+  projectMeta: import('@mediakit/shared').ProjectMeta | null;
   canvasWidth: number;
   canvasHeight: number;
   pages: Page[];
@@ -178,6 +180,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
   return {
     projectId: null,
     projectName: '未命名项目',
+    projectMeta: null,
     canvasWidth: 1280,
     canvasHeight: 720,
     pages: [],
@@ -209,6 +212,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set({
         projectId: detail.id,
         projectName: name,
+        projectMeta: detail.meta ?? null,
         canvasWidth: detail.width,
         canvasHeight: detail.height,
         pages,

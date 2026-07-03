@@ -48,6 +48,28 @@ describe('Projects page', () => {
     expect(screen.getByText('报告 B')).toBeInTheDocument();
   });
 
+  it('filters projects by 业务线 / 场景', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue([
+      { ...summary('p1', 'A'), meta: { businessLine: 'FT', scenario: 'campaign-report' } },
+      { ...summary('p2', 'B'), meta: { businessLine: 'SM', scenario: 'media-kit' } },
+      { ...summary('p3', 'C'), meta: { businessLine: 'FT', scenario: 'media-kit' } },
+    ]);
+    renderPage();
+    await screen.findByText('A');
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+
+    const combos = screen.getAllByRole('combobox'); // [业务线, 场景]
+    await user.selectOptions(combos[0], 'FT');
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    expect(screen.queryByText('B')).toBeNull();
+
+    await user.selectOptions(combos[1], 'media-kit');
+    expect(screen.getByText('1 / 3')).toBeInTheDocument(); // FT ∩ media-kit = C
+    expect(screen.getByText('C')).toBeInTheDocument();
+    expect(screen.queryByText('A')).toBeNull();
+  });
+
   it('creates a project via the dialog form', async () => {
     const user = userEvent.setup();
     listMock.mockResolvedValue([]);

@@ -96,6 +96,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'creator-avatar-card':
       return {
+        variant: 'horizontal',
         avatar: '',
         name: 'Mia Chen',
         platform: 'tiktok',
@@ -104,6 +105,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'creator-stats-strip':
       return {
+        variant: 'cards',
         stats: [
           { label: '粉丝', value: '1.28M', color: '#FF5C00' },
           { label: '互动率', value: '8.7%', color: '#3B82F6' },
@@ -113,6 +115,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'creator-works-list':
       return {
+        variant: 'cards',
         headers: ['封面', '标题', '转', '赞', '评'],
         rows: [
           ['', '7 天肌肤日记 · Day 1', '1.2K', '86K', '2.4K'],

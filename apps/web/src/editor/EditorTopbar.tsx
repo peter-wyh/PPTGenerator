@@ -1,10 +1,12 @@
 import { useEditorStore } from './store';
 import { ExportMenu } from './components/ExportMenu';
+import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 
-/** 顶栏：项目名（可编辑）、撤销/重做、预览、导出/分享（M6）。 */
+/** 顶栏：项目名（可编辑）+ meta 标签、撤销/重做、预览、导出/分享（M6）。 */
 export function EditorTopbar() {
   const projectName = useEditorStore((s) => s.projectName);
   const setProjectName = useEditorStore((s) => s.setProjectName);
+  const meta = useEditorStore((s) => s.projectMeta);
   const canUndo = useEditorStore((s) => s.canUndo());
   const canRedo = useEditorStore((s) => s.canRedo());
   const undo = useEditorStore((s) => s.undo);
@@ -12,14 +14,29 @@ export function EditorTopbar() {
   const enterPreview = useEditorStore((s) => s.enterPreview);
   const hasPages = useEditorStore((s) => s.pages.length > 0);
 
+  const metaTags: string[] = [];
+  if (meta?.businessLine) metaTags.push(meta.businessLine);
+  if (meta?.creator) metaTags.push(meta.creator);
+  if (meta?.advertiser) metaTags.push(meta.advertiser);
+  if (meta?.scenario)
+    metaTags.push(SCENARIO_LABELS[meta.scenario] + (meta.scenarioSub ? `·${SCENARIO_SUB_LABELS[meta.scenarioSub]}` : ''));
+
   return (
     <header className="flex h-12 items-center justify-between border-b border-border-default bg-surface-primary px-3">
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <input
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
-          className="rounded px-1.5 py-0.5 text-sm text-foreground-primary outline-none hover:bg-surface-hover focus:bg-surface-hover"
+          className="w-56 rounded px-1.5 py-0.5 text-sm text-foreground-primary outline-none hover:bg-surface-hover focus:bg-surface-hover"
         />
+        {metaTags.map((t, i) => (
+          <span
+            key={i}
+            className="hidden rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary md:inline"
+          >
+            {t}
+          </span>
+        ))}
       </div>
       <div className="flex items-center gap-1">
         <button

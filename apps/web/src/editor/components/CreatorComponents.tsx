@@ -3,7 +3,8 @@
  *
  * 三层组件模型校准：这三个是"页内可复用、绑定达人领域实体"的真业务组件，
  * 与 BasicComponents 同级（一级 ComponentType），由 REGISTRY 分发。
- * 风格对齐 BasicComponents.tsx：Tailwind + inline style，占位态参考 ImageComponent。
+ * 每个组件提供多个样式变体（data.variant），对应 PRD 组件三层定义中的
+ * "样式变体（选版式）"。风格对齐 BasicComponents.tsx；占位态参考 ImageComponent。
  */
 import type {
   CreatorAvatarCardData,
@@ -30,20 +31,38 @@ const TIER_LABEL: Record<CreatorTier, string> = {
 /* --------------------------- creator avatar card -------------------------- */
 
 export function CreatorAvatarCard({ data }: { data: CreatorAvatarCardData }) {
+  const { variant = 'horizontal' } = data;
+  if (variant === 'vertical') return <AvatarVertical data={data} />;
+  if (variant === 'compact') return <AvatarCompact data={data} />;
+  return <AvatarHorizontal data={data} />;
+}
+
+function Avatar({ data, size }: { data: CreatorAvatarCardData; size: number }) {
+  if (data.avatar) {
+    return (
+      <img
+        src={data.avatar}
+        alt={data.name}
+        style={{ width: size, height: size }}
+        className="flex-none rounded-full object-cover"
+        draggable={false}
+      />
+    );
+  }
+  return (
+    <div
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      className="flex flex-none items-center justify-center rounded-full bg-accent-primary/10 text-accent-primary"
+    >
+      {data.name?.slice(0, 1) || '?'}
+    </div>
+  );
+}
+
+function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
   return (
     <div className="flex h-full w-full items-center gap-3 rounded-xl border border-border-default bg-surface-primary p-3">
-      {data.avatar ? (
-        <img
-          src={data.avatar}
-          alt={data.name}
-          className="h-[72px] w-[72px] flex-none rounded-full object-cover"
-          draggable={false}
-        />
-      ) : (
-        <div className="flex h-[72px] w-[72px] flex-none items-center justify-center rounded-full bg-accent-primary/10 text-2xl text-accent-primary">
-          {data.name?.slice(0, 1) || '?'}
-        </div>
-      )}
+      <Avatar data={data} size={72} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
@@ -58,10 +77,49 @@ export function CreatorAvatarCard({ data }: { data: CreatorAvatarCardData }) {
   );
 }
 
+function AvatarVertical({ data }: { data: CreatorAvatarCardData }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-primary p-3 text-center">
+      <Avatar data={data} size={80} />
+      <div className="flex items-center gap-2">
+        <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
+        <span className="flex-none rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
+          {PLATFORM_LABEL[data.platform] ?? data.platform}
+        </span>
+      </div>
+      <div className="text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
+      {data.intro && <div className="line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
+    </div>
+  );
+}
+
+function AvatarCompact({ data }: { data: CreatorAvatarCardData }) {
+  return (
+    <div className="flex h-full w-full items-center gap-2 rounded-xl border border-border-default bg-surface-primary px-3">
+      <Avatar data={data} size={40} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-semibold text-foreground-primary">{data.name}</span>
+          <span className="truncate text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</span>
+        </div>
+        <div className="truncate text-[11px] text-foreground-secondary">
+          {PLATFORM_LABEL[data.platform] ?? data.platform}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------------------- creator stats strip -------------------------- */
 
 export function CreatorStatsStrip({ data }: { data: CreatorStatsStripData }) {
-  const stats = data.stats ?? [];
+  const { variant = 'cards', stats = [] } = data;
+  if (variant === 'plain') return <StatsPlain stats={stats} />;
+  if (variant === 'metric') return <StatsMetric stats={stats} />;
+  return <StatsCards stats={stats} />;
+}
+
+function StatsCards({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   return (
     <div className="flex h-full w-full items-stretch gap-2 rounded-xl border border-border-default bg-surface-primary p-2">
       {stats.map((s, i) => (
@@ -80,42 +138,139 @@ export function CreatorStatsStrip({ data }: { data: CreatorStatsStripData }) {
   );
 }
 
+function StatsPlain({ stats }: { stats: CreatorStatsStripData['stats'] }) {
+  return (
+    <div className="flex h-full w-full items-center divide-x divide-border-subtle rounded-xl border border-border-default bg-surface-primary px-2">
+      {stats.map((s, i) => (
+        <div key={i} className="flex flex-1 flex-col justify-center px-3">
+          <div className="text-[11px] text-foreground-secondary">{s.label}</div>
+          <div className="font-data text-base font-semibold text-foreground-primary">{s.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatsMetric({ stats }: { stats: CreatorStatsStripData['stats'] }) {
+  return (
+    <div className="flex h-full w-full items-stretch gap-3 rounded-xl border border-border-default bg-surface-primary p-3">
+      {stats.map((s, i) => (
+        <div key={i} className="flex flex-1 flex-col justify-center" style={{ borderBottom: `2px solid ${s.color}` }}>
+          <div className="font-data text-2xl font-bold" style={{ color: s.color }}>
+            {s.value}
+          </div>
+          <div className="mt-0.5 text-[10px] uppercase tracking-wide text-foreground-secondary">{s.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ---------------------------- creator works list -------------------------- */
 
 /**
- * 作品列表：复用 TableData（{headers,rows}）。约定列顺序
- * [封面URL, 标题, 转, 赞, 评]；列0为图片 URL，列2-4 为互动数据。
+ * 作品列表：复用 TableData 形状。约定列顺序
+ * [封面URL, 标题, 转, 赞, 评]；列0 为图片 URL，列2-4 为互动数据。
  */
 export function CreatorWorksList({ data }: { data: CreatorWorksListData }) {
-  const rows = data.rows ?? [];
+  const { variant = 'cards', headers = [], rows = [] } = data;
+  const metricLabels = headers.slice(2, 5);
+  const items = rows.map((r) => ({ cover: r[0] ?? '', title: r[1] ?? '', metrics: r.slice(2, 5) }));
+
+  if (variant === 'row') return <WorksRow items={items} metricLabels={metricLabels} />;
+  if (variant === 'compact') return <WorksCompact items={items} metricLabels={metricLabels} />;
+  return <WorksCards items={items} metricLabels={metricLabels} />;
+}
+
+function Cover({ url, alt, cls }: { url: string; alt: string; cls?: string }) {
+  if (url) {
+    return <img src={url} alt={alt} draggable={false} className={`rounded object-cover ${cls ?? ''}`} />;
+  }
+  return (
+    <div
+      className={`flex items-center justify-center rounded bg-surface-hover text-[10px] text-foreground-muted ${cls ?? ''}`}
+    >
+      作品封面
+    </div>
+  );
+}
+
+function WorksCards({
+  items,
+  metricLabels,
+}: {
+  items: { cover: string; title: string; metrics: string[] }[];
+  metricLabels: string[];
+}) {
   return (
     <div className="flex h-full w-full gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
-      {rows.map((row, ri) => {
-        const cover = row[0];
-        const title = row[1] ?? '';
-        const metrics = row.slice(2, 5);
-        const labels = (data.headers ?? []).slice(2, 5);
-        return (
-          <div key={ri} className="flex w-[200px] flex-none flex-col gap-1 rounded-lg border border-border-subtle p-2">
-            {cover ? (
-              <img src={cover} alt={title} className="h-[72px] w-full rounded object-cover" draggable={false} />
-            ) : (
-              <div className="flex h-[72px] w-full items-center justify-center rounded bg-surface-hover text-[10px] text-foreground-muted">
-                作品封面
-              </div>
-            )}
-            <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{title}</div>
-            <div className="flex gap-2 text-[10px] text-foreground-secondary">
-              {metrics.map((m, ci) => (
-                <span key={ci}>
-                  {labels[ci] ? `${labels[ci]} ` : ''}
-                  {m}
-                </span>
-              ))}
-            </div>
+      {items.map((it, ri) => (
+        <div key={ri} className="flex w-[200px] flex-none flex-col gap-1 rounded-lg border border-border-subtle p-2">
+          <Cover url={it.cover} alt={it.title} cls="h-[72px] w-full" />
+          <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{it.title}</div>
+          <div className="flex gap-2 text-[10px] text-foreground-secondary">
+            {it.metrics.map((m, ci) => (
+              <span key={ci}>
+                {metricLabels[ci] ? `${metricLabels[ci]} ` : ''}
+                {m}
+              </span>
+            ))}
           </div>
-        );
-      })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorksRow({
+  items,
+  metricLabels,
+}: {
+  items: { cover: string; title: string; metrics: string[] }[];
+  metricLabels: string[];
+}) {
+  return (
+    <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+      {items.map((it, ri) => (
+        <div key={ri} className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface-hover">
+          <Cover url={it.cover} alt={it.title} cls="h-[44px] w-[44px] flex-none" />
+          <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</div>
+          <div className="flex flex-none gap-2 text-[11px] text-foreground-secondary">
+            {it.metrics.map((m, ci) => (
+              <span key={ci}>
+                {metricLabels[ci] ? `${metricLabels[ci]} ` : ''}
+                {m}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorksCompact({
+  items,
+  metricLabels,
+}: {
+  items: { cover: string; title: string; metrics: string[] }[];
+  metricLabels: string[];
+}) {
+  return (
+    <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+      {items.map((it, ri) => (
+        <div key={ri} className="flex items-center gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
+          <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</div>
+          <div className="flex flex-none gap-3 text-[11px] text-foreground-secondary">
+            {it.metrics.map((m, ci) => (
+              <span key={ci}>
+                {metricLabels[ci] ? `${metricLabels[ci]} ` : ''}
+                {m}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -5,8 +5,8 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
-import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
-import type { ProjectMeta, ProjectSummary } from '@mediakit/shared';
+import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
+import type { ProjectMeta, ProjectSummary, Scenario } from '@mediakit/shared';
 
 export function Projects() {
   const navigate = useNavigate();
@@ -25,6 +25,16 @@ export function Projects() {
   // 改名内联
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+
+  // 列表筛选
+  const [filterBL, setFilterBL] = useState<string>('');
+  const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
+
+  const filtered = projects.filter(
+    (p) =>
+      (!filterBL || p.meta?.businessLine === filterBL) &&
+      (!filterScenario || p.meta?.scenario === filterScenario),
+  );
 
   async function refresh() {
     setLoading(true);
@@ -83,13 +93,56 @@ export function Projects() {
         <Button onClick={() => setShowCreate(true)}>+ 新建项目</Button>
       </div>
 
+      {projects.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <select
+            value={filterBL}
+            onChange={(e) => setFilterBL(e.target.value)}
+            className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-secondary"
+          >
+            <option value="">全部业务线</option>
+            {BUSINESS_LINES.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterScenario}
+            onChange={(e) => setFilterScenario(e.target.value as Scenario | '')}
+            className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-secondary"
+          >
+            <option value="">全部场景</option>
+            {SCENARIOS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          {(filterBL || filterScenario) && (
+            <button
+              onClick={() => {
+                setFilterBL('');
+                setFilterScenario('');
+              }}
+              className="text-xs text-foreground-muted hover:text-foreground-primary"
+            >
+              清除筛选
+            </button>
+          )}
+          <span className="text-xs text-foreground-muted">{filtered.length} / {projects.length}</span>
+        </div>
+      )}
+
       {loading ? (
         <p className="mt-8 text-sm text-foreground-muted">加载中…</p>
       ) : projects.length === 0 ? (
         <p className="mt-8 text-sm text-foreground-muted">还没有项目，新建一个开始吧。</p>
+      ) : filtered.length === 0 ? (
+        <p className="mt-8 text-sm text-foreground-muted">没有符合筛选条件的项目。</p>
       ) : (
         <ul className="mt-4 space-y-2">
-          {projects.map((p) => (
+          {filtered.map((p) => (
             <li
               key={p.id}
               className="flex items-center gap-3 rounded-lg border border-border-default bg-surface-primary px-4 py-3 transition hover:border-accent-primary/40"

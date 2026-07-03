@@ -195,7 +195,9 @@ export type CreatorPlatform = 'xiaohongshu' | 'tiktok' | 'instagram' | 'youtube'
 export type CreatorTier = 'mega' | 'macro' | 'micro';
 
 /** 达人头像卡：头像 + 名称 + 平台 + 层级 + 简介。 */
+export type CreatorAvatarVariant = 'horizontal' | 'vertical' | 'compact';
 export interface CreatorAvatarCardData {
+  variant: CreatorAvatarVariant;
   avatar: string;
   name: string;
   platform: CreatorPlatform;
@@ -204,7 +206,9 @@ export interface CreatorAvatarCardData {
 }
 
 /** 达人数据条：一组 KPI（粉丝/互动率/触达/曝光…）。复用 {label,value,color} 形状。 */
+export type CreatorStatsVariant = 'cards' | 'plain' | 'metric';
 export interface CreatorStatsStripData {
+  variant: CreatorStatsVariant;
   stats: { label: string; value: string; color: string }[];
 }
 
@@ -213,7 +217,12 @@ export interface CreatorStatsStripData {
  * 约定列顺序：[封面URL, 标题, 转, 赞, 评]；渲染层把列0当图片、列2-4当互动数据。
  * 注：试点刻意复用 table 字段编辑器，强类型 object-list 留后续。
  */
-export type CreatorWorksListData = TableData;
+export type CreatorWorksVariant = 'cards' | 'row' | 'compact';
+export interface CreatorWorksListData {
+  variant: CreatorWorksVariant;
+  headers: string[];
+  rows: string[][];
+}
 
 export type ComponentData =
   | TextData

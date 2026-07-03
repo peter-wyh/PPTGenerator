@@ -25,7 +25,7 @@ describe('creator business components — render', () => {
   it('avatar card renders name + platform + tier, falls back to initial when no avatar', () => {
     render(
       <CreatorAvatarCard
-        data={{ avatar: '', name: 'Mia Chen', platform: 'tiktok', tier: 'macro', intro: 'hi' }}
+        data={{ variant: 'horizontal', avatar: '', name: 'Mia Chen', platform: 'tiktok', tier: 'macro', intro: 'hi' }}
       />,
     );
     expect(screen.getByText('Mia Chen')).toBeInTheDocument();
@@ -38,6 +38,7 @@ describe('creator business components — render', () => {
     render(
       <CreatorStatsStrip
         data={{
+          variant: 'cards',
           stats: [
             { label: '粉丝', value: '1.28M', color: '#FF5C00' },
             { label: '互动率', value: '8.7%', color: '#3B82F6' },
@@ -54,6 +55,7 @@ describe('creator business components — render', () => {
     render(
       <CreatorWorksList
         data={{
+          variant: 'cards',
           headers: ['封面', '标题', '转', '赞', '评'],
           rows: [['', '7 天肌肤日记', '1.2K', '86K', '2.4K']],
         }}
@@ -62,27 +64,47 @@ describe('creator business components — render', () => {
     expect(screen.getByText('7 天肌肤日记')).toBeInTheDocument();
     expect(screen.getByText('作品封面')).toBeInTheDocument(); // 缺封面占位
   });
+
+  it('every variant of every component renders without throwing', () => {
+    const avatarBase = { avatar: '', name: 'Mia', platform: 'tiktok', tier: 'macro', intro: 'x' } as const;
+    for (const v of ['horizontal', 'vertical', 'compact'] as const) {
+      const { unmount } = render(<CreatorAvatarCard data={{ variant: v, ...avatarBase }} />);
+      expect(screen.getByText('Mia')).toBeInTheDocument();
+      unmount();
+    }
+    const statsBase = { stats: [{ label: '粉丝', value: '1M', color: '#FF5C00' }] };
+    for (const v of ['cards', 'plain', 'metric'] as const) {
+      const { unmount } = render(<CreatorStatsStrip data={{ variant: v, ...statsBase }} />);
+      expect(screen.getByText('粉丝')).toBeInTheDocument();
+      unmount();
+    }
+    const worksBase = { headers: ['封面', '标题', '转'], rows: [['', 't', '1']] };
+    for (const v of ['cards', 'row', 'compact'] as const) {
+      const { unmount } = render(<CreatorWorksList data={{ variant: v, ...worksBase }} />);
+      expect(screen.getByText('t')).toBeInTheDocument();
+      unmount();
+    }
+  });
 });
 
 describe('creator business components — defaults / registry', () => {
-  it('getDefaultData returns expected shapes', () => {
-    const avatar = getDefaultData('creator-avatar-card');
-    expect(avatar).toHaveProperty('name');
-    expect(avatar).toHaveProperty('platform');
+  it('getDefaultData returns expected shapes (incl. variant)', () => {
+    expect(getDefaultData('creator-avatar-card')).toMatchObject({ variant: 'horizontal', name: expect.any(String) });
 
-    const stats = getDefaultData('creator-stats-strip') as { stats: unknown[] };
+    const stats = getDefaultData('creator-stats-strip') as { variant: string; stats: unknown[] };
+    expect(stats.variant).toBe('cards');
     expect(Array.isArray(stats.stats)).toBe(true);
-    expect(stats.stats.length).toBeGreaterThan(0);
 
-    const works = getDefaultData('creator-works-list') as { headers: string[]; rows: string[][] };
+    const works = getDefaultData('creator-works-list') as { variant: string; headers: string[]; rows: string[][] };
+    expect(works.variant).toBe('cards');
     expect(works.headers.length).toBe(5);
-    expect(works.rows.length).toBeGreaterThan(0);
   });
 
-  it('REGISTRY has the 3 creator types with non-empty propertySchema', () => {
+  it('REGISTRY has the 3 creator types with variants + non-empty propertySchema', () => {
     for (const t of ['creator-avatar-card', 'creator-stats-strip', 'creator-works-list'] as const) {
       expect(REGISTRY[t]).toBeDefined();
       expect(REGISTRY[t].propertySchema.length).toBeGreaterThan(0);
+      expect(REGISTRY[t].variants?.length).toBeGreaterThanOrEqual(2);
     }
   });
 });

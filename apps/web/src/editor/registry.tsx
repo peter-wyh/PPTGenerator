@@ -33,6 +33,12 @@ export interface SelectOption {
   label: string;
 }
 
+/** 组件样式变体（版式）选项。声明后属性面板渲染 chip 选择器，写入 data.variant。 */
+export interface VariantOption {
+  id: string;
+  label: string;
+}
+
 export interface PropertyField {
   key: string;
   label: string;
@@ -47,6 +53,8 @@ export interface BlockDef {
   defaultSize: { w: number; h: number };
   defaultData: () => unknown;
   propertySchema: PropertyField[];
+  /** 可选：该组件支持的样式变体。出现时属性面板渲染 chip 选择器。 */
+  variants?: VariantOption[];
 }
 
 /** 通用几何字段（x/y/w/h），始终展示。 */
@@ -169,6 +177,11 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: CreatorAvatarCard,
     defaultSize: DEFAULT_SIZES['creator-avatar-card'],
     defaultData: () => getDefaultData('creator-avatar-card'),
+    variants: [
+      { id: 'horizontal', label: '横排' },
+      { id: 'vertical', label: '竖排' },
+      { id: 'compact', label: '紧凑' },
+    ],
     propertySchema: [
       { key: 'avatar', label: '头像 URL', kind: 'text' },
       { key: 'name', label: '名称', kind: 'text' },
@@ -181,12 +194,22 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: CreatorStatsStrip,
     defaultSize: DEFAULT_SIZES['creator-stats-strip'],
     defaultData: () => getDefaultData('creator-stats-strip'),
+    variants: [
+      { id: 'cards', label: '卡片' },
+      { id: 'plain', label: '极简' },
+      { id: 'metric', label: '指标' },
+    ],
     propertySchema: [{ key: 'stats', label: '数据项', kind: 'list' }],
   },
   'creator-works-list': {
     Component: CreatorWorksList,
     defaultSize: DEFAULT_SIZES['creator-works-list'],
     defaultData: () => getDefaultData('creator-works-list'),
+    variants: [
+      { id: 'cards', label: '卡片' },
+      { id: 'row', label: '列表行' },
+      { id: 'compact', label: '紧凑' },
+    ],
     propertySchema: [{ key: '', label: '作品内容', kind: 'table' }],
   },
 };

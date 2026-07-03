@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { EditorComponent, ComponentData } from '@mediakit/shared';
 import { useEditorStore } from './store';
-import { GEOMETRY_FIELDS, REGISTRY, type PropertyField } from './registry';
+import { GEOMETRY_FIELDS, REGISTRY, type PropertyField, type VariantOption } from './registry';
 import type { Alignment } from './store';
 import { getStyleOptions, type VariantId } from './business/catalog';
 import { Button } from '@/components/Button';
@@ -49,10 +49,13 @@ export function PropertyPanel() {
       </FieldGroup>
 
       <FieldGroup title="属性">
+        {def.variants && def.variants.length > 0 && (
+          <VariantSelector comp={comp} variants={def.variants} />
+        )}
         {def.propertySchema.map((f) => (
           <FieldEditor key={f.key + f.kind} comp={comp} field={f} />
         ))}
-        {def.propertySchema.length === 0 && (
+        {def.propertySchema.length === 0 && (def.variants?.length ?? 0) === 0 && (
           <p className="text-xs text-foreground-muted">该组件无可编辑属性。</p>
         )}
       </FieldGroup>
@@ -99,6 +102,31 @@ function FieldGroup({ title, children }: { title: string; children: React.ReactN
     <div>
       <div className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">{title}</div>
       <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+/* --------------------------- 通用样式变体 ---------------------------- */
+
+/** 通用变体 chip 选择器：任何 BlockDef 声明了 variants 的组件都生效，写入 data.variant。 */
+function VariantSelector({ comp, variants }: { comp: EditorComponent; variants: VariantOption[] }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const current = (comp.data as { variant?: string }).variant ?? variants[0]?.id ?? '';
+  return (
+    <div className="flex flex-wrap gap-1">
+      {variants.map((v) => (
+        <button
+          key={v.id}
+          onClick={() => updateComponentData(comp.id, { variant: v.id })}
+          className={`rounded border px-2 py-1 text-xs ${
+            current === v.id
+              ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+              : 'border-border-default text-foreground-secondary hover:bg-surface-hover'
+          }`}
+        >
+          {v.label}
+        </button>
+      ))}
     </div>
   );
 }
