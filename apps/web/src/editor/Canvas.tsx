@@ -3,6 +3,7 @@ import { useEditorStore, type ResizeDir } from './store';
 import type { EditorComponent } from '@mediakit/shared';
 import { CanvasComponent } from './components/CanvasComponent';
 import { ContextMenu, type MenuItem } from './components/ContextMenu';
+import { PALETTE_MIME, type PalettePayload } from './ComponentPanel';
 
 type DragState =
   | { kind: 'move'; mouseX: number; mouseY: number; comps: { id: string; x: number; y: number; locked?: boolean }[] }
@@ -221,6 +222,23 @@ export function Canvas() {
     dragRef.current = { kind: 'marquee', startCanvasX: start.x, startCanvasY: start.y, shift: e.shiftKey };
   }
 
+  /** 从组件库面板拖入：在落点创建组件。 */
+  function handleDrop(e: React.DragEvent) {
+    const raw = e.dataTransfer.getData(PALETTE_MIME);
+    if (!raw) return;
+    let payload: PalettePayload;
+    try {
+      payload = JSON.parse(raw) as PalettePayload;
+    } catch {
+      return;
+    }
+    e.preventDefault();
+    const { x, y } = clientToCanvas(e.clientX, e.clientY);
+    const st = useEditorStore.getState();
+    if (payload.op === 'component') st.addComponentAt(payload.type, x, y);
+    else st.addBusinessBlockAt(payload.kind, x, y);
+  }
+
   return (
     <div
       className="relative flex flex-1 items-center justify-center overflow-hidden bg-surface-subtle"
@@ -229,6 +247,13 @@ export function Canvas() {
       <div
         ref={viewportRef}
         onMouseDown={handleBackgroundMouseDown}
+        onDragOver={(e) => {
+          if (Array.from(e.dataTransfer.types).includes(PALETTE_MIME)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }
+        }}
+        onDrop={handleDrop}
         className="relative shadow-lg"
         style={{
           width: canvasWidth * zoom,

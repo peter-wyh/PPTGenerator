@@ -78,7 +78,9 @@ export interface EditorState {
 
   // ---- components ----
   addComponent: (type: ComponentType) => void;
+  addComponentAt: (type: ComponentType, x: number, y: number) => void;
   addBusinessBlock: (kind: string) => void;
+  addBusinessBlockAt: (kind: string, x: number, y: number) => void;
   updateComponent: (id: string, patch: Partial<EditorComponent>) => void;
   updateComponentData: (id: string, dataPatch: Record<string, unknown>) => void;
   move: (ids: string[], dx: number, dy: number) => void;
@@ -158,6 +160,20 @@ function withCurrentComponents(
 
 function centered(w: number, h: number, cw: number, ch: number): { x: number; y: number } {
   return { x: Math.max(0, Math.floor((cw - w) / 2)), y: Math.max(0, Math.floor((ch - h) / 2)) };
+}
+
+/** 把拖放落点 (鼠标位置) 转为组件左上角坐标：以落点为中心、网格吸附、钳制在画布内。 */
+function placed(
+  w: number,
+  h: number,
+  cx: number,
+  cy: number,
+  cw: number,
+  ch: number,
+): { x: number; y: number } {
+  const x = Math.round(Math.max(0, Math.min(cx - w / 2, cw - w)) / MOVE_SNAP) * MOVE_SNAP;
+  const y = Math.round(Math.max(0, Math.min(cy - h / 2, ch - h)) / MOVE_SNAP) * MOVE_SNAP;
+  return { x, y };
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
@@ -279,6 +295,44 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const layout = getLayout(kind);
         const item = getBusinessItem(kind);
         const { x, y } = centered(layout.w, layout.h, s.canvasWidth, s.canvasHeight);
+        const comp: EditorComponent = {
+          id: newId(),
+          type: 'business-block',
+          x,
+          y,
+          w: layout.w,
+          h: layout.h,
+          data: {
+            businessKind: kind,
+            layoutForm: layout.form,
+            title: item.title,
+            meta: item.meta,
+            details: [...item.details],
+            variant: 'standard',
+          },
+        };
+        return {
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
+          selectedIds: [comp.id],
+        };
+      }),
+
+    addComponentAt: (type, cx, cy) =>
+      mutateAndCommit((s) => {
+        const size = DEFAULT_SIZES[type] ?? { w: 300, h: 200 };
+        const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight);
+        const comp: EditorComponent = { id: newId(), type, x, y, w: size.w, h: size.h, data: getDefaultData(type) };
+        return {
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
+          selectedIds: [comp.id],
+        };
+      }),
+
+    addBusinessBlockAt: (kind, cx, cy) =>
+      mutateAndCommit((s) => {
+        const layout = getLayout(kind);
+        const item = getBusinessItem(kind);
+        const { x, y } = placed(layout.w, layout.h, cx, cy, s.canvasWidth, s.canvasHeight);
         const comp: EditorComponent = {
           id: newId(),
           type: 'business-block',
