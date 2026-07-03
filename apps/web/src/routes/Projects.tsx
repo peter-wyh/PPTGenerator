@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ProjectSummary } from '@mediakit/shared';
 import { projectsApi } from '@/api/projects';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
+import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
+import type { ProjectMeta, ProjectSummary } from '@mediakit/shared';
 
 export function Projects() {
   const navigate = useNavigate();
@@ -38,11 +39,11 @@ export function Projects() {
     void refresh();
   }, []);
 
-  async function handleCreate(values: { name: string; width: number; height: number }) {
+  async function handleCreate(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta }) {
     setCreating(true);
     setCreateError(null);
     try {
-      const p = await projectsApi.create(values.name, values.width, values.height);
+      const p = await projectsApi.create(values.name, values.width, values.height, values.meta);
       setShowCreate(false);
       navigate(`/projects/${p.id}`);
     } catch {
@@ -125,6 +126,7 @@ export function Projects() {
                       {p.pageCount} 页 · {p.width}×{p.height} · 更新于{' '}
                       {new Date(p.updatedAt).toLocaleString()}
                     </div>
+                    <ProjectMetaTags meta={p.meta} />
                   </button>
                   <Button
                     variant="ghost"
@@ -162,6 +164,28 @@ export function Projects() {
         onCancel={() => !creating && setShowCreate(false)}
         onSubmit={handleCreate}
       />
+    </div>
+  );
+}
+
+/** 项目元数据标签（业务线 / 创建人 / 场景 / 广告主）。 */
+function ProjectMetaTags({ meta }: { meta?: ProjectMeta }) {
+  if (!meta) return null;
+  const tags: string[] = [];
+  if (meta.businessLine) tags.push(meta.businessLine);
+  if (meta.creator) tags.push(meta.creator);
+  if (meta.advertiser) tags.push(meta.advertiser);
+  if (meta.scenario) {
+    tags.push(SCENARIO_LABELS[meta.scenario] + (meta.scenarioSub ? `·${SCENARIO_SUB_LABELS[meta.scenarioSub]}` : ''));
+  }
+  if (tags.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {tags.map((t, i) => (
+        <span key={i} className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
+          {t}
+        </span>
+      ))}
     </div>
   );
 }

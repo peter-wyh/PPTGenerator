@@ -6,11 +6,35 @@ const pageSchema = z.object({
   components: z.array(z.any()),
 });
 
+/** Campaign 信息（仅 campaign 类型场景）。 */
+const campaignInfoSchema = z
+  .object({
+    campaignName: z.string().max(200).optional(),
+    platform: z.string().max(100).optional(),
+    startDate: z.string().max(40).optional(),
+    endDate: z.string().max(40).optional(),
+    budget: z.string().max(100).optional(),
+  })
+  .optional();
+
+/** 项目元数据：业务线/创建人/场景/子类/广告主/campaign 信息。 */
+export const projectMetaSchema = z
+  .object({
+    businessLine: z.string().max(40).optional(),
+    creator: z.string().max(80).optional(),
+    scenario: z.enum(['campaign-report', 'campaign-proposal', 'media-kit']).optional(),
+    scenarioSub: z.enum(['weekly', 'monthly', 'wrap-up']).optional(),
+    advertiser: z.string().max(120).optional(),
+    campaignInfo: campaignInfoSchema,
+  })
+  .optional();
+
 export const createProjectSchema = z.object({
   name: z.string().min(1).max(200),
   width: z.number().int().min(1).max(8192).optional(),
   height: z.number().int().min(1).max(8192).optional(),
   pages: z.array(pageSchema).optional(),
+  meta: projectMetaSchema,
 });
 
 export const updateProjectSchema = z
@@ -19,6 +43,7 @@ export const updateProjectSchema = z
     width: z.number().int().min(1).max(8192).optional(),
     height: z.number().int().min(1).max(8192).optional(),
     pages: z.array(pageSchema).optional(),
+    meta: projectMetaSchema,
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 

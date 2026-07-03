@@ -1,12 +1,12 @@
 import { api } from './client';
 import axios from 'axios';
-import type { ProjectDetail, ProjectSummary } from '@mediakit/shared';
+import type { ProjectDetail, ProjectMeta, ProjectSummary } from '@mediakit/shared';
 
 export const projectsApi = {
   list: () => api.get<{ projects: ProjectSummary[] }>('/projects').then((r) => r.data.projects),
-  create: (name: string, width?: number, height?: number) =>
+  create: (name: string, width?: number, height?: number, meta?: ProjectMeta) =>
     api
-      .post<{ project: ProjectDetail }>('/projects', { name, width, height })
+      .post<{ project: ProjectDetail }>('/projects', { name, width, height, meta })
       .then((r) => r.data.project),
   get: (id: string) =>
     api.get<{ project: ProjectDetail }>(`/projects/${id}`).then((r) => r.data.project),

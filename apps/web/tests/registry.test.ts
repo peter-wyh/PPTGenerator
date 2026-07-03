@@ -12,6 +12,9 @@ const TYPES: ComponentType[] = [
   'pie-chart',
   'table',
   'business-block',
+  'creator-avatar-card',
+  'creator-stats-strip',
+  'creator-works-list',
 ];
 
 describe('REGISTRY', () => {

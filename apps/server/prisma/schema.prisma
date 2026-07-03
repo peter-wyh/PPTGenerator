@@ -36,6 +36,8 @@ model Project {
   width      Int      @default(1280)
   height     Int      @default(720)
   shareToken String?  @unique
+  // 项目元数据（业务线/创建人/场景/广告主/campaign 信息），不透明 JSON。
+  meta       Json?
   owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

@@ -11,6 +11,11 @@ import {
   TextComponent,
 } from './components/BasicComponents';
 import { BusinessBlockRenderer } from './business/render';
+import {
+  CreatorAvatarCard,
+  CreatorStatsStrip,
+  CreatorWorksList,
+} from './components/CreatorComponents';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -71,6 +76,20 @@ const FITS: SelectOption[] = [
   { value: 'cover', label: 'cover' },
   { value: 'contain', label: 'contain' },
   { value: 'fill', label: 'fill' },
+];
+
+const PLATFORMS: SelectOption[] = [
+  { value: 'xiaohongshu', label: '小红书' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'weibo', label: '微博' },
+];
+
+const TIERS: SelectOption[] = [
+  { value: 'mega', label: 'Mega 头部' },
+  { value: 'macro', label: 'Macro 中腰' },
+  { value: 'micro', label: 'Micro 微' },
 ];
 
 export const REGISTRY: Record<ComponentType, BlockDef> = {
@@ -145,6 +164,30 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'meta', label: '说明', kind: 'text' },
     ],
+  },
+  'creator-avatar-card': {
+    Component: CreatorAvatarCard,
+    defaultSize: DEFAULT_SIZES['creator-avatar-card'],
+    defaultData: () => getDefaultData('creator-avatar-card'),
+    propertySchema: [
+      { key: 'avatar', label: '头像 URL', kind: 'text' },
+      { key: 'name', label: '名称', kind: 'text' },
+      { key: 'platform', label: '平台', kind: 'select', options: PLATFORMS },
+      { key: 'tier', label: '层级', kind: 'select', options: TIERS },
+      { key: 'intro', label: '简介', kind: 'textarea' },
+    ],
+  },
+  'creator-stats-strip': {
+    Component: CreatorStatsStrip,
+    defaultSize: DEFAULT_SIZES['creator-stats-strip'],
+    defaultData: () => getDefaultData('creator-stats-strip'),
+    propertySchema: [{ key: 'stats', label: '数据项', kind: 'list' }],
+  },
+  'creator-works-list': {
+    Component: CreatorWorksList,
+    defaultSize: DEFAULT_SIZES['creator-works-list'],
+    defaultData: () => getDefaultData('creator-works-list'),
+    propertySchema: [{ key: '', label: '作品内容', kind: 'table' }],
   },
 };
 

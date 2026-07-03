@@ -24,6 +24,32 @@ describe('projects CRUD', () => {
     expect(listed.body.projects[0].pageCount).toBe(1);
   });
 
+  it('persists and returns project meta (业务线/场景/campaign 信息)', async () => {
+    const { h } = await setupOwner('a@x.com');
+    const meta = {
+      businessLine: 'FT',
+      creator: 'alex',
+      scenario: 'campaign-report',
+      scenarioSub: 'weekly',
+      advertiser: 'GlowLab',
+      campaignInfo: { campaignName: 'Q4 上市', platform: 'TikTok', budget: '¥300K' },
+    };
+    const created = await request(app()).post('/api/v1/projects').set(h).send({ name: 'M', meta });
+    expect(created.status).toBe(201);
+    expect(created.body.project.meta).toEqual(meta);
+
+    // 列表也带 meta。
+    const listed = await request(app()).get('/api/v1/projects').set(h);
+    expect(listed.body.projects[0].meta).toEqual(meta);
+
+    // update meta。
+    const updated = await request(app())
+      .patch(`/api/v1/projects/${created.body.project.id}`)
+      .set(h)
+      .send({ meta: { ...meta, scenarioSub: 'monthly' } });
+    expect(updated.body.project.meta.scenarioSub).toBe('monthly');
+  });
+
   it('get / update / delete own project', async () => {
     const { h } = await setupOwner('a@x.com');
     const id = (await request(app()).post('/api/v1/projects').set(h).send({ name: 'P' })).body.project.id;

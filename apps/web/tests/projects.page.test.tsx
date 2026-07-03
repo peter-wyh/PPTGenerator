@@ -14,7 +14,7 @@ const { listMock, createMock, renameMock, removeMock } = vi.hoisted(() => ({
 vi.mock('@/api/projects', () => ({
   projectsApi: {
     list: () => listMock(),
-    create: (n: string, w?: number, h?: number) => createMock(n, w, h),
+    create: (n: string, w?: number, h?: number, meta?: unknown) => createMock(n, w, h, meta),
     rename: (id: string, n: string) => renameMock(id, n),
     remove: (id: string) => removeMock(id),
   },
@@ -71,9 +71,44 @@ describe('Projects page', () => {
     await user.click(screen.getByText('1920 × 1080'));
     await user.click(screen.getByRole('button', { name: '创建' }));
 
-    await waitFor(() =>
-      expect(createMock).toHaveBeenCalledWith('My Report', 1920, 1080),
-    );
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+    const [n, w, h, meta] = createMock.mock.calls[0];
+    expect(n).toBe('My Report');
+    expect(w).toBe(1920);
+    expect(h).toBe(1080);
+    expect(meta).toBeDefined();
+  });
+
+  it('passes meta (业务线/场景/campaign 信息) when filled', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue([]);
+    createMock.mockResolvedValue({
+      id: 'p4',
+      name: 'X',
+      pages: [],
+      width: 1280,
+      height: 720,
+      createdAt: '',
+      updatedAt: '',
+    });
+    renderPage();
+    await screen.findByText(/还没有项目/);
+    await user.click(screen.getByRole('button', { name: /新建项目/ }));
+    await user.type(screen.getByPlaceholderText(/例如/), 'Campaign 周报');
+
+    // 业务线 FT、场景 Campaign 报告（出现「报告类型」子选择）
+    const combos = screen.getAllByRole('combobox');
+    await user.selectOptions(combos[0], 'FT'); // 业务线
+    await user.selectOptions(combos[3], 'campaign-report'); // 场景
+    await user.click(screen.getByRole('button', { name: '创建' }));
+
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+    const meta = createMock.mock.calls[0][3];
+    expect(meta.businessLine).toBe('FT');
+    expect(meta.scenario).toBe('campaign-report');
+    expect(meta.scenarioSub).toBe('weekly');
+    expect(meta.campaignInfo).toBeDefined();
+    expect(meta.campaignInfo.platform).toBeTruthy();
   });
 
   it('renames a project inline', async () => {

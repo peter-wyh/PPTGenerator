@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { Project, Prisma } from '@prisma/client';
-import type { Page, ProjectDetail, ProjectSummary } from '@mediakit/shared';
+import type { Page, ProjectDetail, ProjectMeta, ProjectSummary } from '@mediakit/shared';
 
 /** 新建项目的默认 pages：单个空白页。 */
 export function defaultPages(): Page[] {
@@ -13,6 +13,10 @@ function pageCount(pages: unknown): number {
   return Array.isArray(pages) ? pages.length : 0;
 }
 
+function metaOf(p: Project): ProjectMeta | undefined {
+  return (p.meta as unknown as ProjectMeta | null) ?? undefined;
+}
+
 function toSummary(p: Project): ProjectSummary {
   return {
     id: p.id,
@@ -20,6 +24,7 @@ function toSummary(p: Project): ProjectSummary {
     width: p.width,
     height: p.height,
     pageCount: pageCount(p.pages),
+    meta: metaOf(p),
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -32,6 +37,7 @@ function toDetail(p: Project): ProjectDetail {
     pages: (p.pages as unknown as Page[]) ?? [],
     width: p.width,
     height: p.height,
+    meta: metaOf(p),
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -48,7 +54,13 @@ export const projectsService = {
 
   async create(
     ownerId: string,
-    input: { name: string; width?: number; height?: number; pages?: Page[] },
+    input: {
+      name: string;
+      width?: number;
+      height?: number;
+      pages?: Page[];
+      meta?: ProjectMeta;
+    },
   ): Promise<ProjectDetail> {
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
@@ -56,6 +68,7 @@ export const projectsService = {
       width: input.width ?? 1280,
       height: input.height ?? 720,
       pages: (input.pages ?? defaultPages()) as unknown as Prisma.InputJsonValue,
+      ...(input.meta ? { meta: input.meta as unknown as Prisma.InputJsonValue } : {}),
     };
     const project = await prisma.project.create({ data });
     return toDetail(project);
@@ -73,7 +86,13 @@ export const projectsService = {
   async update(
     ownerId: string,
     id: string,
-    input: { name?: string; width?: number; height?: number; pages?: Page[] },
+    input: {
+      name?: string;
+      width?: number;
+      height?: number;
+      pages?: Page[];
+      meta?: ProjectMeta;
+    },
   ): Promise<ProjectDetail> {
     await this.getOwnedOrThrow(ownerId, id);
     const data: Prisma.ProjectUpdateInput = {};
@@ -81,6 +100,7 @@ export const projectsService = {
     if (input.width !== undefined) data.width = input.width;
     if (input.height !== undefined) data.height = input.height;
     if (input.pages !== undefined) data.pages = input.pages as unknown as Prisma.InputJsonValue;
+    if (input.meta !== undefined) data.meta = input.meta as unknown as Prisma.InputJsonValue;
     const project = await prisma.project.update({ where: { id }, data });
     return toDetail(project);
   },

@@ -63,4 +63,21 @@ export const TEMPLATES: Template[] = [
       return [tbl];
     },
   },
+  {
+    id: 'creator-page',
+    name: '达人介绍页',
+    description: '头像卡 + 数据条 + 作品列表（试点）',
+    components: () => {
+      // 顶部标题
+      const title = t('text', 80, 60, 900, 60);
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '达人介绍';
+      (title.data as { fontSize: number }).fontSize = 32;
+      (title.data as { fontWeight: number }).fontWeight = 700;
+      // 页内业务组件（各自独立可拖拽/删除 —— 验证"页内语义块"粒度）
+      const avatar = t('creator-avatar-card', 80, 150, 360, 120);
+      const stats = t('creator-stats-strip', 460, 150, 740, 120);
+      const works = t('creator-works-list', 80, 300, 1120, 220);
+      return [title, avatar, stats, works];
+    },
+  },
 ];

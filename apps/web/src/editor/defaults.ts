@@ -13,6 +13,9 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'pie-chart': { w: 300, h: 300 },
   table: { w: 500, h: 250 },
   'business-block': { w: 760, h: 430 },
+  'creator-avatar-card': { w: 320, h: 120 },
+  'creator-stats-strip': { w: 600, h: 100 },
+  'creator-works-list': { w: 700, h: 200 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -90,6 +93,32 @@ export function getDefaultData(type: ComponentType): ComponentData {
         meta: '',
         details: [],
         variant: 'standard',
+      };
+    case 'creator-avatar-card':
+      return {
+        avatar: '',
+        name: 'Mia Chen',
+        platform: 'tiktok',
+        tier: 'macro',
+        intro: 'Beauty & Skincare Creator · @miaglowup',
+      };
+    case 'creator-stats-strip':
+      return {
+        stats: [
+          { label: '粉丝', value: '1.28M', color: '#FF5C00' },
+          { label: '互动率', value: '8.7%', color: '#3B82F6' },
+          { label: '平均触达', value: '640K', color: '#22C55E' },
+          { label: '曝光', value: '12.6M', color: '#8B5CF6' },
+        ],
+      };
+    case 'creator-works-list':
+      return {
+        headers: ['封面', '标题', '转', '赞', '评'],
+        rows: [
+          ['', '7 天肌肤日记 · Day 1', '1.2K', '86K', '2.4K'],
+          ['', '敏感肌精华实测', '980', '54K', '1.8K'],
+          ['', '早安护肤流程', '760', '42K', '1.2K'],
+        ],
       };
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };
