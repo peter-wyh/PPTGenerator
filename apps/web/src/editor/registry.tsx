@@ -202,7 +202,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'plain', label: '极简' },
       { id: 'metric', label: '指标' },
     ],
-    propertySchema: [{ key: 'stats', label: '数据项', kind: 'list' }],
+    // stats 由 PropertyPanel 的自定义区块 CreatorStatsFields 负责（指标库勾选 + 文案编辑）。
+    propertySchema: [],
   },
   'creator-works-list': {
     Component: CreatorWorksList,

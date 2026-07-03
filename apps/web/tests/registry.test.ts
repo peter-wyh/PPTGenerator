@@ -50,4 +50,8 @@ describe('REGISTRY', () => {
   it('exposes x/y/w/h geometry fields', () => {
     expect(GEOMETRY_FIELDS.map((f) => f.key)).toEqual(['x', 'y', 'w', 'h']);
   });
+
+  it('creator-stats-strip defers stats editing to custom panel (empty propertySchema)', () => {
+    expect(REGISTRY['creator-stats-strip'].propertySchema).toEqual([]);
+  });
 });
