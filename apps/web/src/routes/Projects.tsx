@@ -5,13 +5,17 @@ import { projectsApi } from '@/api/projects';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 
 export function Projects() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 新建项目弹窗
+  const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // 删除确认
   const [pendingDelete, setPendingDelete] = useState<ProjectSummary | null>(null);
@@ -34,15 +38,15 @@ export function Projects() {
     void refresh();
   }, []);
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    const name = newName.trim();
-    if (!name) return;
+  async function handleCreate(values: { name: string; width: number; height: number }) {
     setCreating(true);
+    setCreateError(null);
     try {
-      const p = await projectsApi.create(name);
-      setNewName('');
+      const p = await projectsApi.create(values.name, values.width, values.height);
+      setShowCreate(false);
       navigate(`/projects/${p.id}`);
+    } catch {
+      setCreateError('创建失败，请重试');
     } finally {
       setCreating(false);
     }
@@ -75,19 +79,8 @@ export function Projects() {
     <div className="mx-auto max-w-4xl px-6 py-8">
       <div className="flex items-center justify-between">
         <h1 className="font-headings text-xl font-semibold text-foreground-primary">我的项目</h1>
+        <Button onClick={() => setShowCreate(true)}>+ 新建项目</Button>
       </div>
-
-      <form onSubmit={handleCreate} className="mt-4 flex gap-2">
-        <Input
-          name="newName"
-          placeholder="新项目名称"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-        <Button type="submit" loading={creating}>
-          新建
-        </Button>
-      </form>
 
       {loading ? (
         <p className="mt-8 text-sm text-foreground-muted">加载中…</p>
@@ -160,6 +153,14 @@ export function Projects() {
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setPendingDelete(null)}
+      />
+
+      <CreateProjectDialog
+        open={showCreate}
+        loading={creating}
+        error={createError}
+        onCancel={() => !creating && setShowCreate(false)}
+        onSubmit={handleCreate}
       />
     </div>
   );

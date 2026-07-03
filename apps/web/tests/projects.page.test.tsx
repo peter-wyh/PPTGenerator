@@ -14,7 +14,7 @@ const { listMock, createMock, renameMock, removeMock } = vi.hoisted(() => ({
 vi.mock('@/api/projects', () => ({
   projectsApi: {
     list: () => listMock(),
-    create: (n: string) => createMock(n),
+    create: (n: string, w?: number, h?: number) => createMock(n, w, h),
     rename: (id: string, n: string) => renameMock(id, n),
     remove: (id: string) => removeMock(id),
   },
@@ -48,23 +48,32 @@ describe('Projects page', () => {
     expect(screen.getByText('报告 B')).toBeInTheDocument();
   });
 
-  it('creates a project on submit', async () => {
+  it('creates a project via the dialog form', async () => {
     const user = userEvent.setup();
     listMock.mockResolvedValue([]);
     createMock.mockResolvedValue({
       id: 'p3',
       name: 'My Report',
       pages: [],
-      width: 1280,
-      height: 720,
+      width: 1920,
+      height: 1080,
       createdAt: '',
       updatedAt: '',
     });
     renderPage();
     await screen.findByText(/还没有项目/);
-    await user.type(screen.getByPlaceholderText('新项目名称'), 'My Report');
-    await user.click(screen.getByRole('button', { name: '新建' }));
-    await waitFor(() => expect(createMock).toHaveBeenCalledWith('My Report'));
+
+    // 打开新建项目弹窗
+    await user.click(screen.getByRole('button', { name: /新建项目/ }));
+    // 填名称
+    await user.type(screen.getByPlaceholderText(/例如/), 'My Report');
+    // 选 1920×1080 预设并提交
+    await user.click(screen.getByText('1920 × 1080'));
+    await user.click(screen.getByRole('button', { name: '创建' }));
+
+    await waitFor(() =>
+      expect(createMock).toHaveBeenCalledWith('My Report', 1920, 1080),
+    );
   });
 
   it('renames a project inline', async () => {

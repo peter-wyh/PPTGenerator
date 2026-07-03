@@ -4,8 +4,10 @@ import type { ProjectDetail, ProjectSummary } from '@mediakit/shared';
 
 export const projectsApi = {
   list: () => api.get<{ projects: ProjectSummary[] }>('/projects').then((r) => r.data.projects),
-  create: (name: string) =>
-    api.post<{ project: ProjectDetail }>('/projects', { name }).then((r) => r.data.project),
+  create: (name: string, width?: number, height?: number) =>
+    api
+      .post<{ project: ProjectDetail }>('/projects', { name, width, height })
+      .then((r) => r.data.project),
   get: (id: string) =>
     api.get<{ project: ProjectDetail }>(`/projects/${id}`).then((r) => r.data.project),
   rename: (id: string, name: string) =>
