@@ -240,6 +240,12 @@ export interface CreatorAvatarCardData {
   platform: CreatorPlatform;
   tier: CreatorTier;
   intro: string;
+  /** 链接解析产出（可选；向后兼容老数据）。 */
+  sourceUrl?: string;
+  handle?: string;
+  followers?: string;
+  likes?: string;
+  engagement?: string;
 }
 
 /** 达人数据条：一组 KPI（粉丝/互动率/触达/曝光…）。复用 {label,value,color} 形状。 */
