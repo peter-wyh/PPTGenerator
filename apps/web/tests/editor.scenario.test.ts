@@ -135,3 +135,35 @@ describe('TEMPLATE_CATEGORIES（新建页面弹窗分组）', () => {
     for (const id of all) expect(categorized.has(id)).toBe(true);
   });
 });
+
+describe('页面维度编辑 — updatePage（背景色/图）', () => {
+  beforeEach(() => useEditorStore.getState().loadProject(emptyProject, 'p'));
+
+  it('updatePage 设置当前页背景色，并保留组件', () => {
+    useEditorStore.getState().addComponent('text');
+    const pageId = useEditorStore.getState().currentPageId!;
+    useEditorStore.getState().updatePage(pageId, { bgColor: '#112233' });
+    const page = useEditorStore.getState().currentPage()!;
+    expect(page.bgColor).toBe('#112233');
+    expect(page.components).toHaveLength(1); // 组件不受影响
+  });
+
+  it('updatePage 设置背景图 + 改名', () => {
+    const pageId = useEditorStore.getState().currentPageId!;
+    useEditorStore.getState().updatePage(pageId, { bgImage: 'https://x/bg.png', name: '封面' });
+    const page = useEditorStore.getState().currentPage()!;
+    expect(page.bgImage).toBe('https://x/bg.png');
+    expect(page.name).toBe('封面');
+  });
+
+  it('updatePage 只影响目标页', () => {
+    useEditorStore.getState().addPagesBatch([
+      { name: 'A', components: [] },
+      { name: 'B', components: [] },
+    ]);
+    const pages = useEditorStore.getState().pages;
+    useEditorStore.getState().updatePage(pages[1].id, { bgColor: '#ff0000' });
+    expect(useEditorStore.getState().pages.find((p) => p.id === pages[1].id)?.bgColor).toBe('#ff0000');
+    expect(useEditorStore.getState().pages.find((p) => p.id === pages[2].id)?.bgColor).toBeUndefined();
+  });
+});

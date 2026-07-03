@@ -25,6 +25,7 @@ export function Canvas() {
   const components = useEditorStore((s) => s.currentComponents());
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const isPanning = useEditorStore((s) => s.isPanning);
+  const currentPage = useEditorStore((s) => s.currentPage());
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; compId: string } | null>(null);
 
@@ -259,7 +260,9 @@ export function Canvas() {
           width: canvasWidth * zoom,
           height: canvasHeight * zoom,
           transform: `translate(${panX}px, ${panY}px)`,
-          background: '#fff',
+          background: currentPage?.bgImage
+            ? `#fff url(${currentPage.bgImage}) center/cover no-repeat`
+            : currentPage?.bgColor ?? '#fff',
         }}
       >
         <div

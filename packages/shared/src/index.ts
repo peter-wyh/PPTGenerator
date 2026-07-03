@@ -389,4 +389,8 @@ export interface Page {
   id: string;
   name: string;
   components: EditorComponent[];
+  /** 页面背景色（HEX）；与 bgImage 二选一，未设时画布默认白。 */
+  bgColor?: string;
+  /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
+  bgImage?: string;
 }

@@ -26,11 +26,7 @@ export function PropertyPanel() {
   }
 
   if (!comp) {
-    return (
-      <div className="flex h-full w-[300px] items-center justify-center border-l border-border-default bg-surface-primary p-4 text-center text-sm text-foreground-muted">
-        选中组件以编辑属性
-      </div>
-    );
+    return <PageProperties />;
   }
 
   const def = REGISTRY[comp.type];
@@ -109,6 +105,73 @@ function FieldGroup({ title, children }: { title: string; children: React.ReactN
     <div>
       <div className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">{title}</div>
       <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+/* ------------------------------ 页面属性 ------------------------------ */
+// 未选中组件时展示：页面名 + 背景色/图（页面维度编辑）。
+
+function PageProperties() {
+  const page = useEditorStore((s) => s.currentPage());
+  const updatePage = useEditorStore((s) => s.updatePage);
+  if (!page) {
+    return (
+      <div className="flex h-full w-[300px] items-center justify-center border-l border-border-default bg-surface-primary p-4 text-center text-sm text-foreground-muted">
+        选中组件以编辑属性
+      </div>
+    );
+  }
+  const set = (patch: Partial<{ name: string; bgColor: string; bgImage: string }>) =>
+    updatePage(page.id, patch);
+
+  return (
+    <div className="flex h-full w-[300px] flex-col gap-4 overflow-auto border-l border-border-default bg-surface-primary p-4">
+      <div className="font-headings text-sm font-semibold text-foreground-primary">页面属性</div>
+
+      <FieldGroup title="页面名">
+        <input
+          value={page.name}
+          onChange={(e) => set({ name: e.target.value })}
+          className="w-full rounded border border-border-default px-2 py-1 text-sm text-foreground-primary"
+        />
+      </FieldGroup>
+
+      <FieldGroup title="背景色">
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={page.bgColor ?? '#ffffff'}
+            onChange={(e) => set({ bgColor: e.target.value })}
+            className="h-8 w-10 rounded border border-border-default p-1"
+          />
+          <input
+            value={page.bgColor ?? ''}
+            placeholder="#FFFFFF（留空=白）"
+            onChange={(e) => set({ bgColor: e.target.value || undefined })}
+            className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+          />
+        </div>
+      </FieldGroup>
+
+      <FieldGroup title="背景图 URL">
+        <input
+          value={page.bgImage ?? ''}
+          placeholder="https://…（优先于背景色）"
+          onChange={(e) => set({ bgImage: e.target.value || undefined })}
+          className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+        />
+        {(page.bgColor || page.bgImage) && (
+          <button
+            onClick={() => set({ bgColor: undefined, bgImage: undefined })}
+            className="mt-1 text-xs text-foreground-muted hover:text-red"
+          >
+            清除背景
+          </button>
+        )}
+      </FieldGroup>
+
+      <p className="mt-auto text-xs text-foreground-muted">提示：点选画布上的组件以编辑组件属性。</p>
     </div>
   );
 }

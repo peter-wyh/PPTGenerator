@@ -16,24 +16,18 @@ interface Props {
   height?: number;
 }
 
+/** 页面背景样式（与 Canvas 一致：图优先于色，默认白）。 */
+function pageBg(page: Page): string {
+  if (page.bgImage) return `#fff url(${page.bgImage}) center/cover no-repeat`;
+  return page.bgColor ?? '#fff';
+}
+
 /**
- * 页面缩略图：把组件按比例缩放进固定盒子，每个组件渲染为一个彩色色块。
- * 忠实 demo.renderPageThumbPreview 的做法（非真实 DOM 快照，而是缩略色块）。
+ * 页面缩略图：把组件按比例缩放进固定盒子，每个组件渲染为一个彩色色块，
+ * 盒子底色反映页面背景。忠实 demo.renderPageThumbPreview 的做法。
  */
 export function PageThumbnail({ page, canvasWidth, canvasHeight, width = 184, height = 56 }: Props) {
-  if (page.components.length === 0) {
-    return (
-      <div
-        className="flex items-center justify-center rounded bg-surface-hover text-[10px] text-foreground-muted"
-        style={{ width, height }}
-      >
-        空白页
-      </div>
-    );
-  }
-
   const scale = Math.min(width / canvasWidth, height / canvasHeight);
-  // 缩放后实际占用的宽高（居中）。
   const innerW = canvasWidth * scale;
   const innerH = canvasHeight * scale;
   const offX = (width - innerW) / 2;
@@ -41,21 +35,25 @@ export function PageThumbnail({ page, canvasWidth, canvasHeight, width = 184, he
 
   return (
     <div className="relative rounded border border-border-subtle bg-surface-primary" style={{ width, height }}>
-      <div className="absolute" style={{ left: offX, top: offY, width: innerW, height: innerH }}>
-        {page.components.map((c: EditorComponent) => (
-          <div
-            key={c.id}
-            className="absolute rounded-[1px]"
-            style={{
-              left: c.x * scale,
-              top: c.y * scale,
-              width: Math.max(1, c.w * scale),
-              height: Math.max(1, c.h * scale),
-              background: TYPE_COLOR[c.type] ?? '#F3F4F6',
-              border: '1px solid rgba(0,0,0,0.04)',
-            }}
-          />
-        ))}
+      <div className="absolute" style={{ left: offX, top: offY, width: innerW, height: innerH, background: pageBg(page) }}>
+        {page.components.length === 0 ? (
+          <div className="flex h-full w-full items-center justify-center text-[10px] text-foreground-muted">空白页</div>
+        ) : (
+          page.components.map((c: EditorComponent) => (
+            <div
+              key={c.id}
+              className="absolute rounded-[1px]"
+              style={{
+                left: c.x * scale,
+                top: c.y * scale,
+                width: Math.max(1, c.w * scale),
+                height: Math.max(1, c.h * scale),
+                background: TYPE_COLOR[c.type] ?? '#F3F4F6',
+                border: '1px solid rgba(0,0,0,0.04)',
+              }}
+            />
+          ))
+        )}
       </div>
     </div>
   );

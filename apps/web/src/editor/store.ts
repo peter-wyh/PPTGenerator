@@ -120,6 +120,7 @@ export interface EditorState {
   copyPage: (id: string) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
+  updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgImage'>>) => void;
   reorderPage: (from: number, to: number) => void;
 
   // ---- history ----
@@ -584,6 +585,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
     renamePage: (id, name) =>
       mutateAndCommit((s) => ({
         pages: s.pages.map((p) => (p.id === id ? { ...p, name: name.trim() || p.name } : p)),
+      })),
+
+    updatePage: (id, patch) =>
+      mutateAndCommit((s) => ({
+        pages: s.pages.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       })),
 
     reorderPage: (from, to) =>
