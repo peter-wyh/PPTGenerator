@@ -19,6 +19,9 @@ const TYPES: ComponentType[] = [
   'package-card',
   'kpi-board',
   'timeline-compare',
+  'product-performance',
+  'placement-display',
+  'post-list',
 ];
 
 describe('REGISTRY', () => {

@@ -20,6 +20,12 @@ vi.mock('@/api/projects', () => ({
   },
 }));
 
+const { listCampaignsMock } = vi.hoisted(() => ({ listCampaignsMock: vi.fn() }));
+vi.mock('@/api/campaigns', () => ({
+  listCampaigns: () => listCampaignsMock(),
+  getCampaign: vi.fn(),
+}));
+
 const summary = (id: string, name: string, pageCount = 1) => ({
   id,
   name,
@@ -39,7 +45,21 @@ function renderPage() {
 }
 
 describe('Projects page', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listCampaignsMock.mockResolvedValue([
+      {
+        id: 'camp-x',
+        name: 'Campaign X',
+        advertiser: 'AdX',
+        businessLine: 'FT',
+        platform: 'TikTok',
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
+        budget: '¥100K',
+      },
+    ]);
+  });
 
   it('lists projects from the API', async () => {
     listMock.mockResolvedValue([summary('p1', '报告 A'), summary('p2', '报告 B', 2)]);
@@ -101,7 +121,7 @@ describe('Projects page', () => {
     expect(meta).toBeDefined();
   });
 
-  it('passes meta (业务线/场景/campaign 信息) when filled', async () => {
+  it('passes meta (场景驱动 + campaign 选择联动填充)', async () => {
     const user = userEvent.setup();
     listMock.mockResolvedValue([]);
     createMock.mockResolvedValue({
@@ -118,19 +138,24 @@ describe('Projects page', () => {
     await user.click(screen.getByRole('button', { name: /新建项目/ }));
     await user.type(screen.getByPlaceholderText(/例如/), 'Campaign 周报');
 
-    // 业务线 FT、场景 Campaign 报告（出现「报告类型」子选择）
-    const combos = screen.getAllByRole('combobox');
-    await user.selectOptions(combos[0], 'FT'); // 业务线
-    await user.selectOptions(combos[3], 'campaign-report'); // 场景
+    // 1) 先选场景 Campaign 报告 → campaign 列表懒加载
+    await user.selectOptions(screen.getByRole('combobox', { name: '场景' }), 'campaign-report');
+    await screen.findByText('Campaign X · AdX');
+
+    // 2) 选择具体 campaign（联动填充广告主/业务线/campaign 信息）
+    await user.selectOptions(screen.getByRole('combobox', { name: /Campaign/ }), 'camp-x');
+
     await user.click(screen.getByRole('button', { name: '创建' }));
 
     await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
     const meta = createMock.mock.calls[0][3];
-    expect(meta.businessLine).toBe('FT');
     expect(meta.scenario).toBe('campaign-report');
     expect(meta.scenarioSub).toBe('weekly');
-    expect(meta.campaignInfo).toBeDefined();
-    expect(meta.campaignInfo.platform).toBeTruthy();
+    expect(meta.campaignId).toBe('camp-x');
+    // 联动自上游 campaign：
+    expect(meta.advertiser).toBe('AdX');
+    expect(meta.businessLine).toBe('FT');
+    expect(meta.campaignInfo).toMatchObject({ campaignName: 'Campaign X', platform: 'TikTok', budget: '¥100K' });
   });
 
   it('renames a project inline', async () => {

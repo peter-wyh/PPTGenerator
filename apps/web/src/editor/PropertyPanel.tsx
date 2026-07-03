@@ -99,6 +99,9 @@ const LABELS: Record<string, string> = {
   'package-card': '套餐卡',
   'kpi-board': '业绩看板',
   'timeline-compare': '周期对比表',
+  'product-performance': '商品表现',
+  'placement-display': '广告位展示',
+  'post-list': 'Post 列表',
 };
 
 function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {

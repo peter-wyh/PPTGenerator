@@ -25,6 +25,7 @@ export const projectMetaSchema = z
     scenario: z.enum(['campaign-report', 'campaign-proposal', 'media-kit']).optional(),
     scenarioSub: z.enum(['weekly', 'monthly', 'wrap-up']).optional(),
     advertiser: z.string().max(120).optional(),
+    campaignId: z.string().max(120).optional(),
     campaignInfo: campaignInfoSchema,
   })
   .optional();

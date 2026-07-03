@@ -73,6 +73,20 @@ export interface CampaignInfo {
   budget?: string;
 }
 
+/** 上游 Campaign 实体（接入上游接口；demo 中 mock）。 */
+export interface Campaign {
+  id: string;
+  name: string;
+  advertiser: string;
+  businessLine: string;
+  platform: string;
+  startDate: string;
+  endDate: string;
+  budget: string;
+  status?: string;
+  owner?: string;
+}
+
 /** 项目元数据（mock 原型字段，存于 Project.meta JSON）。 */
 export interface ProjectMeta {
   /** 业务线：FT/SM/CX/DG/KN/DM 等。 */
@@ -84,6 +98,8 @@ export interface ProjectMeta {
   scenarioSub?: ScenarioSub;
   /** 广告主。 */
   advertiser?: string;
+  /** 选中的上游 campaign id（campaign 类型场景）。 */
+  campaignId?: string;
   campaignInfo?: CampaignInfo;
 }
 
@@ -109,7 +125,10 @@ export type ComponentType =
   | 'package-card'
   // 业务组件（试点：Campaign 报告域，周报/月报/结案核心页）
   | 'kpi-board'
-  | 'timeline-compare';
+  | 'timeline-compare'
+  | 'product-performance'
+  | 'placement-display'
+  | 'post-list';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -281,6 +300,42 @@ export interface TimelineCompareData {
   rows: string[][];
 }
 
+/**
+ * 商品表现（≈PRD CMP-B12）：TOP N 商品。复用 TableData 形状，
+ * 约定列顺序 [商品名, 图URL, 销量, 占比, 品类]；insight 为可选 AI 洞察文本。
+ */
+export type ProductPerformanceVariant = 'cards' | 'rank' | 'grid';
+export interface ProductPerformanceData {
+  variant: ProductPerformanceVariant;
+  insight: string;
+  headers: string[];
+  rows: string[][];
+}
+
+/**
+ * DM 广告位展示（≈PRD CMP-B15）：广告位截图 + 名称 + 数据，
+ * 可选 Highlights / Learnings 文本。复用 TableData，列顺序 [名称, 截图URL, 数据]。
+ */
+export type PlacementVariant = 'single' | 'grid' | 'with-text';
+export interface PlacementData {
+  variant: PlacementVariant;
+  highlights: string;
+  learnings: string;
+  headers: string[];
+  rows: string[][];
+}
+
+/**
+ * Post/链接列表（≈PRD CMP-B16）：Content Site/Reddit/FB 等非达人渠道的 Post。
+ * 复用 TableData，列顺序 [截图URL, 标题, ID, 链接, 数据]。
+ */
+export type PostListVariant = 'cards' | 'row' | 'compact';
+export interface PostListData {
+  variant: PostListVariant;
+  headers: string[];
+  rows: string[][];
+}
+
 export type ComponentData =
   | TextData
   | ImageData
@@ -296,7 +351,10 @@ export type ComponentData =
   | BrandWallData
   | PackageCardData
   | KpiBoardData
-  | TimelineCompareData;
+  | TimelineCompareData
+  | ProductPerformanceData
+  | PlacementData
+  | PostListData;
 
 export interface EditorComponent {
   id: string;

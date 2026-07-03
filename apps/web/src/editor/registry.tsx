@@ -17,7 +17,7 @@ import {
   CreatorWorksList,
 } from './components/CreatorComponents';
 import { BrandWall, PackageCard } from './components/CompanyComponents';
-import { KpiBoard, TimelineCompare } from './components/ReportComponents';
+import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from './components/ReportComponents';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -270,6 +270,46 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'with-bar', label: '带变化条' },
     ],
     propertySchema: [{ key: '', label: '对比数据', kind: 'table' }],
+  },
+  'product-performance': {
+    Component: ProductPerformance,
+    defaultSize: DEFAULT_SIZES['product-performance'],
+    defaultData: () => getDefaultData('product-performance'),
+    variants: [
+      { id: 'cards', label: '卡片' },
+      { id: 'rank', label: '排行榜' },
+      { id: 'grid', label: '网格' },
+    ],
+    propertySchema: [
+      { key: 'insight', label: 'AI 洞察', kind: 'textarea' },
+      { key: '', label: '商品列表', kind: 'table' },
+    ],
+  },
+  'placement-display': {
+    Component: PlacementDisplay,
+    defaultSize: DEFAULT_SIZES['placement-display'],
+    defaultData: () => getDefaultData('placement-display'),
+    variants: [
+      { id: 'single', label: '单大图' },
+      { id: 'grid', label: '网格' },
+      { id: 'with-text', label: '含亮点' },
+    ],
+    propertySchema: [
+      { key: 'highlights', label: 'Highlights', kind: 'textarea' },
+      { key: 'learnings', label: 'Learnings', kind: 'textarea' },
+      { key: '', label: '广告位列表', kind: 'table' },
+    ],
+  },
+  'post-list': {
+    Component: PostList,
+    defaultSize: DEFAULT_SIZES['post-list'],
+    defaultData: () => getDefaultData('post-list'),
+    variants: [
+      { id: 'cards', label: '卡片' },
+      { id: 'row', label: '列表行' },
+      { id: 'compact', label: '紧凑' },
+    ],
+    propertySchema: [{ key: '', label: 'Post 列表', kind: 'table' }],
   },
 };
 

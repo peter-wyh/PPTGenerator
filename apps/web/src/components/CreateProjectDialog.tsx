@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
-import type { ProjectMeta, Scenario, ScenarioSub } from '@mediakit/shared';
+import type { Campaign, ProjectMeta, Scenario, ScenarioSub } from '@mediakit/shared';
 import { Button } from './Button';
 import { Input } from './Input';
 import {
   ADVERTISERS,
   BUSINESS_LINES,
-  CREATORS,
   isCampaignScenario,
-  mockCampaignInfo,
-  PLATFORMS,
   SCENARIOS,
 } from '@/projectsMeta';
+import { listCampaigns } from '@/api/campaigns';
 
 interface SizePreset {
   id: string;
@@ -38,39 +36,56 @@ interface Props {
   onSubmit: (values: { name: string; width: number; height: number; meta: ProjectMeta }) => void;
 }
 
-/** 新建项目完整表单弹窗：名称 + 画布尺寸 + 业务线/创建人/场景/广告主 (+campaign 信息)。 */
+/** 新建项目表单：场景驱动，campaign 类型从上游接口(mock)选择具体 campaign 并联动填充。 */
 export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }: Props) {
   const [name, setName] = useState('');
+  const [scenario, setScenario] = useState<Scenario | ''>('');
+  const [scenarioSub, setScenarioSub] = useState<ScenarioSub>('weekly');
+  const [creator, setCreator] = useState('');
+
+  // campaign（上游 mock）
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
+  const [campaignId, setCampaignId] = useState('');
+
+  // media-kit 手动字段
+  const [mkBusinessLine, setMkBusinessLine] = useState('');
+  const [mkAdvertiser, setMkAdvertiser] = useState('');
+
+  // 画布尺寸
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [custom, setCustom] = useState(false);
   const [width, setWidth] = useState(PRESETS[0].w);
   const [height, setHeight] = useState(PRESETS[0].h);
 
-  // meta
-  const [businessLine, setBusinessLine] = useState('');
-  const [creator, setCreator] = useState('');
-  const [scenario, setScenario] = useState<Scenario | ''>('');
-  const [scenarioSub, setScenarioSub] = useState<ScenarioSub>('weekly');
-  const [advertiser, setAdvertiser] = useState('');
-  const [campaign, setCampaign] = useState(mockCampaignInfo());
-  const [campaignTouched, setCampaignTouched] = useState(false);
+  const isCampaign = isCampaignScenario(scenario as Scenario);
+  const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
 
   useEffect(() => {
     if (open) {
       setName('');
+      setScenario('');
+      setScenarioSub('weekly');
+      setCreator('');
+      setCampaignId('');
+      setMkBusinessLine('');
+      setMkAdvertiser('');
       setPresetId(PRESETS[0].id);
       setCustom(false);
       setWidth(PRESETS[0].w);
       setHeight(PRESETS[0].h);
-      setBusinessLine('');
-      setCreator('');
-      setScenario('');
-      setScenarioSub('weekly');
-      setAdvertiser('');
-      setCampaign(mockCampaignInfo());
-      setCampaignTouched(false);
     }
   }, [open]);
+
+  // 进入 campaign 类型场景时懒加载上游 campaign 列表。
+  useEffect(() => {
+    if (open && isCampaign && campaigns.length === 0 && !campaignsLoading) {
+      setCampaignsLoading(true);
+      listCampaigns()
+        .then(setCampaigns)
+        .finally(() => setCampaignsLoading(false));
+    }
+  }, [open, isCampaign, campaigns.length, campaignsLoading]);
 
   if (!open) return null;
 
@@ -81,35 +96,40 @@ export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }
     setHeight(p.h);
   }
 
-  function changeScenario(s: Scenario | '') {
-    setScenario(s);
-    // 进入 campaign 类型且用户尚未编辑过 campaign 信息 → 预填 mock。
-    if (isCampaignScenario(s as Scenario) && !campaignTouched) {
-      setCampaign(mockCampaignInfo());
-    }
-  }
+  const canSubmit =
+    !!name.trim() && (!scenario || !isCampaignScenario(scenario as Scenario) || !!campaignId);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || !canSubmit) return;
     const w = Math.max(1, Math.min(8192, Math.round(Number(width) || 0)));
     const h = Math.max(1, Math.min(8192, Math.round(Number(height) || 0)));
 
     const meta: ProjectMeta = {
-      businessLine: businessLine || undefined,
       creator: creator || undefined,
       scenario: (scenario || undefined) as Scenario | undefined,
       scenarioSub: scenario === 'campaign-report' ? scenarioSub : undefined,
-      advertiser: advertiser || undefined,
-      campaignInfo: isCampaignScenario(scenario as Scenario) ? campaign : undefined,
     };
+
+    if (isCampaignScenario(scenario as Scenario) && selectedCampaign) {
+      meta.campaignId = selectedCampaign.id;
+      meta.businessLine = selectedCampaign.businessLine;
+      meta.advertiser = selectedCampaign.advertiser;
+      meta.campaignInfo = {
+        campaignName: selectedCampaign.name,
+        platform: selectedCampaign.platform,
+        startDate: selectedCampaign.startDate,
+        endDate: selectedCampaign.endDate,
+        budget: selectedCampaign.budget,
+      };
+    } else if (scenario === 'media-kit') {
+      meta.businessLine = mkBusinessLine || undefined;
+      meta.advertiser = mkAdvertiser || undefined;
+    }
 
     onSubmit({ name: trimmed, width: w, height: h, meta });
   }
-
-  const showSub = scenario === 'campaign-report';
-  const showCampaign = isCampaignScenario(scenario as Scenario);
 
   return (
     <div
@@ -136,6 +156,121 @@ export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }
             autoFocus
             required
           />
+
+          {/* 场景（驱动后续表单） */}
+          <label className="block text-sm text-foreground-secondary">
+            <span className="mb-1 block font-medium">场景</span>
+            <select
+              className={selectCls}
+              value={scenario}
+              onChange={(e) => {
+                setScenario(e.target.value as Scenario | '');
+                setCampaignId('');
+              }}
+            >
+              <option value="">（请选择场景）</option>
+              {SCENARIOS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* campaign 类型：选具体 campaign（上游接口 mock） */}
+          {isCampaign && (
+            <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-hover/40 p-3">
+              <label className="block text-sm text-foreground-secondary">
+                <span className="mb-1 block font-medium">
+                  Campaign <span className="text-foreground-muted">（来自上游接口）</span>
+                </span>
+                <select
+                  className={selectCls}
+                  value={campaignId}
+                  onChange={(e) => setCampaignId(e.target.value)}
+                  disabled={campaignsLoading}
+                >
+                  <option value="">{campaignsLoading ? '加载中…' : '（选择 Campaign）'}</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} · {c.advertiser}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {selectedCampaign && (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-foreground-secondary">
+                  <span>广告主：{selectedCampaign.advertiser}</span>
+                  <span>业务线：{selectedCampaign.businessLine}</span>
+                  <span>平台：{selectedCampaign.platform}</span>
+                  <span>预算：{selectedCampaign.budget}</span>
+                  <span className="col-span-2">
+                    周期：{selectedCampaign.startDate} ~ {selectedCampaign.endDate}
+                  </span>
+                </div>
+              )}
+
+              {/* campaign 报告：报告类型 */}
+              {scenario === 'campaign-report' && (
+                <label className="block text-sm text-foreground-secondary">
+                  <span className="mb-1 block">报告类型</span>
+                  <select
+                    className={selectCls}
+                    value={scenarioSub}
+                    onChange={(e) => setScenarioSub(e.target.value as ScenarioSub)}
+                  >
+                    {SCENARIOS.find((s) => s.id === 'campaign-report')?.subs?.map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
+
+          {/* media-kit：手动选广告主 / 业务线 */}
+          {scenario === 'media-kit' && (
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-sm text-foreground-secondary">
+                <span className="mb-1 block">广告主</span>
+                <select className={selectCls} value={mkAdvertiser} onChange={(e) => setMkAdvertiser(e.target.value)}>
+                  <option value="">（选填）</option>
+                  {ADVERTISERS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm text-foreground-secondary">
+                <span className="mb-1 block">业务线</span>
+                <select className={selectCls} value={mkBusinessLine} onChange={(e) => setMkBusinessLine(e.target.value)}>
+                  <option value="">（选填）</option>
+                  {BUSINESS_LINES.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          {/* 创建人（通用） */}
+          <label className="block text-sm text-foreground-secondary">
+            <span className="mb-1 block">创建人</span>
+            <select className={selectCls} value={creator} onChange={(e) => setCreator(e.target.value)}>
+              <option value="">（选填）</option>
+              {['alex', 'stella', 'reese', 'stacey'].map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {/* 画布尺寸 */}
           <div>
@@ -181,97 +316,6 @@ export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }
             )}
           </div>
 
-          {/* 业务线 / 创建人 / 广告主 */}
-          <div className="grid grid-cols-3 gap-2">
-            <label className="block text-sm text-foreground-secondary">
-              <span className="mb-1 block">业务线</span>
-              <select className={selectCls} value={businessLine} onChange={(e) => setBusinessLine(e.target.value)}>
-                <option value="">（选填）</option>
-                {BUSINESS_LINES.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm text-foreground-secondary">
-              <span className="mb-1 block">创建人</span>
-              <select className={selectCls} value={creator} onChange={(e) => setCreator(e.target.value)}>
-                <option value="">（选填）</option>
-                {CREATORS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm text-foreground-secondary">
-              <span className="mb-1 block">广告主</span>
-              <select className={selectCls} value={advertiser} onChange={(e) => setAdvertiser(e.target.value)}>
-                <option value="">（选填）</option>
-                {ADVERTISERS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {/* 场景 */}
-          <div className={`grid ${showSub ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
-            <label className="block text-sm text-foreground-secondary">
-              <span className="mb-1 block">场景</span>
-              <select
-                className={selectCls}
-                value={scenario}
-                onChange={(e) => changeScenario(e.target.value as Scenario | '')}
-              >
-                <option value="">（选填）</option>
-                {SCENARIOS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {showSub && (
-              <label className="block text-sm text-foreground-secondary">
-                <span className="mb-1 block">报告类型</span>
-                <select className={selectCls} value={scenarioSub} onChange={(e) => setScenarioSub(e.target.value as ScenarioSub)}>
-                  {SCENARIOS.find((s) => s.id === 'campaign-report')?.subs?.map(([id, label]) => (
-                    <option key={id} value={id}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </div>
-
-          {/* Campaign 信息（仅 campaign 类型场景） */}
-          {showCampaign && (
-            <div className="rounded-lg border border-border-subtle bg-surface-hover/40 p-3">
-              <div className="mb-2 text-xs font-medium text-foreground-muted">Campaign 信息（mock）</div>
-              <div className="grid grid-cols-2 gap-2">
-                <Input label="Campaign 名称" value={campaign.campaignName} onChange={(e) => { setCampaign({ ...campaign, campaignName: e.target.value }); setCampaignTouched(true); }} />
-                <label className="block text-sm text-foreground-secondary">
-                  <span className="mb-1 block">投放平台</span>
-                  <select className={selectCls} value={campaign.platform} onChange={(e) => { setCampaign({ ...campaign, platform: e.target.value }); setCampaignTouched(true); }}>
-                    {PLATFORMS.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Input label="开始日期" value={campaign.startDate} onChange={(e) => { setCampaign({ ...campaign, startDate: e.target.value }); setCampaignTouched(true); }} />
-                <Input label="结束日期" value={campaign.endDate} onChange={(e) => { setCampaign({ ...campaign, endDate: e.target.value }); setCampaignTouched(true); }} />
-                <Input label="预算" value={campaign.budget} onChange={(e) => { setCampaign({ ...campaign, budget: e.target.value }); setCampaignTouched(true); }} />
-              </div>
-            </div>
-          )}
-
           {error && <p className="text-sm text-red">{error}</p>}
         </div>
 
@@ -279,7 +323,7 @@ export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }
           <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
             取消
           </Button>
-          <Button type="submit" loading={loading} disabled={!name.trim()}>
+          <Button type="submit" loading={loading} disabled={!canSubmit}>
             创建
           </Button>
         </div>

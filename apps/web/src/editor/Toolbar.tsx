@@ -13,7 +13,7 @@ const TOOLS: { type: 'text' | 'image' | 'bar-chart' | 'line-chart' | 'pie-chart'
 ];
 
 /** 试点业务组件：页内可复用语义块，与通用组件同级，走 addComponent。 */
-const SEMANTIC_TOOLS: { type: 'creator-avatar-card' | 'creator-stats-strip' | 'creator-works-list' | 'brand-wall' | 'package-card' | 'kpi-board' | 'timeline-compare'; label: string }[] = [
+const SEMANTIC_TOOLS: { type: 'creator-avatar-card' | 'creator-stats-strip' | 'creator-works-list' | 'brand-wall' | 'package-card' | 'kpi-board' | 'timeline-compare' | 'product-performance' | 'placement-display' | 'post-list'; label: string }[] = [
   { type: 'creator-avatar-card', label: '达人头像卡' },
   { type: 'creator-stats-strip', label: '达人数据条' },
   { type: 'creator-works-list', label: '达人作品列表' },
@@ -21,6 +21,9 @@ const SEMANTIC_TOOLS: { type: 'creator-avatar-card' | 'creator-stats-strip' | 'c
   { type: 'package-card', label: '套餐卡' },
   { type: 'kpi-board', label: '业绩看板' },
   { type: 'timeline-compare', label: '周期对比表' },
+  { type: 'product-performance', label: '商品表现' },
+  { type: 'placement-display', label: '广告位' },
+  { type: 'post-list', label: 'Post 列表' },
 ];
 
 export function Toolbar() {

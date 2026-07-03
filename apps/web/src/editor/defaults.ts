@@ -20,6 +20,9 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'package-card': { w: 320, h: 320 },
   'kpi-board': { w: 900, h: 200 },
   'timeline-compare': { w: 900, h: 240 },
+  'product-performance': { w: 900, h: 280 },
+  'placement-display': { w: 700, h: 280 },
+  'post-list': { w: 900, h: 240 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -176,6 +179,41 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['Total Reach', '8.1M', '7.0M', 'Exceeded'],
           ['Conversion', '3.8%', '4.0%', 'Stable'],
           ['Engagement', '8.7%', '6.2%', 'Optimized'],
+        ],
+      };
+    case 'product-performance':
+      return {
+        variant: 'cards',
+        insight: '【最佳销售 Top5】功效精华类贡献 46% 销售额；建议下阶段单品加投。',
+        headers: ['商品', '图URL', '销量', '占比', '品类'],
+        rows: [
+          ['敏感肌精华', '', '12.4K', '32%', '护肤'],
+          ['保湿面霜', '', '8.6K', '22%', '护肤'],
+          ['洁面慕斯', '', '5.2K', '13%', '清洁'],
+          ['防晒霜', '', '4.1K', '11%', '防晒'],
+          ['眼霜', '', '3.0K', '8%', '护肤'],
+        ],
+      };
+    case 'placement-display':
+      return {
+        variant: 'grid',
+        highlights: '首页 Banner CTR 高于均值 1.8 倍。',
+        learnings: '推荐位素材需强化功效可视化。',
+        headers: ['名称', '截图URL', '数据'],
+        rows: [
+          ['首页 Banner', '', 'CTR 2.4%'],
+          ['详情页推荐位', '', 'CTR 1.6%'],
+          ['购物车加购位', '', 'CTR 3.1%'],
+        ],
+      };
+    case 'post-list':
+      return {
+        variant: 'cards',
+        headers: ['截图URL', '标题', 'ID', '链接', '数据'],
+        rows: [
+          ['', 'Content Site 深度测评', 'CS-001', 'https://example.com/1', '阅读 24K'],
+          ['', 'Reddit 热议帖', 'RD-104', 'https://example.com/2', '互动 3.2K'],
+          ['', 'FB 种草贴', 'FB-220', 'https://example.com/3', '互动 1.8K'],
         ],
       };
     default:
