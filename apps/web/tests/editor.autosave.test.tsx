@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ProjectDetail } from '@mediakit/shared';
 
 const updateMock = vi.fn().mockResolvedValue({});
@@ -28,7 +29,11 @@ describe('editor autosave', () => {
 
   it('PATCHes pages after a debounced change', async () => {
     vi.useFakeTimers();
-    render(<Editor detail={detail} />);
+    render(
+      <MemoryRouter>
+        <Editor detail={detail} />
+      </MemoryRouter>,
+    );
 
     // 初始无保存。
     expect(updateMock).not.toHaveBeenCalled();
