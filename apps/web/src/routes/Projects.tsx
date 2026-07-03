@@ -206,6 +206,13 @@ export function Projects() {
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <button
+                      onClick={() => navigate(`/projects/${p.id}`)}
+                      className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
+                      title="进入可视化编辑器"
+                    >
+                      可视化编辑
+                    </button>
+                    <button
                       onClick={() => {
                         setEditingId(p.id);
                         setEditName(p.name);
