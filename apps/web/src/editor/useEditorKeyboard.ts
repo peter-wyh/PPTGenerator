@@ -19,6 +19,8 @@ export function useEditorKeyboard(): void {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const st = useEditorStore.getState();
+      // 预览模式（M6）：键盘交给 PreviewOverlay（←/→ 翻页、Esc 关闭），编辑快捷键全部让位。
+      if (st.previewOpen) return;
       // 空格 pan（允许在任何地方触发，但避免与输入冲突）。
       if (e.code === 'Space' && !isEditing(e.target)) {
         e.preventDefault();

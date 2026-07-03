@@ -125,6 +125,15 @@ export interface EditorState {
   addDatasource: (ds: Datasource) => void;
   removeDatasource: (id: string) => void;
   bindComponent: (id: string, binding: ComponentBinding | null) => void;
+
+  // ---- 预览（M6，不入 history，与 zoom/pan 同理）----
+  previewOpen: boolean;
+  previewPageIndex: number;
+  enterPreview: () => void;
+  exitPreview: () => void;
+  previewPrev: () => void;
+  previewNext: () => void;
+  setPreviewPageIndex: (index: number) => void;
 }
 
 function newId(): string {
@@ -184,6 +193,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     datasources: [],
     loaded: false,
     dirty: false,
+    previewOpen: false,
+    previewPageIndex: 0,
 
     currentPage: () => get().pages.find((p) => p.id === get().currentPageId) ?? null,
     currentComponents: () => get().currentPage()?.components ?? [],
@@ -548,6 +559,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
         pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
           cs.map((c) => (c.id === id ? { ...c, binding: binding ?? undefined } : c)),
         ),
+      })),
+
+    // ---- 预览（M6）：纯视图，set() 不入 history ----
+    enterPreview: () => {
+      const { pages, currentPageId } = get();
+      const idx = pages.findIndex((p) => p.id === currentPageId);
+      set({ previewOpen: true, previewPageIndex: idx < 0 ? 0 : idx });
+    },
+    exitPreview: () => set({ previewOpen: false }),
+    previewPrev: () =>
+      set((s) => ({ previewPageIndex: Math.max(0, s.previewPageIndex - 1) })),
+    previewNext: () =>
+      set((s) => ({
+        previewPageIndex: Math.min(Math.max(0, s.pages.length - 1), s.previewPageIndex + 1),
+      })),
+    setPreviewPageIndex: (index) =>
+      set((s) => ({
+        previewPageIndex: Math.min(Math.max(0, s.pages.length - 1), Math.max(0, index)),
       })),
   };
 });

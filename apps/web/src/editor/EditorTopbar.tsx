@@ -1,6 +1,7 @@
 import { useEditorStore } from './store';
+import { ExportMenu } from './components/ExportMenu';
 
-/** 顶栏：项目名（可编辑）、撤销/重做、预览/导出桩（M6 接通）。 */
+/** 顶栏：项目名（可编辑）、撤销/重做、预览、导出/分享（M6）。 */
 export function EditorTopbar() {
   const projectName = useEditorStore((s) => s.projectName);
   const setProjectName = useEditorStore((s) => s.setProjectName);
@@ -8,6 +9,8 @@ export function EditorTopbar() {
   const canRedo = useEditorStore((s) => s.canRedo());
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
+  const enterPreview = useEditorStore((s) => s.enterPreview);
+  const hasPages = useEditorStore((s) => s.pages.length > 0);
 
   return (
     <header className="flex h-12 items-center justify-between border-b border-border-default bg-surface-primary px-3">
@@ -37,19 +40,14 @@ export function EditorTopbar() {
         </button>
         <span className="mx-1 h-4 w-px bg-border-default" />
         <button
-          disabled
-          className="rounded px-2 py-1 text-sm text-foreground-muted disabled:opacity-50"
-          title="M6 接通"
+          onClick={() => enterPreview()}
+          disabled={!hasPages}
+          className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover disabled:opacity-40"
+          title="预览 (←/→ 翻页, Esc 关闭)"
         >
           预览
         </button>
-        <button
-          disabled
-          className="rounded px-2 py-1 text-sm text-foreground-muted disabled:opacity-50"
-          title="M6 接通"
-        >
-          导出
-        </button>
+        <ExportMenu />
       </div>
     </header>
   );

@@ -103,4 +103,34 @@ export const projectsService = {
     const project = await prisma.project.create({ data });
     return toDetail(project);
   },
+
+  /** Owner 生成（或刷新）公开分享 token。 */
+  async createShareToken(ownerId: string, id: string): Promise<string> {
+    await this.getOwnedOrThrow(ownerId, id);
+    const token = randomUUID();
+    await prisma.project.update({ where: { id }, data: { shareToken: token } });
+    return token;
+  },
+
+  /** Owner 撤销分享 token。 */
+  async revokeShareToken(ownerId: string, id: string): Promise<void> {
+    await this.getOwnedOrThrow(ownerId, id);
+    await prisma.project.update({ where: { id }, data: { shareToken: null } });
+  },
+
+  /** 按 share token 公开读取（无认证）。token 不存在或为 null → 404（不泄露存在性）。 */
+  async getByShareToken(token: string): Promise<ProjectDetail> {
+    const project = await prisma.project.findUnique({ where: { shareToken: token } });
+    if (!project) {
+      throw ApiError.notFound('Shared project not found');
+    }
+    return toDetail(project);
+  },
+
+  /** Owner 取得当前 share token（若有），不抛错。供导出复用。 */
+  async getShareToken(ownerId: string, id: string): Promise<string | null> {
+    await this.getOwnedOrThrow(ownerId, id);
+    const raw = await prisma.project.findUnique({ where: { id }, select: { shareToken: true } });
+    return raw?.shareToken ?? null;
+  },
 };

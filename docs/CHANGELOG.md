@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-02 — M6：预览 + 导出 + 分享 ✅
+
+mediakit 全新重写最后一期：全屏只读预览、PDF 导出、公开分享链接，接通 M1 顶栏预览/导出桩。至此 M0→M6 七期全部完成。
+
+- **全屏只读预览**（`editor/preview/PreviewOverlay.tsx`）：顶栏「预览」打开全屏 overlay；←/→ 翻页 + ArrowLeft/Right 键 + Esc 关闭；页码显示；复用 `PageView` 真实渲染。预览状态用 `set()` 不入 history，`useEditorKeyboard` 在 previewOpen 时让位键盘。
+- **`PageView`**（`editor/preview/PageView.tsx`）：预览/分享/PDF 共用的纯渲染组件，复用 `REGISTRY` + `ComponentRenderer`，独立精简定位壳（无手柄/hover/选中，不污染 `CanvasComponent`）；transform scale 整体缩放 + `fitScale` 工具。
+- **公开分享链接**：Project 加 `shareToken` 字段（迁移 `20260702000000_share_token`）；无认证路由 `GET /share/:token`（挂载模式仿 `/health`）；owner `POST/DELETE /projects/:id/share` 生成/撤销；前端 `/share/:token` 路由（`ProtectedLayout` 外，匿名可访问）+ ExportMenu「复制分享链接」。
+- **PDF 导出**（`server/modules/export/`）：`POST /projects/:id/export?format=pdf` 走 puppeteer 访问 `/share/:token?print=1` 让浏览器渲染后 print-to-PDF（复用前端渲染，避免 React+recharts SSR）；分享页 `?print=1` 模式连续渲染所有页（page-break）。
+- **测试**：server `share.test.ts`（4：公开读 / 404 不泄露 / owner 隔离 / 需认证）；web `editor.preview.test.tsx`（6：enter/exit/prev/next/clamp + 不污染 history）。门禁 typecheck + test（160）+ build 全绿。
+
+**已知限制**：数据源未持久化（M5 取舍）→ 分享页/PDF 中数据源绑定图表回落默认数据；puppeteer Chromium 需在生产容器装系统库（后续可换 sidecar）。
+
 ## 2026-07-02 — M5：数据源 ✅
 
 CSV/Excel 上传 → 解析 → 组件按列绑定，真实驱动图表/表格。

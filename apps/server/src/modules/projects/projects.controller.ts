@@ -32,4 +32,14 @@ export const projectsController = {
   duplicate: asyncHandler(async (req: Request, res: Response) => {
     res.status(201).json({ project: await projectsService.duplicate(owner(req), req.params.id) });
   }),
+
+  createShare: asyncHandler(async (req: Request, res: Response) => {
+    const shareToken = await projectsService.createShareToken(owner(req), req.params.id);
+    res.json({ shareToken });
+  }),
+
+  revokeShare: asyncHandler(async (req: Request, res: Response) => {
+    await projectsService.revokeShareToken(owner(req), req.params.id);
+    res.status(204).end();
+  }),
 };

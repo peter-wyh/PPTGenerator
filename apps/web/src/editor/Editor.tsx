@@ -6,6 +6,7 @@ import { Toolbar } from './Toolbar';
 import { PageSidebar } from './PageSidebar';
 import { Canvas } from './Canvas';
 import { PropertyPanel } from './PropertyPanel';
+import { PreviewOverlay } from './preview/PreviewOverlay';
 import { useAutosave } from './useAutosave';
 import { useEditorKeyboard } from './useEditorKeyboard';
 
@@ -33,6 +34,7 @@ export function Editor({ detail }: EditorProps) {
         </div>
         <PropertyPanel />
       </div>
+      <PreviewOverlay />
     </div>
   );
 }

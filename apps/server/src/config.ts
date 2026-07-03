@@ -45,6 +45,9 @@ export const config = {
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()) ?? ['http://localhost:5173'],
   },
+
+  /** 前端 Web 地址（PDF 导出时 puppeteer 访问 /share/:token?print=1 渲染页面）。 */
+  webUrl: process.env.WEB_URL ?? 'http://localhost:5173',
 } as const;
 
 export type Config = typeof config;

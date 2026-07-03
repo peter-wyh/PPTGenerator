@@ -29,15 +29,16 @@ model User {
 }
 
 model Project {
-  id        String   @id @default(cuid())
-  ownerId   String
-  name      String
-  pages     Json
-  width     Int      @default(1280)
-  height    Int      @default(720)
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  ownerId    String
+  name       String
+  pages      Json
+  width      Int      @default(1280)
+  height     Int      @default(720)
+  shareToken String?  @unique
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([ownerId])
 }

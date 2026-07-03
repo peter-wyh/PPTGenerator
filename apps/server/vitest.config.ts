@@ -1,8 +1,9 @@
 import { defineConfig } from 'vitest/config';
 
-// 测试库：默认指向 docker-compose 的 mysql/redis（可被 TEST_DATABASE_URL / TEST_REDIS_URL 覆盖）。
+// 测试库：独立 mediakit_test，与 dev 库隔离（跑测试不会清掉 dev 的 seed 数据）。
+// 可被 TEST_DATABASE_URL / TEST_REDIS_URL 覆盖。
 const testDatabaseUrl =
-  process.env.TEST_DATABASE_URL ?? 'mysql://mediakit:mediakit_pw@localhost:3317/mediakit';
+  process.env.TEST_DATABASE_URL ?? 'mysql://mediakit:mediakit_pw@localhost:3317/mediakit_test';
 const testRedisUrl = process.env.TEST_REDIS_URL ?? 'redis://localhost:6389';
 
 export default defineConfig({

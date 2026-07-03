@@ -3,6 +3,7 @@ import { projectsController } from './projects.controller';
 import { validate } from '../../middleware/validate';
 import { createProjectSchema, idParamSchema, updateProjectSchema } from './projects.schema';
 import { authenticate } from '../../middleware/auth';
+import { exportRoutes } from '../export/export.routes';
 
 const router = Router();
 
@@ -14,5 +15,9 @@ router.get('/:id', validate({ params: idParamSchema }), projectsController.get);
 router.patch('/:id', validate({ params: idParamSchema, body: updateProjectSchema }), projectsController.update);
 router.delete('/:id', validate({ params: idParamSchema }), projectsController.remove);
 router.post('/:id/duplicate', validate({ params: idParamSchema }), projectsController.duplicate);
+router.post('/:id/share', validate({ params: idParamSchema }), projectsController.createShare);
+router.delete('/:id/share', validate({ params: idParamSchema }), projectsController.revokeShare);
+// /projects/:id/export（PDF 导出，复用本 router 的 authenticate）
+router.use('/', exportRoutes);
 
 export const projectsRoutes = router;
