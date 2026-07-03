@@ -4,6 +4,7 @@ import { useEditorStore } from './store';
 import { EditorTopbar } from './EditorTopbar';
 import { Toolbar } from './Toolbar';
 import { PageSidebar } from './PageSidebar';
+import { ComponentPanel } from './ComponentPanel';
 import { Canvas } from './Canvas';
 import { PropertyPanel } from './PropertyPanel';
 import { PreviewOverlay } from './preview/PreviewOverlay';
@@ -28,6 +29,7 @@ export function Editor({ detail }: EditorProps) {
       <EditorTopbar />
       <div className="flex min-h-0 flex-1">
         <PageSidebar />
+        <ComponentPanel />
         <div className="flex min-w-0 flex-1 flex-col">
           <Toolbar />
           <Canvas />
