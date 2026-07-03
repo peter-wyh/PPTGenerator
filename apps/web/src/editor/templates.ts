@@ -17,6 +17,16 @@ function t(type: ComponentType, x: number, y: number, w: number, h: number): Edi
   return { id: `tpl-${type}-${x}-${y}`, type, x, y, w, h, data: getDefaultData(type) };
 }
 
+/** 页面标题文本块（大字号粗体）。 */
+function titleAt(content: string, x: number, y: number, w = 1120, h = 50): EditorComponent {
+  const title = t('text', x, y, w, h);
+  const data = title.data as { content: string; fontSize: number; fontWeight: number };
+  data.content = content;
+  data.fontSize = 28;
+  data.fontWeight = 700;
+  return title;
+}
+
 export const TEMPLATES: Template[] = [
   {
     id: 'blank',
@@ -154,6 +164,84 @@ export const TEMPLATES: Template[] = [
         return c;
       });
       return [title, ...cards];
+    },
+  },
+  {
+    id: 'report-weekly-overview',
+    name: '周报·业绩概览',
+    description: 'KPI 看板 + 下周计划',
+    components: () => {
+      const title = titleAt('Weekly Status Update', 80, 50);
+      const kpi = t('kpi-board', 80, 130, 1120, 200);
+      const plan = t('text', 80, 360, 1120, 280);
+      (plan.data as { content: string; fontSize: number }).content =
+        '下周计划：\n· 追加 Spark Ads 投放\n· 上线 12 位敏感肌达人内容\n· 重点跟进转化率偏低的渠道';
+      (plan.data as { fontSize: number }).fontSize = 16;
+      return [title, kpi, plan];
+    },
+  },
+  {
+    id: 'report-monthly-overview',
+    name: '月报·业绩概览',
+    description: 'KPI + 趋势图 + 周期对比 + Insight',
+    components: () => {
+      const title = titleAt('Performance Review', 80, 40);
+      const kpi = t('kpi-board', 80, 110, 1120, 170);
+      const chart = t('bar-chart', 80, 300, 640, 240);
+      (chart.data as { title: string }).title = 'Sales 趋势';
+      const timeline = t('timeline-compare', 760, 300, 440, 240);
+      const insight = t('text', 80, 560, 1120, 80);
+      (insight.data as { content: string }).content =
+        'Insight：本期销售额同比 +20%，主要由中腰部创作者的持续转化驱动；下月建议加大该层级预算。';
+      return [title, kpi, chart, timeline, insight];
+    },
+  },
+  {
+    id: 'report-channel',
+    name: '月报·渠道表现',
+    description: '渠道大数字 + 渠道对比表',
+    components: () => {
+      const title = titleAt('Performance by Channels', 80, 40);
+      // 渠道大数字：复用 kpi-board（compact）承载 Engaged Publishers / Est Impression 等。
+      const channelKpi = t('kpi-board', 80, 110, 1120, 90);
+      (channelKpi.data as { variant: string }).variant = 'compact';
+      (channelKpi.data as { headers: string[]; rows: string[][] }).headers = ['指标', '数值', '对比'];
+      (channelKpi.data as { rows: string[][] }).rows = [
+        ['Engaged Publishers', '38', '+6'],
+        ['Est Impression', '12.6M', '+18%'],
+        ['# of Mega', '6', '+1'],
+        ['# of Macro', '24', '+4'],
+        ['Reach Platforms', '5', '+0'],
+      ];
+      const table = t('table', 80, 230, 1120, 320);
+      (table.data as { headers: string[]; rows: string[][] }).headers = [
+        'Channel',
+        'Sales',
+        'Clicks',
+        'CVR',
+        'Publishers',
+      ];
+      (table.data as { rows: string[][] }).rows = [
+        ['Influencer', '¥600K', '80K', '4.1%', '20'],
+        ['Content Site', '¥400K', '120K', '2.8%', '18'],
+        ['Reddit', '¥180K', '60K', '3.2%', '8'],
+      ];
+      return [title, channelKpi, table];
+    },
+  },
+  {
+    id: 'report-wrapup-review',
+    name: '结案·业绩复盘',
+    description: 'KPI + 周期对比 + What Works',
+    components: () => {
+      const title = titleAt('Campaign 复盘', 80, 40);
+      const kpi = t('kpi-board', 80, 110, 1120, 170);
+      const timeline = t('timeline-compare', 80, 300, 1120, 220);
+      (timeline.data as { variant: string }).variant = 'with-bar';
+      const works = t('text', 80, 540, 1120, 100);
+      (works.data as { content: string }).content =
+        'What Works：7 天肌肤日记机制显著提升收藏与加购。\nChallenge & Strategy：前 3 秒功效表达偏弱 → 下一阶段缩短钩子、放大中腰部创作者。';
+      return [title, kpi, timeline, works];
     },
   },
 ];

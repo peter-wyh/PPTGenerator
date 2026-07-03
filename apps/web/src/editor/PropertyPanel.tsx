@@ -97,6 +97,8 @@ const LABELS: Record<string, string> = {
   'creator-works-list': '达人作品列表',
   'brand-wall': '品牌墙',
   'package-card': '套餐卡',
+  'kpi-board': '业绩看板',
+  'timeline-compare': '周期对比表',
 };
 
 function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {

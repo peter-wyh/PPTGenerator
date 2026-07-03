@@ -17,6 +17,8 @@ const TYPES: ComponentType[] = [
   'creator-works-list',
   'brand-wall',
   'package-card',
+  'kpi-board',
+  'timeline-compare',
 ];
 
 describe('REGISTRY', () => {

@@ -249,6 +249,28 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: '', label: '特性列表', kind: 'table' },
     ],
   },
+  'kpi-board': {
+    Component: KpiBoard,
+    defaultSize: DEFAULT_SIZES['kpi-board'],
+    defaultData: () => getDefaultData('kpi-board'),
+    variants: [
+      { id: 'grid', label: '网格' },
+      { id: 'row', label: '横排' },
+      { id: 'compact', label: '紧凑' },
+    ],
+    propertySchema: [{ key: '', label: 'KPI 列表', kind: 'table' }],
+  },
+  'timeline-compare': {
+    Component: TimelineCompare,
+    defaultSize: DEFAULT_SIZES['timeline-compare'],
+    defaultData: () => getDefaultData('timeline-compare'),
+    variants: [
+      { id: 'standard', label: '标准' },
+      { id: 'mini', label: '极简' },
+      { id: 'with-bar', label: '带变化条' },
+    ],
+    propertySchema: [{ key: '', label: '对比数据', kind: 'table' }],
+  },
 };
 
 /** REGISTRY 的几何字段（属性面板追加在每类字段之后）。 */
