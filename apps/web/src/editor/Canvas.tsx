@@ -307,6 +307,29 @@ export function Canvas() {
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
       )}
+
+      {/* 缩放百分比指示器 */}
+      <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-md border border-border-default bg-surface px-1.5 py-1 text-xs text-foreground-secondary shadow-sm">
+        <button
+          type="button"
+          className="flex h-5 w-5 items-center justify-center rounded hover:bg-surface-subtle disabled:opacity-40"
+          onClick={() => useEditorStore.getState().setZoom(Math.max(0.1, zoom - 0.1))}
+          disabled={zoom <= 0.1}
+          title="缩小"
+        >
+          −
+        </button>
+        <span className="w-10 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+        <button
+          type="button"
+          className="flex h-5 w-5 items-center justify-center rounded hover:bg-surface-subtle disabled:opacity-40"
+          onClick={() => useEditorStore.getState().setZoom(Math.min(2, zoom + 0.1))}
+          disabled={zoom >= 2}
+          title="放大"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }

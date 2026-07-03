@@ -21,9 +21,10 @@ export function Projects() {
   const [pendingDelete, setPendingDelete] = useState<ProjectSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 改名内联
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
+  // 编辑项目弹窗
+  const [editing, setEditing] = useState<ProjectSummary | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // 列表筛选
   const [filterBL, setFilterBL] = useState<string>('');
@@ -62,15 +63,25 @@ export function Projects() {
     }
   }
 
-  async function handleRename(id: string) {
-    const name = editName.trim();
-    if (!name) {
-      setEditingId(null);
-      return;
+  async function handleEdit(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta }) {
+    if (!editing) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      const updated = await projectsApi.update(editing.id, values);
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === editing.id
+            ? { ...p, name: updated.name, width: updated.width, height: updated.height, meta: updated.meta }
+            : p,
+        ),
+      );
+      setEditing(null);
+    } catch {
+      setEditError('保存失败，请重试');
+    } finally {
+      setEditSubmitting(false);
     }
-    const updated = await projectsApi.rename(id, name);
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, name: updated.name } : p)));
-    setEditingId(null);
   }
 
   async function handleDelete() {
@@ -159,39 +170,12 @@ export function Projects() {
               {filtered.map((p) => (
                 <tr key={p.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
                   <td className="px-3 py-2">
-                    {editingId === p.id ? (
-                      <form
-                        className="flex items-center gap-1"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void handleRename(p.id);
-                        }}
-                      >
-                        <input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          autoFocus
-                          className="w-44 rounded border border-border-default px-2 py-1 text-sm"
-                        />
-                        <button type="submit" className="text-xs text-accent-primary hover:underline">
-                          保存
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingId(null)}
-                          className="text-xs text-foreground-muted hover:underline"
-                        >
-                          取消
-                        </button>
-                      </form>
-                    ) : (
-                      <button
-                        className="font-medium text-foreground-primary hover:text-accent-primary"
-                        onClick={() => navigate(`/projects/${p.id}`)}
-                      >
-                        {p.name}
-                      </button>
-                    )}
+                    <button
+                      className="font-medium text-foreground-primary hover:text-accent-primary"
+                      onClick={() => navigate(`/projects/${p.id}`)}
+                    >
+                      {p.name}
+                    </button>
                   </td>
                   <td className="px-3 py-2 text-foreground-secondary">{p.meta?.businessLine ?? '—'}</td>
                   <td className="px-3 py-2 text-foreground-secondary">{scenarioText(p.meta)}</td>
@@ -214,12 +198,12 @@ export function Projects() {
                     </button>
                     <button
                       onClick={() => {
-                        setEditingId(p.id);
-                        setEditName(p.name);
+                        setEditError(null);
+                        setEditing(p);
                       }}
                       className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
                     >
-                      改名
+                      编辑
                     </button>
                     <button
                       onClick={() => setPendingDelete(p)}
@@ -251,6 +235,21 @@ export function Projects() {
         error={createError}
         onCancel={() => !creating && setShowCreate(false)}
         onSubmit={handleCreate}
+      />
+
+      <CreateProjectDialog
+        open={!!editing}
+        loading={editSubmitting}
+        error={editError}
+        title="编辑项目"
+        submitLabel="保存"
+        initial={
+          editing
+            ? { name: editing.name, width: editing.width, height: editing.height, meta: editing.meta }
+            : null
+        }
+        onCancel={() => !editSubmitting && setEditing(null)}
+        onSubmit={handleEdit}
       />
     </div>
   );

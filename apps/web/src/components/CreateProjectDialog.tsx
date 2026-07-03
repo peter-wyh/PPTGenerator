@@ -28,16 +28,36 @@ const PRESETS: SizePreset[] = [
 const selectCls =
   'w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary';
 
+export interface ProjectFormInitial {
+  name: string;
+  width: number;
+  height: number;
+  meta?: ProjectMeta;
+}
+
 interface Props {
   open: boolean;
   loading?: boolean;
   error?: string | null;
+  /** 编辑模式时传入初始值；不传为新建模式。 */
+  initial?: ProjectFormInitial | null;
+  title?: string;
+  submitLabel?: string;
   onCancel: () => void;
   onSubmit: (values: { name: string; width: number; height: number; meta: ProjectMeta }) => void;
 }
 
-/** 新建项目表单：场景驱动，campaign 类型从上游接口(mock)选择具体 campaign 并联动填充。 */
-export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }: Props) {
+/** 新建/编辑项目表单：场景驱动，campaign 类型从上游接口(mock)选择具体 campaign 并联动填充。 */
+export function CreateProjectDialog({
+  open,
+  loading,
+  error,
+  initial,
+  title = '新建项目',
+  submitLabel = '创建',
+  onCancel,
+  onSubmit,
+}: Props) {
   const [name, setName] = useState('');
   const [scenario, setScenario] = useState<Scenario | ''>('');
   const [scenarioSub, setScenarioSub] = useState<ScenarioSub>('weekly');
@@ -62,20 +82,29 @@ export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }
   const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
 
   useEffect(() => {
-    if (open) {
-      setName('');
-      setScenario('');
-      setScenarioSub('weekly');
-      setCreator('');
-      setCampaignId('');
-      setMkBusinessLine('');
-      setMkAdvertiser('');
-      setPresetId(PRESETS[0].id);
+    if (!open) return;
+    const m = initial?.meta;
+    const initW = initial?.width ?? PRESETS[0].w;
+    const initH = initial?.height ?? PRESETS[0].h;
+    const matched = PRESETS.find((p) => p.w === initW && p.h === initH);
+
+    setName(initial?.name ?? '');
+    setScenario((m?.scenario ?? '') as Scenario | '');
+    setScenarioSub(m?.scenarioSub ?? 'weekly');
+    setCreator(m?.creator ?? '');
+    setCampaignId(m?.campaignId ?? '');
+    setMkBusinessLine(m?.businessLine ?? '');
+    setMkAdvertiser(m?.advertiser ?? '');
+    if (matched) {
+      setPresetId(matched.id);
       setCustom(false);
-      setWidth(PRESETS[0].w);
-      setHeight(PRESETS[0].h);
+    } else {
+      setPresetId(PRESETS[0].id);
+      setCustom(true);
     }
-  }, [open]);
+    setWidth(initW);
+    setHeight(initH);
+  }, [open, initial]);
 
   // 进入 campaign 类型场景时懒加载上游 campaign 列表。
   useEffect(() => {
@@ -144,7 +173,7 @@ export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }
         aria-modal="true"
         onSubmit={submit}
       >
-        <h3 className="font-headings text-base font-semibold text-foreground-primary">新建项目</h3>
+        <h3 className="font-headings text-base font-semibold text-foreground-primary">{title}</h3>
 
         <div className="mt-4 space-y-4">
           <Input
@@ -324,7 +353,7 @@ export function CreateProjectDialog({ open, loading, error, onCancel, onSubmit }
             取消
           </Button>
           <Button type="submit" loading={loading} disabled={!canSubmit}>
-            创建
+            {submitLabel}
           </Button>
         </div>
       </form>

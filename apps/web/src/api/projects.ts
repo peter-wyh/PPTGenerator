@@ -12,8 +12,10 @@ export const projectsApi = {
     api.get<{ project: ProjectDetail }>(`/projects/${id}`).then((r) => r.data.project),
   rename: (id: string, name: string) =>
     api.patch<{ project: ProjectDetail }>(`/projects/${id}`, { name }).then((r) => r.data.project),
-  update: (id: string, patch: { name?: string; width?: number; height?: number; pages?: unknown }) =>
-    api.patch(`/projects/${id}`, patch),
+  update: (
+    id: string,
+    patch: { name?: string; width?: number; height?: number; pages?: unknown; meta?: ProjectMeta },
+  ) => api.patch<{ project: ProjectDetail }>(`/projects/${id}`, patch).then((r) => r.data.project),
   remove: (id: string) => api.delete(`/projects/${id}`),
 
   // ---- M6 分享 ----

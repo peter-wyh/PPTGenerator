@@ -4,11 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Projects } from '@/routes/Projects';
 
-const { listMock, createMock, renameMock, removeMock } = vi.hoisted(() => ({
+const { listMock, createMock, renameMock, removeMock, updateMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   createMock: vi.fn(),
   renameMock: vi.fn(),
   removeMock: vi.fn(),
+  updateMock: vi.fn(),
 }));
 
 vi.mock('@/api/projects', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/api/projects', () => ({
     list: () => listMock(),
     create: (n: string, w?: number, h?: number, meta?: unknown) => createMock(n, w, h, meta),
     rename: (id: string, n: string) => renameMock(id, n),
+    update: (id: string, patch: unknown) => updateMock(id, patch),
     remove: (id: string) => removeMock(id),
   },
 }));
@@ -158,20 +160,34 @@ describe('Projects page', () => {
     expect(meta.campaignInfo).toMatchObject({ campaignName: 'Campaign X', platform: 'TikTok', budget: '¥100K' });
   });
 
-  it('renames a project inline', async () => {
+  it('edits a project via the edit dialog', async () => {
     const user = userEvent.setup();
     listMock.mockResolvedValue([summary('p1', '报告 A')]);
-    renameMock.mockResolvedValue(summary('p1', '改名后'));
+    updateMock.mockResolvedValue({
+      id: 'p1',
+      name: '改名后',
+      pages: [],
+      width: 1280,
+      height: 720,
+      createdAt: '',
+      updatedAt: '',
+    });
     renderPage();
 
     await screen.findByText('报告 A');
-    await user.click(screen.getByRole('button', { name: '改名' }));
-    const input = screen.getByDisplayValue('报告 A');
-    await user.clear(input);
-    await user.type(input, '改名后');
+    await user.click(screen.getByRole('button', { name: '编辑' }));
+
+    // 名称预填，改为「改名后」
+    const nameInput = screen.getByDisplayValue('报告 A');
+    await user.clear(nameInput);
+    await user.type(nameInput, '改名后');
     await user.click(screen.getByRole('button', { name: '保存' }));
 
-    await waitFor(() => expect(renameMock).toHaveBeenCalledWith('p1', '改名后'));
+    await waitFor(() =>
+      expect(updateMock).toHaveBeenCalledWith('p1', expect.objectContaining({ name: '改名后' })),
+    );
+    // 列表项名称已更新。
+    await waitFor(() => expect(screen.getByText('改名后')).toBeInTheDocument());
   });
 
   it('deletes a project after confirming', async () => {
