@@ -4,6 +4,7 @@ import { authRoutes } from '../modules/auth/auth.routes';
 import { usersRoutes } from '../modules/users/users.routes';
 import { projectsRoutes } from '../modules/projects/projects.routes';
 import { shareRoutes } from '../modules/share/share.routes';
+import { uploadRoutes } from '../modules/upload/upload.routes';
 
 export const apiRouter = Router();
 
@@ -14,3 +15,4 @@ apiRouter.use('/auth', authRoutes);
 apiRouter.use('/admin/users', usersRoutes);
 apiRouter.use('/projects', projectsRoutes);
 apiRouter.use('/share', shareRoutes);
+apiRouter.use('/uploads', uploadRoutes);

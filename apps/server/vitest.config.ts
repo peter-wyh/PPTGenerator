@@ -22,6 +22,10 @@ export default defineConfig({
       JWT_ACCESS_SECRET: 'test-access-secret',
       JWT_REFRESH_SECRET: 'test-refresh-secret',
       LOG_LEVEL: 'silent',
+      // 测试上传落到缓存目录，避免污染工作树。
+      STORAGE_DRIVER: 'local',
+      UPLOAD_DIR: './node_modules/.cache/uploads-test',
+      PUBLIC_BASE: 'http://localhost:4000',
     },
   },
 });

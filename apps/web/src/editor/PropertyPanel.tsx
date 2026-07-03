@@ -5,6 +5,7 @@ import { GEOMETRY_FIELDS, REGISTRY, type PropertyField, type VariantOption } fro
 import type { Alignment } from './store';
 import { getStyleOptions, type VariantId } from './business/catalog';
 import { Button } from '@/components/Button';
+import { ImageInput } from '@/components/ImageInput';
 
 /** 读取组件某字段值（data 字段 vs 几何字段）。 */
 function readValue(comp: EditorComponent, field: PropertyField): unknown {
@@ -155,12 +156,7 @@ function PageProperties() {
       </FieldGroup>
 
       <FieldGroup title="背景图 URL">
-        <input
-          value={page.bgImage ?? ''}
-          placeholder="https://…（优先于背景色）"
-          onChange={(e) => set({ bgImage: e.target.value || undefined })}
-          className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-        />
+        <ImageInput value={page.bgImage ?? ''} onChange={(url) => set({ bgImage: url || undefined })} />
         {(page.bgColor || page.bgImage) && (
           <button
             onClick={() => set({ bgColor: undefined, bgImage: undefined })}
@@ -474,6 +470,8 @@ export function FieldEditor({ comp, field }: { comp: EditorComponent; field: Pro
     case 'text':
     case 'color':
       return <TextField comp={comp} field={field} type={field.kind === 'color' ? 'color' : 'text'} />;
+    case 'image-url':
+      return <ImageUrlField comp={comp} field={field} />;
     case 'textarea':
       return <TextareaField comp={comp} field={field} />;
     case 'number':
@@ -515,6 +513,18 @@ function TextField({ comp, field, type }: { comp: EditorComponent; field: Proper
         }`}
       />
     </label>
+  );
+}
+
+/** 图片 URL 字段：文本 + 上传(裁剪)，复用 ImageInput。 */
+function ImageUrlField({ comp, field }: { comp: EditorComponent; field: PropertyField }) {
+  const update = useDataUpdate(comp);
+  const value = (readValue(comp, field) as string) ?? '';
+  return (
+    <div className="text-xs text-foreground-secondary">
+      <div className="mb-1">{field.label}</div>
+      <ImageInput value={value} onChange={(url) => update(field.key, url)} />
+    </div>
   );
 }
 

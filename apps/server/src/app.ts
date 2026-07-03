@@ -19,12 +19,22 @@ export function createApp(): express.Express {
       credentials: true, // refresh token cookie 跨子域
     }),
   );
+  // 放宽图片来源：允许 blob（裁剪预览）、data、任意 https（OSS / 外链图片）。
+  app.use(
+    helmet.contentSecurityPolicy({
+      useDefaults: true,
+      directives: { imgSrc: ["'self'", 'data:', 'blob:', 'https:'] },
+    }),
+  );
   app.use(express.json({ limit: '5mb' }));
   app.use(cookieParser());
   app.use(pinoHttp({ logger }));
 
   // 健康检查打点（探活无需鉴权）。
   app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
+
+  // 本地上传文件静态托管（OSS 驱动下不依赖此路径）。
+  app.use('/uploads', express.static(config.storage.uploadDir));
 
   app.use('/api/v1', apiRouter);
 

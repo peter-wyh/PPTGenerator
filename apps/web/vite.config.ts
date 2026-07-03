@@ -15,6 +15,11 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
+      // 本地上传文件静态托管（STORAGE_DRIVER=local 时）。
+      '/uploads': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
     },
   },
   test: {

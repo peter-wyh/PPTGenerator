@@ -27,6 +27,7 @@ export type PropertyFieldKind =
   | 'number'
   | 'color'
   | 'select'
+  | 'image-url' // 图片 URL（文本 + 上传 + 裁剪）
   | 'list' // {label,value,color}[] —— 柱状/饼图
   | 'table'; // TableData headers+rows
 
@@ -119,7 +120,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     defaultSize: DEFAULT_SIZES.image,
     defaultData: () => getDefaultData('image'),
     propertySchema: [
-      { key: 'src', label: '图片地址', kind: 'text' },
+      { key: 'src', label: '图片地址', kind: 'image-url' },
       { key: 'fit', label: '填充', kind: 'select', options: FITS },
     ],
   },
@@ -185,7 +186,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'compact', label: '紧凑' },
     ],
     propertySchema: [
-      { key: 'avatar', label: '头像 URL', kind: 'text' },
+      { key: 'avatar', label: '头像 URL', kind: 'image-url' },
       { key: 'name', label: '名称', kind: 'text' },
       { key: 'platform', label: '平台', kind: 'select', options: PLATFORMS },
       { key: 'tier', label: '层级', kind: 'select', options: TIERS },

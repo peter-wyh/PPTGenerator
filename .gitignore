@@ -35,3 +35,6 @@ coverage/
 
 # vite
 .vite/
+
+# 上传文件（本地存储驱动运行时产物）
+uploads/

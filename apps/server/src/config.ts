@@ -48,6 +48,20 @@ export const config = {
 
   /** 前端 Web 地址（PDF 导出时 puppeteer 访问 /share/:token?print=1 渲染页面）。 */
   webUrl: process.env.WEB_URL ?? 'http://localhost:5173',
+
+  /** 文件上传存储：local=本地目录（默认），oss=阿里云 OSS。 */
+  storage: {
+    driver: (process.env.STORAGE_DRIVER === 'oss' ? 'oss' : 'local') as 'local' | 'oss',
+    uploadDir: process.env.UPLOAD_DIR ?? resolve(process.cwd(), 'uploads'),
+    publicBase: (process.env.PUBLIC_BASE ?? `http://localhost:${int('PORT', 4000)}`).replace(/\/$/, ''),
+    oss: {
+      region: process.env.OSS_REGION,
+      bucket: process.env.OSS_BUCKET,
+      accessKeyId: process.env.OSS_ACCESS_KEY_ID,
+      accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
+      endpoint: process.env.OSS_ENDPOINT,
+    },
+  },
 } as const;
 
 export type Config = typeof config;
