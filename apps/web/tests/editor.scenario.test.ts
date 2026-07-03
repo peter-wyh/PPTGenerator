@@ -83,3 +83,38 @@ describe('store.addPagesBatch', () => {
     expect(useEditorStore.getState().pages.length).toBe(before); // 一次 undo 全回退
   });
 });
+
+describe('legacy 整页版式 → 页面模板（拆成组件编排）', () => {
+  // 这些页面模板由通用/业务组件拼成，不应再产生单体 business-block。
+  const LEGACY_PAGE_IDS = [
+    'milestone-page',
+    'global-page',
+    'org-page',
+    'service-page',
+    'challenge-page',
+    'process-page',
+    'calendar-page',
+    'campaign-plan-page',
+    'case-page',
+    'content-analysis-page',
+    'funnel-page',
+  ];
+
+  it('每个 legacy 页面模板都存在且编排组件（无单体 business-block）', () => {
+    for (const id of LEGACY_PAGE_IDS) {
+      const tpl = getTemplate(id);
+      expect(tpl, `template ${id} missing`).toBeDefined();
+      const comps = tpl!.components();
+      expect(comps.length, `${id} 应至少含标题+内容`).toBeGreaterThanOrEqual(2);
+      // 业务组件层迁移后，页面模板不再落下单体 business-block。
+      expect(comps.every((c) => c.type !== 'business-block')).toBe(true);
+    }
+  });
+
+  it('table 系页面含表格；案例页含成效卡 + 作品列表', () => {
+    expect(getTemplate('milestone-page')!.components().some((c) => c.type === 'table')).toBe(true);
+    const caseComps = getTemplate('case-page')!.components().map((c) => c.type);
+    expect(caseComps).toContain('indicator-card');
+    expect(caseComps).toContain('creator-works-list');
+  });
+});

@@ -88,6 +88,37 @@ function titleAt(content: string, x: number, y: number, w = 1120, h = 50): Edito
   return title;
 }
 
+/** 表格主体块（设置 headers/rows）。 */
+function tableAt(x: number, y: number, w: number, h: number, headers: string[], rows: string[][]): EditorComponent {
+  const tbl = t('table', x, y, w, h);
+  const data = tbl.data as { headers: string[]; rows: string[][] };
+  data.headers = headers;
+  data.rows = rows;
+  return tbl;
+}
+
+/** 文本块（设置 content/fontSize）。 */
+function textAt(x: number, y: number, w: number, h: number, content: string, fontSize = 16): EditorComponent {
+  const tx = t('text', x, y, w, h);
+  const data = tx.data as { content: string; fontSize: number };
+  data.content = content;
+  data.fontSize = fontSize;
+  return tx;
+}
+
+/**
+ * 标题 + 表格（+可选简介）的页面骨架 —— legacy 整页版式（里程碑/组织架构/服务矩阵…）
+ * 迁移为「页面模板编排通用组件」的通用形态。
+ */
+function tablePage(
+  title: string,
+  headers: string[],
+  rows: string[][],
+  intro?: string,
+): EditorComponent[] {
+  return [titleAt(title, 80, 50), tableAt(80, 130, 1120, intro ? 380 : 540, headers, rows), ...(intro ? [textAt(80, 540, 1120, 80, intro)] : [])];
+}
+
 export const TEMPLATES: Template[] = [
   {
     id: 'blank',
@@ -357,6 +388,172 @@ export const TEMPLATES: Template[] = [
       const title = titleAt('Channel Posts', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
       return [title, posts];
+    },
+  },
+
+  /* -------- legacy 整页版式 → 页面模板（拆成通用/业务组件编排） -------- */
+
+  {
+    id: 'milestone-page',
+    name: '公司里程碑',
+    description: '标题 + 里程碑表 + 简介',
+    components: () =>
+      tablePage(
+        '公司里程碑',
+        ['年份', '里程碑'],
+        [
+          ['2019', '业务启航'],
+          ['2022', '服务 100+ 品牌'],
+          ['2024', 'AI 营销能力上线'],
+          ['2026', '覆盖全球市场'],
+        ],
+        '从 0 到全球化：每一步聚焦真实内容驱动的品牌增长。',
+      ),
+  },
+  {
+    id: 'global-page',
+    name: '全球布局',
+    description: '标题 + 区域布局表',
+    components: () =>
+      tablePage('全球化业务网络', ['区域', '办公室', '创作者资源'], [
+        ['亚太', '3', '420+'],
+        ['北美', '2', '280+'],
+        ['欧洲', '1', '180+'],
+        ['中东', '0', '120+'],
+      ]),
+  },
+  {
+    id: 'org-page',
+    name: '组织架构',
+    description: '标题 + 团队分工表',
+    components: () =>
+      tablePage('策略 × 创意 × 运营 × 数据', ['职能', '占比', '职责'], [
+        ['策略咨询', '20%', '增长诊断与达人策略'],
+        ['创意内容', '25%', '内容方案共创'],
+        ['媒介运营', '35%', '投放与达人运营'],
+        ['数据技术', '20%', '归因与复盘'],
+      ]),
+  },
+  {
+    id: 'service-page',
+    name: '核心服务矩阵',
+    description: '标题 + 服务清单表',
+    components: () =>
+      tablePage('从人群洞察到生意增长', ['服务', '说明'], [
+        ['达人策略与招募', '按品类匹配创作者'],
+        ['TikTok 内容投放', 'Spark Ads 加速'],
+        ['社媒媒体采买', '多平台组合'],
+        ['AI 数据归因', '效果可回溯'],
+      ]),
+  },
+  {
+    id: 'challenge-page',
+    name: '机会与挑战',
+    description: '标题 + 机会/挑战表',
+    components: () =>
+      tablePage(
+        '机会与挑战',
+        ['维度', '机会', '挑战'],
+        [
+          ['人群', '18–24 高潜', '心智未稳固'],
+          ['内容', 'UGC 可信背书', '同质化严重'],
+          ['细分', '敏感肌蓝海', '品类教育成本高'],
+        ],
+        '抓住功效可视化内容窗口，放大中腰部创作者转化。',
+      ),
+  },
+  {
+    id: 'process-page',
+    name: '合作评估流程',
+    description: '标题 + 流程步骤表',
+    components: () =>
+      tablePage('4 周从需求到上线', ['步骤', '核心工作', '目标'], [
+        ['1', '品牌增长诊断', '明确 KPI'],
+        ['2', '达人资源评估', '匹配度排序'],
+        ['3', '内容方案共创', '脚本定稿'],
+        ['4', '上线复盘迭代', '效果归因'],
+      ]),
+  },
+  {
+    id: 'calendar-page',
+    name: '营销活动日历',
+    description: '标题 + 季度节点表',
+    components: () =>
+      tablePage('2026 内容营销节奏', ['节点', '主题', '动作'], [
+        ['春季', '焕新种草', '上新内容'],
+        ['618', '集中转化', '头部引爆'],
+        ['开学季', '场景渗透', '中腰部扩量'],
+        ['黑五圣诞', '礼赠爆发', 'Spark Ads'],
+      ]),
+  },
+  {
+    id: 'campaign-plan-page',
+    name: 'Campaign 方案',
+    description: '标题 + 阶段路径表',
+    components: () =>
+      tablePage('30 天 TikTok 增长路径', ['阶段', '动作', '目标'], [
+        ['预热', '种子达人种草', '蓄水'],
+        ['引爆', '头部达人爆发', '声量'],
+        ['扩散', 'Spark Ads 加码', '触达'],
+        ['复盘', 'GMV 与评论', '归因'],
+      ]),
+  },
+  {
+    id: 'case-page',
+    name: '合作案例',
+    description: '标题 + 成效卡 + 案例作品 + 文案',
+    components: () => {
+      const title = titleAt('合作案例', 80, 50);
+      const cards = [0, 1, 2, 3].map((i) => {
+        const c = t('indicator-card', 80 + i * 280, 130, 260, 90);
+        const d = c.data as { title: string; value: string; colorTheme: string };
+        d.title = ['累计曝光', 'GMV 达成', '互动率', '合作达人'][i];
+        d.value = ['12.6M', '138%', '8.7%', '70'][i];
+        d.colorTheme = ['orange', 'green', 'blue', 'purple'][i];
+        return c;
+      });
+      const works = t('creator-works-list', 80, 250, 1120, 200);
+      const narrative = textAt(80, 480, 1120, 100, '以"7 天肌肤状态日记"内容线串联测评、种草与即时转化。');
+      return [title, ...cards, works, narrative];
+    },
+  },
+  {
+    id: 'content-analysis-page',
+    name: '作品分析',
+    description: '标题 + 内容类型分布柱图 + 明细表',
+    components: () => {
+      const title = titleAt('内容表现与转化分析', 80, 50);
+      const chart = t('bar-chart', 80, 130, 560, 260);
+      (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = '内容类型分布';
+      (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
+        { label: 'UGC 测评', value: 46, color: '#FF5C00' },
+        { label: '达人演示', value: 31, color: '#3B82F6' },
+        { label: '成分科普', value: 15, color: '#22C55E' },
+        { label: '礼赠场景', value: 8, color: '#8B5CF6' },
+      ];
+      const tbl = tableAt(680, 130, 520, 260, ['类型', '播放占比', '高频词'], [
+        ['UGC 测评', '46%', 'gentle / glow'],
+        ['达人演示', '31%', '效果 / 真实'],
+        ['成分科普', '15%', '安全 / 温和'],
+      ]);
+      return [title, chart, tbl];
+    },
+  },
+  {
+    id: 'funnel-page',
+    name: '增长漏斗',
+    description: '标题 + 漏斗各阶段柱图',
+    components: () => {
+      const title = titleAt('内容驱动的转化漏斗', 80, 50);
+      const chart = t('bar-chart', 80, 130, 1120, 360);
+      (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = '从曝光到下单';
+      (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
+        { label: '曝光', value: 1260, color: '#FF5C00' },
+        { label: '触达', value: 810, color: '#F97316' },
+        { label: '互动', value: 110, color: '#3B82F6' },
+        { label: '下单', value: 84, color: '#22C55E' },
+      ];
+      return [title, chart];
     },
   },
 ];
