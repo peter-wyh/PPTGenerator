@@ -187,3 +187,64 @@ describe('报告维度配置 — setTheme（品牌色）', () => {
     expect(theme?.fontFamily).toBe('Noto');
   });
 });
+
+describe('达人数据条 — 指标筛选与文案（store 持久化）', () => {
+  beforeEach(() => useEditorStore.getState().loadProject(emptyProject, 'p'));
+
+  it('updateComponentData 切换 selected 后影响数据', () => {
+    useEditorStore.getState().addPagesBatch([
+      {
+        name: 'p',
+        components: [
+          {
+            id: 'c1', type: 'creator-stats-strip', x: 0, y: 0, w: 400, h: 120,
+            data: {
+              variant: 'cards',
+              stats: [
+                { key: 'followers', label: '粉丝', value: '1M', color: '#FF5C00', selected: true },
+                { key: 'engagement', label: '互动率', value: '8%', color: '#3B82F6', selected: true },
+              ],
+            },
+          },
+        ],
+      },
+    ]);
+    // addPagesBatch 会重分配组件 id，取真实 id。
+    const id = useEditorStore.getState().currentPage()!.components[0].id;
+    useEditorStore.getState().updateComponentData(id, {
+      stats: [
+        { key: 'followers', label: '粉丝', value: '1M', color: '#FF5C00', selected: true },
+        { key: 'engagement', label: '互动率', value: '8%', color: '#3B82F6', selected: false },
+      ],
+    });
+    const comp = useEditorStore.getState().currentPage()!.components[0];
+    const stats = (comp.data as { stats: { selected?: boolean }[] }).stats;
+    expect(stats[1].selected).toBe(false);
+    expect(stats[0].selected).toBe(true);
+  });
+
+  it('updateComponentData 修改文案 value 持久化', () => {
+    useEditorStore.getState().addPagesBatch([
+      {
+        name: 'p',
+        components: [
+          {
+            id: 'c2', type: 'creator-stats-strip', x: 0, y: 0, w: 400, h: 120,
+            data: {
+              variant: 'cards',
+              stats: [{ key: 'followers', label: '粉丝', value: '1M', color: '#FF5C00', selected: true }],
+            },
+          },
+        ],
+      },
+    ]);
+    const id = useEditorStore.getState().currentPage()!.components[0].id;
+    useEditorStore.getState().updateComponentData(id, {
+      stats: [{ key: 'followers', label: '粉丝数', value: '2.5M', color: '#FF5C00', selected: true }],
+    });
+    const comp = useEditorStore.getState().currentPage()!.components[0];
+    const s = (comp.data as { stats: { label: string; value: string }[] }).stats[0];
+    expect(s.label).toBe('粉丝数');
+    expect(s.value).toBe('2.5M');
+  });
+});
