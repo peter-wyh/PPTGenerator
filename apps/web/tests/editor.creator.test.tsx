@@ -4,7 +4,7 @@ import { useEditorStore } from '@/editor/store';
 import { getDefaultData } from '@/editor/defaults';
 import { REGISTRY } from '@/editor/registry';
 import { TEMPLATES } from '@/editor/templates';
-import type { ProjectDetail } from '@mediakit/shared';
+import type { ProjectDetail, CreatorStatsStripData } from '@mediakit/shared';
 import {
   CreatorAvatarCard,
   CreatorStatsStrip,
@@ -132,12 +132,21 @@ describe('creator business components — defaults / registry', () => {
     expect(works.headers.length).toBe(5);
   });
 
-  it('REGISTRY has the 3 creator types with variants + non-empty propertySchema', () => {
+  it('REGISTRY has the 3 creator types with variants', () => {
     for (const t of ['creator-avatar-card', 'creator-stats-strip', 'creator-works-list'] as const) {
       expect(REGISTRY[t]).toBeDefined();
-      expect(REGISTRY[t].propertySchema.length).toBeGreaterThan(0);
       expect(REGISTRY[t].variants?.length).toBeGreaterThanOrEqual(2);
     }
+    // avatar-card / works-list 仍走通用 propertySchema；stats-strip 改由自定义区块负责。
+    expect(REGISTRY['creator-avatar-card'].propertySchema.length).toBeGreaterThan(0);
+    expect(REGISTRY['creator-works-list'].propertySchema.length).toBeGreaterThan(0);
+  });
+
+  it('creator-stats-strip default stats carry catalog keys + selected:true', () => {
+    const data = getDefaultData('creator-stats-strip') as CreatorStatsStripData;
+    const keys = data.stats.map((s) => s.key);
+    expect(keys).toEqual(['followers', 'engagement', 'reach', 'impressions']);
+    expect(data.stats.every((s) => s.selected === true)).toBe(true);
   });
 });
 

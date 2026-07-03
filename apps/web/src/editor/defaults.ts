@@ -114,10 +114,10 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         variant: 'cards',
         stats: [
-          { label: '粉丝', value: '1.28M', color: '#FF5C00' },
-          { label: '互动率', value: '8.7%', color: '#3B82F6' },
-          { label: '平均触达', value: '640K', color: '#22C55E' },
-          { label: '曝光', value: '12.6M', color: '#8B5CF6' },
+          { key: 'followers', label: '粉丝', value: '1.28M', color: '#FF5C00', selected: true },
+          { key: 'engagement', label: '互动率', value: '8.7%', color: '#3B82F6', selected: true },
+          { key: 'reach', label: '平均触达', value: '640K', color: '#22C55E', selected: true },
+          { key: 'impressions', label: '曝光', value: '12.6M', color: '#8B5CF6', selected: true },
         ],
       };
     case 'creator-works-list':
