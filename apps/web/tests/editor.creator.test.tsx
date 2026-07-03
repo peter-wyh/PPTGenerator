@@ -51,6 +51,38 @@ describe('creator business components — render', () => {
     expect(screen.getByText('互动率')).toBeInTheDocument();
   });
 
+  it('stats strip hides items with selected:false', () => {
+    render(
+      <CreatorStatsStrip
+        data={{
+          variant: 'cards',
+          stats: [
+            { label: '粉丝', value: '1.28M', color: '#FF5C00' },
+            { label: '互动率', value: '8.7%', color: '#3B82F6', selected: false },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('粉丝')).toBeInTheDocument();
+    expect(screen.queryByText('互动率')).not.toBeInTheDocument();
+  });
+
+  it('stats strip shows all items when selected absent (backward compat)', () => {
+    render(
+      <CreatorStatsStrip
+        data={{
+          variant: 'metric',
+          stats: [
+            { label: '粉丝', value: '1M', color: '#FF5C00' },
+            { label: '曝光', value: '2M', color: '#8B5CF6' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('粉丝')).toBeInTheDocument();
+    expect(screen.getByText('曝光')).toBeInTheDocument();
+  });
+
   it('works list renders title + cover placeholder when no cover url', () => {
     render(
       <CreatorWorksList

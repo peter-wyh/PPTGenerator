@@ -114,9 +114,11 @@ function AvatarCompact({ data }: { data: CreatorAvatarCardData }) {
 
 export function CreatorStatsStrip({ data }: { data: CreatorStatsStripData }) {
   const { variant = 'cards', stats = [] } = data;
-  if (variant === 'plain') return <StatsPlain stats={stats} />;
-  if (variant === 'metric') return <StatsMetric stats={stats} />;
-  return <StatsCards stats={stats} />;
+  // selected 缺省视为 true（向后兼容）；selected:false 不渲染。
+  const visible = stats.filter((s) => s.selected !== false);
+  if (variant === 'plain') return <StatsPlain stats={visible} />;
+  if (variant === 'metric') return <StatsMetric stats={visible} />;
+  return <StatsCards stats={visible} />;
 }
 
 function StatsCards({ stats }: { stats: CreatorStatsStripData['stats'] }) {
