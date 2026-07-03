@@ -18,6 +18,33 @@ export function getTemplate(id: string): Template | undefined {
   return TEMPLATES.find((t) => t.id === id);
 }
 
+/** 页面模板分类目录（供「新建页面」弹窗分组陈列）。顺序即展示顺序。 */
+export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
+  { category: '基础', ids: ['blank', 'title', 'overview', 'table'] },
+  {
+    category: 'Campaign 报告',
+    ids: [
+      'report-weekly-overview',
+      'report-monthly-overview',
+      'report-channel',
+      'report-product',
+      'report-creator-collab',
+      'report-placement',
+      'report-posts',
+      'report-wrapup-review',
+    ],
+  },
+  {
+    category: '公司·品牌',
+    ids: ['cover-page', 'agenda-page', 'company-page', 'package-page', 'milestone-page', 'global-page', 'org-page', 'service-page'],
+  },
+  { category: '达人·案例', ids: ['creator-page', 'case-page'] },
+  {
+    category: '策略·内容',
+    ids: ['challenge-page', 'process-page', 'calendar-page', 'campaign-plan-page', 'content-analysis-page', 'funnel-page'],
+  },
+];
+
 /* ----------------------------- 场景模板（第④层）----------------------------- */
 // 把多个页面模板串成一份完整报告（一键生成多页）。引用 TEMPLATES 里的页面模板 id。
 

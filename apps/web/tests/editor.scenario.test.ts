@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SCENARIO_TEMPLATES, getTemplate } from '@/editor/templates';
+import { SCENARIO_TEMPLATES, getTemplate, TEMPLATE_CATEGORIES, TEMPLATES } from '@/editor/templates';
 import { useEditorStore } from '@/editor/store';
 import type { ProjectDetail } from '@mediakit/shared';
 
@@ -116,5 +116,22 @@ describe('legacy 整页版式 → 页面模板（拆成组件编排）', () => {
     const caseComps = getTemplate('case-page')!.components().map((c) => c.type);
     expect(caseComps).toContain('indicator-card');
     expect(caseComps).toContain('creator-works-list');
+  });
+});
+
+describe('TEMPLATE_CATEGORIES（新建页面弹窗分组）', () => {
+  it('每个分类下的 id 都对应存在的模板', () => {
+    for (const cat of TEMPLATE_CATEGORIES) {
+      for (const id of cat.ids) {
+        expect(getTemplate(id), `${cat.category} → ${id}`).toBeDefined();
+      }
+    }
+  });
+
+  it('所有模板都被分到某个分类（无遗漏、无孤立）', () => {
+    const categorized = new Set(TEMPLATE_CATEGORIES.flatMap((c) => c.ids));
+    const all = new Set(TEMPLATES.map((t) => t.id));
+    expect(categorized.size).toBe(all.size);
+    for (const id of all) expect(categorized.has(id)).toBe(true);
   });
 });
