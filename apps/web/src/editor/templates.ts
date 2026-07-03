@@ -244,4 +244,58 @@ export const TEMPLATES: Template[] = [
       return [title, kpi, timeline, works];
     },
   },
+  {
+    id: 'report-product',
+    name: '月报·商品表现',
+    description: 'TOP 商品 + AI 洞察',
+    components: () => {
+      const title = titleAt('Top Products', 80, 40);
+      const products = t('product-performance', 80, 110, 1120, 360);
+      return [title, products];
+    },
+  },
+  {
+    id: 'report-creator-collab',
+    name: '月报·达人合作详情',
+    description: '头像 + 合作数据 + 作品 + 变动说明',
+    components: () => {
+      const title = titleAt('Top Influencer Collaboration', 80, 40);
+      // 编排已有 creator 三件套（验证业务组件跨页复用）。
+      const avatar = t('creator-avatar-card', 80, 110, 440, 120);
+      const stats = t('creator-stats-strip', 560, 110, 640, 120);
+      // 合作指标覆盖默认粉丝数据。
+      (stats.data as { stats: { label: string; value: string; color: string }[] }).stats = [
+        { label: '曝光', value: '2.4M', color: '#FF5C00' },
+        { label: '互动率', value: '9.1%', color: '#3B82F6' },
+        { label: '销售额', value: '¥186K', color: '#22C55E' },
+        { label: 'ROAS', value: '4.2x', color: '#8B5CF6' },
+      ];
+      const works = t('creator-works-list', 80, 260, 1120, 200);
+      const note = t('text', 80, 480, 1120, 80);
+      (note.data as { content: string }).content =
+        '合作变动说明：本期该达人推广量上升 18%，主因为 7 天日记内容线带动复购；建议下期延续该机制并增加 2 条爆款复刻。';
+      return [title, avatar, stats, works, note];
+    },
+  },
+  {
+    id: 'report-placement',
+    name: '月报·DM 广告位',
+    description: '广告位截图 + 亮点/经验',
+    components: () => {
+      const title = titleAt('Placement Display', 80, 40);
+      const placement = t('placement-display', 80, 110, 1120, 320);
+      (placement.data as { variant: string }).variant = 'with-text';
+      return [title, placement];
+    },
+  },
+  {
+    id: 'report-posts',
+    name: '月报·渠道 Post',
+    description: 'Content Site / Reddit / FB Post 列表',
+    components: () => {
+      const title = titleAt('Channel Posts', 80, 40);
+      const posts = t('post-list', 80, 110, 1120, 320);
+      return [title, posts];
+    },
+  },
 ];

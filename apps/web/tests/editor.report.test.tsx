@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { getDefaultData } from '@/editor/defaults';
 import { REGISTRY } from '@/editor/registry';
 import { TEMPLATES } from '@/editor/templates';
-import { KpiBoard, TimelineCompare } from '@/editor/components/ReportComponents';
+import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from '@/editor/components/ReportComponents';
 
 describe('report components — render', () => {
   it('kpi-board renders labels + values', () => {
@@ -79,6 +79,81 @@ describe('report components — defaults / registry', () => {
   });
 });
 
+describe('product / placement / post — render + variants', () => {
+  it('product-performance renders names + insight', () => {
+    render(
+      <ProductPerformance
+        data={{
+          variant: 'cards',
+          insight: '精华类贡献 46%',
+          headers: ['商品', '图URL', '销量', '占比', '品类'],
+          rows: [['敏感肌精华', '', '12.4K', '32%', '护肤']],
+        }}
+      />,
+    );
+    expect(screen.getByText('敏感肌精华')).toBeInTheDocument();
+    expect(screen.getByText(/精华类贡献/)).toBeInTheDocument();
+  });
+
+  it('placement-display renders names; with-text shows highlights', () => {
+    render(
+      <PlacementDisplay
+        data={{
+          variant: 'with-text',
+          highlights: 'Banner CTR 高',
+          learnings: '',
+          headers: ['名称', '截图URL', '数据'],
+          rows: [['首页 Banner', '', 'CTR 2.4%']],
+        }}
+      />,
+    );
+    expect(screen.getByText('首页 Banner')).toBeInTheDocument();
+    expect(screen.getByText(/Banner CTR 高/)).toBeInTheDocument();
+  });
+
+  it('post-list renders titles + ids', () => {
+    render(
+      <PostList
+        data={{
+          variant: 'cards',
+          headers: ['截图URL', '标题', 'ID', '链接', '数据'],
+          rows: [['', '深度测评', 'CS-001', 'link', '阅读 24K']],
+        }}
+      />,
+    );
+    expect(screen.getByText('深度测评')).toBeInTheDocument();
+    expect(screen.getByText('CS-001')).toBeInTheDocument();
+  });
+
+  it('every variant of the three renders without throwing', () => {
+    const prod = { insight: '', headers: ['商品', '图', '销量', '占比', '品类'], rows: [['A', '', '1', '10%', 'c']] };
+    for (const v of ['cards', 'rank', 'grid'] as const) {
+      const { unmount } = render(<ProductPerformance data={{ variant: v, ...prod }} />);
+      expect(screen.getAllByText('A').length).toBeGreaterThan(0);
+      unmount();
+    }
+    const plc = { highlights: '', learnings: '', headers: ['名称', '图', '数据'], rows: [['P', '', 'd']] };
+    for (const v of ['single', 'grid', 'with-text'] as const) {
+      const { unmount } = render(<PlacementDisplay data={{ variant: v, ...plc }} />);
+      expect(screen.getAllByText('P').length).toBeGreaterThan(0);
+      unmount();
+    }
+    const post = { headers: ['图', '标题', 'ID', '链接', '数据'], rows: [['', 'T', 'ID1', 'l', 'm']] };
+    for (const v of ['cards', 'row', 'compact'] as const) {
+      const { unmount } = render(<PostList data={{ variant: v, ...post }} />);
+      expect(screen.getAllByText('T').length).toBeGreaterThan(0);
+      unmount();
+    }
+  });
+
+  it('defaults + REGISTRY entries', () => {
+    for (const t of ['product-performance', 'placement-display', 'post-list'] as const) {
+      expect(getDefaultData(t)).toHaveProperty('variant');
+      expect(REGISTRY[t].variants?.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
 describe('campaign report page templates', () => {
   const find = (id: string) => TEMPLATES.find((t) => t.id === id)!;
   const types = (id: string) => find(id).components().map((c) => c.type);
@@ -108,5 +183,36 @@ describe('campaign report page templates', () => {
     const tl = comps.find((c) => c.type === 'timeline-compare')!;
     expect((tl.data as { variant: string }).variant).toBe('with-bar');
     expect(comps.map((c) => c.type)).toContain('kpi-board');
+  });
+
+  it('report-product = title + product-performance', () => {
+    const t = types('report-product');
+    expect(t).toContain('product-performance');
+    expect(t).toContain('text');
+  });
+
+  it('report-creator-collab composes creator trio + note', () => {
+    const t = types('report-creator-collab');
+    expect(t).toContain('creator-avatar-card');
+    expect(t).toContain('creator-stats-strip');
+    expect(t).toContain('creator-works-list');
+    // 合作指标被模板覆盖（非默认粉丝数据）。
+    const stats = find('report-creator-collab')
+      .components()
+      .find((c) => c.type === 'creator-stats-strip')!;
+    const labels = (stats.data as { stats: { label: string }[] }).stats.map((s) => s.label);
+    expect(labels).toContain('ROAS');
+  });
+
+  it('report-placement = title + placement-display(with-text)', () => {
+    const comps = find('report-placement').components();
+    const pl = comps.find((c) => c.type === 'placement-display')!;
+    expect((pl.data as { variant: string }).variant).toBe('with-text');
+  });
+
+  it('report-posts = title + post-list', () => {
+    const t = types('report-posts');
+    expect(t).toContain('post-list');
+    expect(t).toContain('text');
   });
 });
