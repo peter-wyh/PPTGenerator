@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { ComponentType } from '@mediakit/shared';
 import { useEditorStore } from './store';
 import { DatasourceMenu } from './components/DatasourceMenu';
@@ -9,8 +8,7 @@ type PalettePayload = { op: 'component'; type: ComponentType } | { op: 'business
 
 /**
  * 组件库有机分组 —— 仅通用组件 + 业务组件（页内语义块）。
- * 整页版式（封面/里程碑/案例/策略…）属于「页面模板」层，不在此处，
- * 见 templates.ts / 新建页面。
+ * 整页版式属于「页面模板」层，不在此处。
  */
 const GROUPS: { group: string; items: { type: ComponentType; label: string; icon: string }[] }[] = [
   {
@@ -57,11 +55,12 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
   },
 ];
 
-/** 组件库面板：页面栏与画布之间。点击添加到画布中央、或拖拽到画布指定位置。底部为数据源。 */
+/**
+ * 组件库横向条：置于画布上方，按分组横向陈列，点击添加到画布中央、
+ * 或拖拽到画布指定位置。横向布局以让出更多画布宽度。
+ */
 export function ComponentPanel() {
   const addComponent = useEditorStore((s) => s.addComponent);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const toggle = (g: string) => setCollapsed((p) => ({ ...p, [g]: !p[g] }));
 
   function onDragStart(e: React.DragEvent, type: ComponentType) {
     e.dataTransfer.setData(PALETTE_MIME, JSON.stringify({ op: 'component', type } as PalettePayload));
@@ -69,42 +68,29 @@ export function ComponentPanel() {
   }
 
   return (
-    <div className="flex w-[180px] flex-none flex-col border-r border-border-default bg-surface-primary">
-      <div className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">组件</div>
-      <div className="flex-1 overflow-auto px-2 pb-2">
-        {GROUPS.map((g) => {
-          const isCollapsed = !!collapsed[g.group];
-          return (
-            <div key={g.group} className="mb-2">
-              <button
-                onClick={() => toggle(g.group)}
-                className="flex w-full items-center justify-between rounded px-1 py-1 text-[11px] font-semibold text-foreground-secondary hover:bg-surface-hover"
-              >
-                <span>{g.group}</span>
-                <span className="text-foreground-muted">{isCollapsed ? '▸' : '▾'}</span>
-              </button>
-              {!isCollapsed && (
-                <div className="grid grid-cols-2 gap-1 pt-1">
-                  {g.items.map((it) => (
-                    <button
-                      key={it.type}
-                      draggable
-                      onDragStart={(e) => onDragStart(e, it.type)}
-                      title={`添加${it.label}（拖到画布或点击）`}
-                      onClick={() => addComponent(it.type)}
-                      className="flex cursor-grab flex-col items-center gap-1 rounded-lg border border-border-default bg-surface-primary px-1 py-2 text-[11px] text-foreground-secondary transition hover:border-accent-primary hover:bg-accent-primary/5 hover:text-accent-primary active:cursor-grabbing"
-                    >
-                      <span className="flex h-5 w-5 items-center justify-center text-[14px] text-accent-primary">{it.icon}</span>
-                      <span className="truncate">{it.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <div className="border-t border-border-default p-2">
+    <div className="flex h-[68px] flex-none items-center gap-3 overflow-x-auto border-b border-border-default bg-surface-primary px-3">
+      {GROUPS.map((g, gi) => (
+        <div key={g.group} className="flex flex-none items-center gap-1">
+          {gi > 0 && <span className="mr-1 h-8 w-px bg-border-default" />}
+          <span className="mr-1 flex-none text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">
+            {g.group}
+          </span>
+          {g.items.map((it) => (
+            <button
+              key={it.type}
+              draggable
+              onDragStart={(e) => onDragStart(e, it.type)}
+              title={`添加${it.label}（拖到画布或点击）`}
+              onClick={() => addComponent(it.type)}
+              className="flex w-12 flex-none cursor-grab flex-col items-center gap-0.5 rounded-lg border border-border-default bg-surface-primary px-1 py-1 text-[10px] text-foreground-secondary transition hover:border-accent-primary hover:bg-accent-primary/5 hover:text-accent-primary active:cursor-grabbing"
+            >
+              <span className="flex h-5 w-5 items-center justify-center text-[15px] text-accent-primary">{it.icon}</span>
+              <span className="truncate">{it.label}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+      <div className="ml-auto flex flex-none pl-2">
         <DatasourceMenu />
       </div>
     </div>
@@ -113,4 +99,3 @@ export function ComponentPanel() {
 
 export { PALETTE_MIME };
 export type { PalettePayload };
-

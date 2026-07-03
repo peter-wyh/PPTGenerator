@@ -28,8 +28,10 @@ export function Editor({ detail }: EditorProps) {
       <EditorTopbar />
       <div className="flex min-h-0 flex-1">
         <PageSidebar />
-        <ComponentPanel />
-        <Canvas />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <ComponentPanel />
+          <Canvas />
+        </div>
         <PropertyPanel />
       </div>
       <PreviewOverlay />
