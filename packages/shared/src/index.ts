@@ -250,10 +250,37 @@ export interface CreatorAvatarCardData {
 
 /** 达人数据条：一组 KPI（粉丝/互动率/触达/曝光…）。复用 {label,value,color} 形状。 */
 export type CreatorStatsVariant = 'cards' | 'plain' | 'metric';
+
+/** 达人数据条单项。key 命中指标库；selected 缺省视为 true（向后兼容）。 */
+export interface CreatorStatItem {
+  key?: string;
+  label: string;
+  value: string;
+  color: string;
+  selected?: boolean;
+}
+
 export interface CreatorStatsStripData {
   variant: CreatorStatsVariant;
-  stats: { label: string; value: string; color: string }[];
+  stats: CreatorStatItem[];
 }
+
+/** 常用达人指标库（属性面板勾选筛选用）。 */
+export const CREATOR_METRIC_CATALOG: {
+  key: string;
+  label: string;
+  color: string;
+  placeholder: string;
+}[] = [
+  { key: 'followers', label: '粉丝数', color: '#FF5C00', placeholder: '1.28M' },
+  { key: 'engagement', label: '互动率', color: '#3B82F6', placeholder: '8.7%' },
+  { key: 'reach', label: '平均触达', color: '#22C55E', placeholder: '640K' },
+  { key: 'impressions', label: '曝光量', color: '#8B5CF6', placeholder: '12.6M' },
+  { key: 'cpm', label: 'CPM', color: '#EC4899', placeholder: '¥120' },
+  { key: 'cpe', label: 'CPE', color: '#14B8A6', placeholder: '¥3.2' },
+  { key: 'completion', label: '完播率', color: '#F59E0B', placeholder: '42%' },
+  { key: 'growth', label: '粉丝增量', color: '#6366F1', placeholder: '+38K' },
+];
 
 /**
  * 达人作品列表：复用 TableData 形状（{headers,rows}）。
