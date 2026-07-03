@@ -34,6 +34,52 @@ describe('creator business components — render', () => {
     expect(screen.getByText('M')).toBeInTheDocument(); // 头像占位 = 名字首字母
   });
 
+  it('avatar card renders KPI line when followers/likes/engagement present (horizontal & vertical)', () => {
+    const data = {
+      variant: 'horizontal' as const,
+      avatar: '',
+      name: 'Mia',
+      platform: 'tiktok' as const,
+      tier: 'macro' as const,
+      intro: 'hi',
+      followers: '1.28M',
+      likes: '12.4M',
+      engagement: '8.7%',
+    };
+    const { rerender } = render(<CreatorAvatarCard data={data} />);
+    expect(screen.getByText(/粉丝 1\.28M/)).toBeInTheDocument();
+    expect(screen.getByText(/获赞 12\.4M/)).toBeInTheDocument();
+    expect(screen.getByText(/互动 8\.7%/)).toBeInTheDocument();
+
+    // 切到竖排同样展示
+    rerender(<CreatorAvatarCard data={{ ...data, variant: 'vertical' }} />);
+    expect(screen.getByText(/粉丝 1\.28M/)).toBeInTheDocument();
+  });
+
+  it('avatar card omits KPI line when no stats, and compact never shows it', () => {
+    const { rerender } = render(
+      <CreatorAvatarCard
+        data={{ variant: 'horizontal', avatar: '', name: 'Mia', platform: 'tiktok', tier: 'macro', intro: 'hi' }}
+      />,
+    );
+    expect(screen.queryByText(/粉丝/)).toBeNull();
+
+    rerender(
+      <CreatorAvatarCard
+        data={{
+          variant: 'compact',
+          avatar: '',
+          name: 'Mia',
+          platform: 'tiktok',
+          tier: 'macro',
+          intro: 'hi',
+          followers: '1.28M',
+        }}
+      />,
+    );
+    expect(screen.queryByText(/粉丝/)).toBeNull();
+  });
+
   it('stats strip renders each stat label + value', () => {
     render(
       <CreatorStatsStrip

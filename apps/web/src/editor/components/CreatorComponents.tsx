@@ -59,6 +59,16 @@ function Avatar({ data, size }: { data: CreatorAvatarCardData; size: number }) {
   );
 }
 
+/** 粉丝/获赞/互动 KPI 单行；无任何字段时不渲染。 */
+function StatsLine({ data }: { data: CreatorAvatarCardData }) {
+  const parts: string[] = [];
+  if (data.followers) parts.push(`粉丝 ${data.followers}`);
+  if (data.likes) parts.push(`获赞 ${data.likes}`);
+  if (data.engagement) parts.push(`互动 ${data.engagement}`);
+  if (parts.length === 0) return null;
+  return <div className="mt-1 text-[11px] text-foreground-secondary">{parts.join(' · ')}</div>;
+}
+
 function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
   return (
     <div className="flex h-full w-full items-center gap-3 rounded-xl border border-border-default bg-surface-primary p-3">
@@ -72,6 +82,7 @@ function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
         </div>
         <div className="mt-0.5 text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
         {data.intro && <div className="mt-1 line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
+        <StatsLine data={data} />
       </div>
     </div>
   );
@@ -89,6 +100,7 @@ function AvatarVertical({ data }: { data: CreatorAvatarCardData }) {
       </div>
       <div className="text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
       {data.intro && <div className="line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
+      <StatsLine data={data} />
     </div>
   );
 }
