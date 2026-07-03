@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useEditorStore } from './store';
 import { projectsApi } from '@/api/projects';
 
-/** pages / 尺寸 / 名称 变更后 debounce 1.5s → PATCH；保存后清 dirty。 */
+/** pages / 尺寸 / 名称 / meta(含主题) 变更后 debounce 1.5s → PATCH；保存后清 dirty。 */
 export function useAutosave(): void {
   const projectId = useEditorStore((s) => s.projectId);
   const dirty = useEditorStore((s) => s.dirty);
@@ -19,6 +19,7 @@ export function useAutosave(): void {
           width: s.canvasWidth,
           height: s.canvasHeight,
           pages: s.pages,
+          meta: s.projectMeta ?? undefined,
         })
         .then(() => useEditorStore.getState().markSaved())
         .catch(() => {

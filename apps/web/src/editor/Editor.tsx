@@ -23,8 +23,16 @@ export function Editor({ detail }: EditorProps) {
   useAutosave();
   useEditorKeyboard();
 
+  // 报告维度主题（品牌色）→ 覆盖 CSS 变量，子树 accent 自动换肤。
+  const theme = useEditorStore((s) => s.projectMeta?.theme);
+  const themeStyle = {
+    ...(theme?.primary ? { '--accent-primary': theme.primary } : {}),
+    ...(theme?.secondary ? { '--accent-secondary': theme.secondary } : {}),
+    ...(theme?.fontFamily ? { fontFamily: theme.fontFamily } : {}),
+  } as React.CSSProperties;
+
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden" style={themeStyle}>
       <EditorTopbar />
       <div className="flex min-h-0 flex-1">
         <PageSidebar />

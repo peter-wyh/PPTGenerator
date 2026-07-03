@@ -63,6 +63,8 @@ export interface EditorState {
   // ---- lifecycle ----
   loadProject: (detail: ProjectDetail, name: string) => void;
   setProjectName: (name: string) => void;
+  /** 报告维度：更新主题（品牌色等），合并进 projectMeta 并标记 dirty。 */
+  setTheme: (theme: Partial<import('@mediakit/shared').ProjectTheme>) => void;
   markSaved: () => void;
 
   // ---- view ----
@@ -251,6 +253,15 @@ export const useEditorStore = create<EditorState>((set, get) => {
     markSaved: () => set({ dirty: false }),
 
     setProjectName: (name) => set({ projectName: name, dirty: true }),
+
+    setTheme: (theme) =>
+      set((s) => ({
+        dirty: true,
+        projectMeta: {
+          ...(s.projectMeta ?? {}),
+          theme: { ...(s.projectMeta?.theme ?? {}), ...theme },
+        },
+      })),
 
     setZoom: (z) => set({ zoom: Math.round(z * 100) / 100 }),
     zoomByDelta: (delta) =>

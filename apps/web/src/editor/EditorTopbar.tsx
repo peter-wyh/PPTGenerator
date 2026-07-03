@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from './store';
 import { ExportMenu } from './components/ExportMenu';
+import { ReportSettingsOverlay } from './components/ReportSettingsOverlay';
 import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 
-/** 顶栏：返回 + 项目名（可编辑）+ meta 标签、撤销/重做、预览、导出/分享（M6）。 */
+/** 顶栏：返回 + 项目名（可编辑）+ meta 标签、撤销/重做、报告设置、预览、导出/分享（M6）。 */
 export function EditorTopbar() {
   const navigate = useNavigate();
   const projectName = useEditorStore((s) => s.projectName);
@@ -15,6 +17,7 @@ export function EditorTopbar() {
   const redo = useEditorStore((s) => s.redo);
   const enterPreview = useEditorStore((s) => s.enterPreview);
   const hasPages = useEditorStore((s) => s.pages.length > 0);
+  const [showSettings, setShowSettings] = useState(false);
 
   const metaTags: string[] = [];
   if (meta?.businessLine) metaTags.push(meta.businessLine);
@@ -67,6 +70,13 @@ export function EditorTopbar() {
         </button>
         <span className="mx-1 h-4 w-px bg-border-default" />
         <button
+          onClick={() => setShowSettings(true)}
+          className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+          title="报告设置（品牌色等）"
+        >
+          报告设置
+        </button>
+        <button
           onClick={() => enterPreview()}
           disabled={!hasPages}
           className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover disabled:opacity-40"
@@ -76,6 +86,7 @@ export function EditorTopbar() {
         </button>
         <ExportMenu />
       </div>
+      {showSettings && <ReportSettingsOverlay onClose={() => setShowSettings(false)} />}
     </header>
   );
 }

@@ -17,7 +17,16 @@ const campaignInfoSchema = z
   })
   .optional();
 
-/** 项目元数据：业务线/创建人/场景/子类/广告主/campaign 信息。 */
+/** 项目主题（报告维度：品牌色等）。 */
+const projectThemeSchema = z
+  .object({
+    primary: z.string().max(20).optional(),
+    secondary: z.string().max(20).optional(),
+    fontFamily: z.string().max(120).optional(),
+  })
+  .optional();
+
+/** 项目元数据：业务线/创建人/场景/子类/广告主/campaign 信息/主题。 */
 export const projectMetaSchema = z
   .object({
     businessLine: z.string().max(40).optional(),
@@ -27,6 +36,7 @@ export const projectMetaSchema = z
     advertiser: z.string().max(120).optional(),
     campaignId: z.string().max(120).optional(),
     campaignInfo: campaignInfoSchema,
+    theme: projectThemeSchema,
   })
   .optional();
 

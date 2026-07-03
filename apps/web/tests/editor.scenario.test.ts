@@ -167,3 +167,23 @@ describe('页面维度编辑 — updatePage（背景色/图）', () => {
     expect(useEditorStore.getState().pages.find((p) => p.id === pages[2].id)?.bgColor).toBeUndefined();
   });
 });
+
+describe('报告维度配置 — setTheme（品牌色）', () => {
+  beforeEach(() => useEditorStore.getState().loadProject(emptyProject, 'p'));
+
+  it('setTheme 合并进 projectMeta 并标记 dirty', () => {
+    useEditorStore.getState().markSaved();
+    expect(useEditorStore.getState().dirty).toBe(false);
+    useEditorStore.getState().setTheme({ primary: '#2563eb' });
+    expect(useEditorStore.getState().projectMeta?.theme?.primary).toBe('#2563eb');
+    expect(useEditorStore.getState().dirty).toBe(true);
+  });
+
+  it('setTheme 多次合并，不覆盖其它字段', () => {
+    useEditorStore.getState().setTheme({ primary: '#2563eb' });
+    useEditorStore.getState().setTheme({ fontFamily: 'Noto' });
+    const theme = useEditorStore.getState().projectMeta?.theme;
+    expect(theme?.primary).toBe('#2563eb');
+    expect(theme?.fontFamily).toBe('Noto');
+  });
+});

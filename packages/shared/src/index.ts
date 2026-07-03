@@ -87,6 +87,16 @@ export interface Campaign {
   owner?: string;
 }
 
+/** 项目主题（报告维度配置）：品牌色等，驱动编辑器 accent 主题色。 */
+export interface ProjectTheme {
+  /** 主品牌色（HEX），映射到 CSS 变量 --accent-primary。 */
+  primary?: string;
+  /** 次品牌色（HEX），映射到 --accent-secondary。 */
+  secondary?: string;
+  /** 字体族（留空=默认 Inter）。 */
+  fontFamily?: string;
+}
+
 /** 项目元数据（mock 原型字段，存于 Project.meta JSON）。 */
 export interface ProjectMeta {
   /** 业务线：FT/SM/CX/DG/KN/DM 等。 */
@@ -101,6 +111,8 @@ export interface ProjectMeta {
   /** 选中的上游 campaign id（campaign 类型场景）。 */
   campaignId?: string;
   campaignInfo?: CampaignInfo;
+  /** 报告主题（品牌色等）。 */
+  theme?: ProjectTheme;
 }
 
 /* ------------------------------------------------------------------ */
