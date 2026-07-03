@@ -16,8 +16,11 @@ export function App() {
         <Route path="/share/:token" element={<SharePage />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:id" element={<ProjectShell />} />
           <Route path="/data" element={<MockData />} />
+        </Route>
+        {/* 编辑器：沉浸式，无全局导航 */}
+        <Route element={<ProtectedLayout bare />}>
+          <Route path="/projects/:id" element={<ProjectShell />} />
         </Route>
         <Route path="*" element={<Login />} />
       </Routes>

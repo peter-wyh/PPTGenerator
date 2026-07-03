@@ -1,9 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from './store';
 import { ExportMenu } from './components/ExportMenu';
 import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 
-/** 顶栏：项目名（可编辑）+ meta 标签、撤销/重做、预览、导出/分享（M6）。 */
+/** 顶栏：返回 + 项目名（可编辑）+ meta 标签、撤销/重做、预览、导出/分享（M6）。 */
 export function EditorTopbar() {
+  const navigate = useNavigate();
   const projectName = useEditorStore((s) => s.projectName);
   const setProjectName = useEditorStore((s) => s.setProjectName);
   const meta = useEditorStore((s) => s.projectMeta);
@@ -24,6 +26,14 @@ export function EditorTopbar() {
   return (
     <header className="flex h-12 items-center justify-between border-b border-border-default bg-surface-primary px-3">
       <div className="flex min-w-0 items-center gap-2">
+        <button
+          onClick={() => navigate('/projects')}
+          className="flex items-center gap-1 rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+          title="返回项目列表"
+        >
+          ← 返回
+        </button>
+        <span className="h-4 w-px bg-border-default" />
         <input
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
