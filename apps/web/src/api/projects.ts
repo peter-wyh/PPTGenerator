@@ -17,6 +17,9 @@ export const projectsApi = {
     patch: { name?: string; width?: number; height?: number; pages?: unknown; meta?: ProjectMeta },
   ) => api.patch<{ project: ProjectDetail }>(`/projects/${id}`, patch).then((r) => r.data.project),
   remove: (id: string) => api.delete(`/projects/${id}`),
+  /** 复制项目（后端深拷贝页面/尺寸/meta，生成新 id）。返回新项目详情。 */
+  duplicate: (id: string) =>
+    api.post<{ project: ProjectDetail }>(`/projects/${id}/duplicate`).then((r) => r.data.project),
 
   // ---- M6 分享 ----
   /** 生成（或刷新）分享 token，返回 token。 */

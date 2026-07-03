@@ -84,6 +84,15 @@ export function Projects() {
     }
   }
 
+  async function handleDuplicate(p: ProjectSummary) {
+    try {
+      await projectsApi.duplicate(p.id);
+      await refresh();
+    } catch {
+      /* 复制失败静默；可按需加 toast */
+    }
+  }
+
   async function handleDelete() {
     if (!pendingDelete) return;
     setDeleting(true);
@@ -206,6 +215,13 @@ export function Projects() {
                       编辑
                     </button>
                     <button
+                      onClick={() => void handleDuplicate(p)}
+                      className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+                      title="复制项目"
+                    >
+                      复制
+                    </button>
+                    <button
                       onClick={() => setPendingDelete(p)}
                       className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-red"
                     >
@@ -243,6 +259,7 @@ export function Projects() {
         error={editError}
         title="编辑项目"
         submitLabel="保存"
+        lockScenario
         initial={
           editing
             ? { name: editing.name, width: editing.width, height: editing.height, meta: editing.meta }

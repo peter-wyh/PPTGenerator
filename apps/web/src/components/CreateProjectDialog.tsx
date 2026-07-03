@@ -41,6 +41,8 @@ interface Props {
   error?: string | null;
   /** 编辑模式时传入初始值；不传为新建模式。 */
   initial?: ProjectFormInitial | null;
+  /** 锁定场景（编辑模式下避免误改已绑定 campaign）。 */
+  lockScenario?: boolean;
   title?: string;
   submitLabel?: string;
   onCancel: () => void;
@@ -53,6 +55,7 @@ export function CreateProjectDialog({
   loading,
   error,
   initial,
+  lockScenario = false,
   title = '新建项目',
   submitLabel = '创建',
   onCancel,
@@ -188,10 +191,11 @@ export function CreateProjectDialog({
 
           {/* 场景（驱动后续表单） */}
           <label className="block text-sm text-foreground-secondary">
-            <span className="mb-1 block font-medium">场景</span>
+            <span className="mb-1 block font-medium">场景{lockScenario && <span className="ml-1 text-foreground-muted">（已锁定）</span>}</span>
             <select
               className={selectCls}
               value={scenario}
+              disabled={lockScenario}
               onChange={(e) => {
                 setScenario(e.target.value as Scenario | '');
                 setCampaignId('');

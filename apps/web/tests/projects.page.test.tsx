@@ -4,12 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Projects } from '@/routes/Projects';
 
-const { listMock, createMock, renameMock, removeMock, updateMock } = vi.hoisted(() => ({
+const { listMock, createMock, renameMock, removeMock, updateMock, duplicateMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   createMock: vi.fn(),
   renameMock: vi.fn(),
   removeMock: vi.fn(),
   updateMock: vi.fn(),
+  duplicateMock: vi.fn(),
 }));
 
 vi.mock('@/api/projects', () => ({
@@ -18,6 +19,7 @@ vi.mock('@/api/projects', () => ({
     create: (n: string, w?: number, h?: number, meta?: unknown) => createMock(n, w, h, meta),
     rename: (id: string, n: string) => renameMock(id, n),
     update: (id: string, patch: unknown) => updateMock(id, patch),
+    duplicate: (id: string) => duplicateMock(id),
     remove: (id: string) => removeMock(id),
   },
 }));
@@ -188,6 +190,22 @@ describe('Projects page', () => {
     );
     // 列表项名称已更新。
     await waitFor(() => expect(screen.getByText('改名后')).toBeInTheDocument());
+  });
+
+  it('duplicates a project (calls duplicate then refreshes list)', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValueOnce([summary('p1', '报告 A')]).mockResolvedValueOnce([
+      summary('p1', '报告 A'),
+      summary('p2', '报告 A 副本'),
+    ]);
+    duplicateMock.mockResolvedValue({ id: 'p2', name: '报告 A 副本', pages: [] });
+    renderPage();
+
+    await screen.findByText('报告 A');
+    await user.click(screen.getByRole('button', { name: '复制' }));
+    await waitFor(() => expect(duplicateMock).toHaveBeenCalledWith('p1'));
+    // 复制后刷新列表，副本出现。
+    await waitFor(() => expect(screen.getByText('报告 A 副本')).toBeInTheDocument());
   });
 
   it('deletes a project after confirming', async () => {
