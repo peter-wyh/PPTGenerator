@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { EditorComponent, ComponentData } from '@mediakit/shared';
+import type { CreatorAvatarCardData, EditorComponent, ComponentData } from '@mediakit/shared';
 import { useEditorStore } from './store';
 import { GEOMETRY_FIELDS, REGISTRY, type PropertyField, type VariantOption } from './registry';
 import type { Alignment } from './store';
 import { getStyleOptions, type VariantId } from './business/catalog';
 import { Button } from '@/components/Button';
 import { ImageInput } from '@/components/ImageInput';
+import { parseCreatorLink } from './creatorLink';
 
 /** 读取组件某字段值（data 字段 vs 几何字段）。 */
 function readValue(comp: EditorComponent, field: PropertyField): unknown {
@@ -36,6 +37,8 @@ export function PropertyPanel() {
       <div className="font-headings text-sm font-semibold text-foreground-primary">
         {LABELS[comp.type] ?? comp.type}
       </div>
+
+      {comp.type === 'creator-avatar-card' && <CreatorLinkImporter comp={comp} />}
 
       <FieldGroup title="位置与尺寸">
         <div className="grid grid-cols-2 gap-2">
@@ -194,6 +197,61 @@ function VariantSelector({ comp, variants }: { comp: EditorComponent; variants: 
         </button>
       ))}
     </div>
+  );
+}
+
+/* --------------------------- 达人链接解析 ---------------------------- */
+
+/** 达人头像卡：粘贴达人链接 → 自动解析填充 handle/粉丝/获赞/互动等字段。 */
+function CreatorLinkImporter({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const data = comp.data as CreatorAvatarCardData;
+  const [url, setUrl] = useState(data.sourceUrl ?? '');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setUrl(data.sourceUrl ?? '');
+  }, [data.sourceUrl]);
+
+  const onParse = async () => {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setStatus('error');
+      setError('请粘贴达人链接');
+      return;
+    }
+    setStatus('loading');
+    setError('');
+    try {
+      const parsed = await parseCreatorLink(trimmed);
+      updateComponentData(comp.id, parsed);
+      commit();
+      setStatus('idle');
+    } catch {
+      setStatus('error');
+      setError('暂仅支持 TikTok / Instagram / YouTube / 微博 链接');
+    }
+  };
+
+  return (
+    <FieldGroup title="达人链接解析">
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="粘贴达人主页/视频链接…"
+        className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+      />
+      <button
+        onClick={onParse}
+        disabled={status === 'loading'}
+        className="mt-1 rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover disabled:opacity-50"
+      >
+        {status === 'loading' ? '解析中…' : '解析'}
+      </button>
+      {status === 'error' && <div className="mt-1 text-xs text-red">{error}</div>}
+    </FieldGroup>
   );
 }
 
