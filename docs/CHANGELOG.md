@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-03 — 达人头像卡：链接解析（迭代 1）
+
+`creator-avatar-card` 支持粘贴达人链接自动解析填充字段（前端 mock）。
+
+- **链接解析模块**（`editor/creatorLink.ts`）：`detectPlatform` 识别 TikTok / Instagram / YouTube / 微博（host 匹配，容忍 www./m./无协议/大小写，不支持返回 null，含小红书）；`parseCreatorLink` 用 FNV-1a 确定性哈希派生稳定的 mock 字段（handle / 粉丝 / 获赞 / 互动率 / 头像 / 简介 / sourceUrl），400ms 模拟延迟，相同链接结果一致。
+- **数据结构**：`CreatorAvatarCardData` 增加可选 `sourceUrl / handle / followers / likes / engagement`（向后兼容）。
+- **卡片渲染**：horizontal / vertical 变体简介下方加 KPI 行（粉丝/获赞/互动，缺哪省哪）；compact 不变；无字段不渲染。
+- **属性面板**：新增「达人链接解析」区块（`CreatorLinkImporter`），解析后写入字段并保留 variant/tier；空输入/不支持平台给出错误提示。`propertySchema` 增 handle/粉丝/获赞/互动 四个 text 字段供微调。
+- **测试**：`editor.creator-link.test.ts`（detectPlatform + parseCreatorLink 确定性，7）；`editor.creator-link-importer.test.tsx`（面板交互 3）；`editor.creator.test.tsx` 增 KPI 渲染断言。门禁 typecheck + test（198）全绿。
+
+**已知限制**：本期为前端 mock，未接入真实达人库/抓取；小红书链接暂不支持（设计取舍）。
+
 ## 2026-07-02 — M6：预览 + 导出 + 分享 ✅
 
 mediakit 全新重写最后一期：全屏只读预览、PDF 导出、公开分享链接，接通 M1 顶栏预览/导出桩。至此 M0→M6 七期全部完成。
