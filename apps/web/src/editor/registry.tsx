@@ -16,6 +16,8 @@ import {
   CreatorStatsStrip,
   CreatorWorksList,
 } from './components/CreatorComponents';
+import { BrandWall, PackageCard } from './components/CompanyComponents';
+import { KpiBoard, TimelineCompare } from './components/ReportComponents';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -211,6 +213,41 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'compact', label: '紧凑' },
     ],
     propertySchema: [{ key: '', label: '作品内容', kind: 'table' }],
+  },
+  'brand-wall': {
+    Component: BrandWall,
+    defaultSize: DEFAULT_SIZES['brand-wall'],
+    defaultData: () => getDefaultData('brand-wall'),
+    variants: [
+      { id: 'grid', label: '网格' },
+      { id: 'row', label: '横排' },
+      { id: 'marquee', label: '条带' },
+    ],
+    propertySchema: [{ key: '', label: '品牌列表', kind: 'table' }],
+  },
+  'package-card': {
+    Component: PackageCard,
+    defaultSize: DEFAULT_SIZES['package-card'],
+    defaultData: () => getDefaultData('package-card'),
+    variants: [
+      { id: 'standard', label: '标准' },
+      { id: 'featured', label: '推荐' },
+      { id: 'compact', label: '紧凑' },
+    ],
+    propertySchema: [
+      { key: 'name', label: '套餐名', kind: 'text' },
+      { key: 'price', label: '价格', kind: 'text' },
+      {
+        key: 'highlighted',
+        label: '高亮推荐',
+        kind: 'select',
+        options: [
+          { value: 'true', label: '是' },
+          { value: 'false', label: '否' },
+        ],
+      },
+      { key: '', label: '特性列表', kind: 'table' },
+    ],
   },
 };
 

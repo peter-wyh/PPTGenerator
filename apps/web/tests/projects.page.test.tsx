@@ -139,8 +139,8 @@ describe('Projects page', () => {
     renameMock.mockResolvedValue(summary('p1', '改名后'));
     renderPage();
 
-    const item = (await screen.findAllByRole('listitem'))[0];
-    await user.click(within(item).getByRole('button', { name: '改名' }));
+    await screen.findByText('报告 A');
+    await user.click(screen.getByRole('button', { name: '改名' }));
     const input = screen.getByDisplayValue('报告 A');
     await user.clear(input);
     await user.type(input, '改名后');
@@ -155,8 +155,8 @@ describe('Projects page', () => {
     removeMock.mockResolvedValue(undefined);
     renderPage();
 
-    const item = (await screen.findAllByRole('listitem'))[0];
-    await user.click(within(item).getByRole('button', { name: '删除' }));
+    await screen.findByText('报告 A');
+    await user.click(screen.getByRole('button', { name: '删除' }));
 
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: '删除' }));

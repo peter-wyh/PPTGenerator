@@ -103,7 +103,13 @@ export type ComponentType =
   // 业务组件（试点：达人介绍页拆出的页内语义块，绑定"达人"领域实体）
   | 'creator-avatar-card'
   | 'creator-stats-strip'
-  | 'creator-works-list';
+  | 'creator-works-list'
+  // 业务组件（试点：公司/报价域，从原整页版式拆出的可复用语义块）
+  | 'brand-wall'
+  | 'package-card'
+  // 业务组件（试点：Campaign 报告域，周报/月报/结案核心页）
+  | 'kpi-board'
+  | 'timeline-compare';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -224,6 +230,57 @@ export interface CreatorWorksListData {
   rows: string[][];
 }
 
+/* ---- 业务组件（试点：公司/报价域）Data ---- */
+
+/**
+ * 品牌墙：Logo 网格。复用 TableData 形状（{headers,rows}）。
+ * 约定列顺序：[品牌名, Logo URL]；无 URL 时渲染品牌名首字占位。
+ */
+export type BrandWallVariant = 'grid' | 'row' | 'marquee';
+export interface BrandWallData {
+  variant: BrandWallVariant;
+  headers: string[];
+  rows: string[][];
+}
+
+/**
+ * 套餐卡：单个方案。features 复用 TableData 形状（headers+rows，单列 [特性]，每行一条），
+ * 以便复用 table 字段编辑器（与 brand-wall / works-list 一致的对象列表方案）。
+ */
+export type PackageCardVariant = 'standard' | 'featured' | 'compact';
+export interface PackageCardData {
+  variant: PackageCardVariant;
+  name: string;
+  price: string;
+  headers: string[];
+  rows: string[][];
+  highlighted: boolean;
+}
+
+/* ---- 业务组件（试点：Campaign 报告域）Data ---- */
+
+/**
+ * 业绩看板（≈PRD CMP-B1）：KPI 矩阵。复用 TableData 形状，
+ * 约定列顺序 [指标, 数值, 对比]；对比为 "+15%"/"-2%" 文本，渲染层按首字符上色。
+ */
+export type KpiBoardVariant = 'grid' | 'row' | 'compact';
+export interface KpiBoardData {
+  variant: KpiBoardVariant;
+  headers: string[];
+  rows: string[][];
+}
+
+/**
+ * 周期对比表（≈PRD CMP-B13）：本期 vs 上期 + 状态。复用 TableData 形状，
+ * 约定列顺序 [指标, 本期, 上期, 状态]；状态值 Optimized/Exceeded/Stable 渲染为色块。
+ */
+export type TimelineCompareVariant = 'standard' | 'mini' | 'with-bar';
+export interface TimelineCompareData {
+  variant: TimelineCompareVariant;
+  headers: string[];
+  rows: string[][];
+}
+
 export type ComponentData =
   | TextData
   | ImageData
@@ -235,7 +292,11 @@ export type ComponentData =
   | BusinessBlockData
   | CreatorAvatarCardData
   | CreatorStatsStripData
-  | CreatorWorksListData;
+  | CreatorWorksListData
+  | BrandWallData
+  | PackageCardData
+  | KpiBoardData
+  | TimelineCompareData;
 
 export interface EditorComponent {
   id: string;

@@ -12,11 +12,13 @@ const TOOLS: { type: 'text' | 'image' | 'bar-chart' | 'line-chart' | 'pie-chart'
   { type: 'table', label: '表格' },
 ];
 
-/** 试点业务组件（达人领域）：页内可复用语义块，与通用组件同级，走 addComponent。 */
-const CREATOR_TOOLS: { type: 'creator-avatar-card' | 'creator-stats-strip' | 'creator-works-list'; label: string }[] = [
+/** 试点业务组件：页内可复用语义块，与通用组件同级，走 addComponent。 */
+const SEMANTIC_TOOLS: { type: 'creator-avatar-card' | 'creator-stats-strip' | 'creator-works-list' | 'brand-wall' | 'package-card'; label: string }[] = [
   { type: 'creator-avatar-card', label: '达人头像卡' },
   { type: 'creator-stats-strip', label: '达人数据条' },
   { type: 'creator-works-list', label: '达人作品列表' },
+  { type: 'brand-wall', label: '品牌墙' },
+  { type: 'package-card', label: '套餐卡' },
 ];
 
 export function Toolbar() {
@@ -35,8 +37,8 @@ export function Toolbar() {
         </button>
       ))}
       <span className="mx-1 h-4 w-px bg-border-default" />
-      <span className="px-1 text-[11px] font-medium text-foreground-muted">达人组件·试点</span>
-      {CREATOR_TOOLS.map((t) => (
+      <span className="px-1 text-[11px] font-medium text-foreground-muted">业务组件·试点</span>
+      {SEMANTIC_TOOLS.map((t) => (
         <button
           key={t.type}
           onClick={() => addComponent(t.type)}

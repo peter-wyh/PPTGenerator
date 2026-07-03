@@ -16,6 +16,10 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'creator-avatar-card': { w: 320, h: 120 },
   'creator-stats-strip': { w: 600, h: 100 },
   'creator-works-list': { w: 700, h: 200 },
+  'brand-wall': { w: 700, h: 200 },
+  'package-card': { w: 320, h: 320 },
+  'kpi-board': { w: 900, h: 200 },
+  'timeline-compare': { w: 900, h: 240 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -121,6 +125,57 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['', '7 天肌肤日记 · Day 1', '1.2K', '86K', '2.4K'],
           ['', '敏感肌精华实测', '980', '54K', '1.8K'],
           ['', '早安护肤流程', '760', '42K', '1.2K'],
+        ],
+      };
+    case 'brand-wall':
+      return {
+        variant: 'grid',
+        headers: ['品牌', 'Logo URL'],
+        rows: [
+          ['LUMIÈRE', ''],
+          ['NOVA HOME', ''],
+          ['MOTION', ''],
+          ['EVERYDAY', ''],
+          ['WANDER', ''],
+          ['GLOWLAB', ''],
+        ],
+      };
+    case 'package-card':
+      return {
+        variant: 'standard',
+        name: '增长加速包',
+        price: '¥80,000',
+        headers: ['特性'],
+        rows: [
+          ['40–60 位达人'],
+          ['Spark Ads 资源位'],
+          ['8–12% CPS 佣金'],
+          ['6 周服务周期'],
+        ],
+        highlighted: false,
+      };
+    case 'kpi-board':
+      return {
+        variant: 'grid',
+        headers: ['指标', '数值', '对比'],
+        rows: [
+          ['Sales', '¥1.24M', '+15%'],
+          ['Commission', '¥98K', '+12%'],
+          ['CVR', '3.8%', '+0.4%'],
+          ['New Customer', '62%', '+5%'],
+          ['Clicks', '120K', '-3%'],
+          ['Orders', '8.4K', '+9%'],
+        ],
+      };
+    case 'timeline-compare':
+      return {
+        variant: 'standard',
+        headers: ['指标', '本期', '上期', '状态'],
+        rows: [
+          ['Total Sales', '¥1.24M', '¥1.08M', 'Exceeded'],
+          ['Total Reach', '8.1M', '7.0M', 'Exceeded'],
+          ['Conversion', '3.8%', '4.0%', 'Stable'],
+          ['Engagement', '8.7%', '6.2%', 'Optimized'],
         ],
       };
     default:

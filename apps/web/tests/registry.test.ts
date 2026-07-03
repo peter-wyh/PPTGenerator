@@ -15,6 +15,8 @@ const TYPES: ComponentType[] = [
   'creator-avatar-card',
   'creator-stats-strip',
   'creator-works-list',
+  'brand-wall',
+  'package-card',
 ];
 
 describe('REGISTRY', () => {

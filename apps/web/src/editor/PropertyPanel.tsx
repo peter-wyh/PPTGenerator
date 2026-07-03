@@ -95,6 +95,8 @@ const LABELS: Record<string, string> = {
   'creator-avatar-card': '达人头像卡',
   'creator-stats-strip': '达人数据条',
   'creator-works-list': '达人作品列表',
+  'brand-wall': '品牌墙',
+  'package-card': '套餐卡',
 };
 
 function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
