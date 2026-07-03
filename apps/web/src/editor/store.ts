@@ -114,6 +114,7 @@ export interface EditorState {
   setPage: (id: string) => void;
   addPage: () => void;
   addPageWithComponents: (name: string, components: EditorComponent[]) => void;
+  addPagesBatch: (pages: { name: string; components: EditorComponent[] }[]) => void;
   copyPage: (id: string) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
@@ -487,6 +488,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const reid = components.map((c) => ({ ...clone(c), id: newId() }));
         const page: Page = { id: newId(), name, components: reid };
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
+      }),
+
+    addPagesBatch: (pages) =>
+      mutateAndCommit((s) => {
+        // 一次生成多页（场景模板用），每页组件重新分配 id，单个 history 条目。
+        const built: Page[] = pages.map((p) => ({
+          id: newId(),
+          name: p.name,
+          components: p.components.map((c) => ({ ...clone(c), id: newId() })),
+        }));
+        if (built.length === 0) return {};
+        return { pages: [...s.pages, ...built], currentPageId: built[0].id, selectedIds: [] };
       }),
 
     copyPage: (id) =>

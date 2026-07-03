@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useEditorStore } from './store';
 import { PageThumbnail } from './components/PageThumbnail';
 import { TemplateOverlay } from './components/TemplateOverlay';
+import { ScenarioOverlay } from './components/ScenarioOverlay';
 import type { Template } from './templates';
 
 /** 页面栏：缩略图卡片 + 切换/改名/复制/删除 + 拖拽排序 + 模板新建。 */
@@ -19,6 +20,7 @@ export function PageSidebar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showScenarios, setShowScenarios] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   function applyTemplate(tpl: Template) {
@@ -119,15 +121,24 @@ export function PageSidebar() {
           </div>
         ))}
       </div>
-      <button
-        onClick={() => setShowTemplates(true)}
-        className="m-2 rounded-lg border border-dashed border-border-default px-2 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
-      >
-        + 新建页面
-      </button>
+      <div className="flex gap-2 p-2">
+        <button
+          onClick={() => setShowScenarios(true)}
+          className="flex-1 rounded-lg border border-accent-primary/40 bg-accent-primary/5 px-2 py-1.5 text-sm text-accent-primary hover:bg-accent-primary/10"
+        >
+          + 报告
+        </button>
+        <button
+          onClick={() => setShowTemplates(true)}
+          className="flex-1 rounded-lg border border-dashed border-border-default px-2 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
+        >
+          + 页面
+        </button>
+      </div>
       {showTemplates && (
         <TemplateOverlay onApply={applyTemplate} onClose={() => setShowTemplates(false)} />
       )}
+      {showScenarios && <ScenarioOverlay onClose={() => setShowScenarios(false)} />}
     </div>
   );
 }

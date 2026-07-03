@@ -13,6 +13,67 @@ export interface Template {
   components: () => EditorComponent[];
 }
 
+/** 根据 id 取页面模板。 */
+export function getTemplate(id: string): Template | undefined {
+  return TEMPLATES.find((t) => t.id === id);
+}
+
+/* ----------------------------- 场景模板（第④层）----------------------------- */
+// 把多个页面模板串成一份完整报告（一键生成多页）。引用 TEMPLATES 里的页面模板 id。
+
+export interface ScenarioPage {
+  /** 页面名（侧栏显示）。 */
+  name: string;
+  /** 引用的页面模板 id（见 TEMPLATES）。 */
+  templateId: string;
+}
+
+export interface ScenarioTemplate {
+  id: string;
+  name: string;
+  description: string;
+  pages: ScenarioPage[];
+}
+
+export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
+  {
+    id: 'biweekly',
+    name: 'Campaign 双周报',
+    description: '8 页 · 业绩 + 渠道 + 广告位 + 达人 + 套餐',
+    pages: [
+      { name: '封面', templateId: 'cover-page' },
+      { name: '业绩概览', templateId: 'report-monthly-overview' },
+      { name: '渠道拆分', templateId: 'report-channel' },
+      { name: '渠道 Post', templateId: 'report-posts' },
+      { name: 'DM 广告位', templateId: 'report-placement' },
+      { name: '合作达人', templateId: 'creator-page' },
+      { name: '套餐', templateId: 'package-page' },
+      { name: '封底', templateId: 'cover-page' },
+    ],
+  },
+  {
+    id: 'monthly',
+    name: 'Campaign 月报',
+    description: '14 页 · 章节分隔 + 业绩/商品/渠道/达人/广告位/套餐',
+    pages: [
+      { name: '编辑说明（不导出）', templateId: 'blank' },
+      { name: '封面', templateId: 'cover-page' },
+      { name: 'PART 1 · Performance', templateId: 'title' },
+      { name: '业绩概览', templateId: 'report-monthly-overview' },
+      { name: 'TOP 商品', templateId: 'report-product' },
+      { name: '渠道表现', templateId: 'report-channel' },
+      { name: '头部达人合作', templateId: 'report-creator-collab' },
+      { name: '渠道 Post', templateId: 'report-posts' },
+      { name: 'DM 广告位', templateId: 'report-placement' },
+      { name: 'PART 2 · Optimization', templateId: 'title' },
+      { name: '套餐', templateId: 'package-page' },
+      { name: '推荐达人', templateId: 'creator-page' },
+      { name: '达人详情', templateId: 'creator-page' },
+      { name: '封底', templateId: 'cover-page' },
+    ],
+  },
+];
+
 function t(type: ComponentType, x: number, y: number, w: number, h: number): EditorComponent {
   return { id: `tpl-${type}-${x}-${y}`, type, x, y, w, h, data: getDefaultData(type) };
 }
