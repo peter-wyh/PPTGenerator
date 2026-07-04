@@ -42,7 +42,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         content: '文本内容',
         fontSize: 14,
-        fontFamily: 'Inter',
+        fontFamily: '',
         fontWeight: 400,
         color: '#1A1A1A',
       };

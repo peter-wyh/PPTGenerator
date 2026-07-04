@@ -115,7 +115,7 @@ function GenericAccent(ctx: RenderCtx) {
           }}
         >
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.8px' }}>{item.name.toUpperCase()}</div>
-          <div style={{ fontFamily: "'Funnel Sans', sans-serif", fontWeight: 800, fontSize: 38, lineHeight: 0.9 }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 38, lineHeight: 0.9 }}>
             {details.length}
           </div>
           <div style={{ fontSize: 10, lineHeight: 1.4 }}>
@@ -331,7 +331,7 @@ function renderKind(ctx: RenderCtx): React.ReactNode {
                     justifyContent: 'center',
                     fontWeight: 700,
                     fontSize: 12,
-                    fontFamily: "'Funnel Sans', sans-serif",
+                    fontFamily: 'var(--font-heading)',
                     color: colors[i % colors.length],
                   }}
                 >
@@ -688,7 +688,7 @@ function renderKind(ctx: RenderCtx): React.ReactNode {
                           textAlign: 'center',
                           fontSize: 10,
                           fontWeight: i === 3 ? 700 : 500,
-                          fontFamily: i === 3 ? "'IBM Plex Mono', monospace" : 'Inter, sans-serif',
+                          fontFamily: i === 3 ? 'var(--font-number)' : 'var(--font-text)',
                           color: j === 1 ? ACCENT : '#555',
                         }}
                       >

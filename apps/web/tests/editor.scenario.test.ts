@@ -174,17 +174,17 @@ describe('报告维度配置 — setTheme（品牌色）', () => {
   it('setTheme 合并进 projectMeta 并标记 dirty', () => {
     useEditorStore.getState().markSaved();
     expect(useEditorStore.getState().dirty).toBe(false);
-    useEditorStore.getState().setTheme({ primary: '#2563eb' });
-    expect(useEditorStore.getState().projectMeta?.theme?.primary).toBe('#2563eb');
+    useEditorStore.getState().setTheme({ color: { primary: '#2563eb' } });
+    expect(useEditorStore.getState().projectMeta?.theme?.color.primary).toBe('#2563eb');
     expect(useEditorStore.getState().dirty).toBe(true);
   });
 
   it('setTheme 多次合并，不覆盖其它字段', () => {
-    useEditorStore.getState().setTheme({ primary: '#2563eb' });
-    useEditorStore.getState().setTheme({ fontFamily: 'Noto' });
+    useEditorStore.getState().setTheme({ color: { primary: '#2563eb' } });
+    useEditorStore.getState().setTheme({ font: { text: 'noto-sans-sc' } });
     const theme = useEditorStore.getState().projectMeta?.theme;
-    expect(theme?.primary).toBe('#2563eb');
-    expect(theme?.fontFamily).toBe('Noto');
+    expect(theme?.color.primary).toBe('#2563eb');
+    expect(theme?.font.text).toBe('noto-sans-sc');
   });
 });
 

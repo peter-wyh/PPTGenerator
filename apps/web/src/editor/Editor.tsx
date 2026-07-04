@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import type { CSSProperties } from 'react';
 import type { ProjectDetail } from '@mediakit/shared';
+import { DEFAULT_THEME } from '@mediakit/shared';
 import { useEditorStore } from './store';
 import { EditorTopbar } from './EditorTopbar';
 import { PageSidebar } from './PageSidebar';
@@ -9,6 +11,7 @@ import { PropertyPanel } from './PropertyPanel';
 import { PreviewOverlay } from './preview/PreviewOverlay';
 import { useAutosave } from './useAutosave';
 import { useEditorKeyboard } from './useEditorKeyboard';
+import { ThemeContext, injectFontLinks, themeToCssVars } from './theme';
 
 interface EditorProps {
   detail: ProjectDetail;
@@ -23,26 +26,37 @@ export function Editor({ detail }: EditorProps) {
   useAutosave();
   useEditorKeyboard();
 
-  // 报告维度主题（品牌色）→ 覆盖 CSS 变量，子树 accent 自动换肤。
-  const theme = useEditorStore((s) => s.projectMeta?.theme);
-  const themeStyle = {
-    ...(theme?.primary ? { '--accent-primary': theme.primary } : {}),
-    ...(theme?.secondary ? { '--accent-secondary': theme.secondary } : {}),
-    ...(theme?.fontFamily ? { fontFamily: theme.fontFamily } : {}),
-  } as React.CSSProperties;
+  // 报告维度主题（品牌色 / 字体 / 密度 / 圆角）→ CSS 变量 + Context 整树换肤。
+  const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
+
+  // 派生 CSS 变量（颜色/字体/圆角/间距），挂在根节点。
+  const themeStyle = useMemo<CSSProperties>(() => themeToCssVars(theme), [theme]);
+
+  // 字体 <link> 按需注入 <head>（去重，旧 link 保留）。
+  useEffect(() => {
+    injectFontLinks(theme);
+  }, [theme]);
+
+  // Context 值：chartPalette 供图表组件按 index 取色。
+  const ctxValue = useMemo(
+    () => ({ chartPalette: theme.color.chartPalette, theme }),
+    [theme],
+  );
 
   return (
-    <div className="flex h-full flex-col overflow-hidden" style={themeStyle}>
-      <EditorTopbar />
-      <div className="flex min-h-0 flex-1">
-        <PageSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <ComponentPanel />
-          <Canvas />
+    <ThemeContext.Provider value={ctxValue}>
+      <div className="flex h-full flex-col overflow-hidden" style={themeStyle}>
+        <EditorTopbar />
+        <div className="flex min-h-0 flex-1">
+          <PageSidebar />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ComponentPanel />
+            <Canvas />
+          </div>
+          <PropertyPanel />
         </div>
-        <PropertyPanel />
+        <PreviewOverlay />
       </div>
-      <PreviewOverlay />
-    </div>
+    </ThemeContext.Provider>
   );
 }

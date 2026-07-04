@@ -87,14 +87,305 @@ export interface Campaign {
   owner?: string;
 }
 
-/** 项目主题（报告维度配置）：品牌色等，驱动编辑器 accent 主题色。 */
+/**
+ * 字体选项：预置字体清单，前后端共享。
+ * key 为唯一标识（存入 ProjectTheme.font.text/number/heading），
+ * stack 为 CSS font-family 值，loadUrl 为 Google Fonts <link>（按需注入 <head>）。
+ */
+export interface FontOption {
+  key: string; // 'noto-sans-sc'
+  label: string; // '思源黑体'
+  category: 'text' | 'number' | 'heading';
+  stack: string; // 实际 CSS font-family 值
+  loadUrl?: string; // Google Fonts <link>，按需注入 <head>
+}
+
+/** 整体风格预设：一整套 ProjectTheme 值，点中即填入报告设置。 */
+export interface StylePreset {
+  key: string; // 'business-sober'
+  name: string; // '商务沉稳'
+  description: string;
+  theme: ProjectTheme; // 一整套值
+}
+
+/** 密度：紧凑 / 标准 / 宽松。 */
+export type ThemeDensity = 'compact' | 'standard' | 'spacious';
+/** 圆角：直角 / 小圆角 / 大圆角。 */
+export type ThemeRadius = 'sharp' | 'small' | 'large';
+
+/** 项目主题（报告维度配置）：结构化 ThemeSpec，驱动编辑器整树换肤。 */
 export interface ProjectTheme {
-  /** 主品牌色（HEX），映射到 CSS 变量 --accent-primary。 */
+  color: {
+    primary: string; // 主品牌色（原 primary），映射 --color-primary
+    secondary: string; // 次品牌色（原 secondary），映射 --color-secondary
+    chartPalette: string[]; // 图表配色序列，6 色，用于柱/折/饼
+    neutralText: string; // 主文字色（中性），映射 --color-neutral-text
+    neutralBg: string; // 页面/卡片背景色，映射 --color-neutral-bg
+  };
+  font: {
+    text: string; // 文本字体 key（如 'noto-sans-sc'）
+    number: string; // 数字字体 key（如 'inter'）
+    heading?: string; // 标题字体 key，可选，缺省=跟随 text
+  };
+  density: ThemeDensity;
+  radius: ThemeRadius;
+  preset?: string; // 当前命中的预设 key，仅用于 UI 高亮；手改字段后置空
+}
+
+/** 预置字体清单。 */
+export const FONT_OPTIONS: FontOption[] = [
+  {
+    key: 'noto-sans-sc',
+    label: '思源黑体',
+    category: 'text',
+    stack: "'Noto Sans SC', sans-serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap',
+  },
+  {
+    key: 'inter',
+    label: 'Inter',
+    category: 'number',
+    stack: "'Inter', sans-serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
+  },
+  {
+    key: 'funnel-sans',
+    label: 'Funnel Sans',
+    category: 'heading',
+    stack: "'Funnel Sans', sans-serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=Funnel+Sans:wght@400;700;800&display=swap',
+  },
+  {
+    key: 'ibm-plex-sans',
+    label: 'IBM Plex Sans',
+    category: 'text',
+    stack: "'IBM Plex Sans', sans-serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap',
+  },
+  {
+    key: 'ibm-plex-mono',
+    label: 'IBM Plex Mono',
+    category: 'number',
+    stack: "'IBM Plex Mono', monospace",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap',
+  },
+  {
+    key: 'roboto',
+    label: 'Roboto',
+    category: 'number',
+    stack: "'Roboto', sans-serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+  },
+  {
+    key: 'noto-serif-sc',
+    label: '思源宋体',
+    category: 'heading',
+    stack: "'Noto Serif SC', serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap',
+  },
+];
+
+/** 默认图表配色（6 色）。 */
+export const DEFAULT_CHART_PALETTE = [
+  '#FF5C00',
+  '#3B82F6',
+  '#22C55E',
+  '#8B5CF6',
+  '#F59E0B',
+  '#EC4899',
+];
+
+/** 默认主题：与原硬编码值对齐（ACCENT=#FF5C00, INK=#1A1A1A, Inter）。 */
+export const DEFAULT_THEME: ProjectTheme = {
+  color: {
+    primary: '#FF5C00',
+    secondary: '#FF8533',
+    chartPalette: [...DEFAULT_CHART_PALETTE],
+    neutralText: '#1A1A1A',
+    neutralBg: '#FFFFFF',
+  },
+  font: {
+    text: 'noto-sans-sc',
+    number: 'inter',
+    heading: undefined,
+  },
+  density: 'standard',
+  radius: 'small',
+  preset: 'business-sober',
+};
+
+/** 整体风格预设清单（4 个）。 */
+export const STYLE_PRESETS: StylePreset[] = [
+  {
+    key: 'business-sober',
+    name: '商务沉稳',
+    description: '橙色主品牌色 + 思源黑体 + 标准密度',
+    theme: {
+      color: {
+        primary: '#FF5C00',
+        secondary: '#FF8533',
+        chartPalette: ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899'],
+        neutralText: '#1A1A1A',
+        neutralBg: '#FFFFFF',
+      },
+      font: { text: 'noto-sans-sc', number: 'inter', heading: undefined },
+      density: 'standard',
+      radius: 'small',
+      preset: 'business-sober',
+    },
+  },
+  {
+    key: 'tech-minimal',
+    name: '科技简约',
+    description: '蓝色主品牌色 + Inter/IBM Plex Mono + 紧凑密度',
+    theme: {
+      color: {
+        primary: '#2563EB',
+        secondary: '#60A5FA',
+        chartPalette: ['#2563EB', '#06B6D4', '#8B5CF6', '#3B82F6', '#22C55E', '#F59E0B'],
+        neutralText: '#0F172A',
+        neutralBg: '#F8FAFC',
+      },
+      font: { text: 'inter', number: 'ibm-plex-mono', heading: 'inter' },
+      density: 'compact',
+      radius: 'sharp',
+      preset: 'tech-minimal',
+    },
+  },
+  {
+    key: 'vibrant-trendy',
+    name: '活力潮流',
+    description: '粉红主品牌色 + Funnel Sans + 宽松密度',
+    theme: {
+      color: {
+        primary: '#EC4899',
+        secondary: '#F472B6',
+        chartPalette: ['#EC4899', '#F59E0B', '#22C55E', '#3B82F6', '#8B5CF6', '#06B6D4'],
+        neutralText: '#1A1A1A',
+        neutralBg: '#FFFFFF',
+      },
+      font: { text: 'noto-sans-sc', number: 'inter', heading: 'funnel-sans' },
+      density: 'spacious',
+      radius: 'large',
+      preset: 'vibrant-trendy',
+    },
+  },
+  {
+    key: 'minimal-elegant',
+    name: '极简素雅',
+    description: '深灰主品牌色 + 思源黑体/思源宋体 + 标准密度',
+    theme: {
+      color: {
+        primary: '#1A1A1A',
+        secondary: '#6B7280',
+        chartPalette: ['#1A1A1A', '#6B7280', '#9CA3AF', '#D1D5DB', '#374151', '#4B5563'],
+        neutralText: '#1A1A1A',
+        neutralBg: '#FAFAFA',
+      },
+      font: { text: 'noto-sans-sc', number: 'inter', heading: 'noto-serif-sc' },
+      density: 'standard',
+      radius: 'small',
+      preset: 'minimal-elegant',
+    },
+  },
+];
+
+/**
+ * 旧形状兼容：早期 ProjectTheme 是 { primary?, secondary?, fontFamily? } 扁平结构。
+ * normalizeTheme 接受任意形状（旧/新/空），输出标准化 ProjectTheme。
+ */
+export interface LegacyProjectTheme {
   primary?: string;
-  /** 次品牌色（HEX），映射到 --accent-secondary。 */
   secondary?: string;
-  /** 字体族（留空=默认 Inter）。 */
   fontFamily?: string;
+}
+
+/** 按 key 查找 FontOption.stack；找不到时回退到默认 stack。 */
+export function getFontStack(key: string | undefined, fallbackKey: string): string {
+  if (key) {
+    const opt = FONT_OPTIONS.find((f) => f.key === key);
+    if (opt) return opt.stack;
+  }
+  const fb = FONT_OPTIONS.find((f) => f.key === fallbackKey);
+  return fb?.stack ?? fallbackKey;
+}
+
+/**
+ * 把任意形状（旧扁平 / 新结构化 / 空）归一为标准 ProjectTheme。
+ * - 旧字段 primary→color.primary、secondary→color.secondary、fontFamily→font.text（按 stack 反查 key）
+ * - 缺失字段用 DEFAULT_THEME 补齐
+ * - 不抛错，容错所有边界
+ */
+export function normalizeTheme(raw: unknown): ProjectTheme {
+  const d = DEFAULT_THEME;
+  if (!raw || typeof raw !== 'object') return structuredCloneSafe(d);
+
+  const obj = raw as Record<string, unknown>;
+
+  // ---- 新结构：color / font / density / radius / preset ----
+  const colorRaw = obj.color as Record<string, unknown> | undefined;
+  const fontRaw = obj.font as Record<string, unknown> | undefined;
+
+  // 旧扁平字段（向后兼容）
+  const legacyPrimary = obj.primary as string | undefined;
+  const legacySecondary = obj.secondary as string | undefined;
+  const legacyFontFamily = obj.fontFamily as string | undefined;
+
+  // 解析 font key：旧 fontFamily 是 CSS stack 值，需反查 key
+  let textKey = d.font.text;
+  if (fontRaw?.text && typeof fontRaw.text === 'string') {
+    textKey = fontRaw.text;
+  } else if (legacyFontFamily) {
+    // 旧 fontFamily 是 stack，尝试反查；查不到就保留 stack 但存 'inter' 作 key
+    const found = FONT_OPTIONS.find((f) => f.stack === legacyFontFamily || f.stack.includes(legacyFontFamily));
+    textKey = found?.key ?? 'inter';
+  }
+
+  let numberKey = d.font.number;
+  if (fontRaw?.number && typeof fontRaw.number === 'string') {
+    numberKey = fontRaw.number;
+  }
+
+  let headingKey: string | undefined = d.font.heading;
+  if (fontRaw && 'heading' in fontRaw) {
+    headingKey = fontRaw.heading as string | undefined;
+  }
+
+  // 图表配色：6 色
+  let chartPalette = [...d.color.chartPalette];
+  if (Array.isArray(colorRaw?.chartPalette)) {
+    chartPalette = (colorRaw!.chartPalette as unknown[]).filter((c): c is string => typeof c === 'string');
+    while (chartPalette.length < 6) chartPalette.push(d.color.chartPalette[chartPalette.length % 6]);
+    chartPalette = chartPalette.slice(0, 6);
+  }
+
+  const density = (obj.density as ThemeDensity) ?? d.density;
+  const radius = (obj.radius as ThemeRadius) ?? d.radius;
+  const preset = typeof obj.preset === 'string' ? obj.preset : obj.preset === undefined ? d.preset : undefined;
+
+  return {
+    color: {
+      primary: (colorRaw?.primary as string) || legacyPrimary || d.color.primary,
+      secondary: (colorRaw?.secondary as string) || legacySecondary || d.color.secondary,
+      chartPalette,
+      neutralText: (colorRaw?.neutralText as string) || d.color.neutralText,
+      neutralBg: (colorRaw?.neutralBg as string) || d.color.neutralBg,
+    },
+    font: {
+      text: textKey,
+      number: numberKey,
+      heading: headingKey,
+    },
+    density: ['compact', 'standard', 'spacious'].includes(density) ? density : d.density,
+    radius: ['sharp', 'small', 'large'].includes(radius) ? radius : d.radius,
+    preset,
+  };
+}
+
+/** structuredClone 容错（部分环境无此 API）。 */
+function structuredCloneSafe<T>(v: T): T {
+  if (typeof structuredClone === 'function') return structuredClone(v);
+  return JSON.parse(JSON.stringify(v));
 }
 
 /** 项目元数据（mock 原型字段，存于 Project.meta JSON）。 */

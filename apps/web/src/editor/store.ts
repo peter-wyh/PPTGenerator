@@ -7,7 +7,12 @@ import type {
   EditorComponent,
   Page,
   ProjectDetail,
+  ProjectMeta,
+  ProjectTheme,
+  ThemeDensity,
+  ThemeRadius,
 } from '@mediakit/shared';
+import { DEFAULT_THEME, normalizeTheme } from '@mediakit/shared';
 import {
   DEFAULT_SIZES,
   getDefaultData,
@@ -17,6 +22,15 @@ import {
   MOVE_SNAP,
 } from './defaults';
 import { getBusinessItem, getLayout } from './business/catalog';
+
+/** 主题补丁：支持嵌套 color/font 部分更新（深合并），density/radius/preset 直接替换。 */
+export type ThemePatch = {
+  color?: Partial<ProjectTheme['color']>;
+  font?: Partial<ProjectTheme['font']>;
+  density?: ThemeDensity;
+  radius?: ThemeRadius;
+  preset?: string;
+};
 
 /** history 快照：仅 pages + currentPageId（忠实 demo：zoom/尺寸/选中不进 history）。 */
 export interface Snapshot {
@@ -63,8 +77,8 @@ export interface EditorState {
   // ---- lifecycle ----
   loadProject: (detail: ProjectDetail, name: string) => void;
   setProjectName: (name: string) => void;
-  /** 报告维度：更新主题（品牌色等），合并进 projectMeta 并标记 dirty。 */
-  setTheme: (theme: Partial<import('@mediakit/shared').ProjectTheme>) => void;
+  /** 报告维度：更新主题（品牌色/字体/密度/圆角），深合并 color/font，标记 dirty。 */
+  setTheme: (patch: ThemePatch) => void;
   markSaved: () => void;
 
   // ---- view ----
@@ -229,10 +243,15 @@ export const useEditorStore = create<EditorState>((set, get) => {
         ? detail.pages
         : [{ id: newId(), name: '第 1 页', components: [] }];
       const snapshot: Snapshot = { pages: clone(pages), currentPageId: pages[0].id };
+      // 加载项目时归一化主题：兼容旧扁平形状 { primary, secondary, fontFamily }。
+      const rawMeta: ProjectMeta | null = detail.meta ?? null;
+      const projectMeta = rawMeta
+        ? { ...rawMeta, theme: normalizeTheme(rawMeta.theme) }
+        : null;
       set({
         projectId: detail.id,
         projectName: name,
-        projectMeta: detail.meta ?? null,
+        projectMeta,
         canvasWidth: detail.width,
         canvasHeight: detail.height,
         pages,
@@ -254,14 +273,23 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     setProjectName: (name) => set({ projectName: name, dirty: true }),
 
-    setTheme: (theme) =>
-      set((s) => ({
-        dirty: true,
-        projectMeta: {
-          ...(s.projectMeta ?? {}),
-          theme: { ...(s.projectMeta?.theme ?? {}), ...theme },
-        },
-      })),
+    setTheme: (patch) =>
+      set((s) => {
+        const current = s.projectMeta?.theme ?? DEFAULT_THEME;
+        // 深合并 color / font 子对象；density / radius / preset 直接替换。
+        // preset: 若 patch 显式含 preset key（含 undefined=清空），则用 patch 值；否则保留当前。
+        const merged: ProjectTheme = {
+          color: { ...current.color, ...patch.color },
+          font: { ...current.font, ...patch.font },
+          density: patch.density ?? current.density,
+          radius: patch.radius ?? current.radius,
+          preset: 'preset' in patch ? patch.preset : current.preset,
+        };
+        return {
+          dirty: true,
+          projectMeta: { ...(s.projectMeta ?? {}), theme: merged } as ProjectMeta,
+        };
+      }),
 
     setZoom: (z) => set({ zoom: Math.round(z * 100) / 100 }),
     zoomByDelta: (delta) =>

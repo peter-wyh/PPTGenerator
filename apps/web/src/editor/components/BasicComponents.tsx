@@ -22,6 +22,7 @@ import type {
   TextData,
 } from '@mediakit/shared';
 
+
 /* ---------------------------------- text --------------------------------- */
 export function TextComponent({ data }: { data: TextData }) {
   return (
@@ -30,7 +31,7 @@ export function TextComponent({ data }: { data: TextData }) {
       style={{
         fontSize: data.fontSize,
         fontWeight: data.fontWeight,
-        fontFamily: data.fontFamily ?? 'Inter',
+        fontFamily: data.fontFamily, // 留空=继承根节点 --font-text
         color: data.color,
         backgroundColor: data.bgColor,
         padding: data.padding,

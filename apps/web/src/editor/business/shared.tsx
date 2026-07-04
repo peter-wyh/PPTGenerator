@@ -11,17 +11,19 @@ export interface RenderCtx {
   variant: VariantId;
 }
 
-export const ACCENT = '#FF5C00';
-export const INK = '#1A1A1A';
-export const STAT_COLORS = ['#FF5C00', '#F59E0B', '#3B82F6', '#8B5CF6'];
-export const BAR_FADE = ['#FF5C00', '#FF8533', '#FDBA74', '#FED7AA'];
+export const ACCENT = 'var(--color-primary)';
+export const INK = 'var(--color-neutral-text)';
+/** 业务块状态色：主品牌色 + 语义色（黄/蓝/紫），随主题切换。 */
+export const STAT_COLORS = ['var(--color-primary)', 'var(--yellow)', 'var(--blue)', 'var(--purple)'];
+/** 渐变柱色：主/次品牌色 + 两个浅色 tint。 */
+export const BAR_FADE = ['var(--color-primary)', 'var(--color-secondary)', '#FDBA74', '#FED7AA'];
 export const AVATAR_DOTS = ['#FFDAC5', '#FDE68A', '#BFDBFE', '#DDD6FE'];
 export const CAL_BANDS = ['#FFF0E8', '#FEF3C7', '#DBEAFE', '#EDE9FE'];
 
 /** 外层包裹（忠实 demo base()：accent=橙边+阴影，light=白底，其余=发丝边）。 */
 export function Base({
   variant,
-  tone = '#FFFFFF',
+  tone = 'var(--color-neutral-bg)',
   children,
 }: {
   variant: VariantId;
@@ -37,10 +39,10 @@ export function Base({
         height: '100%',
         overflow: 'hidden',
         border: accent ? `2px solid ${ACCENT}` : '1px solid #F0E7E2',
-        borderRadius: 10,
-        background: light ? '#FFFFFF' : tone,
+        borderRadius: 'var(--radius-card)',
+        background: light ? 'var(--color-neutral-bg)' : tone,
         boxShadow: accent ? `0 8px 22px rgba(255,92,0,.16)` : undefined,
-        fontFamily: 'Inter, sans-serif',
+        fontFamily: 'var(--font-text)',
         color: INK,
       }}
     >
@@ -58,12 +60,12 @@ export function Label({ item }: { item: BusinessItem }) {
   );
 }
 
-/** 标题（Funnel Sans）。size 默认 21。 */
+/** 标题（heading 字体）。size 默认 21。 */
 export function Title({ text, size = 21, color = INK, style }: { text: string; size?: number; color?: string; style?: React.CSSProperties }) {
   return (
     <div
       style={{
-        fontFamily: "'Funnel Sans', sans-serif",
+        fontFamily: 'var(--font-heading)',
         fontSize: size,
         lineHeight: 1.12,
         fontWeight: 700,
@@ -77,17 +79,17 @@ export function Title({ text, size = 21, color = INK, style }: { text: string; s
 }
 
 /** 药丸列表（首个橙色）。 */
-export function Chips({ list, color = '#FFF7F0' }: { list: string[]; color?: string }) {
+export function Chips({ list, color = 'var(--surface-hover)' }: { list: string[]; color?: string }) {
   return (
     <>
       {list.map((x, i) => (
         <div
           key={i}
           style={{
-            padding: 8,
+            padding: 'var(--space-pad-sm)',
             background: color,
-            borderRadius: 6,
-            color: i === 0 ? ACCENT : '#555',
+            borderRadius: 'var(--radius-card)',
+            color: i === 0 ? ACCENT : 'var(--foreground-secondary)',
             fontSize: 10,
             fontWeight: 600,
             whiteSpace: 'nowrap',
@@ -108,4 +110,4 @@ export function splitStat(s: string): { label: string; value: string } {
   return { value: p[p.length - 1], label: p.slice(0, -1).join(' ') };
 }
 
-export const mono = { fontFamily: "'IBM Plex Mono', monospace" } as const;
+export const mono = { fontFamily: 'var(--font-number)' } as const;

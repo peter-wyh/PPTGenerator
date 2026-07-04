@@ -1,4 +1,5 @@
 import type { Datasource, EditorComponent } from '@mediakit/shared';
+import { DEFAULT_CHART_PALETTE } from '@mediakit/shared';
 import type { BarChartData, LineChartData, PieChartData, TableData } from '@mediakit/shared';
 
 /**
@@ -23,12 +24,12 @@ export function resolveData(
         .map((r) => ({ label: String(r[b.labelColumn ?? ''] ?? ''), value: num(r[b.valueColumn ?? '']), color: pickColor(0) }))
         .filter((_, i) => i < 20);
       // 多色
-      const palette = ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B'];
+      const palette = DEFAULT_CHART_PALETTE;
       bars.forEach((bar, i) => (bar.color = palette[i % palette.length]));
       return { title: (comp.data as BarChartData).title ?? '', bars } as BarChartData;
     }
     case 'pie-chart': {
-      const palette = ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B'];
+      const palette = DEFAULT_CHART_PALETTE;
       const slices = ds.rows.map((r) => ({
         label: String(r[b.labelColumn ?? ''] ?? ''),
         value: num(r[b.valueColumn ?? '']),
@@ -44,7 +45,7 @@ export function resolveData(
       }));
       return {
         title: (comp.data as LineChartData).title ?? '',
-        series: [{ name: b.valueColumn ?? '系列', color: '#FF5C00', points }],
+        series: [{ name: b.valueColumn ?? '系列', color: DEFAULT_CHART_PALETTE[0], points }],
       } as LineChartData;
     }
     case 'table': {
@@ -63,5 +64,5 @@ function num(v: string): number {
 }
 
 function pickColor(i: number): string {
-  return ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B'][i % 5];
+  return DEFAULT_CHART_PALETTE[i % DEFAULT_CHART_PALETTE.length];
 }
