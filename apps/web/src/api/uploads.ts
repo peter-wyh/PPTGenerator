@@ -4,8 +4,8 @@ import { api } from './client';
 export async function uploadImage(file: Blob): Promise<string> {
   const form = new FormData();
   form.append('file', file);
-  const res = await api.post<{ url: string }>('/uploads', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  // 不要手动设 Content-Type：FormData 必须由浏览器带上 boundary，
+  // 否则 multer 解析不出 multipart 边界 → req.file 为空 → 上传 400。
+  const res = await api.post<{ url: string }>('/uploads', form);
   return res.data.url;
 }
