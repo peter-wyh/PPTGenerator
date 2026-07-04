@@ -2,9 +2,9 @@ import type { ComponentType, EditorComponent } from '@mediakit/shared';
 import { getDefaultData } from './defaults';
 
 /**
- * 页面模板目录（M3 精简版：由基础组件拼成）。
- * demo 的完整业务模板（cover/funnel/...）依赖业务组件，留 M4 落地。
- * 组件 id 为占位，addPageWithComponents 会重新分配。
+ * Page template catalog (M3 lite: composed of basic components).
+ * Full business templates (cover/funnel/...) depend on business components, deferred to M4.
+ * Component ids are placeholders; addPageWithComponents reassigns them.
  */
 export interface Template {
   id: string;
@@ -13,16 +13,16 @@ export interface Template {
   components: () => EditorComponent[];
 }
 
-/** 根据 id 取页面模板。 */
+/** Get a page template by id. */
 export function getTemplate(id: string): Template | undefined {
   return TEMPLATES.find((t) => t.id === id);
 }
 
-/** 页面模板分类目录（供「新建页面」弹窗分组陈列）。顺序即展示顺序。 */
+/** Page template categories (grouped in the "New Page" dialog). Order = display order. */
 export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
-  { category: '基础', ids: ['blank', 'title', 'overview', 'table'] },
+  { category: 'Basic', ids: ['blank', 'title', 'overview', 'table'] },
   {
-    category: 'Campaign 报告',
+    category: 'Campaign Reports',
     ids: [
       'report-weekly-overview',
       'report-monthly-overview',
@@ -35,23 +35,24 @@ export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
     ],
   },
   {
-    category: '公司·品牌',
+    category: 'Company · Brand',
     ids: ['cover-page', 'agenda-page', 'company-page', 'package-page', 'milestone-page', 'global-page', 'org-page', 'service-page'],
   },
-  { category: '达人·案例', ids: ['creator-page', 'case-page'] },
+  { category: 'Creators · Cases', ids: ['creator-page', 'case-page'] },
   {
-    category: '策略·内容',
+    category: 'Strategy · Content',
     ids: ['challenge-page', 'process-page', 'calendar-page', 'campaign-plan-page', 'content-analysis-page', 'funnel-page'],
   },
 ];
 
-/* ----------------------------- 场景模板（第④层）----------------------------- */
-// 把多个页面模板串成一份完整报告（一键生成多页）。引用 TEMPLATES 里的页面模板 id。
+/* ----------------------------- Scenario templates (layer ④) ----------------------------- */
+// Compose multiple page templates into a full report (one-click multi-page).
+// References page template ids from TEMPLATES.
 
 export interface ScenarioPage {
-  /** 页面名（侧栏显示）。 */
+  /** Page name (shown in sidebar). */
   name: string;
-  /** 引用的页面模板 id（见 TEMPLATES）。 */
+  /** Referenced page template id (see TEMPLATES). */
   templateId: string;
 }
 
@@ -65,38 +66,38 @@ export interface ScenarioTemplate {
 export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   {
     id: 'biweekly',
-    name: 'Campaign 双周报',
-    description: '8 页 · 业绩 + 渠道 + 广告位 + 达人 + 套餐',
+    name: 'Campaign Biweekly Report',
+    description: '8 pages · Performance + Channels + Placements + Creators + Packages',
     pages: [
-      { name: '封面', templateId: 'cover-page' },
-      { name: '业绩概览', templateId: 'report-monthly-overview' },
-      { name: '渠道拆分', templateId: 'report-channel' },
-      { name: '渠道 Post', templateId: 'report-posts' },
-      { name: 'DM 广告位', templateId: 'report-placement' },
-      { name: '合作达人', templateId: 'creator-page' },
-      { name: '套餐', templateId: 'package-page' },
-      { name: '封底', templateId: 'cover-page' },
+      { name: 'Cover', templateId: 'cover-page' },
+      { name: 'Performance Overview', templateId: 'report-monthly-overview' },
+      { name: 'Channel Breakdown', templateId: 'report-channel' },
+      { name: 'Channel Posts', templateId: 'report-posts' },
+      { name: 'DM Placements', templateId: 'report-placement' },
+      { name: 'Partner Creators', templateId: 'creator-page' },
+      { name: 'Packages', templateId: 'package-page' },
+      { name: 'Back Cover', templateId: 'cover-page' },
     ],
   },
   {
     id: 'monthly',
-    name: 'Campaign 月报',
-    description: '14 页 · 章节分隔 + 业绩/商品/渠道/达人/广告位/套餐',
+    name: 'Campaign Monthly Report',
+    description: '14 pages · Section dividers + Performance/Product/Channel/Creator/Placement/Package',
     pages: [
-      { name: '编辑说明（不导出）', templateId: 'blank' },
-      { name: '封面', templateId: 'cover-page' },
+      { name: "Editor's Note (not exported)", templateId: 'blank' },
+      { name: 'Cover', templateId: 'cover-page' },
       { name: 'PART 1 · Performance', templateId: 'title' },
-      { name: '业绩概览', templateId: 'report-monthly-overview' },
-      { name: 'TOP 商品', templateId: 'report-product' },
-      { name: '渠道表现', templateId: 'report-channel' },
-      { name: '头部达人合作', templateId: 'report-creator-collab' },
-      { name: '渠道 Post', templateId: 'report-posts' },
-      { name: 'DM 广告位', templateId: 'report-placement' },
+      { name: 'Performance Overview', templateId: 'report-monthly-overview' },
+      { name: 'Top Products', templateId: 'report-product' },
+      { name: 'Channel Performance', templateId: 'report-channel' },
+      { name: 'Top Creator Collaboration', templateId: 'report-creator-collab' },
+      { name: 'Channel Posts', templateId: 'report-posts' },
+      { name: 'DM Placements', templateId: 'report-placement' },
       { name: 'PART 2 · Optimization', templateId: 'title' },
-      { name: '套餐', templateId: 'package-page' },
-      { name: '推荐达人', templateId: 'creator-page' },
-      { name: '达人详情', templateId: 'creator-page' },
-      { name: '封底', templateId: 'cover-page' },
+      { name: 'Packages', templateId: 'package-page' },
+      { name: 'Recommended Creators', templateId: 'creator-page' },
+      { name: 'Creator Details', templateId: 'creator-page' },
+      { name: 'Back Cover', templateId: 'cover-page' },
     ],
   },
 ];
@@ -105,7 +106,7 @@ function t(type: ComponentType, x: number, y: number, w: number, h: number): Edi
   return { id: `tpl-${type}-${x}-${y}`, type, x, y, w, h, data: getDefaultData(type) };
 }
 
-/** 页面标题文本块（大字号粗体）。 */
+/** Page title text block (large, bold). */
 function titleAt(content: string, x: number, y: number, w = 1120, h = 50): EditorComponent {
   const title = t('text', x, y, w, h);
   const data = title.data as { content: string; fontSize: number; fontWeight: number };
@@ -115,7 +116,7 @@ function titleAt(content: string, x: number, y: number, w = 1120, h = 50): Edito
   return title;
 }
 
-/** 表格主体块（设置 headers/rows）。 */
+/** Table body block (sets headers/rows). */
 function tableAt(x: number, y: number, w: number, h: number, headers: string[], rows: string[][]): EditorComponent {
   const tbl = t('table', x, y, w, h);
   const data = tbl.data as { headers: string[]; rows: string[][] };
@@ -124,7 +125,7 @@ function tableAt(x: number, y: number, w: number, h: number, headers: string[], 
   return tbl;
 }
 
-/** 文本块（设置 content/fontSize）。 */
+/** Text block (sets content/fontSize). */
 function textAt(x: number, y: number, w: number, h: number, content: string, fontSize = 16): EditorComponent {
   const tx = t('text', x, y, w, h);
   const data = tx.data as { content: string; fontSize: number };
@@ -134,8 +135,9 @@ function textAt(x: number, y: number, w: number, h: number, content: string, fon
 }
 
 /**
- * 标题 + 表格（+可选简介）的页面骨架 —— legacy 整页版式（里程碑/组织架构/服务矩阵…）
- * 迁移为「页面模板编排通用组件」的通用形态。
+ * Title + table (+ optional intro) page skeleton — legacy full-page layouts
+ * (milestones / org chart / service matrix …) migrated to the generic
+ * "page-template-orchestrates-common-components" form.
  */
 function tablePage(
   title: string,
@@ -149,33 +151,33 @@ function tablePage(
 export const TEMPLATES: Template[] = [
   {
     id: 'blank',
-    name: '空白页',
-    description: '从零开始',
+    name: 'Blank',
+    description: 'Start from scratch',
     components: () => [],
   },
   {
     id: 'title',
-    name: '标题页',
-    description: '大标题 + 副标题',
+    name: 'Title Page',
+    description: 'Big title + subtitle',
     components: () => {
       const title = t('text', 120, 200, 900, 120);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Report Title';
       (title.data as { fontSize: number }).fontSize = 48;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const sub = t('text', 120, 340, 900, 60);
-      (sub.data as { content: string; fontSize: number }).content = '副标题 / 摘要说明';
+      (sub.data as { content: string; fontSize: number }).content = 'Subtitle / Summary';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
     },
   },
   {
     id: 'overview',
-    name: '数据概览',
-    description: '指标卡 + 柱状图',
+    name: 'Data Overview',
+    description: 'Indicator cards + bar chart',
     components: () => {
       const cards = [0, 1, 2].map((i) => {
         const c = t('indicator-card', 80 + i * 300, 80, 260, 110);
-        (c.data as { title: string; value: string }).title = `指标 ${i + 1}`;
+        (c.data as { title: string; value: string }).title = `Metric ${i + 1}`;
         (c.data as { value: string }).value = '---';
         return c;
       });
@@ -185,8 +187,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'table',
-    name: '表格页',
-    description: '数据表格',
+    name: 'Table Page',
+    description: 'Data table',
     components: () => {
       const tbl = t('table', 80, 100, 1120, 520);
       return [tbl];
@@ -194,15 +196,15 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'creator-page',
-    name: '达人介绍页',
-    description: '头像卡 + 数据条 + 作品列表（试点）',
+    name: 'Creator Intro Page',
+    description: 'Avatar card + stats strip + works list (pilot)',
     components: () => {
-      // 顶部标题
+      // Top title
       const title = t('text', 80, 60, 900, 60);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '达人介绍';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Creator Intro';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
-      // 页内业务组件（各自独立可拖拽/删除 —— 验证"页内语义块"粒度）
+      // In-page business components (each independently draggable/deletable — validates "in-page semantic block" granularity)
       const avatar = t('creator-avatar-card', 80, 150, 360, 120);
       const stats = t('creator-stats-strip', 460, 150, 740, 120);
       const works = t('creator-works-list', 80, 300, 1120, 220);
@@ -211,62 +213,62 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'cover-page',
-    name: '封面页',
-    description: '大标题 + 副标题',
+    name: 'Cover Page',
+    description: 'Big title + subtitle',
     components: () => {
       const title = t('text', 120, 240, 1000, 120);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Report Title';
       (title.data as { fontSize: number }).fontSize = 56;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const sub = t('text', 120, 380, 1000, 50);
-      (sub.data as { content: string; fontSize: number }).content = '副标题 / 时间 / 品牌';
+      (sub.data as { content: string; fontSize: number }).content = 'Subtitle / Date / Brand';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
     },
   },
   {
     id: 'agenda-page',
-    name: '目录页',
-    description: '章节导航表格',
+    name: 'Agenda Page',
+    description: 'Section navigation table',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '目录';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Agenda';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const tbl = t('table', 80, 140, 1120, 460);
-      (tbl.data as { headers: string[]; rows: string[][] }).headers = ['章节', '内容'];
+      (tbl.data as { headers: string[]; rows: string[][] }).headers = ['Section', 'Content'];
       (tbl.data as { rows: string[][] }).rows = [
-        ['01', '公司介绍'],
-        ['02', '业绩概览'],
-        ['03', '达人分析'],
-        ['04', '合作提案'],
+        ['01', 'Company Intro'],
+        ['02', 'Performance Overview'],
+        ['03', 'Creator Analysis'],
+        ['04', 'Partnership Proposal'],
       ];
       return [title, tbl];
     },
   },
   {
     id: 'company-page',
-    name: '公司介绍页',
-    description: '简介 + 品牌墙',
+    name: 'Company Page',
+    description: 'Intro + brand wall',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '关于我们';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'About Us';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const intro = t('text', 80, 130, 1120, 80);
       (intro.data as { content: string }).content =
-        '以内容为核心，连接达人资源、媒体资源与转化数据，服务 300+ 增长型品牌。';
+        'Content-first: connecting creator resources, media resources, and conversion data to serve 300+ growth-stage brands.';
       const wall = t('brand-wall', 80, 240, 1120, 360);
       return [title, intro, wall];
     },
   },
   {
     id: 'package-page',
-    name: '套餐对比页',
-    description: '3 个套餐卡',
+    name: 'Package Comparison Page',
+    description: '3 package cards',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '套餐对比';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Package Comparison';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const cardW = 360;
@@ -276,8 +278,8 @@ export const TEMPLATES: Template[] = [
         const c = t('package-card', Math.round(startX + i * (cardW + gap)), 150, cardW, 460);
         const data = c.data as { name: string; highlighted: boolean };
         if (i === 1) {
-          // 中间方案设为推荐。
-          data.name = i === 1 ? '增长加速包' : data.name;
+          // Middle plan marked as recommended.
+          data.name = i === 1 ? 'Growth Booster' : data.name;
           data.highlighted = true;
         }
         return c;
@@ -287,22 +289,22 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'report-weekly-overview',
-    name: '周报·业绩概览',
-    description: 'KPI 看板 + 下周计划',
+    name: 'Weekly · Performance Overview',
+    description: 'KPI board + next-week plan',
     components: () => {
       const title = titleAt('Weekly Status Update', 80, 50);
       const kpi = t('kpi-board', 80, 130, 1120, 200);
       const plan = t('text', 80, 360, 1120, 280);
       (plan.data as { content: string; fontSize: number }).content =
-        '下周计划：\n· 追加 Spark Ads 投放\n· 上线 12 位敏感肌达人内容\n· 重点跟进转化率偏低的渠道';
+        'Next Week Plan:\n· Add Spark Ads placements\n· Launch 12 sensitive-skin creator posts\n· Focus on low-CVR channels';
       (plan.data as { fontSize: number }).fontSize = 16;
       return [title, kpi, plan];
     },
   },
   {
     id: 'report-monthly-overview',
-    name: '月报·业绩概览',
-    description: 'KPI + 趋势图 + 周期对比 + Insight',
+    name: 'Monthly · Performance Overview',
+    description: 'KPI + trend chart + period comparison + Insight',
     components: () => {
       const title = titleAt('Performance Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
@@ -311,20 +313,20 @@ export const TEMPLATES: Template[] = [
       const timeline = t('timeline-compare', 760, 300, 440, 240);
       const insight = t('text', 80, 560, 1120, 80);
       (insight.data as { content: string }).content =
-        'Insight：本期销售额同比 +20%，主要由中腰部创作者的持续转化驱动；下月建议加大该层级预算。';
+        'Insight: Sales +20% YoY, mainly driven by sustained conversion from mid-tier creators; recommend increasing budget for this tier next month.';
       return [title, kpi, chart, timeline, insight];
     },
   },
   {
     id: 'report-channel',
-    name: '月报·渠道表现',
-    description: '渠道大数字 + 渠道对比表',
+    name: 'Monthly · Channel Performance',
+    description: 'Channel big numbers + comparison table',
     components: () => {
       const title = titleAt('Performance by Channels', 80, 40);
-      // 渠道大数字：复用 kpi-board（compact）承载 Engaged Publishers / Est Impression 等。
+      // Channel big numbers: reuse kpi-board (compact) to carry Engaged Publishers / Est Impression etc.
       const channelKpi = t('kpi-board', 80, 110, 1120, 90);
       (channelKpi.data as { variant: string }).variant = 'compact';
-      (channelKpi.data as { headers: string[]; rows: string[][] }).headers = ['指标', '数值', '对比'];
+      (channelKpi.data as { headers: string[]; rows: string[][] }).headers = ['Metric', 'Value', 'Compare'];
       (channelKpi.data as { rows: string[][] }).rows = [
         ['Engaged Publishers', '38', '+6'],
         ['Est Impression', '12.6M', '+18%'],
@@ -350,23 +352,23 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'report-wrapup-review',
-    name: '结案·业绩复盘',
-    description: 'KPI + 周期对比 + What Works',
+    name: 'Wrap-up · Performance Review',
+    description: 'KPI + period comparison + What Works',
     components: () => {
-      const title = titleAt('Campaign 复盘', 80, 40);
+      const title = titleAt('Campaign Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
       const timeline = t('timeline-compare', 80, 300, 1120, 220);
       (timeline.data as { variant: string }).variant = 'with-bar';
       const works = t('text', 80, 540, 1120, 100);
       (works.data as { content: string }).content =
-        'What Works：7 天肌肤日记机制显著提升收藏与加购。\nChallenge & Strategy：前 3 秒功效表达偏弱 → 下一阶段缩短钩子、放大中腰部创作者。';
+        'What Works: The 7-day skin diary mechanic significantly lifted saves and add-to-carts.\nChallenge & Strategy: Efficacy expression in the first 3s is weak → next phase: shorter hooks, amplify mid-tier creators.';
       return [title, kpi, timeline, works];
     },
   },
   {
     id: 'report-product',
-    name: '月报·商品表现',
-    description: 'TOP 商品 + AI 洞察',
+    name: 'Monthly · Product Performance',
+    description: 'Top products + AI insight',
     components: () => {
       const title = titleAt('Top Products', 80, 40);
       const products = t('product-performance', 80, 110, 1120, 360);
@@ -375,14 +377,14 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'report-creator-collab',
-    name: '月报·达人合作详情',
-    description: '头像 + 合作数据 + 作品 + 变动说明',
+    name: 'Monthly · Creator Collaboration Details',
+    description: 'Avatar + partnership data + works + change note',
     components: () => {
       const title = titleAt('Top Influencer Collaboration', 80, 40);
-      // 编排已有 creator 三件套（验证业务组件跨页复用）。
+      // Orchestrate the existing creator trio (validates cross-page reuse of business components).
       const avatar = t('creator-avatar-card', 80, 110, 440, 120);
       const stats = t('creator-stats-strip', 560, 110, 640, 120);
-      // 合作指标覆盖默认粉丝数据。
+      // Partnership metrics override default follower data.
       (stats.data as { stats: { label: string; value: string; color: string }[] }).stats = [
         { label: 'Impressions', value: '2.4M', color: '#FF5C00' },
         { label: 'Engagement Rate', value: '9.1%', color: '#3B82F6' },
@@ -392,14 +394,14 @@ export const TEMPLATES: Template[] = [
       const works = t('creator-works-list', 80, 260, 1120, 200);
       const note = t('text', 80, 480, 1120, 80);
       (note.data as { content: string }).content =
-        '合作变动说明：本期该达人推广量上升 18%，主因为 7 天日记内容线带动复购；建议下期延续该机制并增加 2 条爆款复刻。';
+        "Change Note: This creator's promo volume rose 18% this period, mainly driven by repeat purchases from the 7-day diary content line; recommend continuing this mechanic next period and adding 2 hero-post replicas.";
       return [title, avatar, stats, works, note];
     },
   },
   {
     id: 'report-placement',
-    name: '月报·DM 广告位',
-    description: '广告位截图 + 亮点/经验',
+    name: 'Monthly · DM Placements',
+    description: 'Placement screenshots + highlights/learnings',
     components: () => {
       const title = titleAt('Placement Display', 80, 40);
       const placement = t('placement-display', 80, 110, 1120, 320);
@@ -409,8 +411,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'report-posts',
-    name: '月报·渠道 Post',
-    description: 'Content Site / Reddit / FB Post 列表',
+    name: 'Monthly · Channel Posts',
+    description: 'Content Site / Reddit / FB Post list',
     components: () => {
       const title = titleAt('Channel Posts', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
@@ -418,119 +420,119 @@ export const TEMPLATES: Template[] = [
     },
   },
 
-  /* -------- legacy 整页版式 → 页面模板（拆成通用/业务组件编排） -------- */
+  /* -------- legacy full-page layouts → page templates (split into common/business component orchestrations) -------- */
 
   {
     id: 'milestone-page',
-    name: '公司里程碑',
-    description: '标题 + 里程碑表 + 简介',
+    name: 'Company Milestones',
+    description: 'Title + milestone table + intro',
     components: () =>
       tablePage(
-        '公司里程碑',
-        ['年份', '里程碑'],
+        'Company Milestones',
+        ['Year', 'Milestone'],
         [
-          ['2019', '业务启航'],
-          ['2022', '服务 100+ 品牌'],
-          ['2024', 'AI 营销能力上线'],
-          ['2026', '覆盖全球市场'],
+          ['2019', 'Business Launched'],
+          ['2022', 'Served 100+ Brands'],
+          ['2024', 'AI Marketing Capabilities Live'],
+          ['2026', 'Global Coverage'],
         ],
-        '从 0 到全球化：每一步聚焦真实内容驱动的品牌增长。',
+        'From zero to global: every step focused on real content-driven brand growth.',
       ),
   },
   {
     id: 'global-page',
-    name: '全球布局',
-    description: '标题 + 区域布局表',
+    name: 'Global Footprint',
+    description: 'Title + regional layout table',
     components: () =>
-      tablePage('全球化业务网络', ['区域', '办公室', '创作者资源'], [
-        ['亚太', '3', '420+'],
-        ['北美', '2', '280+'],
-        ['欧洲', '1', '180+'],
-        ['中东', '0', '120+'],
+      tablePage('Global Business Network', ['Region', 'Offices', 'Creator Resources'], [
+        ['APAC', '3', '420+'],
+        ['North America', '2', '280+'],
+        ['Europe', '1', '180+'],
+        ['Middle East', '0', '120+'],
       ]),
   },
   {
     id: 'org-page',
-    name: '组织架构',
-    description: '标题 + 团队分工表',
+    name: 'Org Structure',
+    description: 'Title + team breakdown table',
     components: () =>
-      tablePage('策略 × 创意 × 运营 × 数据', ['职能', '占比', '职责'], [
-        ['策略咨询', '20%', '增长诊断与达人策略'],
-        ['创意内容', '25%', '内容方案共创'],
-        ['媒介运营', '35%', '投放与达人运营'],
-        ['数据技术', '20%', '归因与复盘'],
+      tablePage('Strategy × Creative × Ops × Data', ['Function', 'Share', 'Responsibility'], [
+        ['Strategy Consulting', '20%', 'Growth diagnosis & creator strategy'],
+        ['Creative Content', '25%', 'Content solution co-creation'],
+        ['Media Ops', '35%', 'Media buying & creator ops'],
+        ['Data & Tech', '20%', 'Attribution & review'],
       ]),
   },
   {
     id: 'service-page',
-    name: '核心服务矩阵',
-    description: '标题 + 服务清单表',
+    name: 'Core Service Matrix',
+    description: 'Title + service list table',
     components: () =>
-      tablePage('从人群洞察到生意增长', ['服务', '说明'], [
-        ['达人策略与招募', '按品类匹配创作者'],
-        ['TikTok 内容投放', 'Spark Ads 加速'],
-        ['社媒媒体采买', '多平台组合'],
-        ['AI 数据归因', '效果可回溯'],
+      tablePage('From Audience Insight to Business Growth', ['Service', 'Description'], [
+        ['Creator Strategy & Recruiting', 'Match creators by category'],
+        ['TikTok Content Buying', 'Spark Ads acceleration'],
+        ['Social Media Buying', 'Multi-platform mix'],
+        ['AI Data Attribution', 'Traceable performance'],
       ]),
   },
   {
     id: 'challenge-page',
-    name: '机会与挑战',
-    description: '标题 + 机会/挑战表',
+    name: 'Opportunities & Challenges',
+    description: 'Title + opportunity/challenge table',
     components: () =>
       tablePage(
-        '机会与挑战',
-        ['维度', '机会', '挑战'],
+        'Opportunities & Challenges',
+        ['Dimension', 'Opportunity', 'Challenge'],
         [
-          ['人群', '18–24 高潜', '心智未稳固'],
-          ['内容', 'UGC 可信背书', '同质化严重'],
-          ['细分', '敏感肌蓝海', '品类教育成本高'],
+          ['Audience', '18–24 high-potential', 'Weak mind-share'],
+          ['Content', 'Credible UGC endorsement', 'Heavy homogenization'],
+          ['Segment', 'Sensitive-skin blue ocean', 'High category-education cost'],
         ],
-        '抓住功效可视化内容窗口，放大中腰部创作者转化。',
+        'Seize the efficacy-visualization content window; amplify mid-tier creator conversion.',
       ),
   },
   {
     id: 'process-page',
-    name: '合作评估流程',
-    description: '标题 + 流程步骤表',
+    name: 'Partnership Evaluation Process',
+    description: 'Title + process steps table',
     components: () =>
-      tablePage('4 周从需求到上线', ['步骤', '核心工作', '目标'], [
-        ['1', '品牌增长诊断', '明确 KPI'],
-        ['2', '达人资源评估', '匹配度排序'],
-        ['3', '内容方案共创', '脚本定稿'],
-        ['4', '上线复盘迭代', '效果归因'],
+      tablePage('4 Weeks from Brief to Launch', ['Step', 'Core Work', 'Goal'], [
+        ['1', 'Brand Growth Diagnosis', 'Define KPIs'],
+        ['2', 'Creator Resource Evaluation', 'Match-rank sorting'],
+        ['3', 'Content Solution Co-creation', 'Finalize scripts'],
+        ['4', 'Launch, Review & Iterate', 'Performance attribution'],
       ]),
   },
   {
     id: 'calendar-page',
-    name: '营销活动日历',
-    description: '标题 + 季度节点表',
+    name: 'Marketing Calendar',
+    description: 'Title + seasonal milestones table',
     components: () =>
-      tablePage('2026 内容营销节奏', ['节点', '主题', '动作'], [
-        ['春季', '焕新种草', '上新内容'],
-        ['618', '集中转化', '头部引爆'],
-        ['开学季', '场景渗透', '中腰部扩量'],
-        ['黑五圣诞', '礼赠爆发', 'Spark Ads'],
+      tablePage('2026 Content Marketing Cadence', ['Milestone', 'Theme', 'Action'], [
+        ['Spring', 'Refresh & seed', 'Launch new content'],
+        ['618', 'Concentrated conversion', 'Mega-creator boost'],
+        ['Back-to-School', 'Scenario penetration', 'Mid-tier scale-up'],
+        ['Black Friday & Christmas', 'Gifting surge', 'Spark Ads'],
       ]),
   },
   {
     id: 'campaign-plan-page',
-    name: 'Campaign 方案',
-    description: '标题 + 阶段路径表',
+    name: 'Campaign Plan',
+    description: 'Title + stage roadmap table',
     components: () =>
-      tablePage('30 天 TikTok 增长路径', ['阶段', '动作', '目标'], [
-        ['预热', '种子达人种草', '蓄水'],
-        ['引爆', '头部达人爆发', '声量'],
-        ['扩散', 'Spark Ads 加码', '触达'],
-        ['复盘', 'GMV 与评论', '归因'],
+      tablePage('30-Day TikTok Growth Path', ['Stage', 'Action', 'Goal'], [
+        ['Warm-up', 'Seed-creator seeding', 'Demand pool'],
+        ['Ignite', 'Mega-creator burst', 'Buzz'],
+        ['Scale', 'Spark Ads boost', 'Reach'],
+        ['Review', 'GMV & reviews', 'Attribution'],
       ]),
   },
   {
     id: 'case-page',
-    name: '合作案例',
-    description: '标题 + 成效卡 + 案例作品 + 文案',
+    name: 'Case Study',
+    description: 'Title + result cards + case works + copy',
     components: () => {
-      const title = titleAt('合作案例', 80, 50);
+      const title = titleAt('Case Study', 80, 50);
       const cards = [0, 1, 2, 3].map((i) => {
         const c = t('indicator-card', 80 + i * 280, 130, 260, 90);
         const d = c.data as { title: string; value: string; colorTheme: string };
@@ -540,16 +542,16 @@ export const TEMPLATES: Template[] = [
         return c;
       });
       const works = t('creator-works-list', 80, 250, 1120, 200);
-      const narrative = textAt(80, 480, 1120, 100, '以"7 天肌肤状态日记"内容线串联测评、种草与即时转化。');
+      const narrative = textAt(80, 480, 1120, 100, 'Linking reviews, seeding, and instant conversion via the "7-day skin diary" content line.');
       return [title, ...cards, works, narrative];
     },
   },
   {
     id: 'content-analysis-page',
-    name: '作品分析',
-    description: '标题 + 内容类型分布柱图 + 明细表',
+    name: 'Content Analysis',
+    description: 'Title + content-type distribution bar chart + detail table',
     components: () => {
-      const title = titleAt('内容表现与转化分析', 80, 50);
+      const title = titleAt('Content Performance & Conversion Analysis', 80, 50);
       const chart = t('bar-chart', 80, 130, 560, 260);
       (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = 'Content Type Distribution';
       (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
@@ -568,10 +570,10 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'funnel-page',
-    name: '增长漏斗',
-    description: '标题 + 漏斗各阶段柱图',
+    name: 'Growth Funnel',
+    description: 'Title + funnel-stage bar chart',
     components: () => {
-      const title = titleAt('内容驱动的转化漏斗', 80, 50);
+      const title = titleAt('Content-Driven Conversion Funnel', 80, 50);
       const chart = t('bar-chart', 80, 130, 1120, 360);
       (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = 'From Impressions to Orders';
       (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
