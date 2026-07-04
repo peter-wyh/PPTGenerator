@@ -307,7 +307,7 @@ export const TEMPLATES: Template[] = [
       const title = titleAt('Performance Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
       const chart = t('bar-chart', 80, 300, 640, 240);
-      (chart.data as { title: string }).title = 'Sales 趋势';
+      (chart.data as { title: string }).title = 'Sales Trend';
       const timeline = t('timeline-compare', 760, 300, 440, 240);
       const insight = t('text', 80, 560, 1120, 80);
       (insight.data as { content: string }).content =
@@ -551,17 +551,17 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const title = titleAt('内容表现与转化分析', 80, 50);
       const chart = t('bar-chart', 80, 130, 560, 260);
-      (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = '内容类型分布';
+      (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = 'Content Type Distribution';
       (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
-        { label: 'UGC 测评', value: 46, color: '#FF5C00' },
-        { label: '达人演示', value: 31, color: '#3B82F6' },
-        { label: '成分科普', value: 15, color: '#22C55E' },
-        { label: '礼赠场景', value: 8, color: '#8B5CF6' },
+        { label: 'UGC Review', value: 46, color: '#FF5C00' },
+        { label: 'Creator Demo', value: 31, color: '#3B82F6' },
+        { label: 'Ingredient Education', value: 15, color: '#22C55E' },
+        { label: 'Gifting', value: 8, color: '#8B5CF6' },
       ];
-      const tbl = tableAt(680, 130, 520, 260, ['类型', '播放占比', '高频词'], [
-        ['UGC 测评', '46%', 'gentle / glow'],
-        ['达人演示', '31%', '效果 / 真实'],
-        ['成分科普', '15%', '安全 / 温和'],
+      const tbl = tableAt(680, 130, 520, 260, ['Type', 'View Share', 'Top Keywords'], [
+        ['UGC Review', '46%', 'gentle / glow'],
+        ['Creator Demo', '31%', 'effect / authentic'],
+        ['Ingredient Education', '15%', 'safe / gentle'],
       ]);
       return [title, chart, tbl];
     },

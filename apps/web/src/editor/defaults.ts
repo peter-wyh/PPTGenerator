@@ -50,7 +50,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return { title: '指标名称', value: '---', colorTheme: 'blue' };
     case 'bar-chart':
       return {
-        title: '柱状图',
+        title: 'Bar Chart',
         bars: [
           { label: 'A', value: 80, color: '#FF5C00' },
           { label: 'B', value: 60, color: '#3B82F6' },
@@ -59,24 +59,24 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'line-chart':
       return {
-        title: '折线图',
+        title: 'Line Chart',
         series: [
           {
-            name: '系列1',
+            name: 'Series 1',
             color: '#FF5C00',
             points: [
-              { label: '周一', value: 30 },
-              { label: '周二', value: 60 },
-              { label: '周三', value: 45 },
-              { label: '周四', value: 80 },
-              { label: '周五', value: 55 },
+              { label: 'Mon', value: 30 },
+              { label: 'Tue', value: 60 },
+              { label: 'Wed', value: 45 },
+              { label: 'Thu', value: 80 },
+              { label: 'Fri', value: 55 },
             ],
           },
         ],
       };
     case 'pie-chart':
       return {
-        title: '饼图',
+        title: 'Pie Chart',
         slices: [
           { label: 'A', value: 40, color: '#FF5C00' },
           { label: 'B', value: 30, color: '#3B82F6' },
