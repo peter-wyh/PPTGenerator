@@ -386,7 +386,7 @@ export const TEMPLATES: Template[] = [
       (stats.data as { stats: { label: string; value: string; color: string }[] }).stats = [
         { label: 'Impressions', value: '2.4M', color: '#FF5C00' },
         { label: 'Engagement Rate', value: '9.1%', color: '#3B82F6' },
-        { label: '销售额', value: '¥186K', color: '#22C55E' },
+        { label: 'Sales', value: '¥186K', color: '#22C55E' },
         { label: 'ROAS', value: '4.2x', color: '#8B5CF6' },
       ];
       const works = t('creator-works-list', 80, 260, 1120, 200);
@@ -534,7 +534,7 @@ export const TEMPLATES: Template[] = [
       const cards = [0, 1, 2, 3].map((i) => {
         const c = t('indicator-card', 80 + i * 280, 130, 260, 90);
         const d = c.data as { title: string; value: string; colorTheme: string };
-        d.title = ['Impressions', 'GMV 达成', 'Engagement Rate', '合作达人'][i];
+        d.title = ['Impressions', 'GMV Achievement', 'Engagement Rate', 'Partner Creators'][i];
         d.value = ['12.6M', '138%', '8.7%', '70'][i];
         d.colorTheme = ['orange', 'green', 'blue', 'purple'][i];
         return c;
@@ -573,12 +573,12 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const title = titleAt('内容驱动的转化漏斗', 80, 50);
       const chart = t('bar-chart', 80, 130, 1120, 360);
-      (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = '从曝光到下单';
+      (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = 'From Impressions to Orders';
       (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
         { label: 'Impressions', value: 1260, color: '#FF5C00' },
         { label: 'Reach', value: 810, color: '#F97316' },
         { label: 'Interactions', value: 110, color: '#3B82F6' },
-        { label: '下单', value: 84, color: '#22C55E' },
+        { label: 'Orders', value: 84, color: '#22C55E' },
       ];
       return [title, chart];
     },
