@@ -47,13 +47,13 @@ describe('creator business components — render', () => {
       engagement: '8.7%',
     };
     const { rerender } = render(<CreatorAvatarCard data={data} />);
-    expect(screen.getByText(/粉丝 1\.28M/)).toBeInTheDocument();
-    expect(screen.getByText(/获赞 12\.4M/)).toBeInTheDocument();
-    expect(screen.getByText(/互动 8\.7%/)).toBeInTheDocument();
+    expect(screen.getByText(/Followers 1\.28M/)).toBeInTheDocument();
+    expect(screen.getByText(/Likes 12\.4M/)).toBeInTheDocument();
+    expect(screen.getByText(/Engagement Rate 8\.7%/)).toBeInTheDocument();
 
     // 切到竖排同样展示
     rerender(<CreatorAvatarCard data={{ ...data, variant: 'vertical' }} />);
-    expect(screen.getByText(/粉丝 1\.28M/)).toBeInTheDocument();
+    expect(screen.getByText(/Followers 1\.28M/)).toBeInTheDocument();
   });
 
   it('avatar card omits KPI line when no stats, and compact never shows it', () => {
@@ -62,7 +62,7 @@ describe('creator business components — render', () => {
         data={{ variant: 'horizontal', avatar: '', name: 'Mia', platform: 'tiktok', tier: 'macro', intro: 'hi' }}
       />,
     );
-    expect(screen.queryByText(/粉丝/)).toBeNull();
+    expect(screen.queryByText(/Followers/)).toBeNull();
 
     rerender(
       <CreatorAvatarCard
@@ -77,7 +77,7 @@ describe('creator business components — render', () => {
         }}
       />,
     );
-    expect(screen.queryByText(/粉丝/)).toBeNull();
+    expect(screen.queryByText(/Followers/)).toBeNull();
   });
 
   it('stats strip renders each stat label + value', () => {

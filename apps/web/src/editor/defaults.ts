@@ -114,16 +114,16 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         variant: 'cards',
         stats: [
-          { key: 'followers', label: '粉丝', value: '1.28M', color: '#FF5C00', selected: true },
-          { key: 'engagement', label: '互动率', value: '8.7%', color: '#3B82F6', selected: true },
-          { key: 'reach', label: '平均触达', value: '640K', color: '#22C55E', selected: true },
-          { key: 'impressions', label: '曝光', value: '12.6M', color: '#8B5CF6', selected: true },
+          { key: 'followers', label: 'Followers', value: '1.28M', color: '#FF5C00', selected: true },
+          { key: 'engagement', label: 'Engagement Rate', value: '8.7%', color: '#3B82F6', selected: true },
+          { key: 'reach', label: 'Avg. Reach', value: '640K', color: '#22C55E', selected: true },
+          { key: 'impressions', label: 'Impressions', value: '12.6M', color: '#8B5CF6', selected: true },
         ],
       };
     case 'creator-works-list':
       return {
         variant: 'cards',
-        headers: ['封面', '标题', '转', '赞', '评'],
+        headers: ['封面', '标题', 'Shares', 'Likes', 'Comments'],
         rows: [
           ['', '7 天肌肤日记 · Day 1', '1.2K', '86K', '2.4K'],
           ['', '敏感肌精华实测', '980', '54K', '1.8K'],

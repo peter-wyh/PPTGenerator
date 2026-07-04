@@ -384,8 +384,8 @@ export const TEMPLATES: Template[] = [
       const stats = t('creator-stats-strip', 560, 110, 640, 120);
       // 合作指标覆盖默认粉丝数据。
       (stats.data as { stats: { label: string; value: string; color: string }[] }).stats = [
-        { label: '曝光', value: '2.4M', color: '#FF5C00' },
-        { label: '互动率', value: '9.1%', color: '#3B82F6' },
+        { label: 'Impressions', value: '2.4M', color: '#FF5C00' },
+        { label: 'Engagement Rate', value: '9.1%', color: '#3B82F6' },
         { label: '销售额', value: '¥186K', color: '#22C55E' },
         { label: 'ROAS', value: '4.2x', color: '#8B5CF6' },
       ];
@@ -534,7 +534,7 @@ export const TEMPLATES: Template[] = [
       const cards = [0, 1, 2, 3].map((i) => {
         const c = t('indicator-card', 80 + i * 280, 130, 260, 90);
         const d = c.data as { title: string; value: string; colorTheme: string };
-        d.title = ['累计曝光', 'GMV 达成', '互动率', '合作达人'][i];
+        d.title = ['Impressions', 'GMV 达成', 'Engagement Rate', '合作达人'][i];
         d.value = ['12.6M', '138%', '8.7%', '70'][i];
         d.colorTheme = ['orange', 'green', 'blue', 'purple'][i];
         return c;
@@ -575,9 +575,9 @@ export const TEMPLATES: Template[] = [
       const chart = t('bar-chart', 80, 130, 1120, 360);
       (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = '从曝光到下单';
       (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
-        { label: '曝光', value: 1260, color: '#FF5C00' },
-        { label: '触达', value: 810, color: '#F97316' },
-        { label: '互动', value: 110, color: '#3B82F6' },
+        { label: 'Impressions', value: 1260, color: '#FF5C00' },
+        { label: 'Reach', value: 810, color: '#F97316' },
+        { label: 'Interactions', value: 110, color: '#3B82F6' },
         { label: '下单', value: 84, color: '#22C55E' },
       ];
       return [title, chart];

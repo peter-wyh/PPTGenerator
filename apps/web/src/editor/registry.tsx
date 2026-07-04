@@ -192,9 +192,9 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'tier', label: '层级', kind: 'select', options: TIERS },
       { key: 'intro', label: '简介', kind: 'textarea' },
       { key: 'handle', label: 'Handle', kind: 'text' },
-      { key: 'followers', label: '粉丝数', kind: 'text' },
-      { key: 'likes', label: '获赞数', kind: 'text' },
-      { key: 'engagement', label: '互动率', kind: 'text' },
+      { key: 'followers', label: 'Followers', kind: 'text' },
+      { key: 'likes', label: 'Likes', kind: 'text' },
+      { key: 'engagement', label: 'Engagement Rate', kind: 'text' },
     ],
   },
   'creator-stats-strip': {

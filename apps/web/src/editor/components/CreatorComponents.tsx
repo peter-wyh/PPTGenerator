@@ -59,12 +59,12 @@ function Avatar({ data, size }: { data: CreatorAvatarCardData; size: number }) {
   );
 }
 
-/** 粉丝/获赞/互动 KPI 单行；无任何字段时不渲染。 */
+/** Followers / Likes / Engagement Rate KPI 单行；无任何字段时不渲染。 */
 function StatsLine({ data }: { data: CreatorAvatarCardData }) {
   const parts: string[] = [];
-  if (data.followers) parts.push(`粉丝 ${data.followers}`);
-  if (data.likes) parts.push(`获赞 ${data.likes}`);
-  if (data.engagement) parts.push(`互动 ${data.engagement}`);
+  if (data.followers) parts.push(`Followers ${data.followers}`);
+  if (data.likes) parts.push(`Likes ${data.likes}`);
+  if (data.engagement) parts.push(`Engagement Rate ${data.engagement}`);
   if (parts.length === 0) return null;
   return <div className="mt-1 text-[11px] text-foreground-secondary">{parts.join(' · ')}</div>;
 }
