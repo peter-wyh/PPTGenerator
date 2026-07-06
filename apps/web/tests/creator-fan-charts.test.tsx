@@ -16,7 +16,7 @@ vi.mock('recharts', () => ({
   LabelList: () => null,
 }));
 
-import { CreatorFanGender, CreatorFanCity } from '@/editor/components/CreatorComponents';
+import { CreatorFanGender, CreatorFanCity, CreatorFanAge } from '@/editor/components/CreatorComponents';
 
 describe('creator fan gender (donut)', () => {
   it('renders title, subtitle, slices and center text', () => {
@@ -67,6 +67,30 @@ describe('creator fan city (horizontal bar)', () => {
 
   it('renders empty-state when bars empty', () => {
     render(<CreatorFanCity data={{ title: 'T', bars: [] }} />);
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
+  });
+});
+
+describe('creator fan age (vertical bar)', () => {
+  it('renders title + subtitle', () => {
+    render(
+      <CreatorFanAge
+        data={{
+          title: '年龄段',
+          subtitle: '25-34 主力',
+          bars: [
+            { label: '18-24', value: 28, color: '#FF5C00' },
+            { label: '25-34', value: 38, color: '#22C55E' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('年龄段')).toBeInTheDocument();
+    expect(screen.getByText('25-34 主力')).toBeInTheDocument();
+  });
+
+  it('renders empty-state when bars empty', () => {
+    render(<CreatorFanAge data={{ title: 'T', bars: [] }} />);
     expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });
