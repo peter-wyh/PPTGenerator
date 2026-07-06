@@ -53,7 +53,10 @@ export const config = {
   storage: {
     driver: (process.env.STORAGE_DRIVER === 'oss' ? 'oss' : 'local') as 'local' | 'oss',
     uploadDir: process.env.UPLOAD_DIR ?? resolve(process.cwd(), 'uploads'),
-    publicBase: (process.env.PUBLIC_BASE ?? `http://localhost:${int('PORT', 4000)}`).replace(/\/$/, ''),
+    // 默认空串 → 返回相对路径 /uploads/<file>，浏览器经 Vite 代理 / 同源访问。
+    // 焊死 http://localhost:PORT 会在容器/远程/部署后导致 <img> 直连失败 → 图片不回显。
+    // 需要绝对地址（如 CDN）时显式设置 PUBLIC_BASE 覆盖。
+    publicBase: (process.env.PUBLIC_BASE ?? '').replace(/\/$/, ''),
     oss: {
       region: process.env.OSS_REGION,
       bucket: process.env.OSS_BUCKET,
