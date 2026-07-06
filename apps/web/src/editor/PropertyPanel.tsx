@@ -14,6 +14,9 @@ import { getStyleOptions, type VariantId } from './business/catalog';
 import { Button } from '@/components/Button';
 import { ImageInput } from '@/components/ImageInput';
 import { parseCreatorLink } from './creatorLink';
+import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from './icons/IconPickerOverlay';
+import { IconKit } from './icons/IconKit';
+import type { IconWeight } from '@mediakit/shared';
 
 /** 读取组件某字段值（data 字段 vs 几何字段）。 */
 function readValue(comp: EditorComponent, field: PropertyField): unknown {
@@ -39,6 +42,21 @@ export function PropertyPanel() {
   }
 
   const def = REGISTRY[comp.type];
+
+  // 当前激活变体定义（用于图标门控）。
+  const activeVariant = (() => {
+    const vs = def.variants;
+    if (!vs || vs.length === 0) return undefined;
+    const currentId = (comp.data as { variant?: string }).variant ?? vs[0].id;
+    return vs.find((v) => v.id === currentId);
+  })();
+
+  // 变体声明了 icon 即注入一个 icon 字段（不放进 registry.propertySchema，保持通用）。
+  const fields: PropertyField[] = [...def.propertySchema];
+  if (activeVariant?.icon) {
+    fields.push({ key: 'icon', label: '图标', kind: 'icon' });
+  }
+
   return (
     <div className="flex h-full w-[300px] flex-col gap-4 overflow-auto border-l border-border-default bg-surface-primary p-4">
       <div className="font-headings text-sm font-semibold text-foreground-primary">
@@ -59,10 +77,10 @@ export function PropertyPanel() {
         {def.variants && def.variants.length > 0 && (
           <VariantSelector comp={comp} variants={def.variants} />
         )}
-        {def.propertySchema.map((f) => (
+        {fields.map((f) => (
           <FieldEditor key={f.key + f.kind} comp={comp} field={f} />
         ))}
-        {def.propertySchema.length === 0 && (def.variants?.length ?? 0) === 0 && (
+        {fields.length === 0 && (def.variants?.length ?? 0) === 0 && (
           <p className="text-xs text-foreground-muted">该组件无可编辑属性。</p>
         )}
       </FieldGroup>
@@ -549,6 +567,8 @@ export function FieldEditor({ comp, field }: { comp: EditorComponent; field: Pro
       return <ListField comp={comp} field={field} />;
     case 'table':
       return <TableField comp={comp} />;
+    case 'icon':
+      return <IconPickerField comp={comp} />;
     default:
       return null;
   }
@@ -591,6 +611,76 @@ function ImageUrlField({ comp, field }: { comp: EditorComponent; field: Property
     <div className="text-xs text-foreground-secondary">
       <div className="mb-1">{field.label}</div>
       <ImageInput value={value} onChange={(url) => update(field.key, url)} />
+    </div>
+  );
+}
+
+/** 图标字段：预览 + 选择(overlay) + 清除 + weight 下拉。仅用于启用图标的变体。 */
+function IconPickerField({ comp }: { comp: EditorComponent }) {
+  const update = useDataUpdate(comp);
+  const data = comp.data as { icon?: string; iconWeight?: IconWeight };
+  const def = REGISTRY[comp.type];
+  const currentVariantId = (comp.data as { variant?: string }).variant ?? def.variants?.[0]?.id;
+  const variantDef = def.variants?.find((v) => v.id === currentVariantId);
+  const variantIconCfg = variantDef?.icon;
+
+  // 回退顺序：data.iconWeight → variant.defaultWeight → 'regular'
+  const weight: IconWeight = data.iconWeight ?? variantIconCfg?.defaultWeight ?? 'regular';
+  // 显示的图标：data.icon → variant.defaultKey
+  const effectiveKey = data.icon ?? variantIconCfg?.defaultKey;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="block text-xs text-foreground-secondary">
+      <div className="mb-1">图标</div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-default text-foreground-primary hover:bg-surface-hover"
+          title="选择图标"
+        >
+          <IconKit name={effectiveKey} weight={weight} size={20} />
+        </button>
+        <button
+          onClick={() => setOpen(true)}
+          className="rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+        >
+          选择
+        </button>
+        {data.icon && (
+          <button
+            onClick={() => update('icon', undefined)}
+            className="rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+          >
+            清除
+          </button>
+        )}
+        <select
+          value={weight}
+          onChange={(e) => update('iconWeight', e.target.value)}
+          className="ml-auto rounded border border-border-default px-1 py-1 text-xs text-foreground-primary"
+          title="图标风格"
+        >
+          {ICON_WEIGHT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+      {open && (
+        <IconPickerOverlay
+          value={data.icon}
+          weight={weight}
+          onPick={(key) => {
+            update('icon', key);
+            setOpen(false);
+          }}
+          onClear={() => {
+            update('icon', undefined);
+            setOpen(false);
+          }}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </div>
   );
 }
