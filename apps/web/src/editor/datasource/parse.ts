@@ -1,24 +1,26 @@
 import * as XLSX from 'xlsx';
-import type { Datasource } from '@mediakit/shared';
 
-/** 把「数组行」（第一行表头）转成 Datasource。 */
-function fromMatrix(name: string, matrix: string[][]): Datasource {
-  if (matrix.length === 0) return { id: rid(name), name, columns: [], rows: [] };
+/** 解析后的单个 sheet（无 id，仅供导入映射弹框临时使用）。 */
+export interface ParsedSheet {
+  name: string;
+  columns: string[];
+  rows: Record<string, string>[];
+}
+
+/** 把「数组行」（第一行表头）转成 ParsedSheet。 */
+function fromMatrix(name: string, matrix: string[][]): ParsedSheet {
+  if (matrix.length === 0) return { name, columns: [], rows: [] };
   const columns = matrix[0].map((h, i) => String(h ?? `列${i + 1}`));
   const rows = matrix.slice(1).map((r) => {
     const obj: Record<string, string> = {};
     columns.forEach((c, i) => (obj[c] = String(r[i] ?? '')));
     return obj;
   });
-  return { id: rid(name), name, columns, rows };
-}
-
-function rid(name: string): string {
-  return `${name}-${Math.random().toString(36).slice(2, 8)}`;
+  return { name, columns, rows };
 }
 
 /** 解析 CSV 文本（支持引号包裹的字段与逗号转义）。 */
-export function parseCSV(text: string, name = 'CSV'): Datasource {
+export function parseCSV(text: string, name = 'CSV'): ParsedSheet {
   const rows: string[][] = [];
   let cur: string[] = [];
   let field = '';
@@ -60,26 +62,28 @@ export function parseCSV(text: string, name = 'CSV'): Datasource {
   return fromMatrix(name, rows.map((r) => r.map((c) => c.trim())));
 }
 
-/** 解析 Excel ArrayBuffer（取第一个 sheet）。 */
-export function parseExcel(buffer: ArrayBuffer, name = 'Excel'): Datasource {
+/** 解析 Excel ArrayBuffer，返回所有 sheet。 */
+export function parseExcel(buffer: ArrayBuffer, _name = 'Excel'): ParsedSheet[] {
   const wb = XLSX.read(buffer, { type: 'array' });
-  const first = wb.SheetNames[0];
-  if (!first) return { id: rid(name), name, columns: [], rows: [] };
-  const sheet = wb.Sheets[first];
-  const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, blankrows: false });
-  return fromMatrix(name, matrix as unknown as string[][]);
+  return wb.SheetNames.map((sheetName) => {
+    const matrix = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[sheetName], {
+      header: 1,
+      blankrows: false,
+    });
+    return fromMatrix(sheetName, matrix as unknown as string[][]);
+  });
 }
 
-/** 根据文件名/类型选择解析器。 */
-export async function parseFile(file: File): Promise<Datasource> {
+/** 根据文件名/类型选择解析器，返回所有 sheet（CSV 恒为单 sheet）。 */
+export async function parseFile(file: File): Promise<ParsedSheet[]> {
   const lower = file.name.toLowerCase();
+  const base = file.name.replace(/\.[^.]+$/, '');
   if (lower.endsWith('.csv') || file.type === 'text/csv') {
-    return parseCSV(await file.text(), file.name.replace(/\.[^.]+$/, ''));
+    return [parseCSV(await file.text(), base)];
   }
   if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-    const buf = await file.arrayBuffer();
-    return parseExcel(buf, file.name.replace(/\.[^.]+$/, ''));
+    return parseExcel(await file.arrayBuffer(), base);
   }
   // 兜底按文本 CSV 解析。
-  return parseCSV(await file.text(), file.name.replace(/\.[^.]+$/, ''));
+  return [parseCSV(await file.text(), base)];
 }

@@ -79,6 +79,60 @@ describe('projects CRUD', () => {
     expect(dup.body.project.name).toBe('Orig 副本');
   });
 
+  it('persists page-level bgColor/bgImage through update + reload', async () => {
+    const { h } = await setupOwner('bg@x.com');
+    const id = (await request(app()).post('/api/v1/projects').set(h).send({ name: 'BG' })).body.project
+      .id;
+
+    const pageId = 'p1';
+    const updated = await request(app())
+      .patch(`/api/v1/projects/${id}`)
+      .set(h)
+      .send({
+        pages: [
+          { id: pageId, name: '封面', bgColor: '#FF5C00', bgImage: 'https://x/a.png', components: [] },
+        ],
+      });
+    expect(updated.status).toBe(200);
+    expect(updated.body.project.pages[0].bgColor).toBe('#FF5C00');
+    expect(updated.body.project.pages[0].bgImage).toBe('https://x/a.png');
+
+    // reload 必须保留页面背景（防止 zod strip 丢字段）。
+    const reloaded = await request(app()).get(`/api/v1/projects/${id}`).set(h);
+    expect(reloaded.body.project.pages[0].bgColor).toBe('#FF5C00');
+    expect(reloaded.body.project.pages[0].bgImage).toBe('https://x/a.png');
+  });
+
+  it('persists structured report theme (color/font/density/radius/preset) through update + reload', async () => {
+    const { h } = await setupOwner('theme@x.com');
+    const id = (await request(app()).post('/api/v1/projects').set(h).send({ name: 'T' })).body.project
+      .id;
+
+    const theme = {
+      color: {
+        primary: '#FF5C00',
+        secondary: '#3B82F6',
+        chartPalette: ['#FF5C00', '#3B82F6', '#22C55E'],
+        neutralText: '#1A1A1A',
+        neutralBg: '#FFFFFF',
+      },
+      font: { text: 'noto-sans-sc', number: 'inter', heading: 'funnel-sans' },
+      density: 'spacious',
+      radius: 'large',
+      preset: 'warm-bold',
+    };
+    const updated = await request(app())
+      .patch(`/api/v1/projects/${id}`)
+      .set(h)
+      .send({ meta: { theme } });
+    expect(updated.status).toBe(200);
+    expect(updated.body.project.meta.theme).toEqual(theme);
+
+    // reload 必须保留结构化主题（防止 zod strip 丢字段）。
+    const reloaded = await request(app()).get(`/api/v1/projects/${id}`).set(h);
+    expect(reloaded.body.project.meta.theme).toEqual(theme);
+  });
+
   it('ownership isolation: other users get 404 (no existence leak)', async () => {
     const owner = await setupOwner('owner@x.com');
     const other = await setupOwner('other@x.com');

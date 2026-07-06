@@ -1,6 +1,5 @@
 import type { ComponentType } from '@mediakit/shared';
 import { useEditorStore } from './store';
-import { DatasourceMenu } from './components/DatasourceMenu';
 
 /** 调色板拖放 payload（dataTransfer）。 */
 const PALETTE_MIME = 'application/x-mediakit-palette';
@@ -94,9 +93,6 @@ export function ComponentPanel() {
           ))}
         </div>
       ))}
-      <div className="ml-auto flex flex-none pl-2">
-        <DatasourceMenu />
-      </div>
     </div>
   );
 }

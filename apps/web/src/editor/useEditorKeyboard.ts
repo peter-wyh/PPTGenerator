@@ -29,6 +29,13 @@ export function useEditorKeyboard(): void {
       }
       if (e.code === 'Space') return; // 在输入框里不拦截空格
 
+      // 保存：在任何焦点下都生效（含输入框），浏览器默认「另存网页」让位。
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        void st.save();
+        return;
+      }
+
       if (isEditing(e.target)) return;
 
       const mod = e.ctrlKey || e.metaKey;

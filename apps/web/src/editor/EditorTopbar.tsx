@@ -17,6 +17,9 @@ export function EditorTopbar() {
   const redo = useEditorStore((s) => s.redo);
   const enterPreview = useEditorStore((s) => s.enterPreview);
   const hasPages = useEditorStore((s) => s.pages.length > 0);
+  const dirty = useEditorStore((s) => s.dirty);
+  const saving = useEditorStore((s) => s.saving);
+  const save = useEditorStore((s) => s.save);
   const [showSettings, setShowSettings] = useState(false);
 
   const metaTags: string[] = [];
@@ -68,6 +71,20 @@ export function EditorTopbar() {
         >
           ↷
         </button>
+        <span className="mx-1 h-4 w-px bg-border-default" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-foreground-muted" title="保存状态">
+            {saving ? '保存中…' : dirty ? '未保存' : '已保存'}
+          </span>
+          <button
+            onClick={() => void save()}
+            disabled={!dirty || saving}
+            className="rounded border border-accent-primary bg-accent-primary px-2 py-1 text-sm text-white hover:opacity-90 disabled:border-border-default disabled:bg-transparent disabled:text-foreground-muted"
+            title="保存 (Ctrl/Cmd+S)"
+          >
+            保存
+          </button>
+        </div>
         <span className="mx-1 h-4 w-px bg-border-default" />
         <button
           onClick={() => setShowSettings(true)}
