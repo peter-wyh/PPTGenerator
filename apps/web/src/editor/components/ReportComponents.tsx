@@ -13,6 +13,8 @@ import type {
   ProductPerformanceData,
   TimelineCompareData,
 } from '@mediakit/shared';
+import { findIcon } from '../icons/catalog';
+import { KPI_COLOR_TOKENS } from '../kpiTokens';
 
 /* -------------------------------- kpi board ------------------------------- */
 
@@ -64,6 +66,52 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
             <Card {...it} />
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (variant === 'card') {
+    return (
+      <div
+        className="grid h-full w-full gap-3 overflow-auto p-1"
+        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
+      >
+        {items.map((it, i) => {
+          const token = data.valueColors?.[i] ?? null;
+          const isPrimary = !token || token === 'primary';
+          const c = KPI_COLOR_TOKENS[token ?? 'primary'];
+          const Icon = findIcon(data.icons?.[i] ?? undefined)?.Comp;
+          const weight = data.iconWeight ?? 'regular';
+          return (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-2xl bg-surface-primary p-5 shadow-sm"
+            >
+              <div className="flex flex-col gap-1">
+                <div className="text-xs text-foreground-secondary">{it.label}</div>
+                <div
+                  className="font-data text-2xl font-bold text-foreground-primary"
+                  style={isPrimary ? undefined : { color: c.fg }}
+                >
+                  {it.value}
+                </div>
+                {it.compare && (
+                  <div className="text-xs font-medium" style={{ color: compareColor(it.compare) }}>
+                    {it.compare}
+                  </div>
+                )}
+              </div>
+              {Icon && (
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: c.softBg }}
+                >
+                  <Icon size={22} weight={weight} color={isPrimary ? undefined : c.fg} />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
