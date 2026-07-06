@@ -63,7 +63,7 @@ export function parseCSV(text: string, name = 'CSV'): ParsedSheet {
 }
 
 /** 解析 Excel ArrayBuffer，返回所有 sheet。 */
-export function parseExcel(buffer: ArrayBuffer, name = 'Excel'): ParsedSheet[] {
+export function parseExcel(buffer: ArrayBuffer, _name = 'Excel'): ParsedSheet[] {
   const wb = XLSX.read(buffer, { type: 'array' });
   return wb.SheetNames.map((sheetName) => {
     const matrix = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[sheetName], {
