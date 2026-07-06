@@ -14,6 +14,49 @@
 | 测试 | vitest + @testing-library（web） · vitest + supertest（server） |
 | 基础设施 | docker-compose（mysql:8 + redis:7） + 种子脚本（admin@mediakit.local / admin123） |
 
+## 架构图
+
+```mermaid
+flowchart TB
+  subgraph Client["浏览器客户端"]
+    UI["apps/web 编辑器<br/>React 18 · Vite · Tailwind"]
+    Store["Zustand 单 store<br/>pages / history / clipboard / zoom"]
+    Registry["REGISTRY 组件渲染<br/>7 基础类型 + business-block 二级分发"]
+    HTTP["axios 客户端<br/>401 自动刷新拦截器"]
+    UI --> Store --> Registry
+    Store -. "pages 变更 debounce 1.5s" .-> HTTP
+  end
+
+  subgraph Server["apps/server · Express :4000"]
+    MW["中间件层<br/>helmet · zod 校验 · pino 日志 · JWT 鉴权"]
+    Auth["auth<br/>access ~15min / refresh ~7d<br/>轮换 + Redis 黑名单"]
+    Projects["projects CRUD<br/>所有权隔离（非 owner → 404）"]
+    Prisma["Prisma Client"]
+    MW --> Auth & Projects --> Prisma
+  end
+
+  subgraph Infra["docker-compose"]
+    MySQL[("MySQL 8 :3317<br/>User · Project[pages JSON]")]
+    Redis[("Redis :6389<br/>refresh 黑名单")]
+  end
+
+  HTTP -->|"HTTPS · Authorization: Bearer"| MW
+  Prisma --> MySQL
+  Auth -->|"jti 黑名单查询/写入"| Redis
+
+  classDef store fill:#eef2ff,stroke:#6366f1
+  classDef db fill:#ecfdf5,stroke:#10b981
+  class Store,Registry store
+  class MySQL,Redis db
+```
+
+**数据流要点**
+
+- 前端编辑 → Zustand store → `pages` 变更 debounce(1.5s) → `PATCH /projects/:id` 自动保存。
+- axios 拦截器:请求带 access token;遇 401 用 refresh 换新 access 并重试(并发刷新去重)。
+- 后端 `pages` 字段为不透明 JSON —— 组件类型扩展不触发 Prisma 迁移,仅前端 + `packages/shared` 类型变更。
+- docker-compose 仅承载 MySQL + Redis;web / server 本地以 `pnpm dev` 起。
+
 ## 目录
 
 ```
