@@ -20,6 +20,7 @@ import {
   MOVE_SNAP,
 } from './defaults';
 import { getBusinessItem, getLayout } from './business/catalog';
+import { projectsApi } from '@/api/projects';
 
 /** 主题补丁：支持嵌套 color/font 部分更新（深合并），density/radius/preset 直接替换。 */
 export type ThemePatch = {
@@ -62,6 +63,8 @@ export interface EditorState {
   loaded: boolean;
   /** 自上次保存后是否有未落库变更（供 autosave）。 */
   dirty: boolean;
+  /** 保存请求进行中（供顶栏状态展示）。 */
+  saving: boolean;
 
   // ---- selectors ----
   currentPage: () => Page | null;
@@ -75,6 +78,8 @@ export interface EditorState {
   /** 报告维度：更新主题（品牌色/字体/密度/圆角），深合并 color/font，标记 dirty。 */
   setTheme: (patch: ThemePatch) => void;
   markSaved: () => void;
+  /** 立即把当前编辑结果落库（name/尺寸/pages/meta）。autosave 与手动保存共用此入口。 */
+  save: () => Promise<void>;
 
   // ---- view ----
   setZoom: (z: number) => void;
@@ -221,6 +226,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     isPanning: false,
     loaded: false,
     dirty: false,
+    saving: false,
     previewOpen: false,
     previewPageIndex: 0,
 
@@ -256,10 +262,43 @@ export const useEditorStore = create<EditorState>((set, get) => {
         panY: 0,
         loaded: true,
         dirty: false,
+        saving: false,
       });
     },
 
     markSaved: () => set({ dirty: false }),
+
+    async save() {
+      const s = get();
+      // 无项目 / 无未保存改动 / 已有保存进行中 → 跳过。
+      if (!s.projectId || !s.dirty || s.saving) return;
+      const payload = {
+        name: s.projectName,
+        width: s.canvasWidth,
+        height: s.canvasHeight,
+        pages: s.pages,
+        meta: s.projectMeta ?? undefined,
+      };
+      // 用序列化签名判断保存期间是否有新改动：若一致才清 dirty，否则保留待 autosave 重试。
+      const sig = JSON.stringify(payload);
+      set({ saving: true });
+      try {
+        await projectsApi.update(s.projectId, payload);
+        const after = get();
+        const afterSig = JSON.stringify({
+          name: after.projectName,
+          width: after.canvasWidth,
+          height: after.canvasHeight,
+          pages: after.pages,
+          meta: after.projectMeta ?? undefined,
+        });
+        // 保存期间有新改动 → 保留 dirty（保持 true），待 autosave 重试；否则清 dirty。
+        set(afterSig === sig ? { dirty: false, saving: false } : { saving: false });
+      } catch {
+        // 失败保 dirty，下轮 autosave 重试。
+        set({ saving: false });
+      }
+    },
 
     setProjectName: (name) => set({ projectName: name, dirty: true }),
 
