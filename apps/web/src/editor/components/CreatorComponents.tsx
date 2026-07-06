@@ -395,3 +395,29 @@ export function CreatorFanCity({ data }: { data: import('@mediakit/shared').Crea
     </CreatorChartShell>
   );
 }
+
+/** 年龄段分布（竖向柱状）。 */
+export function CreatorFanAge({ data }: { data: import('@mediakit/shared').CreatorFanAgeData }) {
+  const { title, subtitle, bars = [] } = data;
+  return (
+    <CreatorChartShell title={title} subtitle={subtitle}>
+      {bars.length === 0 ? (
+        <EmptyChart />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={bars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+            <Tooltip cursor={{ fill: '#F9FAFB' }} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {bars.map((b, i) => (
+                <Cell key={i} fill={b.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </CreatorChartShell>
+  );
+}
