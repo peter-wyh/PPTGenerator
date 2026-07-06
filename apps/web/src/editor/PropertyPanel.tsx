@@ -626,9 +626,14 @@ function TableField({ comp }: { comp: EditorComponent }) {
     update('rows', rows2);
   };
   const addRow = () => update('rows', [...rows, headers.map(() => '--')]);
+  const removeRow = (r: number) => update('rows', rows.filter((_, idx) => idx !== r));
   const addCol = () => {
     update('headers', [...headers, `列${headers.length + 1}`]);
     update('rows', rows.map((r) => [...r, '--']));
+  };
+  const removeCol = (c: number) => {
+    update('headers', headers.filter((_, idx) => idx !== c));
+    update('rows', rows.map((r) => r.filter((_, idx) => idx !== c)));
   };
 
   return (
@@ -637,16 +642,24 @@ function TableField({ comp }: { comp: EditorComponent }) {
       <div className="space-y-1">
         <div className="flex gap-1">
           {headers.map((h, i) => (
-            <input
-              key={i}
-              value={h}
-              onChange={(e) => setHeader(i, e.target.value)}
-              className="w-16 rounded border border-border-default px-1 py-0.5"
-            />
+            <div key={i} className="flex flex-col items-center gap-0.5">
+              <input
+                value={h}
+                onChange={(e) => setHeader(i, e.target.value)}
+                className="w-16 rounded border border-border-default px-1 py-0.5"
+              />
+              <button
+                onClick={() => removeCol(i)}
+                title="删除该列"
+                className="text-[10px] text-foreground-muted hover:text-red"
+              >
+                ✕
+              </button>
+            </div>
           ))}
         </div>
         {rows.map((row, ri) => (
-          <div key={ri} className="flex gap-1">
+          <div key={ri} className="flex items-center gap-1">
             {row.map((cell, ci) => (
               <input
                 key={ci}
@@ -655,6 +668,13 @@ function TableField({ comp }: { comp: EditorComponent }) {
                 className="w-16 rounded border border-border-default px-1 py-0.5"
               />
             ))}
+            <button
+              onClick={() => removeRow(ri)}
+              title="删除该行"
+              className="text-foreground-muted hover:text-red"
+            >
+              ✕
+            </button>
           </div>
         ))}
       </div>
