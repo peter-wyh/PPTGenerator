@@ -16,7 +16,7 @@ vi.mock('recharts', () => ({
   LabelList: () => null,
 }));
 
-import { CreatorFanGender } from '@/editor/components/CreatorComponents';
+import { CreatorFanGender, CreatorFanCity } from '@/editor/components/CreatorComponents';
 
 describe('creator fan gender (donut)', () => {
   it('renders title, subtitle, slices and center text', () => {
@@ -44,5 +44,29 @@ describe('creator fan gender (donut)', () => {
     const { container } = render(<CreatorFanGender data={{ title: 'T', subtitle: '', slices: [] }} />);
     expect(screen.queryByText('T')).toBeInTheDocument();
     expect(container.textContent).not.toContain('undefined');
+  });
+});
+
+describe('creator fan city (horizontal bar)', () => {
+  it('renders title + subtitle', () => {
+    render(
+      <CreatorFanCity
+        data={{
+          title: '城市分布',
+          subtitle: '一线占 73%',
+          bars: [
+            { label: '上海', value: 22, color: '#FF5C00' },
+            { label: '北京', value: 14, color: '#22C55E' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('城市分布')).toBeInTheDocument();
+    expect(screen.getByText('一线占 73%')).toBeInTheDocument();
+  });
+
+  it('renders empty-state when bars empty', () => {
+    render(<CreatorFanCity data={{ title: 'T', bars: [] }} />);
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });

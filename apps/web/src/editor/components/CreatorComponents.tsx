@@ -365,3 +365,33 @@ export function CreatorFanGender({ data }: { data: import('@mediakit/shared').Cr
     </CreatorChartShell>
   );
 }
+
+/** 城市分布 Top N（横向条形）；按 value 降序，条尾 LabelList 标百分比。 */
+export function CreatorFanCity({ data }: { data: import('@mediakit/shared').CreatorFanCityData }) {
+  const { title, subtitle, bars = [] } = data;
+  const sorted = [...bars].sort((a, b) => b.value - a.value);
+  const sum = sorted.reduce((acc, b) => acc + b.value, 0) || 1;
+  const withPct = sorted.map((b) => ({ ...b, pct: Math.round((b.value / sum) * 100) }));
+  return (
+    <CreatorChartShell title={title} subtitle={subtitle}>
+      {sorted.length === 0 ? (
+        <EmptyChart />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart layout="vertical" data={withPct} margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
+            <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
+            <Tooltip cursor={{ fill: '#F9FAFB' }} />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+              {withPct.map((b, i) => (
+                <Cell key={i} fill={b.color} />
+              ))}
+              <LabelList dataKey="pct" position="right" formatter={(v: number) => `${v}%`} style={{ fontSize: 11 }} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </CreatorChartShell>
+  );
+}
