@@ -26,12 +26,23 @@ function compareColor(compare: string): string {
 
 export function KpiBoard({ data }: { data: KpiBoardData }) {
   const { variant = 'grid', rows = [] } = data;
-  const items = rows.map((r) => ({ label: r[0] ?? '', value: r[1] ?? '', compare: r[2] ?? '' }));
+  const items = rows.map((r, i) => {
+    const token = data.valueColors?.[i] ?? null;
+    const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : undefined;
+    return { label: r[0] ?? '', value: r[1] ?? '', compare: r[2] ?? '', color };
+  });
 
-  const Card = ({ label, value, compare }: { label: string; value: string; compare: string }) => (
-    <div className="flex flex-col justify-center rounded-lg border border-border-subtle bg-surface-primary px-3 py-2">
+  const Card = ({
+    label, value, compare, color,
+  }: { label: string; value: string; compare: string; color?: string }) => (
+    <div className="flex flex-col justify-center">
       <div className="text-[11px] text-foreground-secondary">{label}</div>
-      <div className="font-data text-xl font-bold text-foreground-primary">{value}</div>
+      <div
+        className="font-data text-xl font-bold text-foreground-primary"
+        style={color ? { color } : undefined}
+      >
+        {value}
+      </div>
       {compare && (
         <div className="text-[11px] font-medium" style={{ color: compareColor(compare) }}>
           {compare}
@@ -60,7 +71,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
 
   if (variant === 'row') {
     return (
-      <div className="flex h-full w-full items-stretch gap-2 rounded-xl border border-border-default bg-surface-primary p-2">
+      <div className="flex h-full w-full items-stretch gap-2">
         {items.map((it, i) => (
           <div key={i} className="flex-1">
             <Card {...it} />
@@ -118,7 +129,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
 
   // grid（默认 3 列）
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto">
       {items.map((it, i) => (
         <Card key={i} {...it} />
       ))}

@@ -38,3 +38,40 @@ describe('KpiBoard · card 变体', () => {
     expect(valueEl.style.color).toBe('rgb(239, 68, 68)'); // #EF4444
   });
 });
+
+describe('KpiBoard · grid/row 去边框', () => {
+  it('grid 无 border class、无外层 padding', () => {
+    const { container } = render(
+      <KpiBoard data={{ variant: 'grid', headers: ['指标', '数值', '对比'], rows: [['A', '1', '']] }} />,
+    );
+    expect(container.querySelector('.border-border-default')).toBeNull();
+    expect(container.querySelector('.border-border-subtle')).toBeNull();
+    expect(container.querySelector('.bg-surface-primary')).toBeNull();
+  });
+
+  it('row 无 border class', () => {
+    const { container } = render(
+      <KpiBoard data={{ variant: 'row', headers: ['指标', '数值', '对比'], rows: [['A', '1', '']] }} />,
+    );
+    expect(container.querySelector('.border-border-default')).toBeNull();
+    expect(container.querySelector('.border-border-subtle')).toBeNull();
+  });
+
+  it('grid valueColors 非 primary 上 inline 色', () => {
+    const { container } = render(
+      <KpiBoard data={{
+        variant: 'grid', headers: ['指标', '数值', '对比'],
+        rows: [['A', '1', '']], valueColors: ['info'],
+      }} />,
+    );
+    const valueEl = container.querySelector('.font-data') as HTMLElement;
+    expect(valueEl.style.color).toBe('rgb(59, 130, 246)'); // #3B82F6
+  });
+
+  it('compact 保持有外层 border（回归保护）', () => {
+    const { container } = render(
+      <KpiBoard data={{ variant: 'compact', headers: ['指标', '数值', '对比'], rows: [['A', '1', '']] }} />,
+    );
+    expect(container.querySelector('.border-border-default')).toBeTruthy();
+  });
+});
