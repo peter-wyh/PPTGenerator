@@ -30,7 +30,9 @@ export class LocalStorage implements Storage {
     const file = `${hash}-${randomUUID().slice(0, 8)}.${ext}`;
     const abs = resolve(this.uploadDir, file);
     await fs.writeFile(abs, buf);
-    return { url: `${this.publicBase}/uploads/${file}`, key: file };
+    // 自行归一化尾部斜杠，避免 config 之外的调用方传入带斜杠的 base 产生 //uploads。
+    const base = this.publicBase.replace(/\/$/, '');
+    return { url: `${base}/uploads/${file}`, key: file };
   }
 }
 
