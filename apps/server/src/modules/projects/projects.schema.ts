@@ -3,6 +3,10 @@ import { z } from 'zod';
 const pageSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** 页面背景色（HEX）；与 bgImage 二选一。 */
+  bgColor: z.string().max(20).optional(),
+  /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
+  bgImage: z.string().max(2048).optional(),
   components: z.array(z.any()),
 });
 
@@ -17,12 +21,28 @@ const campaignInfoSchema = z
   })
   .optional();
 
-/** 项目主题（报告维度：品牌色等）。 */
+/** 项目主题（报告维度：结构化 ThemeSpec——color/font/density/radius/preset）。 */
 const projectThemeSchema = z
   .object({
-    primary: z.string().max(20).optional(),
-    secondary: z.string().max(20).optional(),
-    fontFamily: z.string().max(120).optional(),
+    color: z
+      .object({
+        primary: z.string().max(20).optional(),
+        secondary: z.string().max(20).optional(),
+        chartPalette: z.array(z.string().max(20)).optional(),
+        neutralText: z.string().max(20).optional(),
+        neutralBg: z.string().max(20).optional(),
+      })
+      .optional(),
+    font: z
+      .object({
+        text: z.string().max(120).optional(),
+        number: z.string().max(120).optional(),
+        heading: z.string().max(120).optional(),
+      })
+      .optional(),
+    density: z.enum(['compact', 'standard', 'spacious']).optional(),
+    radius: z.enum(['sharp', 'small', 'large']).optional(),
+    preset: z.string().max(120).optional(),
   })
   .optional();
 
