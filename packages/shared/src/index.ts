@@ -440,6 +440,9 @@ export interface ProjectMeta {
 /* 编辑器数据模型（M0 仅定义类型，编辑器内核在 M1 落地）                */
 /* ------------------------------------------------------------------ */
 
+/** 图标风格 = Phosphor weight。6 套风格。 */
+export type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
+
 export type ComponentType =
   | 'text'
   | 'image'
@@ -480,12 +483,20 @@ export interface ImageData {
   fit: 'cover' | 'contain' | 'fill';
 }
 
+export type IndicatorCardVariant = 'plain' | 'icon-left' | 'icon-top' | 'icon-bg';
+
 export interface IndicatorCardData {
+  /** 样式变体；缺省 'plain'（向后兼容老数据，无 variant 字段时按旧外观渲染）。 */
+  variant?: IndicatorCardVariant;
   title: string;
   value: string;
   trend?: string;
   trendUp?: boolean;
   colorTheme: 'orange' | 'green' | 'blue' | 'purple' | 'red';
+  /** catalog 图标 key，可选；仅当变体启用图标时有意义。 */
+  icon?: string;
+  /** 图标 weight；缺省走 variant.icon.defaultWeight。 */
+  iconWeight?: IconWeight;
 }
 
 export interface BarChartDatum {
