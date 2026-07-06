@@ -6,6 +6,7 @@
  * 每个组件提供多个样式变体（data.variant），对应 PRD 组件三层定义中的
  * "样式变体（选版式）"。风格对齐 BasicComponents.tsx；占位态参考 ImageComponent。
  */
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type {
   CreatorAvatarCardData,
   CreatorPlatform,
@@ -307,5 +308,60 @@ function CreatorChartShell({
       {subtitle && <div className="mt-0.5 text-[11px] text-foreground-secondary">{subtitle}</div>}
       <div className="min-h-0 flex-1">{children}</div>
     </div>
+  );
+}
+
+/** 空数据占位。 */
+function EmptyChart() {
+  return (
+    <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">暂无数据</div>
+  );
+}
+
+/** 性别占比环形图；center 为中心主项摘要。 */
+export function CreatorFanGender({ data }: { data: import('@mediakit/shared').CreatorFanGenderData }) {
+  const { title, subtitle, center, slices = [] } = data;
+  return (
+    <CreatorChartShell title={title} subtitle={subtitle}>
+      {slices.length === 0 ? (
+        <EmptyChart />
+      ) : (
+        <div className="relative h-full w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={slices}
+                dataKey="value"
+                nameKey="label"
+                cx="50%"
+                cy="50%"
+                innerRadius="55%"
+                outerRadius="80%"
+                label={(e: { label?: string }) => e.label ?? ''}
+              >
+                {slices.map((s, i) => (
+                  <Cell key={i} fill={s.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          {center && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-xs font-semibold text-foreground-primary">
+              {center}
+            </div>
+          )}
+          {/* recharts label 在 jsdom 测试环境下因整体 mock 不会触发；保留一份 DOM 可见的图例作为兜底。 */}
+          <div className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-0.5 text-[10px] text-foreground-secondary">
+            {slices.map((s, i) => (
+              <span key={i} className="inline-flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span>{s.label}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </CreatorChartShell>
   );
 }
