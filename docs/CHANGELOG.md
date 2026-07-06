@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-06 — SVG 图标库 + 指标卡变体级图标接入
+
+底层补一套「多套风格（weight）× 用途分类」的 SVG 图标能力，并以「变体门控」的通用机制让组件在特定样式变体下渲染可选图标。首批落地指标卡。
+
+- **底层图标库**（`apps/web/src/editor/icons/`，依赖 `@phosphor-icons/react`）：
+  - `catalog.ts` —— 精选目录（~31 图标 × 4 用途分类 metric/creator/report/generic），每项持稳定 `key` + label + category + 直接 import 的 Phosphor 组件（保留 tree-shaking）；导出 `ICONS` / `ICON_CATEGORIES` / `ICON_WEIGHTS` / `findIcon`。稳定 `key` 解耦于 Phosphor 组件名，便于换库不迁数据。
+  - `IconKit.tsx` —— 唯一渲染入口 `<IconKit name weight size color />`，未知 key 返回 null（不抛）。
+  - `IconPickerOverlay.tsx` —— 选择器模态：按当前 weight 预览 + 分类分组 + 搜索 + 选中/清除；导出 `ICON_WEIGHT_OPTIONS` 供 weight 下拉复用。
+- **通用变体门控机制**：`registry.tsx` 的 `VariantOption` 加可选 `icon?: { position?; defaultKey?; defaultWeight? }`——存在即启用（渲染层在该变体位渲染图标，属性面板显示 icon 字段），缺省即不涉及。`PropertyFieldKind` 加 `'icon'`；`PropertyPanel` 仅在激活变体声明 icon 时动态注入 icon 字段（不放进各组件 `propertySchema`，保持通用）。任何组件声明带 icon 的变体即免费获得图标能力。
+- **指标卡 4 变体**（`IndicatorCardComponent` 改 1→4 分发器）：`plain`（旧外观，完全向后兼容，老数据无 variant 字段按旧渲染）/ `icon-left`（图标左）/ `icon-top`（图标上）/ `icon-bg`（大尺寸 12% 透明水印）。`colorTheme` 统一驱动卡片底色与图标色调，无需逐图标配色。图标 key/weight 优先取 `data.icon`/`data.iconWeight`，缺省回退变体默认。
+- **shared 类型（type-only，最小侵入）**：`IconWeight`（6 weight）；`IndicatorCardVariant`；`IndicatorCardData` 加可选 `variant?/icon?/iconWeight?`。Phosphor 不进入 shared。
+- **测试**（+19）：`icons.catalog.test`（4）/ `icons.kit.test`（3）/ `icons.picker.test`（4）/ `components.test` 指标卡变体（5）/ `registry.test` 变体声明（3）/ `property-panel.test` 变体门控（3）。门禁 typecheck + test（223）+ build 全绿。
+
+**范围外（后续）**：其它数值类组件（kpi-board / creator-stats 等）的图标变体接入；逐图标自定义颜色；服务端/SSR 图标渲染。
+
 ## 2026-07-03 — 达人头像卡：链接解析（迭代 1）
 
 `creator-avatar-card` 支持粘贴达人链接自动解析填充字段（前端 mock）。

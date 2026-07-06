@@ -60,6 +60,8 @@
 ### 通用组件（7）
 `text` · `image` · `indicator-card` · `bar-chart` · `line-chart` · `pie-chart` · `table`
 
+> `indicator-card` 新增 4 样式变体（plain / icon-left / icon-top / icon-bg），后三者经 `VariantOption.icon` 声明启用 SVG 图标（底层 Phosphor 图标库，weight=多套风格）。
+
 ### 业务组件（7，均为一级 ComponentType，各带 3 样式变体）
 | type | 领域 | ≈PRD | 变体 |
 |---|---|---|---|
@@ -105,6 +107,7 @@
 - **变体机制通用**：`BlockDef.variants?: VariantOption[]`；属性面板 `VariantSelector` 检测到就渲染 chips 写入 `data.variant`。任何组件声明即得。
 - **`table` 字段兼作"对象列表编辑器"**：多字段对象列表（作品 [封面,标题,转,赞,评] / 品牌墙 [品牌,Logo URL] / 套餐特性 / KPI / 周期对比）统一用 TableData `{headers, rows}`，复用 `TableField` 编辑。
 - **三层无嵌套**：画布扁平，组件互不嵌套；"页面模板 = 编排"靠 `addPageWithComponents` 一次性落多个扁平件实现，不需要组件树。
+- **图标能力（通用）**：底层图标库在 `apps/web/src/editor/icons/`（catalog + `IconKit` + picker）。任何组件声明带 `icon: {...}` 的变体即启用——属性面板动态注入 `icon` 字段，渲染层通过 `<IconKit>` 在变体位渲染。`packages/shared` 仅持 `IconWeight` 类型契约，Phosphor 不进入 shared。
 
 ---
 
