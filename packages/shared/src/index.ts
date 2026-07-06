@@ -87,6 +87,36 @@ export interface Campaign {
   owner?: string;
 }
 
+/** 业务线（mock 查找表 BUSINESS_LINE_META 的条目）。 */
+export interface BusinessLine {
+  /** 简称，与 BUSINESS_LINES 中的条目一致，例如 'FT'。 */
+  code: string;
+  /** 全称，例如 'FineTech 芯科'。 */
+  name: string;
+  /** Logo URL。 */
+  logo?: string;
+}
+
+/** 商家（独立列表 MERCHANTS 的条目；广告主通过 merchantId 引用）。 */
+export interface Merchant {
+  /** 例如 'm1'。 */
+  id: string;
+  /** 商家名称。 */
+  name: string;
+  /** Logo URL。 */
+  logo?: string;
+}
+
+/** 广告主（mock 查找表 ADVERTISER_META 的条目）。 */
+export interface Advertiser {
+  /** 广告主名称，与 ADVERTISERS 中的条目一致，例如 'GlowLab'。 */
+  name: string;
+  /** 关联的商家 id（指向 MERCHANTS）。 */
+  merchantId?: string;
+  /** Logo URL。 */
+  logo?: string;
+}
+
 /**
  * 字体选项：预置字体清单，前后端共享。
  * key 为唯一标识（存入 ProjectTheme.font.text/number/heading），
