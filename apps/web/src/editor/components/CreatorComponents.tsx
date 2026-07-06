@@ -9,6 +9,10 @@
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type {
   CreatorAvatarCardData,
+  CreatorFanAgeData,
+  CreatorFanCityData,
+  CreatorFanGenderData,
+  CreatorFanInterestData,
   CreatorPlatform,
   CreatorStatsStripData,
   CreatorTier,
@@ -319,7 +323,7 @@ function EmptyChart() {
 }
 
 /** 性别占比环形图；center 为中心主项摘要。 */
-export function CreatorFanGender({ data }: { data: import('@mediakit/shared').CreatorFanGenderData }) {
+export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
   const { title, subtitle, center, slices = [] } = data;
   return (
     <CreatorChartShell title={title} subtitle={subtitle}>
@@ -367,7 +371,7 @@ export function CreatorFanGender({ data }: { data: import('@mediakit/shared').Cr
 }
 
 /** 城市分布 Top N（横向条形）；按 value 降序，条尾 LabelList 标百分比。 */
-export function CreatorFanCity({ data }: { data: import('@mediakit/shared').CreatorFanCityData }) {
+export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
   const { title, subtitle, bars = [] } = data;
   const sorted = [...bars].sort((a, b) => b.value - a.value);
   const sum = sorted.reduce((acc, b) => acc + b.value, 0) || 1;
@@ -397,7 +401,7 @@ export function CreatorFanCity({ data }: { data: import('@mediakit/shared').Crea
 }
 
 /** 年龄段分布（竖向柱状）。 */
-export function CreatorFanAge({ data }: { data: import('@mediakit/shared').CreatorFanAgeData }) {
+export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
   const { title, subtitle, bars = [] } = data;
   return (
     <CreatorChartShell title={title} subtitle={subtitle}>
@@ -423,7 +427,7 @@ export function CreatorFanAge({ data }: { data: import('@mediakit/shared').Creat
 }
 
 /** 兴趣标签：纯 div 横向占比条。占比 = value / sum(values)；showPercent 缺省视为 true。 */
-export function CreatorFanInterest({ data }: { data: import('@mediakit/shared').CreatorFanInterestData }) {
+export function CreatorFanInterest({ data }: { data: CreatorFanInterestData }) {
   const { title, subtitle, tags = [], showPercent } = data;
   const showPct = showPercent !== false;
   const sum = tags.reduce((acc, t) => acc + t.value, 0) || 1;
