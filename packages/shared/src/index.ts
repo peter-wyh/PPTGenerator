@@ -464,6 +464,11 @@ export type ComponentType =
   | 'timeline-compare'
   | 'product-performance'
   | 'placement-display'
+  // 业务组件（试点：达人粉丝画像图表，绑定"达人"领域实体）
+  | 'creator-fan-gender'
+  | 'creator-fan-city'
+  | 'creator-fan-age'
+  | 'creator-fan-interest'
   | 'post-list';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
@@ -713,6 +718,38 @@ export interface PostListData {
   rows: string[][];
 }
 
+/* ---- 业务组件（试点：达人粉丝画像图表）Data ---- */
+
+/** 性别占比（环形图）。center 为中心主项摘要，空 → 不渲染中心文字。 */
+export interface CreatorFanGenderData {
+  title?: string;
+  subtitle?: string; // 空 → 不渲染
+  center?: string;
+  slices: PieChartSlice[]; // 复用 {label,value,color}
+}
+
+/** 城市分布 Top N（横向条形）。bars 按 value 降序展示。 */
+export interface CreatorFanCityData {
+  title?: string;
+  subtitle?: string;
+  bars: BarChartDatum[];
+}
+
+/** 年龄段分布（竖向柱状）。 */
+export interface CreatorFanAgeData {
+  title?: string;
+  subtitle?: string;
+  bars: BarChartDatum[];
+}
+
+/** 兴趣标签（纯 div 横向占比条）。showPercent 缺省视为 true。 */
+export interface CreatorFanInterestData {
+  title?: string;
+  subtitle?: string;
+  showPercent?: boolean;
+  tags: { label: string; value: number; color: string }[];
+}
+
 export type ComponentData =
   | TextData
   | ImageData
@@ -731,6 +768,10 @@ export type ComponentData =
   | TimelineCompareData
   | ProductPerformanceData
   | PlacementData
+  | CreatorFanGenderData
+  | CreatorFanCityData
+  | CreatorFanAgeData
+  | CreatorFanInterestData
   | PostListData;
 
 export interface EditorComponent {
