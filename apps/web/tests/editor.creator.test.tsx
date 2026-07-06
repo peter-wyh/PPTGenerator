@@ -194,6 +194,17 @@ describe('creator business components — defaults / registry', () => {
     expect(keys).toEqual(['followers', 'engagement', 'reach', 'impressions']);
     expect(data.stats.every((s) => s.selected === true)).toBe(true);
   });
+
+  it('fan profile defaults have title + data arrays', () => {
+    const gender = getDefaultData('creator-fan-gender') as { title: string; slices: unknown[] };
+    const city = getDefaultData('creator-fan-city') as { title: string; bars: unknown[] };
+    const age = getDefaultData('creator-fan-age') as { title: string; bars: unknown[] };
+    const interest = getDefaultData('creator-fan-interest') as { title: string; tags: unknown[] };
+    expect(gender.slices.length).toBeGreaterThan(0);
+    expect(city.bars.length).toBe(8);
+    expect(age.bars.length).toBeGreaterThan(0);
+    expect(interest.tags.length).toBeGreaterThan(0);
+  });
 });
 
 describe('creator business components — added via addComponent (first-class type)', () => {

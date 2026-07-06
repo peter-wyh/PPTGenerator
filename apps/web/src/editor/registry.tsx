@@ -15,6 +15,10 @@ import {
   CreatorAvatarCard,
   CreatorStatsStrip,
   CreatorWorksList,
+  CreatorFanGender,
+  CreatorFanCity,
+  CreatorFanAge,
+  CreatorFanInterest,
 } from './components/CreatorComponents';
 import { BrandWall, PackageCard } from './components/CompanyComponents';
 import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from './components/ReportComponents';
@@ -316,6 +320,47 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'compact', label: '紧凑' },
     ],
     propertySchema: [{ key: '', label: 'Post 列表', kind: 'table' }],
+  },
+  'creator-fan-gender': {
+    Component: CreatorFanGender,
+    defaultSize: DEFAULT_SIZES['creator-fan-gender'],
+    defaultData: () => getDefaultData('creator-fan-gender'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题（清空隐藏）', kind: 'text' },
+      { key: 'center', label: '中心文案', kind: 'text' },
+      { key: 'slices', label: '性别项', kind: 'list' },
+    ],
+  },
+  'creator-fan-city': {
+    Component: CreatorFanCity,
+    defaultSize: DEFAULT_SIZES['creator-fan-city'],
+    defaultData: () => getDefaultData('creator-fan-city'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题（清空隐藏）', kind: 'text' },
+      { key: 'bars', label: '城市数据', kind: 'list' },
+    ],
+  },
+  'creator-fan-age': {
+    Component: CreatorFanAge,
+    defaultSize: DEFAULT_SIZES['creator-fan-age'],
+    defaultData: () => getDefaultData('creator-fan-age'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题（清空隐藏）', kind: 'text' },
+      { key: 'bars', label: '年龄段数据', kind: 'list' },
+    ],
+  },
+  'creator-fan-interest': {
+    Component: CreatorFanInterest,
+    defaultSize: DEFAULT_SIZES['creator-fan-interest'],
+    defaultData: () => getDefaultData('creator-fan-interest'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题（清空隐藏）', kind: 'text' },
+      { key: 'tags', label: '兴趣标签', kind: 'list' },
+    ],
   },
 };
 

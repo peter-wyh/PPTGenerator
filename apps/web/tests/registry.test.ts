@@ -22,6 +22,10 @@ const TYPES: ComponentType[] = [
   'product-performance',
   'placement-display',
   'post-list',
+  'creator-fan-gender',
+  'creator-fan-city',
+  'creator-fan-age',
+  'creator-fan-interest',
 ];
 
 describe('REGISTRY', () => {
