@@ -421,3 +421,32 @@ export function CreatorFanAge({ data }: { data: import('@mediakit/shared').Creat
     </CreatorChartShell>
   );
 }
+
+/** 兴趣标签：纯 div 横向占比条。占比 = value / sum(values)；showPercent 缺省视为 true。 */
+export function CreatorFanInterest({ data }: { data: import('@mediakit/shared').CreatorFanInterestData }) {
+  const { title, subtitle, tags = [], showPercent } = data;
+  const showPct = showPercent !== false;
+  const sum = tags.reduce((acc, t) => acc + t.value, 0) || 1;
+  return (
+    <CreatorChartShell title={title} subtitle={subtitle}>
+      {tags.length === 0 ? (
+        <EmptyChart />
+      ) : (
+        <div className="flex h-full w-full flex-col justify-center gap-2 overflow-auto">
+          {tags.map((t, i) => {
+            const pct = Math.round((t.value / sum) * 100);
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-12 flex-none truncate text-[11px] text-foreground-secondary">{t.label}</div>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-hover">
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: t.color }} />
+                </div>
+                {showPct && <div className="w-9 flex-none text-right text-[11px] font-data text-foreground-primary">{pct}%</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </CreatorChartShell>
+  );
+}
