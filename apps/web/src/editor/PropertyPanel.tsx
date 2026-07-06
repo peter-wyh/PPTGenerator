@@ -19,6 +19,7 @@ import { IconKit } from './icons/IconKit';
 import type { IconWeight } from '@mediakit/shared';
 import { ImportDataModal } from './components/ImportDataModal';
 import type { ChartData } from './datasource/resolve';
+import { parseFile } from './datasource/parse';
 
 /** 读取组件某字段值（data 字段 vs 几何字段）。 */
 function readValue(comp: EditorComponent, field: PropertyField): unknown {
@@ -68,6 +69,8 @@ export function PropertyPanel() {
       {(comp.type === 'bar-chart' ||
         comp.type === 'line-chart' ||
         comp.type === 'pie-chart') && <ChartImportButton comp={comp} />}
+
+      {comp.type === 'kpi-board' && <KpiImportButton comp={comp} />}
 
       {comp.type === 'creator-avatar-card' && <CreatorLinkImporter comp={comp} />}
 
@@ -903,6 +906,56 @@ function ChartImportButton({ comp }: { comp: EditorComponent }) {
           onCancel={() => setFile(null)}
         />
       )}
+    </FieldGroup>
+  );
+}
+
+/** kpi-board：导入 Excel/CSV → 首行表头、其余数据行，直接覆盖 headers/rows。 */
+function KpiImportButton({ comp }: { comp: EditorComponent }) {
+  const setComponentData = useEditorStore((s) => s.setComponentData);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(file: File) {
+    setError(null);
+    try {
+      const sheets = await parseFile(file);
+      const sheet = sheets[0];
+      if (!sheet || sheet.columns.length === 0) {
+        setError('文件为空或无表头');
+        return;
+      }
+      const headers = sheet.columns;
+      const rows = sheet.rows.map((r) => headers.map((h) => r[h] ?? ''));
+      setComponentData(comp.id, { ...comp.data, headers, rows });
+    } catch {
+      setError('解析失败，请检查文件格式');
+    }
+  }
+
+  return (
+    <FieldGroup title="数据导入">
+      <button
+        onClick={() => fileRef.current?.click()}
+        className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+      >
+        导入 Excel/CSV
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,.xlsx,.xls,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          if (fileRef.current) fileRef.current.value = '';
+        }}
+      />
+      {error && <div className="text-xs text-red-500">{error}</div>}
+      <div className="text-[11px] text-foreground-muted">
+        首行作为表头，其余作为数据行；仅覆盖表格内容。
+      </div>
     </FieldGroup>
   );
 }

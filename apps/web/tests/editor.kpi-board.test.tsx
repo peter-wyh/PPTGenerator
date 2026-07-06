@@ -1,9 +1,28 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { PropertyPanel } from '@/editor/PropertyPanel';
+import { useEditorStore } from '@/editor/store';
 import { KpiBoard } from '@/editor/components/ReportComponents';
 import { REGISTRY } from '@/editor/registry';
 import { getDefaultData } from '@/editor/defaults';
-import type { KpiBoardData } from '@mediakit/shared';
+import type { KpiBoardData, ProjectDetail } from '@mediakit/shared';
+
+vi.mock('@/editor/datasource/parse', () => ({
+  parseFile: vi.fn().mockResolvedValue([
+    {
+      name: 'sheet1',
+      columns: ['指标', '数值', '对比'],
+      rows: [{ '指标': 'GMV', '数值': '999', '对比': '+1%' }],
+    },
+  ]),
+}));
+
+const emptyProject: ProjectDetail = {
+  id: 'p', name: 'p', width: 1280, height: 720,
+  pages: [{ id: 'pg', name: '第 1 页', components: [] }],
+  createdAt: '', updatedAt: '',
+};
 
 describe('KpiBoard · card 变体', () => {
   it('渲染 label/value/compare 与图标', () => {
@@ -91,5 +110,35 @@ describe('kpi-board 注册与默认数据', () => {
     expect(data.valueColors?.length).toBeGreaterThan(0);
     expect(data.icons?.length).toBe(data.rows.length);
     expect(data.valueColors?.length).toBe(data.rows.length);
+  });
+});
+
+describe('KpiImportButton', () => {
+  beforeEach(() => {
+    useEditorStore.getState().loadProject(emptyProject, 'p');
+  });
+
+  it('导入 CSV 覆盖 headers/rows，保留 variant', async () => {
+    const store = useEditorStore.getState();
+    store.addComponent('kpi-board');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '导入 Excel/CSV' }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['x'], 't.csv')] } });
+
+    await waitFor(() => {
+      const data = useEditorStore.getState().currentComponents()[0].data as KpiBoardData;
+      expect(data.headers).toEqual(['指标', '数值', '对比']);
+      expect(data.rows).toEqual([['GMV', '999', '+1%']]);
+      expect(data.variant).toBe('grid'); // 保留
+    });
   });
 });
