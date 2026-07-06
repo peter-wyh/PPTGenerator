@@ -8,7 +8,7 @@ import { ComponentRenderer } from '../components/ComponentRenderer';
  *
  * 渲染策略：内层用原始画布尺寸定位组件，外层 transform: scale() 整体缩放，
  * 字体/边框按比例缩放，比逐组件 x*scale 更准确。
- * datasources 由 ComponentRenderer 内部订阅 store（预览同会话可用；分享页回落默认数据）。
+ * 图表数据直接来自 comp.data（导入/手动编辑都写入 comp.data，预览/分享/PDF 同源）。
  */
 interface Props {
   page: Page;
