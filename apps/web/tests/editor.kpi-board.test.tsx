@@ -142,3 +142,40 @@ describe('KpiImportButton', () => {
     });
   });
 });
+
+describe('KpiRowStyleField', () => {
+  beforeEach(() => {
+    useEditorStore.getState().loadProject(emptyProject, 'p');
+  });
+
+  it('按 rows 行数渲染每行样式编辑器', () => {
+    const store = useEditorStore.getState();
+    store.addComponent('kpi-board');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+    // 默认 6 行，第一行 label 是 'Sales'
+    expect(screen.getByText('Sales')).toBeInTheDocument();
+    // 每行 5 个色块，title='红' 每行一个 → 6 行共 6 个
+    expect(screen.getAllByTitle('红').length).toBe(6);
+  });
+
+  it('点色块写入 valueColors[i]', () => {
+    const store = useEditorStore.getState();
+    store.addComponent('kpi-board');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getAllByTitle('红')[0]);
+    const data = useEditorStore.getState().currentComponents()[0].data as KpiBoardData;
+    expect(data.valueColors?.[0]).toBe('danger');
+  });
+});

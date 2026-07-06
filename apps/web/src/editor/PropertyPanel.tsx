@@ -5,6 +5,8 @@ import type {
   ComponentData,
   CreatorStatItem,
   CreatorStatsStripData,
+  KpiBoardData,
+  KpiColorToken,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from './store';
@@ -15,6 +17,8 @@ import { Button } from '@/components/Button';
 import { ImageInput } from '@/components/ImageInput';
 import { parseCreatorLink } from './creatorLink';
 import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from './icons/IconPickerOverlay';
+import { findIcon } from './icons/catalog';
+import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from './kpiTokens';
 import { IconKit } from './icons/IconKit';
 import type { IconWeight } from '@mediakit/shared';
 import { ImportDataModal } from './components/ImportDataModal';
@@ -97,6 +101,8 @@ export function PropertyPanel() {
       {comp.type === 'business-block' && <BusinessFields comp={comp} />}
 
       {comp.type === 'creator-stats-strip' && <CreatorStatsFields comp={comp} />}
+
+      {comp.type === 'kpi-board' && <KpiRowStyleField comp={comp} />}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button
@@ -958,4 +964,93 @@ function KpiImportButton({ comp }: { comp: EditorComponent }) {
       </div>
     </FieldGroup>
   );
+}
+
+/** kpi-board：每行配图标 + 数值主题色（写 data.icons / data.valueColors）。 */
+function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
+  const update = useDataUpdate(comp);
+  const data = comp.data as KpiBoardData;
+  const rows = data.rows ?? [];
+  const icons = data.icons ?? [];
+  const valueColors = data.valueColors ?? [];
+  const weight: IconWeight = data.iconWeight ?? 'regular';
+  const [pickingRow, setPickingRow] = useState<number | null>(null);
+
+  function ensureLen<T>(arr: T[]): T[] {
+    const next = [...arr];
+    while (next.length < rows.length) next.push(null as unknown as T);
+    return next;
+  }
+  function setIcon(i: number, key: string | null) {
+    update('icons', withAt(ensureLen(icons), i, key));
+  }
+  function setColor(i: number, token: KpiColorToken | null) {
+    update('valueColors', withAt(ensureLen(valueColors), i, token));
+  }
+
+  return (
+    <FieldGroup title="卡片样式（每行）">
+      <div className="text-[11px] text-foreground-muted">图标仅在「卡片」变体下显示。</div>
+      {rows.map((r, i) => {
+        const iconKey = icons[i] ?? null;
+        const Icon = findIcon(iconKey ?? undefined)?.Comp;
+        const color = valueColors[i] ?? null;
+        return (
+          <div key={i} className="flex items-center gap-2">
+            <span className="w-20 truncate text-[11px] text-foreground-secondary">{r[0] ?? `行${i + 1}`}</span>
+            <button
+              onClick={() => setPickingRow(i)}
+              title={iconKey ? (findIcon(iconKey)?.label ?? '选图标') : '选图标'}
+              className="flex h-7 w-7 items-center justify-center rounded border border-border-default hover:bg-surface-hover"
+            >
+              {Icon ? <Icon size={16} /> : <span className="text-[10px] text-foreground-muted">+</span>}
+            </button>
+            {iconKey && (
+              <button
+                onClick={() => setIcon(i, null)}
+                className="text-[10px] text-foreground-muted hover:text-foreground-primary"
+              >
+                清除
+              </button>
+            )}
+            <div className="ml-auto flex gap-1">
+              {KPI_COLOR_OPTIONS.map((opt) => (
+                <button
+                  key={opt.token}
+                  title={opt.label}
+                  onClick={() => setColor(i, color === opt.token ? null : opt.token)}
+                  className={`h-4 w-4 rounded-full border ${
+                    color === opt.token ? 'border-foreground-primary' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: KPI_COLOR_TOKENS[opt.token].fg }}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {pickingRow !== null && (
+        <IconPickerOverlay
+          value={icons[pickingRow] ?? undefined}
+          weight={weight}
+          onPick={(key) => {
+            setIcon(pickingRow, key);
+            setPickingRow(null);
+          }}
+          onClear={() => {
+            setIcon(pickingRow, null);
+            setPickingRow(null);
+          }}
+          onClose={() => setPickingRow(null)}
+        />
+      )}
+    </FieldGroup>
+  );
+}
+
+/** 不可变写入：返回新数组，index i 置为 v。 */
+function withAt<T>(arr: T[], i: number, v: T): T[] {
+  const next = [...arr];
+  next[i] = v;
+  return next;
 }
