@@ -90,3 +90,39 @@ describe('basic components render', () => {
     expect(screen.getByText('P')).toBeInTheDocument();
   });
 });
+
+describe('IndicatorCardComponent variants', () => {
+  const base = { title: 'GMV', value: '¥1,200', colorTheme: 'orange' as const };
+
+  it('plain renders no icon (backward compatible)', () => {
+    const { container } = render(<IndicatorCardComponent data={{ ...base, variant: 'plain' }} />);
+    expect(container.querySelector('svg')).toBeNull();
+  });
+
+  it('omitting variant behaves as plain (legacy data)', () => {
+    const { container } = render(<IndicatorCardComponent data={base} />);
+    expect(container.querySelector('svg')).toBeNull();
+    expect(container.textContent).toContain('GMV');
+  });
+
+  it('icon-left renders an svg (uses variant default key when data.icon absent)', () => {
+    const { container } = render(
+      <IndicatorCardComponent data={{ ...base, variant: 'icon-left' }} />
+    );
+    expect(container.querySelector('svg')).toBeTruthy();
+  });
+
+  it('icon-top renders an svg', () => {
+    const { container } = render(
+      <IndicatorCardComponent data={{ ...base, variant: 'icon-top', icon: 'eye', iconWeight: 'bold' }} />
+    );
+    expect(container.querySelector('svg')).toBeTruthy();
+  });
+
+  it('icon-bg renders an svg', () => {
+    const { container } = render(
+      <IndicatorCardComponent data={{ ...base, variant: 'icon-bg' }} />
+    );
+    expect(container.querySelector('svg')).toBeTruthy();
+  });
+});

@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { ComponentType, EditorComponent } from '@mediakit/shared';
+import type { ComponentType, EditorComponent, IconWeight } from '@mediakit/shared';
 import { DEFAULT_SIZES, getDefaultData } from './defaults';
 import {
   BarChartComponent,
@@ -33,7 +33,8 @@ export type PropertyFieldKind =
   | 'select'
   | 'image-url' // 图片 URL（文本 + 上传 + 裁剪）
   | 'list' // {label,value,color}[] —— 柱状/饼图
-  | 'table'; // TableData headers+rows
+  | 'table' // TableData headers+rows
+  | 'icon'; // catalog 图标选择器（读写 data.icon / data.iconWeight）
 
 export interface SelectOption {
   value: string;
@@ -44,6 +45,17 @@ export interface SelectOption {
 export interface VariantOption {
   id: string;
   label: string;
+  /**
+   * 变体声明图标支持。存在即启用：
+   *  - 渲染层在该变体的图标位渲染 <IconKit>
+   *  - 属性面板对该组件显示 icon 字段
+   * 缺省（undefined）= 该变体不涉及图标。
+   */
+  icon?: {
+    position?: 'left' | 'top' | 'bg';
+    defaultKey?: string;
+    defaultWeight?: IconWeight;
+  };
 }
 
 export interface PropertyField {
@@ -132,6 +144,12 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: IndicatorCardComponent,
     defaultSize: DEFAULT_SIZES['indicator-card'],
     defaultData: () => getDefaultData('indicator-card'),
+    variants: [
+      { id: 'plain', label: '极简' },
+      { id: 'icon-left', label: '图标左', icon: { position: 'left', defaultKey: 'trend-up', defaultWeight: 'regular' } },
+      { id: 'icon-top', label: '图标上', icon: { position: 'top', defaultKey: 'trend-up', defaultWeight: 'fill' } },
+      { id: 'icon-bg', label: '图标水印', icon: { position: 'bg', defaultKey: 'trend-up', defaultWeight: 'fill' } },
+    ],
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'value', label: '主数值', kind: 'text' },

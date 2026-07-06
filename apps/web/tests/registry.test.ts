@@ -59,3 +59,25 @@ describe('REGISTRY', () => {
     expect(REGISTRY['creator-stats-strip'].propertySchema).toEqual([]);
   });
 });
+
+describe('indicator-card variants', () => {
+  const def = REGISTRY['indicator-card'];
+
+  it('declares 4 variants', () => {
+    expect(def.variants?.map((v) => v.id)).toEqual(['plain', 'icon-left', 'icon-top', 'icon-bg']);
+  });
+
+  it('plain has no icon slot; the other three declare icon slots', () => {
+    const byId = Object.fromEntries((def.variants ?? []).map((v) => [v.id, v]));
+    expect(byId.plain.icon).toBeUndefined();
+    expect(byId['icon-left'].icon?.position).toBe('left');
+    expect(byId['icon-top'].icon?.position).toBe('top');
+    expect(byId['icon-bg'].icon?.position).toBe('bg');
+  });
+
+  it('icon variants carry a default key + weight', () => {
+    const byId = Object.fromEntries((def.variants ?? []).map((v) => [v.id, v]));
+    expect(byId['icon-top'].icon?.defaultKey).toBeTruthy();
+    expect(byId['icon-bg'].icon?.defaultWeight).toBeTruthy();
+  });
+});
