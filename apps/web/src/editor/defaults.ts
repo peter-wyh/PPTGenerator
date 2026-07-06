@@ -18,7 +18,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'creator-works-list': { w: 700, h: 200 },
   'brand-wall': { w: 700, h: 200 },
   'package-card': { w: 320, h: 320 },
-  'kpi-board': { w: 900, h: 200 },
+  'kpi-board': { w: 900, h: 240 },
   'timeline-compare': { w: 900, h: 240 },
   'product-performance': { w: 900, h: 280 },
   'placement-display': { w: 700, h: 280 },
@@ -173,6 +173,8 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['Clicks', '120K', '-3%'],
           ['Orders', '8.4K', '+9%'],
         ],
+        icons: ['currency', 'percent', 'percent', 'users', 'eye', 'cart'],
+        valueColors: ['success', 'success', 'info', 'info', 'warning', 'success'],
       };
     case 'timeline-compare':
       return {

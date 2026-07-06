@@ -285,6 +285,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'grid', label: '网格' },
       { id: 'row', label: '横排' },
       { id: 'compact', label: '紧凑' },
+      { id: 'card', label: '卡片' },
     ],
     propertySchema: [{ key: '', label: 'KPI 列表', kind: 'table' }],
   },

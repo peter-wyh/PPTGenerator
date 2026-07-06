@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { KpiBoard } from '@/editor/components/ReportComponents';
+import { REGISTRY } from '@/editor/registry';
+import { getDefaultData } from '@/editor/defaults';
 import type { KpiBoardData } from '@mediakit/shared';
 
 describe('KpiBoard · card 变体', () => {
@@ -73,5 +75,21 @@ describe('KpiBoard · grid/row 去边框', () => {
       <KpiBoard data={{ variant: 'compact', headers: ['指标', '数值', '对比'], rows: [['A', '1', '']] }} />,
     );
     expect(container.querySelector('.border-border-default')).toBeTruthy();
+  });
+});
+
+describe('kpi-board 注册与默认数据', () => {
+  it('REGISTRY 暴露 4 个 variant（含 card）', () => {
+    const def = REGISTRY['kpi-board'];
+    const ids = def.variants?.map((v) => v.id);
+    expect(ids).toEqual(['grid', 'row', 'compact', 'card']);
+  });
+
+  it('默认数据含 icons 与 valueColors 示例', () => {
+    const data = getDefaultData('kpi-board') as KpiBoardData;
+    expect(data.icons?.length).toBeGreaterThan(0);
+    expect(data.valueColors?.length).toBeGreaterThan(0);
+    expect(data.icons?.length).toBe(data.rows.length);
+    expect(data.valueColors?.length).toBe(data.rows.length);
   });
 });
