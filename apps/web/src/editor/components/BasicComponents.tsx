@@ -14,13 +14,16 @@ import {
 } from 'recharts';
 import type {
   BarChartData,
+  IconWeight,
   ImageData,
   IndicatorCardData,
+  IndicatorCardVariant,
   LineChartData,
   PieChartData,
   TableData,
   TextData,
 } from '@mediakit/shared';
+import { IconKit } from '../icons/IconKit';
 
 
 /* ---------------------------------- text --------------------------------- */
@@ -63,7 +66,7 @@ export function ImageComponent({ data }: { data: ImageData }) {
 }
 
 /* ----------------------------- indicator card ---------------------------- */
-const THEME: Record<IndicatorCardData['colorTheme'], { bg: string; fg: string }> = {
+const INDICATOR_THEME: Record<IndicatorCardData['colorTheme'], { bg: string; fg: string }> = {
   blue: { bg: '#EFF6FF', fg: '#3B82F6' },
   green: { bg: '#ECFDF5', fg: '#22C55E' },
   orange: { bg: '#FFF7F0', fg: '#FF5C00' },
@@ -71,14 +74,83 @@ const THEME: Record<IndicatorCardData['colorTheme'], { bg: string; fg: string }>
   red: { bg: '#FEF2F2', fg: '#EF4444' },
 };
 
+/** 每个启用图标的变体的默认图标配置（与 REGISTRY 声明保持一致）。 */
+const INDICATOR_VARIANT_ICON: Record<
+  Exclude<IndicatorCardVariant, 'plain'>,
+  { position: 'left' | 'top' | 'bg'; defaultKey: string; defaultWeight: IconWeight }
+> = {
+  'icon-left': { position: 'left', defaultKey: 'trend-up', defaultWeight: 'regular' },
+  'icon-top': { position: 'top', defaultKey: 'trend-up', defaultWeight: 'fill' },
+  'icon-bg': { position: 'bg', defaultKey: 'trend-up', defaultWeight: 'fill' },
+};
+
 export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
-  const t = THEME[data.colorTheme] ?? THEME.blue;
+  const t = INDICATOR_THEME[data.colorTheme] ?? INDICATOR_THEME.blue;
+  const variant = data.variant ?? 'plain';
+  const cfg = variant === 'plain' ? undefined : INDICATOR_VARIANT_ICON[variant];
+
+  // 图标 key/weight：data 优先，缺省回退变体默认。
+  const iconKey = cfg ? data.icon ?? cfg.defaultKey : undefined;
+  const iconWeight: IconWeight = cfg ? data.iconWeight ?? cfg.defaultWeight : 'regular';
+
+  if (variant === 'icon-bg') {
+    return (
+      <div className="relative h-full w-full overflow-hidden rounded-xl px-4" style={{ backgroundColor: t.bg }}>
+        <div className="pointer-events-none absolute -right-3 -bottom-3 opacity-[0.12]" style={{ color: t.fg }}>
+          <IconKit name={iconKey} weight={iconWeight} size={120} color={t.fg} />
+        </div>
+        <div className="relative flex h-full w-full flex-col justify-center">
+          <div className="text-xs text-foreground-secondary">{data.title}</div>
+          <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+          {data.trend && (
+            <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+              {data.trendUp ? '▲' : '▼'} {data.trend}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'icon-left') {
+    return (
+      <div className="flex h-full w-full items-center gap-3 rounded-xl px-4" style={{ backgroundColor: t.bg }}>
+        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg" style={{ backgroundColor: `${t.fg}1A`, color: t.fg }}>
+          <IconKit name={iconKey} weight={iconWeight} size={22} color={t.fg} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs text-foreground-secondary">{data.title}</div>
+          <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+          {data.trend && (
+            <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+              {data.trendUp ? '▲' : '▼'} {data.trend}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'icon-top') {
+    return (
+      <div className="flex h-full w-full flex-col justify-center rounded-xl px-4" style={{ backgroundColor: t.bg }}>
+        <IconKit name={iconKey} weight={iconWeight} size={24} color={t.fg} />
+        <div className="mt-1 text-xs text-foreground-secondary">{data.title}</div>
+        <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+        {data.trend && (
+          <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+            {data.trendUp ? '▲' : '▼'} {data.trend}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // plain（含缺省/老数据）
   return (
     <div className="flex h-full w-full flex-col justify-center rounded-xl px-4" style={{ backgroundColor: t.bg }}>
       <div className="text-xs text-foreground-secondary">{data.title}</div>
-      <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>
-        {data.value}
-      </div>
+      <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
       {data.trend && (
         <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
           {data.trendUp ? '▲' : '▼'} {data.trend}
