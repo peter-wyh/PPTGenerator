@@ -16,7 +16,7 @@ vi.mock('recharts', () => ({
   LabelList: () => null,
 }));
 
-import { CreatorFanGender, CreatorFanCity, CreatorFanAge } from '@/editor/components/CreatorComponents';
+import { CreatorFanGender, CreatorFanCity, CreatorFanAge, CreatorFanInterest } from '@/editor/components/CreatorComponents';
 
 describe('creator fan gender (donut)', () => {
   it('renders title, subtitle, slices and center text', () => {
@@ -91,6 +91,48 @@ describe('creator fan age (vertical bar)', () => {
 
   it('renders empty-state when bars empty', () => {
     render(<CreatorFanAge data={{ title: 'T', bars: [] }} />);
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
+  });
+});
+
+describe('creator fan interest (proportion bars)', () => {
+  it('renders title + subtitle + tag labels + percent labels', () => {
+    render(
+      <CreatorFanInterest
+        data={{
+          title: '兴趣标签',
+          subtitle: '美妆为主',
+          tags: [
+            { label: '美妆', value: 35, color: '#FF5C00' },
+            { label: '美食', value: 28, color: '#3B82F6' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('兴趣标签')).toBeInTheDocument();
+    expect(screen.getByText('美妆为主')).toBeInTheDocument();
+    expect(screen.getByText('美妆')).toBeInTheDocument();
+    expect(screen.getByText('美食')).toBeInTheDocument();
+    // 35/(35+28)=55.6 → round 56 ; 28/63=44.4 → 44
+    expect(screen.getByText('56%')).toBeInTheDocument();
+    expect(screen.getByText('44%')).toBeInTheDocument();
+  });
+
+  it('hides percent labels when showPercent=false', () => {
+    render(
+      <CreatorFanInterest
+        data={{
+          title: 'T',
+          tags: [{ label: '美妆', value: 35, color: '#FF5C00' }],
+          showPercent: false,
+        }}
+      />,
+    );
+    expect(screen.queryByText(/%$/)).toBeNull();
+  });
+
+  it('renders empty-state when tags empty', () => {
+    render(<CreatorFanInterest data={{ title: 'T', tags: [] }} />);
     expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });
