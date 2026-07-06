@@ -664,11 +664,19 @@ export interface PackageCardData {
  * 业绩看板（≈PRD CMP-B1）：KPI 矩阵。复用 TableData 形状，
  * 约定列顺序 [指标, 数值, 对比]；对比为 "+15%"/"-2%" 文本，渲染层按首字符上色。
  */
-export type KpiBoardVariant = 'grid' | 'row' | 'compact';
+export type KpiBoardVariant = 'grid' | 'row' | 'compact' | 'card';
+export type KpiColorToken = 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
 export interface KpiBoardData {
   variant: KpiBoardVariant;
   headers: string[];
   rows: string[][];
+  /** 每行图标 catalog key（按 rows 索引对齐）；null/缺省=不显示。仅 card 变体消费。 */
+  icons?: (string | null)[];
+  /** 每行数值主题色 token（按 rows 索引对齐）；缺省/null=默认前景。 */
+  valueColors?: (KpiColorToken | null)[];
+  /** 图标 weight，缺省 'regular'。 */
+  iconWeight?: IconWeight;
 }
 
 /**
