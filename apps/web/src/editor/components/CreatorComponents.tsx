@@ -288,3 +288,24 @@ function WorksCompact({
     </div>
   );
 }
+
+/* -------------------------- creator fan profile charts ------------------------- */
+
+/** 图表外壳：统一卡片框 + 标题 + 副标题（空则不渲染）+ 图区。 */
+function CreatorChartShell({
+  title,
+  subtitle,
+  children,
+}: {
+  title?: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary p-3">
+      {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+      {subtitle && <div className="mt-0.5 text-[11px] text-foreground-secondary">{subtitle}</div>}
+      <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  );
+}

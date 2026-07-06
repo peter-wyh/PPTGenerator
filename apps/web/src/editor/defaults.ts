@@ -23,6 +23,10 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'product-performance': { w: 900, h: 280 },
   'placement-display': { w: 700, h: 280 },
   'post-list': { w: 900, h: 240 },
+  'creator-fan-gender': { w: 320, h: 280 },
+  'creator-fan-city': { w: 420, h: 320 },
+  'creator-fan-age': { w: 420, h: 300 },
+  'creator-fan-interest': { w: 420, h: 280 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -214,6 +218,56 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['', 'Content Site 深度测评', 'CS-001', 'https://example.com/1', '阅读 24K'],
           ['', 'Reddit 热议帖', 'RD-104', 'https://example.com/2', '互动 3.2K'],
           ['', 'FB 种草贴', 'FB-220', 'https://example.com/3', '互动 1.8K'],
+        ],
+      };
+    case 'creator-fan-gender':
+      return {
+        title: '粉丝性别占比',
+        subtitle: '女性主导',
+        center: '女性 62%',
+        slices: [
+          { label: '女', value: 62, color: '#FF5C00' },
+          { label: '男', value: 36, color: '#3B82F6' },
+          { label: '其他', value: 2, color: '#8B5CF6' },
+        ],
+      };
+    case 'creator-fan-city':
+      return {
+        title: '粉丝城市分布 Top 8',
+        subtitle: '一线及新一线城市占 73%',
+        bars: [
+          { label: '上海', value: 22, color: '#FF5C00' },
+          { label: '广州', value: 16, color: '#3B82F6' },
+          { label: '北京', value: 14, color: '#22C55E' },
+          { label: '深圳', value: 12, color: '#8B5CF6' },
+          { label: '杭州', value: 9, color: '#F59E0B' },
+          { label: '成都', value: 7, color: '#EC4899' },
+          { label: '武汉', value: 5, color: '#3B82F6' },
+          { label: '西安', value: 4, color: '#22C55E' },
+        ],
+      };
+    case 'creator-fan-age':
+      return {
+        title: '粉丝年龄段',
+        subtitle: '25–34 岁为主力',
+        bars: [
+          { label: '<18', value: 8, color: '#3B82F6' },
+          { label: '18-24', value: 28, color: '#FF5C00' },
+          { label: '25-34', value: 38, color: '#22C55E' },
+          { label: '35-44', value: 18, color: '#8B5CF6' },
+          { label: '45+', value: 8, color: '#F59E0B' },
+        ],
+      };
+    case 'creator-fan-interest':
+      return {
+        title: '兴趣标签',
+        subtitle: '美妆 · 美食为两大主兴趣',
+        showPercent: true,
+        tags: [
+          { label: '美妆', value: 35, color: '#FF5C00' },
+          { label: '美食', value: 28, color: '#3B82F6' },
+          { label: '穿搭', value: 22, color: '#22C55E' },
+          { label: '旅行', value: 15, color: '#8B5CF6' },
         ],
       };
     default:
