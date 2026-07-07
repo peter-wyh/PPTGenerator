@@ -22,7 +22,7 @@ import {
   CreatorFanInterest,
 } from './components/CreatorComponents';
 import { BrandWall, PackageCard } from './components/CompanyComponents';
-import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from './components/ReportComponents';
+import { KpiBoard, MetaStripComponent, StrategyBlockComponent, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from './components/ReportComponents';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -295,6 +295,21 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'card', label: '卡片' },
     ],
     propertySchema: [{ key: '', label: 'KPI 列表', kind: 'table' }],
+  },
+  'meta-strip': {
+    Component: MetaStripComponent,
+    defaultSize: DEFAULT_SIZES['meta-strip'],
+    defaultData: () => getDefaultData('meta-strip'),
+    propertySchema: [{ key: '', label: '信息项', kind: 'table' }],
+  },
+  'strategy-block': {
+    Component: StrategyBlockComponent,
+    defaultSize: DEFAULT_SIZES['strategy-block'],
+    defaultData: () => getDefaultData('strategy-block'),
+    propertySchema: [
+      { key: '', label: '策略块', kind: 'table' },
+      { key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' },
+    ],
   },
   'timeline-compare': {
     Component: TimelineCompare,

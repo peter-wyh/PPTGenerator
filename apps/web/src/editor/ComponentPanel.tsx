@@ -39,6 +39,8 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'creator-fan-city', label: '城市分布', icon: '≣' },
       { type: 'creator-fan-age', label: '年龄段', icon: '▤' },
       { type: 'creator-fan-interest', label: '兴趣标签', icon: '▦' },
+      { type: 'meta-strip', label: '基础信息', icon: '≣' },
+      { type: 'strategy-block', label: '策略块', icon: '✎' },
     ],
   },
   {

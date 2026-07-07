@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MetaStripComponent, StrategyBlockComponent } from '@/editor/components/ReportComponents';
+import { REGISTRY } from '@/editor/registry';
+import { getDefaultData } from '@/editor/defaults';
 
 describe('MetaStripComponent', () => {
   it('渲染每项的 label + text', () => {
@@ -83,5 +85,25 @@ describe('StrategyBlockComponent', () => {
     );
     expect(container.querySelector('.text-accent-secondary')).toBeNull();
     expect(screen.getByText('plain text')).toBeInTheDocument();
+  });
+});
+
+describe('gap 组件注册与默认数据', () => {
+  it('REGISTRY 注册了 meta-strip + strategy-block', () => {
+    expect(REGISTRY['meta-strip']).toBeTruthy();
+    expect(REGISTRY['strategy-block']).toBeTruthy();
+    expect(REGISTRY['meta-strip'].propertySchema.some((f) => f.kind === 'table')).toBe(true);
+    expect(REGISTRY['strategy-block'].propertySchema.some((f) => f.kind === 'textarea')).toBe(true);
+  });
+
+  it('默认数据合法（headers + rows 对齐）', () => {
+    const meta = getDefaultData('meta-strip') as { headers: string[]; rows: string[][] };
+    expect(meta.headers.length).toBe(3);
+    expect(meta.rows.length).toBeGreaterThan(0);
+    expect(meta.rows[0].length).toBe(3);
+    const strat = getDefaultData('strategy-block') as { headers: string[]; rows: string[][]; highlights?: string };
+    expect(strat.headers.length).toBe(3);
+    expect(strat.rows[0].length).toBe(3);
+    expect(typeof strat.highlights).toBe('string');
   });
 });

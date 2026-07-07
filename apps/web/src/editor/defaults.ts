@@ -19,6 +19,8 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'brand-wall': { w: 700, h: 200 },
   'package-card': { w: 320, h: 320 },
   'kpi-board': { w: 900, h: 240 },
+  'meta-strip': { w: 600, h: 80 },
+  'strategy-block': { w: 600, h: 200 },
   'timeline-compare': { w: 900, h: 240 },
   'product-performance': { w: 900, h: 280 },
   'placement-display': { w: 700, h: 280 },
@@ -176,6 +178,24 @@ export function getDefaultData(type: ComponentType): ComponentData {
         ],
         icons: ['currency', 'percent', 'percent', 'users', 'eye', 'cart'],
         valueColors: ['success', 'success', 'info', 'info', 'warning', 'success'],
+      };
+    case 'meta-strip':
+      return {
+        headers: ['图标', '标签', '文本'],
+        rows: [
+          ['target', 'BASE', 'The United States'],
+          ['tag', 'TYPE', 'Beauty'],
+          ['trophy', 'TIER', 'A'],
+        ],
+      };
+    case 'strategy-block':
+      return {
+        headers: ['图标', '标题', '内容'],
+        rows: [
+          ['sparkle', 'INSIGHT', 'My audience values authenticity and practical beauty tips.'],
+          ['target', 'STRATEGY', 'Focus on practical beauty tips and authentic product reviews.'],
+        ],
+        highlights: 'beauty, tips',
       };
     case 'timeline-compare':
       return {
