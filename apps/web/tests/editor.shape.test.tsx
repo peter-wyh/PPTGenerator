@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { ShapeComponent } from '@/editor/components/BasicComponents';
+import { ShapeFields } from '@/editor/PropertyPanel';
 import type { ShapeData } from '@mediakit/shared';
 
 describe('ShapeComponent', () => {
@@ -33,5 +34,14 @@ describe('ShapeComponent', () => {
     const { container } = render(<ShapeComponent data={data} />);
     expect(container.innerHTML).toContain('rotate(45deg)');
     expect(container.innerHTML).toContain('opacity');
+  });
+});
+
+describe('ShapeFields', () => {
+  it('line 不显示填充色，rounded 显示圆角半径', () => {
+    const line = render(<ShapeFields comp={{ id: 'l', type: 'shape', x: 0, y: 0, w: 200, h: 4, data: { shape: 'line', stroke: '#E5E7EB', strokeWidth: 1, opacity: 1, rotation: 0, dash: false } } as any} />);
+    expect(line.queryByText('填充色')).toBeNull();
+    const rounded = render(<ShapeFields comp={{ id: 'r', type: 'shape', x: 0, y: 0, w: 200, h: 120, data: { shape: 'rounded', fill: '#000', strokeWidth: 0, opacity: 1, rotation: 0, borderRadius: 12 } } as any} />);
+    expect(rounded.getByText('圆角半径')).toBeInTheDocument();
   });
 });
