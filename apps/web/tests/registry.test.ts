@@ -26,6 +26,9 @@ const TYPES: ComponentType[] = [
   'creator-fan-city',
   'creator-fan-age',
   'creator-fan-interest',
+  'work-screenshot',
+  'work-metrics',
+  'comment-wordcloud',
 ];
 
 describe('REGISTRY', () => {

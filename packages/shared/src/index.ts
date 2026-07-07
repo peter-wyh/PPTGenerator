@@ -469,7 +469,11 @@ export type ComponentType =
   | 'creator-fan-city'
   | 'creator-fan-age'
   | 'creator-fan-interest'
-  | 'post-list';
+  | 'post-list'
+  // 业务组件（试点：业绩·商品域，作品证据 / 口碑展示）
+  | 'work-screenshot'
+  | 'work-metrics'
+  | 'comment-wordcloud';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -758,6 +762,50 @@ export interface CreatorFanInterestData {
   tags: { label: string; value: number; color: string }[];
 }
 
+/* ---- 业务组件（试点：业绩·商品域，作品证据 / 口碑展示）Data ---- */
+
+export interface WorkScreenshotItem {
+  src: string;
+  caption?: string;
+}
+
+/** 作品截图墙。variant 控制组图版式；缺省 'grid'。 */
+export interface WorkScreenshotData {
+  variant?: 'grid' | 'masonry' | 'hero' | 'skew';
+  title?: string;
+  images: WorkScreenshotItem[];
+}
+
+export interface WorkMetricItem {
+  label: string;
+  value: string; // 展示文案，允许 "1.2万" / "95%" 等
+  color?: string;
+}
+
+/** 单作品多维指标大数字卡。 */
+export interface WorkMetricsData {
+  title?: string;
+  subtitle?: string;
+  cover?: string; // 可选作品封面
+  workName?: string; // 可选作品标题
+  metrics: WorkMetricItem[];
+}
+
+export type Sentiment = 'pos' | 'neg' | 'neutral';
+
+export interface CommentWordItem {
+  text: string;
+  weight: number; // 数值越大字号越大
+  sentiment: Sentiment;
+}
+
+/** 评论关键词云（弹性流，字号 ∝ 权重，按情感着色）。 */
+export interface CommentWordcloudData {
+  title?: string;
+  subtitle?: string;
+  words: CommentWordItem[];
+}
+
 export type ComponentData =
   | TextData
   | ImageData
@@ -780,7 +828,10 @@ export type ComponentData =
   | CreatorFanCityData
   | CreatorFanAgeData
   | CreatorFanInterestData
-  | PostListData;
+  | PostListData
+  | WorkScreenshotData
+  | WorkMetricsData
+  | CommentWordcloudData;
 
 export interface EditorComponent {
   id: string;

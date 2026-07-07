@@ -22,6 +22,7 @@ import {
 } from './components/CreatorComponents';
 import { BrandWall, PackageCard } from './components/CompanyComponents';
 import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from './components/ReportComponents';
+import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -379,6 +380,38 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'subtitle', label: '副标题（清空隐藏）', kind: 'text' },
       { key: 'tags', label: '兴趣标签', kind: 'list' },
+    ],
+  },
+  'work-screenshot': {
+    Component: WorkScreenshot,
+    defaultSize: DEFAULT_SIZES['work-screenshot'],
+    defaultData: () => getDefaultData('work-screenshot'),
+    variants: [
+      { id: 'grid', label: '等分网格' },
+      { id: 'masonry', label: '瀑布流' },
+      { id: 'hero', label: '主图+缩略图' },
+      { id: 'skew', label: '斜切' },
+    ],
+    propertySchema: [{ key: 'title', label: '标题', kind: 'text' }],
+  },
+  'work-metrics': {
+    Component: WorkMetrics,
+    defaultSize: DEFAULT_SIZES['work-metrics'],
+    defaultData: () => getDefaultData('work-metrics'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'workName', label: '作品名', kind: 'text' },
+      { key: 'cover', label: '作品封面', kind: 'image-url' },
+    ],
+  },
+  'comment-wordcloud': {
+    Component: CommentWordcloud,
+    defaultSize: DEFAULT_SIZES['comment-wordcloud'],
+    defaultData: () => getDefaultData('comment-wordcloud'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
     ],
   },
 };

@@ -40,6 +40,9 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'kpi-board', label: '业绩看板', icon: '◉' },
       { type: 'timeline-compare', label: '周期对比', icon: '↔' },
       { type: 'product-performance', label: '商品表现', icon: '▣' },
+      { type: 'work-screenshot', label: '作品截图', icon: '▦' },
+      { type: 'work-metrics', label: '作品数据', icon: '▤' },
+      { type: 'comment-wordcloud', label: '评论词云', icon: '◑' },
     ],
   },
   {

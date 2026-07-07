@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type {
+  CommentWordcloudData,
   CreatorAvatarCardData,
   EditorComponent,
   ComponentData,
@@ -7,6 +8,9 @@ import type {
   CreatorStatsStripData,
   KpiBoardData,
   KpiColorToken,
+  Sentiment,
+  WorkMetricsData,
+  WorkScreenshotData,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from './store';
@@ -104,6 +108,10 @@ export function PropertyPanel() {
 
       {comp.type === 'kpi-board' && <KpiRowStyleField comp={comp} />}
 
+      {comp.type === 'work-screenshot' && <WorkScreenshotFields comp={comp} />}
+      {comp.type === 'work-metrics' && <WorkMetricsFields comp={comp} />}
+      {comp.type === 'comment-wordcloud' && <CommentWordcloudFields comp={comp} />}
+
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button
           variant="danger"
@@ -143,6 +151,9 @@ const LABELS: Record<string, string> = {
   'product-performance': '商品表现',
   'placement-display': '广告位展示',
   'post-list': 'Post 列表',
+  'work-screenshot': '作品截图',
+  'work-metrics': '作品数据',
+  'comment-wordcloud': '评论词云',
 };
 
 function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
@@ -1057,4 +1068,164 @@ function withAt<T>(arr: T[], i: number, v: T): T[] {
   const next = [...arr];
   next[i] = v;
   return next;
+}
+
+/* --------------------------- 业绩·商品 自定义字段 ---------------------------- */
+
+/** 作品截图：每张图 ImageInput + 说明 + 删除，底部添加。 */
+function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const data = comp.data as WorkScreenshotData;
+  const images = data.images ?? [];
+
+  const write = (next: WorkScreenshotData['images']) => {
+    updateComponentData(comp.id, { images: next } as Partial<WorkScreenshotData>);
+    commit();
+  };
+  const setItem = (i: number, patch: Partial<{ src: string; caption: string }>) =>
+    write(images.map((im, idx) => (idx === i ? { ...im, ...patch } : im)));
+  const add = () => write([...images, { src: '', caption: '' }]);
+  const remove = (i: number) => write(images.filter((_, idx) => idx !== i));
+
+  return (
+    <FieldGroup title="作品截图">
+      <div className="space-y-2">
+        {images.map((im, i) => (
+          <div key={i} className="space-y-1 rounded border border-border-subtle p-1.5">
+            <ImageInput value={im.src} onChange={(url) => setItem(i, { src: url })} />
+            <div className="flex items-center gap-1">
+              <input
+                value={im.caption ?? ''}
+                placeholder="说明"
+                onChange={(e) => setItem(i, { caption: e.target.value })}
+                className="w-full rounded border border-border-default px-1.5 py-1 text-xs text-foreground-primary"
+              />
+              <button onClick={() => remove(i)} className="text-foreground-muted hover:text-red">
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={add} className="text-xs text-accent-primary hover:underline">
+        + 添加图片
+      </button>
+    </FieldGroup>
+  );
+}
+
+/** 作品数据：每个指标 label + value + color + 删除，底部添加。 */
+function WorkMetricsFields({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const data = comp.data as WorkMetricsData;
+  const metrics = data.metrics ?? [];
+
+  const write = (next: WorkMetricsData['metrics']) => {
+    updateComponentData(comp.id, { metrics: next } as Partial<WorkMetricsData>);
+    commit();
+  };
+  const setItem = (i: number, patch: Partial<{ label: string; value: string; color: string }>) =>
+    write(metrics.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
+  const add = () => write([...metrics, { label: '新指标', value: '--', color: '#FF5C00' }]);
+  const remove = (i: number) => write(metrics.filter((_, idx) => idx !== i));
+
+  return (
+    <FieldGroup title="作品指标">
+      <div className="space-y-1">
+        {metrics.map((m, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <input
+              value={m.label}
+              placeholder="指标"
+              onChange={(e) => setItem(i, { label: e.target.value })}
+              className="w-16 rounded border border-border-default px-1.5 py-0.5 text-xs text-foreground-primary"
+            />
+            <input
+              value={m.value}
+              placeholder="数值"
+              onChange={(e) => setItem(i, { value: e.target.value })}
+              className="w-16 rounded border border-border-default px-1.5 py-0.5 text-xs text-foreground-primary"
+            />
+            <input
+              type="color"
+              value={m.color ?? '#FF5C00'}
+              onChange={(e) => setItem(i, { color: e.target.value })}
+              className="h-6 w-6 rounded border border-border-default"
+            />
+            <button onClick={() => remove(i)} className="text-foreground-muted hover:text-red">
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <button onClick={add} className="text-xs text-accent-primary hover:underline">
+        + 添加指标
+      </button>
+    </FieldGroup>
+  );
+}
+
+const WORDCLOUD_SENTIMENT_OPTIONS: { value: Sentiment; label: string }[] = [
+  { value: 'pos', label: '正面' },
+  { value: 'neg', label: '负面' },
+  { value: 'neutral', label: '中性' },
+];
+
+/** 评论词云：每个词 text + weight + 情感 + 删除，底部添加。 */
+function CommentWordcloudFields({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const data = comp.data as CommentWordcloudData;
+  const words = data.words ?? [];
+
+  const write = (next: CommentWordcloudData['words']) => {
+    updateComponentData(comp.id, { words: next } as Partial<CommentWordcloudData>);
+    commit();
+  };
+  const setItem = (i: number, patch: Partial<{ text: string; weight: number; sentiment: Sentiment }>) =>
+    write(words.map((w, idx) => (idx === i ? { ...w, ...patch } : w)));
+  const add = () => write([...words, { text: '新词', weight: 50, sentiment: 'neutral' }]);
+  const remove = (i: number) => write(words.filter((_, idx) => idx !== i));
+
+  return (
+    <FieldGroup title="评论词">
+      <div className="space-y-1">
+        {words.map((w, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <input
+              value={w.text}
+              placeholder="词"
+              onChange={(e) => setItem(i, { text: e.target.value })}
+              className="w-16 rounded border border-border-default px-1.5 py-0.5 text-xs text-foreground-primary"
+            />
+            <input
+              type="number"
+              value={w.weight}
+              onChange={(e) => setItem(i, { weight: Number(e.target.value) })}
+              className="w-12 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+            />
+            <select
+              value={w.sentiment}
+              onChange={(e) => setItem(i, { sentiment: e.target.value as Sentiment })}
+              className="rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+            >
+              {WORDCLOUD_SENTIMENT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <button onClick={() => remove(i)} className="text-foreground-muted hover:text-red">
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <button onClick={add} className="text-xs text-accent-primary hover:underline">
+        + 添加词
+      </button>
+    </FieldGroup>
+  );
 }

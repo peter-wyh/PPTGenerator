@@ -27,6 +27,9 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'creator-fan-city': { w: 420, h: 320 },
   'creator-fan-age': { w: 420, h: 300 },
   'creator-fan-interest': { w: 420, h: 280 },
+  'work-screenshot': { w: 600, h: 420 },
+  'work-metrics': { w: 560, h: 320 },
+  'comment-wordcloud': { w: 560, h: 360 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -270,6 +273,46 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { label: 'Food', value: 28, color: '#3B82F6' },
           { label: 'Fashion', value: 22, color: '#22C55E' },
           { label: 'Travel', value: 15, color: '#8B5CF6' },
+        ],
+      };
+    case 'work-screenshot':
+      return {
+        variant: 'grid',
+        title: '作品截图',
+        images: [
+          { src: '', caption: '代表作 1' },
+          { src: '', caption: '代表作 2' },
+          { src: '', caption: '代表作 3' },
+        ],
+      };
+    case 'work-metrics':
+      return {
+        title: '单作品数据',
+        subtitle: '近 7 天',
+        workName: '7-Day Skin Diary · Day 1',
+        cover: '',
+        metrics: [
+          { label: '播放', value: '1.2M', color: '#FF5C00' },
+          { label: '点赞', value: '86K', color: '#3B82F6' },
+          { label: '评论', value: '2.4K', color: '#22C55E' },
+          { label: '转发', value: '1.2K', color: '#8B5CF6' },
+          { label: '完播率', value: '42%', color: '#F59E0B' },
+          { label: '收藏', value: '5.6K', color: '#EC4899' },
+        ],
+      };
+    case 'comment-wordcloud':
+      return {
+        title: '评论词云',
+        subtitle: '正面口碑为主，集中在功效与质地',
+        words: [
+          { text: '种草', weight: 90, sentiment: 'pos' },
+          { text: '好用', weight: 80, sentiment: 'pos' },
+          { text: '回购', weight: 70, sentiment: 'pos' },
+          { text: '性价比', weight: 60, sentiment: 'pos' },
+          { text: '质地', weight: 55, sentiment: 'neutral' },
+          { text: '香味', weight: 45, sentiment: 'neutral' },
+          { text: '刺激', weight: 35, sentiment: 'neg' },
+          { text: '拔草', weight: 30, sentiment: 'neg' },
         ],
       };
     default:
