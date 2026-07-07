@@ -7,6 +7,7 @@ import type {
   ProjectDetail,
   ProjectMeta,
   ProjectTheme,
+  ShapeKind,
   ThemeDensity,
   ThemeRadius,
 } from '@mediakit/shared';
@@ -14,6 +15,7 @@ import { DEFAULT_THEME, normalizeTheme } from '@mediakit/shared';
 import {
   DEFAULT_SIZES,
   getDefaultData,
+  getDefaultShapeData,
   HISTORY_CAP,
   MIN_H,
   MIN_W,
@@ -97,6 +99,8 @@ export interface EditorState {
   addComponentAt: (type: ComponentType, x: number, y: number) => void;
   addBusinessBlock: (kind: string) => void;
   addBusinessBlockAt: (kind: string, x: number, y: number) => void;
+  addShape: (shape: ShapeKind) => void;
+  addShapeAt: (shape: ShapeKind, x: number, y: number) => void;
   updateComponent: (id: string, patch: Partial<EditorComponent>) => void;
   updateComponentData: (id: string, dataPatch: Record<string, unknown>) => void;
   /** 整体替换组件 data（导入数据用），落 history + 标脏。 */
@@ -417,6 +421,44 @@ export const useEditorStore = create<EditorState>((set, get) => {
             details: [...item.details],
             variant: 'standard',
           },
+        };
+        return {
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
+          selectedIds: [comp.id],
+        };
+      }),
+
+    addShape: (shape) =>
+      mutateAndCommit((s) => {
+        const size = shape === 'line' ? { w: 200, h: 4 } : DEFAULT_SIZES['shape'];
+        const { x, y } = centered(size.w, size.h, s.canvasWidth, s.canvasHeight);
+        const comp: EditorComponent = {
+          id: newId(),
+          type: 'shape',
+          x,
+          y,
+          w: size.w,
+          h: size.h,
+          data: getDefaultShapeData(shape),
+        };
+        return {
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
+          selectedIds: [comp.id],
+        };
+      }),
+
+    addShapeAt: (shape, cx, cy) =>
+      mutateAndCommit((s) => {
+        const size = shape === 'line' ? { w: 200, h: 4 } : DEFAULT_SIZES['shape'];
+        const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight);
+        const comp: EditorComponent = {
+          id: newId(),
+          type: 'shape',
+          x,
+          y,
+          w: size.w,
+          h: size.h,
+          data: getDefaultShapeData(shape),
         };
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
