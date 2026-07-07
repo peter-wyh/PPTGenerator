@@ -8,6 +8,7 @@
  */
 import type {
   KpiBoardData,
+  MetaStripData,
   PlacementData,
   PostListData,
   ProductPerformanceData,
@@ -236,6 +237,29 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ------------------------------ meta strip ------------------------------- */
+
+export function MetaStripComponent({ data }: { data: MetaStripData }) {
+  const rows = data.rows ?? [];
+  return (
+    <div className="flex h-full w-full flex-wrap items-center gap-2 overflow-auto">
+      {rows.map((r, i) => {
+        const iconKey = r[0] ?? '';
+        const label = r[1] ?? '';
+        const text = r[2] ?? '';
+        const Icon = findIcon(iconKey)?.Comp;
+        return (
+          <div key={i} className="flex items-center gap-1.5 rounded bg-surface-secondary px-2 py-1">
+            {Icon && <Icon size={14} className="text-foreground-secondary" />}
+            <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{label}</span>
+            <span className="text-sm text-foreground-primary">{text}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
