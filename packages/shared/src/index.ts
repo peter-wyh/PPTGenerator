@@ -469,9 +469,23 @@ export type ComponentType =
   | 'creator-fan-city'
   | 'creator-fan-age'
   | 'creator-fan-interest'
-  | 'post-list';
+  | 'post-list'
+  | 'shape';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
+
+export type ShapeKind = 'rectangle' | 'rounded' | 'circle' | 'line';
+
+export interface ShapeData {
+  shape: ShapeKind;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  opacity?: number;
+  rotation?: number;
+  borderRadius?: number; // 仅 rounded
+  dash?: boolean; // 仅 line
+}
 
 export interface TextData {
   content: string;
@@ -780,7 +794,8 @@ export type ComponentData =
   | CreatorFanCityData
   | CreatorFanAgeData
   | CreatorFanInterestData
-  | PostListData;
+  | PostListData
+  | ShapeData;
 
 export interface EditorComponent {
   id: string;

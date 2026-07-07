@@ -7,6 +7,7 @@ import {
   IndicatorCardComponent,
   LineChartComponent,
   PieChartComponent,
+  ShapeComponent,
   TableComponent,
   TextComponent,
 } from './components/BasicComponents';
@@ -187,6 +188,12 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     defaultSize: DEFAULT_SIZES.table,
     defaultData: () => getDefaultData('table'),
     propertySchema: [{ key: '', label: '表格内容', kind: 'table' }],
+  },
+  'shape': {
+    Component: ShapeComponent,
+    defaultSize: DEFAULT_SIZES['shape'],
+    defaultData: () => getDefaultData('shape'),
+    propertySchema: [],
   },
   'business-block': {
     Component: BusinessBlockRenderer,

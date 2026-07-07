@@ -2,7 +2,7 @@
  * 组件默认尺寸 / 默认数据。供 editor store（addComponent）与 REGISTRY 共用，
  * 避免循环依赖（REGISTRY 含 React 组件）。忠实 demo.html。
  */
-import type { ComponentType, ComponentData } from '@mediakit/shared';
+import type { ComponentType, ComponentData, ShapeKind, ShapeData } from '@mediakit/shared';
 
 export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   text: { w: 300, h: 60 },
@@ -27,6 +27,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'creator-fan-city': { w: 420, h: 320 },
   'creator-fan-age': { w: 420, h: 300 },
   'creator-fan-interest': { w: 420, h: 280 },
+  'shape': { w: 200, h: 120 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -272,7 +273,25 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { label: 'Travel', value: 15, color: '#8B5CF6' },
         ],
       };
+    case 'shape':
+      return getDefaultShapeData('rectangle');
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };
   }
+}
+
+export function getDefaultShapeData(shape: ShapeKind): ShapeData {
+  if (shape === 'line') {
+    return { shape: 'line', stroke: '#E5E7EB', strokeWidth: 1, opacity: 1, rotation: 0, dash: false };
+  }
+  const base: ShapeData = {
+    shape,
+    fill: '#FF5C00',
+    stroke: '#E5E7EB',
+    strokeWidth: 0,
+    opacity: 1,
+    rotation: 0,
+  };
+  if (shape === 'rounded') return { ...base, borderRadius: 12 };
+  return base;
 }

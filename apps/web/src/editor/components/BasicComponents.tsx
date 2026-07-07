@@ -20,6 +20,7 @@ import type {
   IndicatorCardVariant,
   LineChartData,
   PieChartData,
+  ShapeData,
   TableData,
   TextData,
 } from '@mediakit/shared';
@@ -279,6 +280,25 @@ export function BusinessBlockPlaceholder({ data }: { data: { title?: string; bus
     <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-accent-primary/40 bg-accent-primary/5 text-center text-sm text-accent-primary">
       业务组件 · {data.businessKind ?? 'unknown'}
       {data.title ? ` · ${data.title}` : ''}
+    </div>
+  );
+}
+
+/* --------------------------------- shape --------------------------------- */
+export function ShapeComponent({ data }: { data: ShapeData }) {
+  const { shape, fill, stroke, strokeWidth, opacity, rotation, borderRadius, dash } = data;
+  const border = strokeWidth && stroke ? `${strokeWidth}px solid ${stroke}` : undefined;
+  const inner =
+    shape === 'line' ? (
+      <svg className="h-full w-full" preserveAspectRatio="none">
+        <line x1="0" y1="50%" x2="100%" y2="50%" stroke={stroke ?? '#E5E7EB'} strokeWidth={strokeWidth ?? 1} strokeDasharray={dash ? '8 4' : undefined} />
+      </svg>
+    ) : (
+      <div className="h-full w-full" style={{ backgroundColor: fill, border, borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? borderRadius ?? 12 : undefined }} />
+    );
+  return (
+    <div className="h-full w-full" style={{ opacity: opacity ?? 1, transform: rotation ? `rotate(${rotation}deg)` : undefined }}>
+      {inner}
     </div>
   );
 }
