@@ -470,7 +470,9 @@ export type ComponentType =
   | 'creator-fan-age'
   | 'creator-fan-interest'
   | 'post-list'
-  | 'shape';
+  | 'shape'
+  | 'meta-strip'
+  | 'strategy-block';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -691,6 +693,24 @@ export interface KpiBoardData {
   valueColors?: (KpiColorToken | null)[];
   /** 图标 weight，缺省 'regular'。 */
   iconWeight?: IconWeight;
+}
+
+/** 基础信息横排卡组（达人画像页 BASE/TYPE/TIER）。复用 TableData 形态。 */
+export interface MetaStripData {
+  /** 约定 ['图标', '标签', '文本']。 */
+  headers: string[];
+  /** 每行 [iconKey?, label, text]；iconKey 为 catalog key，空串=无图标。 */
+  rows: string[][];
+}
+
+/** 内容策略富文本块（达人画像页 INSIGHT/STRATEGY）。复用 TableData 形态。 */
+export interface StrategyBlockData {
+  /** 约定 ['图标', '标题', '内容']。 */
+  headers: string[];
+  /** 每行 [iconKey?, title, content]。 */
+  rows: string[][];
+  /** 全局高亮词，逗号分隔；渲染时 split，命中 content 的词包粉色 span。 */
+  highlights?: string;
 }
 
 /**
