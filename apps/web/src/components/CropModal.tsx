@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
+import 'react-easy-crop/react-easy-crop.css';
 
 interface Props {
   /** 待裁剪图片（本地选择的文件）。 */
