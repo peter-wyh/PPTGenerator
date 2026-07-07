@@ -8,9 +8,11 @@
  */
 import type {
   KpiBoardData,
+  MetaStripData,
   PlacementData,
   PostListData,
   ProductPerformanceData,
+  StrategyBlockData,
   TimelineCompareData,
 } from '@mediakit/shared';
 import { findIcon } from '../icons/catalog';
@@ -236,6 +238,77 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ------------------------------ meta strip ------------------------------- */
+
+export function MetaStripComponent({ data }: { data: MetaStripData }) {
+  const rows = data.rows ?? [];
+  return (
+    <div className="flex h-full w-full flex-wrap items-center gap-2 overflow-auto">
+      {rows.map((r, i) => {
+        const iconKey = r[0] ?? '';
+        const label = r[1] ?? '';
+        const text = r[2] ?? '';
+        const Icon = findIcon(iconKey)?.Comp;
+        return (
+          <div key={i} className="flex items-center gap-1.5 rounded bg-surface-secondary px-2 py-1">
+            {Icon && <Icon size={14} className="text-foreground-secondary" />}
+            <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{label}</span>
+            <span className="text-sm text-foreground-primary">{text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------------------- strategy block ----------------------------- */
+
+/** 把 content 按 highlights 词（逗号分隔）切分，命中词包成高亮 span。 */
+function renderHighlighted(content: string, highlights?: string) {
+  const words = (highlights ?? '')
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (words.length === 0 || !content) return content;
+  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp(`(${escaped.join('|')})`, 'gi');
+  const lower = words.map((w) => w.toLowerCase());
+  return content.split(re).map((part, i) =>
+    lower.includes(part.toLowerCase()) ? (
+      <span key={i} className="font-medium text-accent-secondary">{part}</span>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
+}
+
+export function StrategyBlockComponent({ data }: { data: StrategyBlockData }) {
+  const rows = data.rows ?? [];
+  return (
+    <div className="flex h-full w-full flex-col gap-3 overflow-auto">
+      {rows.map((r, i) => {
+        const iconKey = r[0] ?? '';
+        const title = r[1] ?? '';
+        const content = r[2] ?? '';
+        const Icon = findIcon(iconKey)?.Comp;
+        return (
+          <div key={i} className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              {Icon && <Icon size={16} className="text-accent-secondary" />}
+              <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
+                {title}
+              </span>
+            </div>
+            <div className="whitespace-pre-wrap text-sm text-foreground-secondary">
+              {renderHighlighted(content, data.highlights)}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

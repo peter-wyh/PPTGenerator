@@ -473,9 +473,26 @@ export type ComponentType =
   // 业务组件（试点：业绩·商品域，作品证据 / 口碑展示）
   | 'work-screenshot'
   | 'work-metrics'
-  | 'comment-wordcloud';
+  | 'comment-wordcloud'
+  // 业务组件（基础图形 / 缺口组件）
+  | 'shape'
+  | 'meta-strip'
+  | 'strategy-block';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
+
+export type ShapeKind = 'rectangle' | 'rounded' | 'circle' | 'line';
+
+export interface ShapeData {
+  shape: ShapeKind;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  opacity?: number;
+  rotation?: number;
+  borderRadius?: number; // 仅 rounded
+  dash?: boolean; // 仅 line
+}
 
 export interface TextData {
   content: string;
@@ -683,6 +700,24 @@ export interface KpiBoardData {
   iconWeight?: IconWeight;
 }
 
+/** 基础信息横排卡组（达人画像页 BASE/TYPE/TIER）。复用 TableData 形态。 */
+export interface MetaStripData {
+  /** 约定 ['图标', '标签', '文本']。 */
+  headers: string[];
+  /** 每行 [iconKey?, label, text]；iconKey 为 catalog key，空串=无图标。 */
+  rows: string[][];
+}
+
+/** 内容策略富文本块（达人画像页 INSIGHT/STRATEGY）。复用 TableData 形态。 */
+export interface StrategyBlockData {
+  /** 约定 ['图标', '标题', '内容']。 */
+  headers: string[];
+  /** 每行 [iconKey?, title, content]。 */
+  rows: string[][];
+  /** 全局高亮词，逗号分隔；渲染时 split，命中 content 的词包粉色 span。 */
+  highlights?: string;
+}
+
 /**
  * 周期对比表（≈PRD CMP-B13）：本期 vs 上期 + 状态。复用 TableData 形状，
  * 约定列顺序 [指标, 本期, 上期, 状态]；状态值 Optimized/Exceeded/Stable 渲染为色块。
@@ -831,7 +866,8 @@ export type ComponentData =
   | PostListData
   | WorkScreenshotData
   | WorkMetricsData
-  | CommentWordcloudData;
+  | CommentWordcloudData
+  | ShapeData;
 
 export interface EditorComponent {
   id: string;

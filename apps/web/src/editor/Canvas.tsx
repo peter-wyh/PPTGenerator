@@ -237,6 +237,7 @@ export function Canvas() {
     const { x, y } = clientToCanvas(e.clientX, e.clientY);
     const st = useEditorStore.getState();
     if (payload.op === 'component') st.addComponentAt(payload.type, x, y);
+    else if (payload.op === 'shape') st.addShapeAt(payload.shape, x, y);
     else st.addBusinessBlockAt(payload.kind, x, y);
   }
 

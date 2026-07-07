@@ -2,7 +2,7 @@
  * 组件默认尺寸 / 默认数据。供 editor store（addComponent）与 REGISTRY 共用，
  * 避免循环依赖（REGISTRY 含 React 组件）。忠实 demo.html。
  */
-import type { ComponentType, ComponentData } from '@mediakit/shared';
+import type { ComponentType, ComponentData, ShapeKind, ShapeData } from '@mediakit/shared';
 
 export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   text: { w: 300, h: 60 },
@@ -19,6 +19,8 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'brand-wall': { w: 700, h: 200 },
   'package-card': { w: 320, h: 320 },
   'kpi-board': { w: 900, h: 240 },
+  'meta-strip': { w: 600, h: 80 },
+  'strategy-block': { w: 600, h: 200 },
   'timeline-compare': { w: 900, h: 240 },
   'product-performance': { w: 900, h: 280 },
   'placement-display': { w: 700, h: 280 },
@@ -30,6 +32,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'work-screenshot': { w: 600, h: 420 },
   'work-metrics': { w: 560, h: 320 },
   'comment-wordcloud': { w: 560, h: 360 },
+  'shape': { w: 200, h: 120 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -179,6 +182,24 @@ export function getDefaultData(type: ComponentType): ComponentData {
         icons: ['currency', 'percent', 'percent', 'users', 'eye', 'cart'],
         valueColors: ['success', 'success', 'info', 'info', 'warning', 'success'],
       };
+    case 'meta-strip':
+      return {
+        headers: ['图标', '标签', '文本'],
+        rows: [
+          ['target', 'BASE', 'The United States'],
+          ['tag', 'TYPE', 'Beauty'],
+          ['trophy', 'TIER', 'A'],
+        ],
+      };
+    case 'strategy-block':
+      return {
+        headers: ['图标', '标题', '内容'],
+        rows: [
+          ['sparkle', 'INSIGHT', 'My audience values authenticity and practical beauty tips.'],
+          ['target', 'STRATEGY', 'Focus on practical beauty tips and authentic product reviews.'],
+        ],
+        highlights: 'beauty, tips',
+      };
     case 'timeline-compare':
       return {
         variant: 'standard',
@@ -315,7 +336,25 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { text: '拔草', weight: 30, sentiment: 'neg' },
         ],
       };
+    case 'shape':
+      return getDefaultShapeData('rectangle');
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };
   }
+}
+
+export function getDefaultShapeData(shape: ShapeKind): ShapeData {
+  if (shape === 'line') {
+    return { shape: 'line', stroke: '#E5E7EB', strokeWidth: 1, opacity: 1, rotation: 0, dash: false };
+  }
+  const base: ShapeData = {
+    shape,
+    fill: '#FF5C00',
+    stroke: '#E5E7EB',
+    strokeWidth: 0,
+    opacity: 1,
+    rotation: 0,
+  };
+  if (shape === 'rounded') return { ...base, borderRadius: 12 };
+  return base;
 }
