@@ -1,5 +1,6 @@
 import type { Page } from '@mediakit/shared';
 import { ComponentRenderer } from '../components/ComponentRenderer';
+import { resolvePageBackground } from '../background';
 
 /**
  * 只读单页渲染（M6 预览 / 分享页 / PDF 共用）。
@@ -19,6 +20,8 @@ interface Props {
 
 export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
   const sorted = [...page.components].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  // 背景与编辑器 Canvas 一致：统一走 resolvePageBackground（图 > 渐变 > 纯色 > 白）。
+  const background = resolvePageBackground(page);
   return (
     <div
       style={{
@@ -26,6 +29,7 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
         width: canvasWidth * scale,
         height: canvasHeight * scale,
         overflow: 'hidden',
+        background,
       }}
     >
       <div

@@ -1,4 +1,5 @@
 import type { ComponentType, EditorComponent, Page } from '@mediakit/shared';
+import { resolvePageBackground } from '../background';
 
 /** demo 的缩略图配色：按组件类型映射。 */
 const TYPE_COLOR: Partial<Record<ComponentType, string>> = {
@@ -16,12 +17,6 @@ interface Props {
   height?: number;
 }
 
-/** 页面背景样式（与 Canvas 一致：图优先于色，默认白）。 */
-function pageBg(page: Page): string {
-  if (page.bgImage) return `#fff url(${page.bgImage}) center/cover no-repeat`;
-  return page.bgColor ?? '#fff';
-}
-
 /**
  * 页面缩略图：把组件按比例缩放进固定盒子，每个组件渲染为一个彩色色块，
  * 盒子底色反映页面背景。忠实 demo.renderPageThumbPreview 的做法。
@@ -35,7 +30,7 @@ export function PageThumbnail({ page, canvasWidth, canvasHeight, width = 184, he
 
   return (
     <div className="relative rounded border border-border-subtle bg-surface-primary" style={{ width, height }}>
-      <div className="absolute" style={{ left: offX, top: offY, width: innerW, height: innerH, background: pageBg(page) }}>
+      <div className="absolute" style={{ left: offX, top: offY, width: innerW, height: innerH, background: resolvePageBackground(page) }}>
         {page.components.length === 0 ? (
           <div className="flex h-full w-full items-center justify-center text-[10px] text-foreground-muted">空白页</div>
         ) : (

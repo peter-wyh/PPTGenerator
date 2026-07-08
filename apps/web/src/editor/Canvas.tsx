@@ -4,6 +4,7 @@ import type { EditorComponent } from '@mediakit/shared';
 import { CanvasComponent } from './components/CanvasComponent';
 import { ContextMenu, type MenuItem } from './components/ContextMenu';
 import { PALETTE_MIME, type PalettePayload } from './ComponentPanel';
+import { resolvePageBackground } from './background';
 
 type DragState =
   | { kind: 'move'; mouseX: number; mouseY: number; comps: { id: string; x: number; y: number; locked?: boolean }[] }
@@ -261,9 +262,7 @@ export function Canvas() {
           width: canvasWidth * zoom,
           height: canvasHeight * zoom,
           transform: `translate(${panX}px, ${panY}px)`,
-          background: currentPage?.bgImage
-            ? `#fff url(${currentPage.bgImage}) center/cover no-repeat`
-            : currentPage?.bgColor ?? '#fff',
+          background: currentPage ? resolvePageBackground(currentPage) : '#fff',
         }}
       >
         <div
