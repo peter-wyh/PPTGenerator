@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MetaStripComponent } from '@/editor/components/ReportComponents';
+import { REGISTRY } from '@/editor/registry';
 import type { MetaStripData } from '@mediakit/shared';
 
 const rows: string[][] = [
@@ -52,5 +53,12 @@ describe('MetaStripComponent variants', () => {
     expect(screen.getByText('BASE')).toBeInTheDocument();
     // stat 的 text 用大号数据字体
     expect(container.querySelector('[class*="font-data"]')).toBeTruthy();
+  });
+});
+
+describe('meta-strip registry', () => {
+  it('declares 5 variants in order', () => {
+    const ids = REGISTRY['meta-strip'].variants?.map((v) => v.id);
+    expect(ids).toEqual(['inline', 'divider', 'list', 'cards', 'stat']);
   });
 });
