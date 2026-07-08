@@ -73,4 +73,21 @@ describe('PropertyPanel — 页面背景类型单选 + 渐变编辑器', () => {
     render(<PropertyPanel />);
     expect(screen.getByText('+ 添加色标')).toBeDisabled();
   });
+
+  it('已有 bgColor 时按数据显示纯色编辑器（类型派生自数据）', () => {
+    setPage({ bgColor: '#FF5C00' });
+    render(<PropertyPanel />);
+    // 纯色区块的 HEX 文本框
+    expect(screen.getByPlaceholderText('#FFFFFF（留空=白）')).toBeInTheDocument();
+    // 渐变编辑器不渲染
+    expect(screen.queryByText('线性')).toBeNull();
+  });
+
+  it('点「图片」（无 URL）进入图片态：不显示纯色/渐变编辑器（imagePending 覆盖）', () => {
+    setPage({});
+    render(<PropertyPanel />);
+    fireEvent.click(screen.getByText('图片'));
+    expect(screen.queryByText('线性')).toBeNull();
+    expect(screen.queryByPlaceholderText('#FFFFFF（留空=白）')).toBeNull();
+  });
 });

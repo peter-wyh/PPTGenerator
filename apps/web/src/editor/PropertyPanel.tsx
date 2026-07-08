@@ -179,10 +179,11 @@ function FieldGroup({ title, children }: { title: string; children: React.ReactN
 function PageProperties() {
   const page = useEditorStore((s) => s.currentPage());
   const updatePage = useEditorStore((s) => s.updatePage);
-  // 背景类型（单选）：初始/切页由数据推导；点 chip 切换。'image' 在尚未选图时靠本地态保持高亮。
-  const [bgType, setBgType] = useState<BackgroundType>(() => (page ? backgroundType(page) : 'none'));
+  // 背景类型派生自数据（撤销/重做后立即同步）；imagePending 仅覆盖「选了图片但还没给 URL」这一瞬态，
+  // 让「图片」chip 保持高亮、显示 ImageInput。
+  const [imagePending, setImagePending] = useState(false);
   useEffect(() => {
-    setBgType(page ? backgroundType(page) : 'none');
+    setImagePending(false);
   }, [page?.id]);
 
   if (!page) {
@@ -196,8 +197,12 @@ function PageProperties() {
   const set = (patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage'>>) =>
     updatePage(page.id, patch);
 
+  // 类型派生自数据；imagePending 覆盖「图片待选 URL」瞬态。
+  const derived = backgroundType(page);
+  const bgType: BackgroundType = imagePending && derived === 'none' ? 'image' : derived;
+
   const switchType = (t: BackgroundType) => {
-    setBgType(t);
+    setImagePending(t === 'image');
     updatePage(page.id, buildBackgroundTypePatch(page, t));
   };
 
@@ -262,7 +267,7 @@ function PageProperties() {
         {(page.bgColor || page.bgGradient || page.bgImage) && (
           <button
             onClick={() => {
-              setBgType('none');
+              setImagePending(false);
               set({ bgColor: undefined, bgGradient: undefined, bgImage: undefined });
             }}
             className="mt-1 text-xs text-foreground-muted hover:text-red"
