@@ -283,10 +283,30 @@ function MetaDivider({ items }: { items: MetaItem[] }) {
   );
 }
 
+function MetaList({ items }: { items: MetaItem[] }) {
+  return (
+    <div className="flex h-full w-full flex-col divide-y divide-border-subtle">
+      {items.map((it, i) => {
+        const Icon = findIcon(it.iconKey)?.Comp;
+        return (
+          <div key={i} className="flex items-baseline justify-between gap-3 py-1.5">
+            <span className="flex items-center gap-1.5">
+              {Icon && <Icon size={13} className="text-foreground-secondary" />}
+              <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{it.label}</span>
+            </span>
+            <span className="text-right text-sm text-foreground-primary">{it.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function MetaStripComponent({ data }: { data: MetaStripData }) {
   const { variant = 'inline', rows = [] } = data;
   const items: MetaItem[] = rows.map((r) => ({ iconKey: r[0] ?? '', label: r[1] ?? '', text: r[2] ?? '' }));
   if (variant === 'divider') return <MetaDivider items={items} />;
+  if (variant === 'list') return <MetaList items={items} />;
   return <MetaInline items={items} />;
 }
 

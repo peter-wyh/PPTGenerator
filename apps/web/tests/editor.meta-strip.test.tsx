@@ -29,4 +29,12 @@ describe('MetaStripComponent variants', () => {
     // divider 无胶囊灰底
     expect(container.querySelector('[class*="bg-surface-secondary"]')).toBeNull();
   });
+
+  it('list renders vertical rows', () => {
+    const { container } = render(<MetaStripComponent data={dataFor('list')} />);
+    expect(screen.getByText('BASE')).toBeInTheDocument();
+    expect(screen.getByText('The United States')).toBeInTheDocument();
+    // list 容器纵向排列
+    expect(container.querySelector('[class*="flex-col"]')).toBeTruthy();
+  });
 });
