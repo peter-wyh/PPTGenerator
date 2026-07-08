@@ -21,4 +21,12 @@ describe('MetaStripComponent variants', () => {
     // inline 胶囊带灰底
     expect(container.querySelector('[class*="bg-surface-secondary"]')).toBeTruthy();
   });
+
+  it('divider renders text without capsule background', () => {
+    const { container } = render(<MetaStripComponent data={dataFor('divider')} />);
+    expect(screen.getByText('BASE')).toBeInTheDocument();
+    expect(screen.getByText('Beauty')).toBeInTheDocument();
+    // divider 无胶囊灰底
+    expect(container.querySelector('[class*="bg-surface-secondary"]')).toBeNull();
+  });
 });

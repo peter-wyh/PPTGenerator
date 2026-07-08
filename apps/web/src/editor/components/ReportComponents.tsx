@@ -263,9 +263,30 @@ function MetaInline({ items }: { items: MetaItem[] }) {
   );
 }
 
+function MetaDivider({ items }: { items: MetaItem[] }) {
+  return (
+    <div className="flex h-full w-full flex-wrap items-center">
+      {items.map((it, i) => {
+        const Icon = findIcon(it.iconKey)?.Comp;
+        return (
+          <div
+            key={i}
+            className={`flex items-center gap-1.5 ${i === 0 ? 'pl-0' : 'border-l border-border-subtle pl-2'}`}
+          >
+            {Icon && <Icon size={13} className="text-foreground-secondary" />}
+            <span className="text-[11px] uppercase tracking-wide text-foreground-muted">{it.label}</span>
+            <span className="text-sm text-foreground-primary">{it.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function MetaStripComponent({ data }: { data: MetaStripData }) {
-  const rows = data.rows ?? [];
+  const { variant = 'inline', rows = [] } = data;
   const items: MetaItem[] = rows.map((r) => ({ iconKey: r[0] ?? '', label: r[1] ?? '', text: r[2] ?? '' }));
+  if (variant === 'divider') return <MetaDivider items={items} />;
   return <MetaInline items={items} />;
 }
 
