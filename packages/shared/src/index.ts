@@ -898,12 +898,75 @@ export interface Datasource {
   rows: Record<string, string>[];
 }
 
+/** 渐变色标：颜色（HEX）+ 位置（百分比 0–100）。 */
+export interface GradientStop {
+  color: string;
+  position: number;
+}
+
+/** 页面背景渐变：线性 / 径向，2–6 色标；线性带角度。 */
+export interface PageGradient {
+  type: 'linear' | 'radial';
+  angle?: number;
+  stops: GradientStop[];
+}
+
 export interface Page {
   id: string;
   name: string;
   components: EditorComponent[];
   /** 页面背景色（HEX）；与 bgImage 二选一，未设时画布默认白。 */
   bgColor?: string;
+  /** 页面背景渐变；优先级在 bgImage 之下、bgColor 之上。 */
+  bgGradient?: PageGradient;
   /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
   bgImage?: string;
+}
+
+function clampNum(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function validHex(c: unknown): string {
+  return typeof c === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) ? c : '#FFFFFF';
+}
+
+/**
+ * 把 PageGradient 对象转成 CSS 渐变字符串。防御式归一（渲染层最后一道防线）：
+ * - position clamp 到 0–100 并按升序排序；
+ * - 色标少于 2 → 补齐到 2；多于 6 → 截断到 6；
+ * - 非法颜色回退 #FFFFFF；
+ * - angle 缺省 180、clamp 到 0–360；type 非 radial 一律按 linear。
+ * 输入为空 / 异常时不抛错，返回纯白线性渐变。
+ */
+export function gradientToCss(g: unknown): string {
+  const raw = (g && typeof g === 'object' ? g : {}) as Partial<PageGradient>;
+  const type: 'linear' | 'radial' = raw.type === 'radial' ? 'radial' : 'linear';
+
+  let stops = (Array.isArray(raw.stops) ? raw.stops : [])
+    .filter((s): s is GradientStop => !!s && typeof s === 'object')
+    .map((s) => ({
+      color: validHex(s.color),
+      position: clampNum(Math.round(Number(s.position) || 0), 0, 100),
+    }))
+    .sort((a, b) => a.position - b.position);
+
+  if (stops.length === 0) {
+    stops = [
+      { color: '#FFFFFF', position: 0 },
+      { color: '#FFFFFF', position: 100 },
+    ];
+  } else if (stops.length === 1) {
+    const c = stops[0].color;
+    stops = [
+      { color: c, position: 0 },
+      { color: c, position: 100 },
+    ];
+  }
+  if (stops.length > 6) stops = stops.slice(0, 6);
+
+  const stopStr = stops.map((s) => `${s.color} ${s.position}%`).join(', ');
+  if (type === 'radial') return `radial-gradient(circle at center, ${stopStr})`;
+  const angle = clampNum(Math.round(Number(raw.angle ?? 180)), 0, 360);
+  return `linear-gradient(${angle}deg, ${stopStr})`;
 }
