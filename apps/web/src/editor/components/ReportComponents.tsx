@@ -244,25 +244,29 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
 
 /* ------------------------------ meta strip ------------------------------- */
 
-export function MetaStripComponent({ data }: { data: MetaStripData }) {
-  const rows = data.rows ?? [];
+type MetaItem = { iconKey: string; label: string; text: string };
+
+function MetaInline({ items }: { items: MetaItem[] }) {
   return (
     <div className="flex h-full w-full flex-wrap items-center gap-2 overflow-auto">
-      {rows.map((r, i) => {
-        const iconKey = r[0] ?? '';
-        const label = r[1] ?? '';
-        const text = r[2] ?? '';
-        const Icon = findIcon(iconKey)?.Comp;
+      {items.map((it, i) => {
+        const Icon = findIcon(it.iconKey)?.Comp;
         return (
           <div key={i} className="flex items-center gap-1.5 rounded bg-surface-secondary px-2 py-1">
             {Icon && <Icon size={14} className="text-foreground-secondary" />}
-            <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{label}</span>
-            <span className="text-sm text-foreground-primary">{text}</span>
+            <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{it.label}</span>
+            <span className="text-sm text-foreground-primary">{it.text}</span>
           </div>
         );
       })}
     </div>
   );
+}
+
+export function MetaStripComponent({ data }: { data: MetaStripData }) {
+  const rows = data.rows ?? [];
+  const items: MetaItem[] = rows.map((r) => ({ iconKey: r[0] ?? '', label: r[1] ?? '', text: r[2] ?? '' }));
+  return <MetaInline items={items} />;
 }
 
 /* ---------------------------- strategy block ----------------------------- */
