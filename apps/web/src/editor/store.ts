@@ -142,7 +142,7 @@ export interface EditorState {
   copyPage: (id: string) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
-  updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgImage'>>) => void;
+  updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage'>>) => void;
   reorderPage: (from: number, to: number) => void;
 
   // ---- history ----
