@@ -701,7 +701,11 @@ export interface KpiBoardData {
 }
 
 /** 基础信息横排卡组（达人画像页 BASE/TYPE/TIER）。复用 TableData 形态。 */
+export type MetaStripVariant = 'inline' | 'divider' | 'list' | 'cards' | 'stat';
+
 export interface MetaStripData {
+  /** 样式变体；缺省按 'inline'（向后兼容老数据）。 */
+  variant?: MetaStripVariant;
   /** 约定 ['图标', '标签', '文本']。 */
   headers: string[];
   /** 每行 [iconKey?, label, text]；iconKey 为 catalog key，空串=无图标。 */
