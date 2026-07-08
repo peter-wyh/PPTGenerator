@@ -302,11 +302,31 @@ function MetaList({ items }: { items: MetaItem[] }) {
   );
 }
 
+function MetaCards({ items }: { items: MetaItem[] }) {
+  return (
+    <div className="grid h-full w-full grid-cols-3 content-start gap-2 overflow-auto">
+      {items.map((it, i) => {
+        const Icon = findIcon(it.iconKey)?.Comp;
+        return (
+          <div key={i} className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-surface-primary p-2">
+            <span className="flex items-center gap-1.5">
+              {Icon && <Icon size={14} className="text-foreground-secondary" />}
+              <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{it.label}</span>
+            </span>
+            <span className="text-sm text-foreground-primary">{it.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function MetaStripComponent({ data }: { data: MetaStripData }) {
   const { variant = 'inline', rows = [] } = data;
   const items: MetaItem[] = rows.map((r) => ({ iconKey: r[0] ?? '', label: r[1] ?? '', text: r[2] ?? '' }));
   if (variant === 'divider') return <MetaDivider items={items} />;
   if (variant === 'list') return <MetaList items={items} />;
+  if (variant === 'cards') return <MetaCards items={items} />;
   return <MetaInline items={items} />;
 }
 

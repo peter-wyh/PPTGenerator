@@ -37,4 +37,12 @@ describe('MetaStripComponent variants', () => {
     // list 容器纵向排列
     expect(container.querySelector('[class*="flex-col"]')).toBeTruthy();
   });
+
+  it('cards renders a grid of cards', () => {
+    const { container } = render(<MetaStripComponent data={dataFor('cards')} />);
+    expect(screen.getByText('BASE')).toBeInTheDocument();
+    expect(screen.getByText('Beauty')).toBeInTheDocument();
+    // cards 容器是 grid
+    expect(container.querySelector('[class*="grid"]')).toBeTruthy();
+  });
 });
