@@ -146,6 +146,10 @@ export interface EditorState {
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
   updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgImage'>>) => void;
+  /** 页面属性的实时预览更新（不落 history）：用于色板拖动/文本输入过程中。
+   *  仅改 pages + 标脏，让画布即时反馈；调用方需在交互结束时（onBlur/onChange 提交）
+   *  再调 updatePage() 推一次 history，否则无法撤销。 */
+  patchPageLive: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgImage'>>) => void;
   reorderPage: (from: number, to: number) => void;
 
   // ---- history ----
@@ -710,6 +714,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     updatePage: (id, patch) =>
       mutateAndCommit((s) => ({
+        pages: s.pages.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      })),
+
+    patchPageLive: (id, patch) =>
+      set((s) => ({
+        dirty: true,
         pages: s.pages.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       })),
 

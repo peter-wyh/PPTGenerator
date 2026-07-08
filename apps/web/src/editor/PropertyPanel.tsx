@@ -178,6 +178,19 @@ function FieldGroup({ title, children }: { title: string; children: React.ReactN
 function PageProperties() {
   const page = useEditorStore((s) => s.currentPage());
   const updatePage = useEditorStore((s) => s.updatePage);
+  const patchPageLive = useEditorStore((s) => s.patchPageLive);
+
+  // 本地 state 缓冲：色板拖动/文本输入时实时更新视觉，但只在 onBlur 时落 history。
+  // 避免拖动一次选色器推几十次 history 快照、清空 redo 栈。
+  const [bgColorDraft, setBgColorDraft] = useState<string>(page?.bgColor ?? '');
+  const [nameDraft, setNameDraft] = useState<string>(page?.name ?? '');
+
+  // 切换页面时把本地缓冲同步成最新 store 值。
+  useEffect(() => {
+    setBgColorDraft(page?.bgColor ?? '');
+    setNameDraft(page?.name ?? '');
+  }, [page?.id, page?.bgColor, page?.name]);
+
   if (!page) {
     return (
       <div className="flex h-full w-[300px] items-center justify-center border-l border-border-default bg-surface-primary p-4 text-center text-sm text-foreground-muted">
@@ -185,6 +198,22 @@ function PageProperties() {
       </div>
     );
   }
+
+  // 色板拖动 / 文本输入：实时写本地 + live 预览（不落 history）。
+  const onBgColorInput = (v: string) => {
+    setBgColorDraft(v);
+    patchPageLive(page.id, { bgColor: v || undefined });
+  };
+  // 失焦提交：落一次 history（可撤销）+ 标脏（触发 autosave）。
+  const commitBgColor = () => updatePage(page.id, { bgColor: bgColorDraft || undefined });
+
+  const onNameInput = (v: string) => {
+    setNameDraft(v);
+    patchPageLive(page.id, { name: v });
+  };
+  const commitName = () => updatePage(page.id, { name: nameDraft });
+
+  // 背景图：单次提交即可（非连续拖动），沿用 updatePage。
   const set = (patch: Partial<{ name: string; bgColor: string; bgImage: string }>) =>
     updatePage(page.id, patch);
 
@@ -194,8 +223,9 @@ function PageProperties() {
 
       <FieldGroup title="页面名">
         <input
-          value={page.name}
-          onChange={(e) => set({ name: e.target.value })}
+          value={nameDraft}
+          onChange={(e) => onNameInput(e.target.value)}
+          onBlur={commitName}
           className="w-full rounded border border-border-default px-2 py-1 text-sm text-foreground-primary"
         />
       </FieldGroup>
@@ -204,14 +234,16 @@ function PageProperties() {
         <div className="flex items-center gap-2">
           <input
             type="color"
-            value={page.bgColor ?? '#ffffff'}
-            onChange={(e) => set({ bgColor: e.target.value })}
+            value={bgColorDraft || '#ffffff'}
+            onChange={(e) => onBgColorInput(e.target.value)}
+            onBlur={commitBgColor}
             className="h-8 w-10 rounded border border-border-default p-1"
           />
           <input
-            value={page.bgColor ?? ''}
+            value={bgColorDraft}
             placeholder="#FFFFFF（留空=白）"
-            onChange={(e) => set({ bgColor: e.target.value || undefined })}
+            onChange={(e) => onBgColorInput(e.target.value)}
+            onBlur={commitBgColor}
             className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
           />
         </div>

@@ -19,6 +19,10 @@ interface Props {
 
 export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
   const sorted = [...page.components].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  // 背景与编辑器 Canvas 一致：bgImage 优先，否则 bgColor，缺省白。
+  const background = page.bgImage
+    ? `#fff url(${page.bgImage}) center/cover no-repeat`
+    : page.bgColor ?? '#fff';
   return (
     <div
       style={{
@@ -26,6 +30,7 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
         width: canvasWidth * scale,
         height: canvasHeight * scale,
         overflow: 'hidden',
+        background,
       }}
     >
       <div

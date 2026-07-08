@@ -58,7 +58,7 @@ describe('TemplateOverlay', () => {
       if (tpl.id === 'blank') useEditorStore.getState().addPage();
       else useEditorStore.getState().addPageWithComponents(tpl.name, tpl.components());
     }} onClose={() => {}} />);
-    await user.click(screen.getByText('Blank'));
+    await user.click(screen.getByText('空白页'));
     expect(useEditorStore.getState().pages).toHaveLength(2);
     expect(useEditorStore.getState().currentComponents()).toHaveLength(0);
   });
@@ -70,7 +70,7 @@ describe('TemplateOverlay', () => {
       if (tpl.id === 'blank') useEditorStore.getState().addPage();
       else useEditorStore.getState().addPageWithComponents(tpl.name, tpl.components());
     }} onClose={() => {}} />);
-    await user.click(screen.getByText('Data Overview'));
+    await user.click(screen.getByText('数据概览'));
     expect(useEditorStore.getState().currentComponents()).toHaveLength(4);
   });
 });
