@@ -29,6 +29,8 @@ import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from './kpiTokens';
 import { IconKit } from './icons/IconKit';
 import type { IconWeight } from '@mediakit/shared';
 import { ImportDataModal } from './components/ImportDataModal';
+import { ImportCampaignModal } from './components/ImportCampaignModal';
+import { metricsToRows } from './campaignMetrics';
 import type { ChartData } from './datasource/resolve';
 import { parseFile } from './datasource/parse';
 
@@ -81,7 +83,12 @@ export function PropertyPanel() {
         comp.type === 'line-chart' ||
         comp.type === 'pie-chart') && <ChartImportButton comp={comp} />}
 
-      {comp.type === 'kpi-board' && <KpiImportButton comp={comp} />}
+      {comp.type === 'kpi-board' && (
+        <>
+          <KpiImportButton comp={comp} />
+          <ImportCampaignButton comp={comp} />
+        </>
+      )}
 
       {comp.type === 'creator-avatar-card' && <CreatorLinkImporter comp={comp} />}
 
@@ -1016,6 +1023,38 @@ function KpiImportButton({ comp }: { comp: EditorComponent }) {
       <div className="text-[11px] text-foreground-muted">
         首行作为表头，其余作为数据行；仅覆盖表格内容。
       </div>
+    </FieldGroup>
+  );
+}
+
+/** kpi-board：从 Campaign 导入投放表现指标 → 覆盖 headers/rows、重置 icons/valueColors、保留 variant。 */
+function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
+  const setComponentData = useEditorStore((s) => s.setComponentData);
+  const defaultCampaignId = useEditorStore((s) => s.projectMeta?.campaignId);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <FieldGroup title="从 Campaign 导入">
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+      >
+        选择 Campaign 导入
+      </button>
+      <div className="text-[11px] text-foreground-muted">
+        导入选中 campaign 的投放表现指标（花费/展示/点击/转化/CTR/ROAS），覆盖当前表格。
+      </div>
+      {open && (
+        <ImportCampaignModal
+          defaultCampaignId={defaultCampaignId}
+          onConfirm={(metrics) => {
+            const patch = metricsToRows(metrics);
+            setComponentData(comp.id, { ...comp.data, ...patch });
+            setOpen(false);
+          }}
+          onCancel={() => setOpen(false)}
+        />
+      )}
     </FieldGroup>
   );
 }
