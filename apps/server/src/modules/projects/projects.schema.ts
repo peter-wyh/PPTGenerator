@@ -6,6 +6,14 @@ export const pageSchema = z.object({
   name: z.string(),
   /** 页面背景色（HEX）；与 bgImage 二选一。 */
   bgColor: z.string().max(20).optional(),
+  /** 页面背景渐变；优先级在 bgImage 之下、bgColor 之上。 */
+  bgGradient: z
+    .object({
+      type: z.enum(['linear', 'radial']),
+      angle: z.number().optional(),
+      stops: z.array(z.object({ color: z.string().max(20), position: z.number() })).min(2).max(6),
+    })
+    .optional(),
   /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
   bgImage: z.string().max(2048).optional(),
   components: z.array(z.any()),
