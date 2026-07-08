@@ -780,7 +780,11 @@ export interface MetaStripData {
 }
 
 /** 内容策略富文本块（达人画像页 INSIGHT/STRATEGY）。复用 TableData 形态。 */
+export type StrategyBlockVariant = 'default' | 'labeled' | 'bulleted';
+
 export interface StrategyBlockData {
+  /** 样式变体；缺省 'default'（平铺）。labeled=卡片标签，bulleted=卡片列表。 */
+  variant?: StrategyBlockVariant;
   /** 约定 ['图标', '标题', '内容']。 */
   headers: string[];
   /** 每行 [iconKey?, title, content]。 */
