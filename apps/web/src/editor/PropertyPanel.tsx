@@ -6,6 +6,7 @@ import type {
   ComponentData,
   CreatorStatItem,
   CreatorStatsStripData,
+  ImageGroupData,
   KpiBoardData,
   KpiColorToken,
   Sentiment,
@@ -114,6 +115,7 @@ export function PropertyPanel() {
       {comp.type === 'work-metrics' && <WorkMetricsFields comp={comp} />}
       {comp.type === 'comment-wordcloud' && <CommentWordcloudFields comp={comp} />}
       {comp.type === 'shape' && <ShapeFields comp={comp} />}
+      {comp.type === 'image-group' && <ImageGroupFields comp={comp} />}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button
@@ -158,6 +160,7 @@ const LABELS: Record<string, string> = {
   'work-metrics': '作品数据',
   'comment-wordcloud': '评论词云',
   'shape': '图形',
+  'image-group': '组图',
 };
 
 function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
@@ -1109,6 +1112,43 @@ function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
                 ✕
               </button>
             </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={add} className="text-xs text-accent-primary hover:underline">
+        + 添加图片
+      </button>
+    </FieldGroup>
+  );
+}
+
+/** 组图：每张图 ImageInput + 删除，底部添加；数量自由，版式自适应或手动锁定。 */
+function ImageGroupFields({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const data = comp.data as ImageGroupData;
+  const images = data.images ?? [];
+
+  const write = (next: ImageGroupData['images']) => {
+    updateComponentData(comp.id, { images: next } as Partial<ImageGroupData>);
+    commit();
+  };
+  const setSrc = (i: number, src: string) =>
+    write(images.map((im, idx) => (idx === i ? { ...im, src } : im)));
+  const add = () => write([...images, { src: '' }]);
+  const remove = (i: number) => write(images.filter((_, idx) => idx !== i));
+
+  return (
+    <FieldGroup title="图片">
+      <div className="space-y-2">
+        {images.map((im, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <div className="flex-1">
+              <ImageInput value={im.src} onChange={(url) => setSrc(i, url)} />
+            </div>
+            <button onClick={() => remove(i)} className="text-foreground-muted hover:text-red">
+              ✕
+            </button>
           </div>
         ))}
       </div>

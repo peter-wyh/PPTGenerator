@@ -32,6 +32,7 @@ import {
   ProductPerformance,
 } from './components/ReportComponents';
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
+import { ImageGroupComponent } from './components/ImageGroupComponent';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -315,6 +316,11 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: StrategyBlockComponent,
     defaultSize: DEFAULT_SIZES['strategy-block'],
     defaultData: () => getDefaultData('strategy-block'),
+    variants: [
+      { id: 'default', label: '默认' },
+      { id: 'labeled', label: '卡片标签' },
+      { id: 'bulleted', label: '卡片列表' },
+    ],
     propertySchema: [
       { key: '', label: '策略块', kind: 'table' },
       { key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' },
@@ -443,6 +449,24 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'subtitle', label: '副标题', kind: 'text' },
     ],
+  },
+  'image-group': {
+    Component: ImageGroupComponent,
+    defaultSize: DEFAULT_SIZES['image-group'],
+    defaultData: () => getDefaultData('image-group'),
+    // variant = 数量版式（自适应 + 2/3/4/5/6/7/9/12）；图片在 ImageGroupFields 编辑。
+    variants: [
+      { id: 'auto', label: '自适应' },
+      { id: 'duo', label: '2 张' },
+      { id: 'trio', label: '3 张' },
+      { id: 'quad', label: '4 张' },
+      { id: 'mosaic-5', label: '5 张' },
+      { id: 'hex', label: '6 张' },
+      { id: 'septet', label: '7 张' },
+      { id: 'nona', label: '9 张' },
+      { id: 'duoza', label: '12 张' },
+    ],
+    propertySchema: [],
   },
 };
 

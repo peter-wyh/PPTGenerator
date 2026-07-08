@@ -33,6 +33,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'work-metrics': { w: 560, h: 320 },
   'comment-wordcloud': { w: 560, h: 360 },
   'shape': { w: 200, h: 120 },
+  'image-group': { w: 600, h: 420 },
 };
 
 /** 移动吸附步长（demo：10px 网格）。 */
@@ -193,6 +194,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'strategy-block':
       return {
+        // variant 缺省 = 'default'（见 StrategyBlockComponent）；此处省略以避开与 PlacementData 的联合类型歧义。
         headers: ['图标', '标题', '内容'],
         rows: [
           ['sparkle', 'INSIGHT', 'My audience values authenticity and practical beauty tips.'],
@@ -338,6 +340,11 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'shape':
       return getDefaultShapeData('rectangle');
+    case 'image-group':
+      return {
+        variant: 'auto',
+        images: [{ src: '' }, { src: '' }, { src: '' }],
+      };
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };
   }

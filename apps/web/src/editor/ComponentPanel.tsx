@@ -18,6 +18,7 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
     items: [
       { type: 'text', label: '文本', icon: 'T' },
       { type: 'image', label: '图片', icon: '▭' },
+      { type: 'image-group', label: '组图', icon: '◫' },
       { type: 'indicator-card', label: '指标卡', icon: '◉' },
       { type: 'table', label: '表格', icon: '▦' },
       { type: 'bar-chart', label: '柱状图', icon: '▮' },

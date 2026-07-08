@@ -29,6 +29,7 @@ const TYPES: ComponentType[] = [
   'work-screenshot',
   'work-metrics',
   'comment-wordcloud',
+  'image-group',
 ];
 
 describe('REGISTRY', () => {
