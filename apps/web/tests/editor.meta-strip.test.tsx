@@ -45,4 +45,12 @@ describe('MetaStripComponent variants', () => {
     // cards 容器是 grid
     expect(container.querySelector('[class*="grid"]')).toBeTruthy();
   });
+
+  it('stat renders large data text', () => {
+    const { container } = render(<MetaStripComponent data={dataFor('stat')} />);
+    expect(screen.getByText('The United States')).toBeInTheDocument();
+    expect(screen.getByText('BASE')).toBeInTheDocument();
+    // stat 的 text 用大号数据字体
+    expect(container.querySelector('[class*="font-data"]')).toBeTruthy();
+  });
 });
