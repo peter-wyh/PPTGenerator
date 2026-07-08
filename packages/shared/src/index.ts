@@ -59,6 +59,42 @@ export interface ProjectDetail {
   updatedAt: string;
 }
 
+/* ------------------------------------------------------------------ */
+/* 模板                                                                */
+/* 模板由设计师（ADMIN）在管理后台维护，BD（USER）从已发布模板创建项目。  */
+/* ------------------------------------------------------------------ */
+
+export type TemplateStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface TemplateSummary {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  pageCount: number;
+  meta?: ProjectMeta;
+  status: TemplateStatus;
+  /** 设计师备注（仅管理后台可见）。 */
+  note?: string | null;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateDetail {
+  id: string;
+  name: string;
+  pages: Page[];
+  width: number;
+  height: number;
+  meta?: ProjectMeta;
+  status: TemplateStatus;
+  note?: string | null;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** 场景类型。 */
 export type Scenario = 'campaign-report' | 'campaign-proposal' | 'media-kit';
 /** Campaign 报告子类。 */
@@ -477,7 +513,9 @@ export type ComponentType =
   // 业务组件（基础图形 / 缺口组件）
   | 'shape'
   | 'meta-strip'
-  | 'strategy-block';
+  | 'strategy-block'
+  // 基础组件：组图（按图片数量的预设版式，纯图无 caption）
+  | 'image-group';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -507,6 +545,39 @@ export interface TextData {
 export interface ImageData {
   src: string;
   fit: 'cover' | 'contain' | 'fill';
+}
+
+/**
+ * 组图版式 id（数量即版式）。
+ * - 'duo'..'duoza' 为固定张数版式；
+ * - 'auto' = 按 images.length 自动选最接近张数的版式（见渲染层 resolveLayout）。
+ */
+export type ImageGroupLayoutId =
+  | 'auto'
+  | 'duo'
+  | 'trio'
+  | 'quad'
+  | 'mosaic-5'
+  | 'hex'
+  | 'septet'
+  | 'nona'
+  | 'duoza';
+
+/** 组图单项：仅图片 URL（无 caption）。 */
+export interface ImageGroupItem {
+  src: string;
+}
+
+/**
+ * 组图组件：按图片数量提供预设版式的纯图网格。
+ * variant 复用 data.variant 通道（与全局 VariantSelector 一致），缺省 'auto'。
+ * images 自由长度；版式锁定时槽位固定，溢出忽略、不足补空占位。
+ */
+export interface ImageGroupData {
+  variant?: ImageGroupLayoutId;
+  images: ImageGroupItem[];
+  /** 单元格间距（px）；可选，缺省 8。 */
+  gap?: number;
 }
 
 export type IndicatorCardVariant = 'plain' | 'icon-left' | 'icon-top' | 'icon-bg';
@@ -867,7 +938,8 @@ export type ComponentData =
   | WorkScreenshotData
   | WorkMetricsData
   | CommentWordcloudData
-  | ShapeData;
+  | ShapeData
+  | ImageGroupData;
 
 export interface EditorComponent {
   id: string;
@@ -898,12 +970,75 @@ export interface Datasource {
   rows: Record<string, string>[];
 }
 
+/** 渐变色标：颜色（HEX）+ 位置（百分比 0–100）。 */
+export interface GradientStop {
+  color: string;
+  position: number;
+}
+
+/** 页面背景渐变：线性 / 径向，2–6 色标；线性带角度。 */
+export interface PageGradient {
+  type: 'linear' | 'radial';
+  angle?: number;
+  stops: GradientStop[];
+}
+
 export interface Page {
   id: string;
   name: string;
   components: EditorComponent[];
   /** 页面背景色（HEX）；与 bgImage 二选一，未设时画布默认白。 */
   bgColor?: string;
+  /** 页面背景渐变；优先级在 bgImage 之下、bgColor 之上。 */
+  bgGradient?: PageGradient;
   /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
   bgImage?: string;
+}
+
+function clampNum(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function validHex(c: unknown): string {
+  return typeof c === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) ? c : '#FFFFFF';
+}
+
+/**
+ * 把 PageGradient 对象转成 CSS 渐变字符串。防御式归一（渲染层最后一道防线）：
+ * - position clamp 到 0–100 并按升序排序；
+ * - 色标少于 2 → 补齐到 2；多于 6 → 截断到 6；
+ * - 非法颜色回退 #FFFFFF；
+ * - angle 缺省 180、clamp 到 0–360；type 非 radial 一律按 linear。
+ * 输入为空 / 异常时不抛错，返回纯白线性渐变。
+ */
+export function gradientToCss(g: unknown): string {
+  const raw = (g && typeof g === 'object' ? g : {}) as Partial<PageGradient>;
+  const type: 'linear' | 'radial' = raw.type === 'radial' ? 'radial' : 'linear';
+
+  let stops = (Array.isArray(raw.stops) ? raw.stops : [])
+    .filter((s): s is GradientStop => !!s && typeof s === 'object')
+    .map((s) => ({
+      color: validHex(s.color),
+      position: clampNum(Math.round(Number(s.position) || 0), 0, 100),
+    }))
+    .sort((a, b) => a.position - b.position);
+
+  if (stops.length === 0) {
+    stops = [
+      { color: '#FFFFFF', position: 0 },
+      { color: '#FFFFFF', position: 100 },
+    ];
+  } else if (stops.length === 1) {
+    const c = stops[0].color;
+    stops = [
+      { color: c, position: 0 },
+      { color: c, position: 100 },
+    ];
+  }
+  if (stops.length > 6) stops = stops.slice(0, 6);
+
+  const stopStr = stops.map((s) => `${s.color} ${s.position}%`).join(', ');
+  if (type === 'radial') return `radial-gradient(circle at center, ${stopStr})`;
+  const angle = clampNum(Math.round(Number(raw.angle ?? 180)), 0, 360);
+  return `linear-gradient(${angle}deg, ${stopStr})`;
 }
