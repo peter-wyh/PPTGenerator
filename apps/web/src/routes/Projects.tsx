@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectsApi } from '@/api/projects';
+import { createProjectFromTemplate } from '@/api/templates';
 import { Button } from '@/components/Button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
+import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
 import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 import type { ProjectMeta, ProjectSummary, Scenario } from '@mediakit/shared';
 
@@ -29,6 +31,11 @@ export function Projects() {
   // 列表筛选
   const [filterBL, setFilterBL] = useState<string>('');
   const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
+
+  // 从模板新建
+  const [showFromTemplate, setShowFromTemplate] = useState(false);
+  const [fromTplLoading, setFromTplLoading] = useState(false);
+  const [fromTplError, setFromTplError] = useState<string | null>(null);
 
   const filtered = projects.filter(
     (p) =>
@@ -60,6 +67,20 @@ export function Projects() {
       setCreateError('创建失败，请重试');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleCreateFromTemplate(values: { templateId: string; name: string }) {
+    setFromTplLoading(true);
+    setFromTplError(null);
+    try {
+      const p = await createProjectFromTemplate(values.templateId, values.name);
+      setShowFromTemplate(false);
+      navigate(`/projects/${p.id}`);
+    } catch {
+      setFromTplError('创建失败，模板可能已下架，请重试');
+    } finally {
+      setFromTplLoading(false);
     }
   }
 
@@ -109,7 +130,12 @@ export function Projects() {
     <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="flex items-center justify-between">
         <h1 className="font-headings text-xl font-semibold text-foreground-primary">我的项目</h1>
-        <Button onClick={() => setShowCreate(true)}>+ 新建项目</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => setShowFromTemplate(true)}>
+            从模板新建
+          </Button>
+          <Button onClick={() => setShowCreate(true)}>+ 新建项目</Button>
+        </div>
       </div>
 
       {projects.length > 0 && (
@@ -251,6 +277,14 @@ export function Projects() {
         error={createError}
         onCancel={() => !creating && setShowCreate(false)}
         onSubmit={handleCreate}
+      />
+
+      <CreateFromTemplateDialog
+        open={showFromTemplate}
+        loading={fromTplLoading}
+        error={fromTplError}
+        onCancel={() => !fromTplLoading && setShowFromTemplate(false)}
+        onSubmit={handleCreateFromTemplate}
       />
 
       <CreateProjectDialog

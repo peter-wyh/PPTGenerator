@@ -33,6 +33,17 @@ export const projectsController = {
     res.status(201).json({ project: await projectsService.duplicate(owner(req), req.params.id) });
   }),
 
+  createFromTemplate: asyncHandler(async (req: Request, res: Response) => {
+    const { templateId, name } = req.body as { templateId?: string; name?: string };
+    if (!templateId) {
+      res.status(400).json({ message: 'templateId is required' });
+      return;
+    }
+    res
+      .status(201)
+      .json({ project: await projectsService.createFromTemplate(owner(req), templateId, name) });
+  }),
+
   createShare: asyncHandler(async (req: Request, res: Response) => {
     const shareToken = await projectsService.createShareToken(owner(req), req.params.id);
     res.json({ shareToken });

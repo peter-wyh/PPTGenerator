@@ -110,6 +110,28 @@ export const projectsService = {
     await prisma.project.delete({ where: { id } });
   },
 
+  /** 从模版创建项目：深拷贝模版 pages/meta/尺寸，归属当前用户。 */
+  async createFromTemplate(
+    ownerId: string,
+    templateId: string,
+    name?: string,
+  ): Promise<ProjectDetail> {
+    const tpl = await prisma.template.findUnique({ where: { id: templateId } });
+    if (!tpl || tpl.status !== 'PUBLISHED') {
+      throw ApiError.notFound('Template not found or not published');
+    }
+    const data: Prisma.ProjectCreateInput = {
+      owner: { connect: { id: ownerId } },
+      name: name?.trim() || `${tpl.name}`,
+      width: tpl.width,
+      height: tpl.height,
+      pages: JSON.parse(JSON.stringify(tpl.pages)) as unknown as Prisma.InputJsonValue,
+      ...(tpl.meta ? { meta: tpl.meta as unknown as Prisma.InputJsonValue } : {}),
+    };
+    const project = await prisma.project.create({ data });
+    return toDetail(project);
+  },
+
   async duplicate(ownerId: string, id: string): Promise<ProjectDetail> {
     const src = await this.getOwnedOrThrow(ownerId, id);
     const data: Prisma.ProjectCreateInput = {

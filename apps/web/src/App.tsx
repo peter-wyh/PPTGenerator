@@ -1,7 +1,9 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Login } from './routes/Login';
 import { Projects } from './routes/Projects';
+import { Templates } from './routes/Templates';
 import { ProjectShell } from './routes/ProjectShell';
+import { TemplateShell } from './routes/TemplateShell';
 import { SharePage } from './routes/SharePage';
 import { MockData } from './routes/MockData';
 import { ProtectedLayout, useRestoreSession } from './routes/ProtectedLayout';
@@ -16,11 +18,13 @@ export function App() {
         <Route path="/share/:token" element={<SharePage />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/projects" element={<Projects />} />
+          <Route path="/templates" element={<Templates />} />
           <Route path="/data" element={<MockData />} />
         </Route>
         {/* 编辑器：沉浸式，无全局导航 */}
         <Route element={<ProtectedLayout bare />}>
           <Route path="/projects/:id" element={<ProjectShell />} />
+          <Route path="/templates/:id" element={<TemplateShell />} />
         </Route>
         <Route path="*" element={<Login />} />
       </Routes>

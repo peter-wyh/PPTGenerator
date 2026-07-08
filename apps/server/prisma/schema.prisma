@@ -16,14 +16,15 @@ enum Role {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   passwordHash String
   name         String?
-  role         Role      @default(USER)
+  role         Role       @default(USER)
   projects     Project[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  templates    Template[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@index([email])
 }
@@ -43,4 +44,30 @@ model Project {
   updatedAt  DateTime @updatedAt
 
   @@index([ownerId])
+}
+
+/// 报告模版：由设计师(ADMIN)维护、按场景+业务线分类，供 BD 基于模版创建报告。
+/// pages/width/height/meta 结构与 Project 完全一致，编辑器可直接复用。
+model Template {
+  id         String           @id @default(cuid())
+  name       String
+  pages      Json
+  width      Int              @default(1280)
+  height     Int              @default(720)
+  meta       Json?
+  status     TemplateStatus   @default(DRAFT)
+  /// 设计师备注（可选），仅管理后台可见。
+  note       String?
+  ownerId    String
+  owner      User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+enum TemplateStatus {
+  DRAFT
+  PUBLISHED
 }

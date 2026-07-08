@@ -23,6 +23,7 @@ import {
 } from './defaults';
 import { getBusinessItem, getLayout } from './business/catalog';
 import { projectsApi } from '@/api/projects';
+import { templatesApi } from '@/api/templates';
 
 /** 主题补丁：支持嵌套 color/font 部分更新（深合并），density/radius/preset 直接替换。 */
 export type ThemePatch = {
@@ -67,6 +68,8 @@ export interface EditorState {
   dirty: boolean;
   /** 保存请求进行中（供顶栏状态展示）。 */
   saving: boolean;
+  /** 编辑模式：项目（默认）或模板。决定 save() 调 projectsApi 还是 templatesApi。 */
+  saveMode: 'project' | 'template';
 
   // ---- selectors ----
   currentPage: () => Page | null;
@@ -75,7 +78,7 @@ export interface EditorState {
   canRedo: () => boolean;
 
   // ---- lifecycle ----
-  loadProject: (detail: ProjectDetail, name: string) => void;
+  loadProject: (detail: ProjectDetail, name: string, mode?: 'project' | 'template') => void;
   setProjectName: (name: string) => void;
   /** 报告维度：更新主题（品牌色/字体/密度/圆角），深合并 color/font，标记 dirty。 */
   setTheme: (patch: ThemePatch) => void;
@@ -231,6 +234,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     loaded: false,
     dirty: false,
     saving: false,
+    saveMode: 'project',
     previewOpen: false,
     previewPageIndex: 0,
 
@@ -239,7 +243,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     canUndo: () => get().historyIndex > 0,
     canRedo: () => get().historyIndex < get().history.length - 1,
 
-    loadProject(detail, name) {
+    loadProject(detail, name, mode) {
       const pages = detail.pages.length
         ? detail.pages
         : [{ id: newId(), name: '第 1 页', components: [] }];
@@ -267,6 +271,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
         loaded: true,
         dirty: false,
         saving: false,
+        // 编辑模式：决定 save() 落库到 projects 还是 templates。
+        saveMode: mode ?? 'project',
       });
     },
 
@@ -287,7 +293,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const sig = JSON.stringify(payload);
       set({ saving: true });
       try {
-        await projectsApi.update(s.projectId, payload);
+        // 按编辑模式分流：模板落 templates，项目落 projects。
+        if (s.saveMode === 'template') {
+          await templatesApi.update(s.projectId, payload);
+        } else {
+          await projectsApi.update(s.projectId, payload);
+        }
         const after = get();
         const afterSig = JSON.stringify({
           name: after.projectName,

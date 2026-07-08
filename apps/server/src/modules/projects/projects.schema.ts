@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-const pageSchema = z.object({
+/** 页面 schema：Template 与 Project 共用同一 Page 结构。 */
+export const pageSchema = z.object({
   id: z.string(),
   name: z.string(),
   /** 页面背景色（HEX）；与 bgImage 二选一。 */

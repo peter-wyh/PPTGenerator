@@ -15,6 +15,8 @@ router.get('/:id', validate({ params: idParamSchema }), projectsController.get);
 router.patch('/:id', validate({ params: idParamSchema, body: updateProjectSchema }), projectsController.update);
 router.delete('/:id', validate({ params: idParamSchema }), projectsController.remove);
 router.post('/:id/duplicate', validate({ params: idParamSchema }), projectsController.duplicate);
+// 从模版创建项目：body { templateId, name? }
+router.post('/from-template', projectsController.createFromTemplate);
 router.post('/:id/share', validate({ params: idParamSchema }), projectsController.createShare);
 router.delete('/:id/share', validate({ params: idParamSchema }), projectsController.revokeShare);
 // /projects/:id/export（PDF 导出，复用本 router 的 authenticate）

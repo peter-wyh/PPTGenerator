@@ -15,13 +15,15 @@ import { ThemeContext, injectFontLinks, themeToCssVars } from './theme';
 
 interface EditorProps {
   detail: ProjectDetail;
+  /** 编辑模式：'template' 时 save() 落库到 templates。默认 'project'。 */
+  mode?: 'project' | 'template';
 }
 
 /** 编辑器工作区：顶栏 + 页面栏 + 组件库 + 画布 + 属性面板。 */
-export function Editor({ detail }: EditorProps) {
+export function Editor({ detail, mode }: EditorProps) {
   useEffect(() => {
-    useEditorStore.getState().loadProject(detail, detail.name);
-  }, [detail]);
+    useEditorStore.getState().loadProject(detail, detail.name, mode);
+  }, [detail, mode]);
 
   useAutosave();
   useEditorKeyboard();

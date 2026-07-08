@@ -34,6 +34,14 @@ export function Layout({ children }: LayoutProps) {
           >
             Mock 数据
           </button>
+          {user?.role === 'ADMIN' && (
+            <button
+              onClick={() => navigate('/templates')}
+              className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+            >
+              模板管理
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {user && (
