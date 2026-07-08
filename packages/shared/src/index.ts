@@ -73,6 +73,13 @@ export interface CampaignInfo {
   budget?: string;
 }
 
+/** Campaign 投放表现指标项；与 kpi-board 行 [指标, 数值, 对比] 同构。 */
+export interface CampaignMetric {
+  label: string;   // 指标名，如 "花费"
+  value: string;   // 数值，如 "¥128,000"
+  compare: string; // 对比文本，如 "+15%"（kpi-board 渲染器按首字符 +/- 自动着色）
+}
+
 /** 上游 Campaign 实体（接入上游接口；demo 中 mock）。 */
 export interface Campaign {
   id: string;
@@ -85,6 +92,8 @@ export interface Campaign {
   budget: string;
   status?: string;
   owner?: string;
+  /** 投放表现指标（供业绩看板「从 Campaign 导入」）。 */
+  metrics?: CampaignMetric[];
 }
 
 /** 业务线（mock 查找表 BUSINESS_LINE_META 的条目）。 */
