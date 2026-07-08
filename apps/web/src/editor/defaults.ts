@@ -2,7 +2,7 @@
  * 组件默认尺寸 / 默认数据。供 editor store（addComponent）与 REGISTRY 共用，
  * 避免循环依赖（REGISTRY 含 React 组件）。忠实 demo.html。
  */
-import type { ComponentType, ComponentData, ShapeKind, ShapeData } from '@mediakit/shared';
+import type { ComponentType, ComponentData, MetaStripData, ShapeKind, ShapeData } from '@mediakit/shared';
 
 export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   text: { w: 300, h: 60 },
@@ -185,13 +185,14 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'meta-strip':
       return {
+        variant: 'inline',
         headers: ['图标', '标签', '文本'],
         rows: [
           ['target', 'BASE', 'The United States'],
           ['tag', 'TYPE', 'Beauty'],
           ['trophy', 'TIER', 'A'],
         ],
-      };
+      } as MetaStripData;
     case 'strategy-block':
       return {
         // variant 缺省 = 'default'（见 StrategyBlockComponent）；此处省略以避开与 PlacementData 的联合类型歧义。

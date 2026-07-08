@@ -310,6 +310,13 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: MetaStripComponent,
     defaultSize: DEFAULT_SIZES['meta-strip'],
     defaultData: () => getDefaultData('meta-strip'),
+    variants: [
+      { id: 'inline', label: '横排胶囊' },
+      { id: 'divider', label: '竖线分隔' },
+      { id: 'list', label: '键值列表' },
+      { id: 'cards', label: '卡片网格' },
+      { id: 'stat', label: '强调数值' },
+    ],
     propertySchema: [{ key: '', label: '信息项', kind: 'table' }],
   },
   'strategy-block': {
