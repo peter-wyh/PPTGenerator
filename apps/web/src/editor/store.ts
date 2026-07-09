@@ -148,8 +148,8 @@ export interface EditorState {
   // ---- pages ----
   setPage: (id: string) => void;
   addPage: () => void;
-  addPageWithComponents: (name: string, components: EditorComponent[]) => void;
-  addPagesBatch: (pages: { name: string; components: EditorComponent[] }[]) => void;
+  addPageWithComponents: (name: string, components: EditorComponent[], opts?: { titleComponentIndex?: number }) => void;
+  addPagesBatch: (pages: { name: string; components: EditorComponent[]; titleComponentIndex?: number }[]) => void;
   copyPage: (id: string) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
@@ -775,41 +775,71 @@ export const useEditorStore = create<EditorState>((set, get) => {
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
       }),
 
-    addPageWithComponents: (name, components) =>
+    addPageWithComponents: (name, components, opts) => {
+      let pageId: string | undefined;
       mutateAndCommit((s) => {
-        // 模板带入的组件重新分配 id，避免与现有冲突。
         const reid = components.map((c) => ({ ...clone(c), id: newId() }));
         const page: Page = { id: newId(), name, components: reid };
+        pageId = page.id;
+        const idx = opts?.titleComponentIndex;
+        if (idx != null && reid[idx]) {
+          page.pageType = 'media-report';
+          page.titleComponentId = reid[idx].id;
+          page.titleOverridden = false;
+        }
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
-      }),
+      });
+      if (pageId) refreshReportTitle(pageId);
+    },
 
-    addPagesBatch: (pages) =>
+    addPagesBatch: (pages) => {
+      const newIds: string[] = [];
       mutateAndCommit((s) => {
-        // 一次生成多页（场景模板用），每页组件重新分配 id，单个 history 条目。
-        const built: Page[] = pages.map((p) => ({
-          id: newId(),
-          name: p.name,
-          components: p.components.map((c) => ({ ...clone(c), id: newId() })),
-        }));
+        const built: Page[] = pages.map((p) => {
+          const reid = p.components.map((c) => ({ ...clone(c), id: newId() }));
+          const page: Page = { id: newId(), name: p.name, components: reid };
+          newIds.push(page.id);
+          const idx = p.titleComponentIndex;
+          if (idx != null && reid[idx]) {
+            page.pageType = 'media-report';
+            page.titleComponentId = reid[idx].id;
+            page.titleOverridden = false;
+          }
+          return page;
+        });
         if (built.length === 0) return {};
         return { pages: [...s.pages, ...built], currentPageId: built[0].id, selectedIds: [] };
-      }),
+      });
+      newIds.forEach((id) => refreshReportTitle(id));
+    },
 
-    copyPage: (id) =>
+    copyPage: (id) => {
+      let newPageId: string | undefined;
       mutateAndCommit((s) => {
         const src = s.pages.find((p) => p.id === id);
         if (!src) return {};
+        const idMap = new Map<string, string>();
+        const copiedComps = src.components.map((c) => {
+          const nid = newId();
+          idMap.set(c.id, nid);
+          return { ...clone(c), id: nid };
+        });
         const copied: Page = {
           id: newId(),
           name: `${src.name} (副本)`,
-          components: src.components.map((c) => ({ ...clone(c), id: newId() })),
+          components: copiedComps,
+          ...(src.pageType ? { pageType: src.pageType } : {}),
+          ...(src.titleComponentId ? { titleComponentId: idMap.get(src.titleComponentId) } : {}),
+          ...(src.titleOverridden ? { titleOverridden: src.titleOverridden } : {}),
         };
-        // 插入到原页之后。
+        newPageId = copied.id;
         const idx = s.pages.findIndex((p) => p.id === id);
         const pages = [...s.pages];
         pages.splice(idx + 1, 0, copied);
         return { pages };
-      }),
+      });
+      if (newPageId) refreshReportTitle(newPageId);
+    },
 
     deletePage: (id) =>
       mutateAndCommit((s) => {

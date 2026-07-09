@@ -184,3 +184,36 @@ describe('手改标题停止自动跟随', () => {
     ).toBe('我的封面');
   });
 });
+
+describe('addPageWithComponents / copyPage — 模板与复制', () => {
+  beforeEach(() => load({ advertiser: 'GlowLab', scenarioSub: 'weekly' }));
+
+  it('addPageWithComponents 带 titleComponentIndex → media-report + 标题', () => {
+    const comp = {
+      id: 'x',
+      type: 'text' as const,
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 50,
+      data: { content: 'Report Title', fontSize: 56, color: '#000' },
+    };
+    useEditorStore.getState().addPageWithComponents('封面', [comp], { titleComponentIndex: 0 });
+    const p = useEditorStore.getState().pages[1];
+    expect(p.pageType).toBe('media-report');
+    expect(p.name).toBe("GlowLab's MEDIA REPORT · 上周");
+    expect((p.components[0].data as { content: string }).content).toBe("GlowLab's MEDIA REPORT · 上周");
+  });
+
+  it('copyPage 复制 media-report 页：保留 pageType 并重指向标题组件', () => {
+    const s = useEditorStore.getState();
+    s.setPageType('p1', 'media-report');
+    const srcTitleId = page().titleComponentId!;
+    s.copyPage('p1');
+    const copy = useEditorStore.getState().pages[1];
+    expect(copy.pageType).toBe('media-report');
+    expect(copy.titleComponentId).toBeTruthy();
+    expect(copy.titleComponentId).not.toBe(srcTitleId);
+    expect(copy.components.find((c) => c.id === copy.titleComponentId)).toBeTruthy();
+  });
+});
