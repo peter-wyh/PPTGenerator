@@ -99,3 +99,28 @@ describe('editor store — align / distribute / equalize', () => {
     expect(useEditorStore.getState().historyIndex).toBe(before + 1);
   });
 });
+
+describe('align / distribute / equalize — safe-area clamp', () => {
+  const safeMeta = { theme: { layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true } } };
+  // safe = {48,48,1232,672}
+  function loadAtSafe(components: ReturnType<typeof comp>[]) {
+    useEditorStore.getState().loadProject(
+      { ...detail, meta: safeMeta, pages: [{ id: 'pg', name: 'pg', components }] },
+      'p',
+    );
+  }
+
+  it('align right clamps a component whose right edge would exceed safe area', () => {
+    // c 越界（右 1500>1232，懒加载保留）；a 在内。align right 把两边对到 bbox max=1500 → 夹回 1232
+    loadAtSafe([comp('a', 100, 100, 100, 50), comp('c', 1400, 100, 100, 50)]);
+    useEditorStore.getState().alignComponents(['a', 'c'], 'right');
+    const a = get('a');
+    expect(a.x + a.w).toBeLessThanOrEqual(1232);
+  });
+
+  it('equalWidth clamps components back inside safe area', () => {
+    loadAtSafe([comp('a', 100, 100, 100, 50), comp('c', 1400, 100, 100, 50)]);
+    useEditorStore.getState().equalWidth(['a', 'c']);
+    for (const id of ['a', 'c']) expect(get(id).x + get(id).w).toBeLessThanOrEqual(1232);
+  });
+});

@@ -225,10 +225,12 @@ function snapCtx(
   return { grid, safe };
 }
 
-/** 夹紧用的安全区：只看 safeMargin>0，不看 showSafeArea（隐藏参考线仍夹紧）。与 snapCtx 的磁吸 safe 解耦。 */
+/** 夹紧用的安全区：只看 safeMargin>0，不看 showSafeArea（隐藏参考线仍夹紧）。与 snapCtx 的磁吸 safe 解耦。
+ *  仅当主题含 layout 时生效（无 meta/无 layout 视为「未定义安全距离」，不夹紧）——与 snapCtx 的 null-meta 行为一致。 */
 function clampSafeFrom(meta: ProjectMeta | null, cw: number, ch: number): SafeRect | null {
-  const margin = meta?.theme?.layout?.safeMargin ?? DEFAULT_THEME.layout!.safeMargin;
-  return safeRectFrom(margin, cw, ch);
+  const layout = meta?.theme?.layout;
+  if (!layout) return null;
+  return safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch);
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
@@ -704,29 +706,34 @@ export const useEditorStore = create<EditorState>((set, get) => {
       })),
 
     alignComponents: (ids, alignment) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => alignInPlace(cs, ids, alignment)),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => alignInPlace(cs, ids, alignment, safe)) };
+      }),
 
     distributeH: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'h')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'h', safe)) };
+      }),
 
     distributeV: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'v')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'v', safe)) };
+      }),
 
     equalWidth: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'w')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'w', safe)) };
+      }),
 
     equalHeight: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'h')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'h', safe)) };
+      }),
 
     setPage: (id) => mutateAndCommit(() => ({ currentPageId: id, selectedIds: [] })),
 
@@ -869,8 +876,8 @@ function moveItem(comps: EditorComponent[], id: string, step: 1 | -1): EditorCom
   return next;
 }
 
-/** 多选对齐：按选中组件 bbox 计算，原地改 x/y。 */
-function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignment): EditorComponent[] {
+/** 多选对齐：按选中组件 bbox 计算，原地改 x/y；结果夹进安全区。 */
+function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignment, safe: SafeRect | null): EditorComponent[] {
   const sel = comps.filter((c) => ids.includes(c.id));
   if (sel.length < 2) return comps;
   const minX = Math.min(...sel.map((c) => c.x));
@@ -886,12 +893,13 @@ function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignm
     else if (alignment === 'top') y = minY;
     else if (alignment === 'bottom') y = maxY - c.h;
     else if (alignment === 'middle-v') y = Math.round((minY + maxY) / 2 - c.h / 2);
-    return { ...c, x: Math.round(x), y: Math.round(y) };
+    const cl = clampRect({ x: Math.round(x), y: Math.round(y), w: c.w, h: c.h }, safe);
+    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
   });
 }
 
-/** 多选分布：沿水平/垂直方向均匀排布间距（保持顺序，首尾不动）。 */
-function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v'): EditorComponent[] {
+/** 多选分布：沿水平/垂直方向均匀排布间距（保持顺序，首尾不动）；结果夹进安全区。 */
+function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v', safe: SafeRect | null): EditorComponent[] {
   const sel = comps.filter((c) => ids.includes(c.id));
   if (sel.length < 3) return comps;
   const pos = (c: EditorComponent, start: boolean) => (axis === 'h' ? (start ? c.x : c.x + c.w) : start ? c.y : c.y + c.h);
@@ -912,14 +920,22 @@ function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v'): E
     if (!ids.includes(c.id)) return c;
     const np = newPos.get(c.id);
     if (np === undefined) return c;
-    return axis === 'h' ? { ...c, x: Math.round(np) } : { ...c, y: Math.round(np) };
+    const box =
+      axis === 'h' ? { x: Math.round(np), y: c.y, w: c.w, h: c.h } : { x: c.x, y: Math.round(np), w: c.w, h: c.h };
+    const cl = clampRect(box, safe);
+    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
   });
 }
 
-/** 多选等宽/等高：全部设为均值。 */
-function equalize(comps: EditorComponent[], ids: string[], dim: 'w' | 'h'): EditorComponent[] {
+/** 多选等宽/等高：全部设为均值；结果夹进安全区。 */
+function equalize(comps: EditorComponent[], ids: string[], dim: 'w' | 'h', safe: SafeRect | null): EditorComponent[] {
   const sel = comps.filter((c) => ids.includes(c.id));
   if (sel.length < 2) return comps;
   const avg = Math.round(sel.reduce((acc, c) => acc + c[dim], 0) / sel.length);
-  return comps.map((c) => (ids.includes(c.id) ? { ...c, [dim]: avg } : c));
+  return comps.map((c) => {
+    if (!ids.includes(c.id)) return c;
+    const next = dim === 'w' ? { ...c, w: avg } : { ...c, h: avg };
+    const cl = clampRect({ x: next.x, y: next.y, w: next.w, h: next.h }, safe);
+    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+  });
 }
