@@ -553,6 +553,37 @@ export interface ProjectMeta {
   reportData?: ReportDataContext;
 }
 
+/** 把 campaign 日期 '2026-10-12' 格式化为 '2026.10.12'；非法/空返回 ''。 */
+export function formatCampaignDate(iso: string | undefined): string {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m ? `${m[1]}.${m[2]}.${m[3]}` : '';
+}
+
+/** 结案周期：两端齐全 → '2026.10.12–2026.11.10'；否则回落 '结案报告'。 */
+export function buildWrapUpPeriod(meta: ProjectMeta): string {
+  const start = formatCampaignDate(meta.campaignInfo?.startDate);
+  const end = formatCampaignDate(meta.campaignInfo?.endDate);
+  return start && end ? `${start}–${end}` : '结案报告';
+}
+
+/**
+ * 投放报告页默认标题。
+ *   周报 → "{advertiser}'s MEDIA REPORT · 上周"
+ *   月报 → "{advertiser}'s MEDIA REPORT · 上月"
+ *   结案 → "{advertiser}'s MEDIA REPORT · {campaign 起止}"
+ * 兜底：advertiser 空 → 'MEDIA REPORT'；无 scenarioSub → 不带周期。
+ */
+export function buildReportTitle(meta: ProjectMeta): string {
+  const advertiser = meta.advertiser?.trim();
+  const base = advertiser ? `${advertiser}'s MEDIA REPORT` : 'MEDIA REPORT';
+  let period = '';
+  if (meta.scenarioSub === 'weekly') period = '上周';
+  else if (meta.scenarioSub === 'monthly') period = '上月';
+  else if (meta.scenarioSub === 'wrap-up') period = buildWrapUpPeriod(meta);
+  return period ? `${base} · ${period}` : base;
+}
+
 /* ------------------------------------------------------------------ */
 /* 编辑器数据模型（M0 仅定义类型，编辑器内核在 M1 落地）                */
 /* ------------------------------------------------------------------ */
