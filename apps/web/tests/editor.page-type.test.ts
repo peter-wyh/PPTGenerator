@@ -1,0 +1,111 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useEditorStore } from '@/editor/store';
+import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
+
+function makeDetail(overrides: Partial<ProjectDetail> = {}): ProjectDetail {
+  return {
+    id: 'proj-1',
+    name: '测试项目',
+    width: 1280,
+    height: 720,
+    pages: [{ id: 'p1', name: '第 1 页', components: [] }],
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
+  };
+}
+function load(meta: Partial<ProjectMeta> = {}) {
+  const detail = makeDetail({ meta: meta as ProjectMeta });
+  useEditorStore.getState().loadProject(detail, detail.name);
+}
+function page(id = 'p1') {
+  return useEditorStore.getState().pages.find((p) => p.id === id)!;
+}
+
+describe('setPageType — 投放报告标题', () => {
+  beforeEach(() => load({ advertiser: 'GlowLab', scenarioSub: 'weekly' }));
+
+  it('设为 media-report：创建标题组件并写入生成标题', () => {
+    useEditorStore.getState().setPageType('p1', 'media-report');
+    const p = page();
+    expect(p.pageType).toBe('media-report');
+    expect(p.titleOverridden).toBe(false);
+    expect(p.name).toBe("GlowLab's MEDIA REPORT · 上周");
+    expect(p.titleComponentId).toBeDefined();
+    const titleComp = p.components.find((c) => c.id === p.titleComponentId)!;
+    expect((titleComp.data as { content: string }).content).toBe("GlowLab's MEDIA REPORT · 上周");
+  });
+
+  it('清除 pageType：保留组件', () => {
+    const s = useEditorStore.getState();
+    s.setPageType('p1', 'media-report');
+    s.setPageType('p1', undefined);
+    const p = page();
+    expect(p.pageType).toBeUndefined();
+    expect(p.components.length).toBeGreaterThan(0);
+  });
+
+  it('结案：标题取 campaign 区间', () => {
+    load({ advertiser: 'GlowLab', scenarioSub: 'wrap-up', campaignInfo: { startDate: '2026-10-12', endDate: '2026-11-10' } });
+    useEditorStore.getState().setPageType('p1', 'media-report');
+    expect(page().name).toBe("GlowLab's MEDIA REPORT · 2026.10.12–2026.11.10");
+  });
+});
+
+describe('restoreReportTitle', () => {
+  beforeEach(() => load({ advertiser: 'GlowLab', scenarioSub: 'weekly' }));
+
+  it('清除 overridden 标记', () => {
+    const s = useEditorStore.getState();
+    s.setPageType('p1', 'media-report');
+    useEditorStore.setState((st) => ({
+      pages: st.pages.map((p) => (p.id === 'p1' ? { ...p, titleOverridden: true } : p)),
+    }));
+    s.restoreReportTitle('p1');
+    expect(page().titleOverridden).toBe(false);
+  });
+});
+
+describe('loadProject 刷新投放报告标题', () => {
+  it('加载带 media-report 的页：按 meta 重算标题', () => {
+    const detail = makeDetail({
+      meta: { advertiser: 'GlowLab', scenarioSub: 'monthly' } as ProjectMeta,
+      pages: [
+        {
+          id: 'p1',
+          name: '封面',
+          components: [
+            { id: 'c1', type: 'text', x: 0, y: 0, w: 100, h: 50, data: { content: 'Report Title', fontSize: 56, color: '#000' } },
+          ],
+          pageType: 'media-report',
+          titleComponentId: 'c1',
+          titleOverridden: false,
+        },
+      ],
+    });
+    useEditorStore.getState().loadProject(detail, detail.name);
+    const p = page();
+    expect(p.name).toBe("GlowLab's MEDIA REPORT · 上月");
+    expect((p.components[0].data as { content: string }).content).toBe("GlowLab's MEDIA REPORT · 上月");
+  });
+
+  it('overridden 的页加载后不被重算', () => {
+    const detail = makeDetail({
+      meta: { advertiser: 'GlowLab', scenarioSub: 'monthly' } as ProjectMeta,
+      pages: [
+        {
+          id: 'p1',
+          name: '自定义标题',
+          components: [
+            { id: 'c1', type: 'text', x: 0, y: 0, w: 100, h: 50, data: { content: '自定义标题', fontSize: 56, color: '#000' } },
+          ],
+          pageType: 'media-report',
+          titleComponentId: 'c1',
+          titleOverridden: true,
+        },
+      ],
+    });
+    useEditorStore.getState().loadProject(detail, detail.name);
+    expect(page().name).toBe('自定义标题');
+  });
+});
