@@ -175,6 +175,147 @@ export interface ReportDataContext {
   creators?: ReportCreator[];
 }
 
+/* ------------------------------------------------------------------ */
+/* 达人执行效果（上游 mock）                                            */
+/* campaign 下每个参与达人的执行效果：帖子效果数据 + CPS（带货）数据。   */
+/* 与 Campaign / Creator 同级，属上游接口实体（demo 中 mock）；          */
+/* 非持久化 Page/ComponentType 字段，不动服务端 Zod。                    */
+/* ------------------------------------------------------------------ */
+
+/** 帖子（作品）类型。 */
+export type PostFormat = 'image' | 'video' | 'live-clip';
+
+/** 单条帖子（作品）的效果数据。 */
+export interface PostEffect {
+  id: string;
+  title: string;
+  /** 封面/截图 URL（可选）。 */
+  cover?: string;
+  /** 帖子链接（可选）。 */
+  url?: string;
+  /** 发布日期 YYYY-MM-DD。 */
+  publishedAt: string;
+  format: PostFormat;
+  /** 曝光（impressions）。 */
+  impressions: string;
+  /** 播放（视频类）；图文为空。 */
+  plays?: string;
+  /** 点赞。 */
+  likes: string;
+  /** 评论。 */
+  comments: string;
+  /** 转发 / 分享。 */
+  shares: string;
+  /** 收藏。 */
+  saves: string;
+  /** 互动率 = (赞+评+转+藏) / 曝光。 */
+  engagementRate: string;
+}
+
+/** 达人在某 campaign 的 CPS（按销售分成 / 带货）汇总数据。 */
+export interface CreatorCps {
+  /** 带货 GMV（成交金额）。 */
+  gmv: string;
+  /** 订单数（= 转化数 Conversions）。 */
+  orders: string;
+  /** 客单价 AOV。 */
+  aov: string;
+  /** 转化率 CVR = 订单 / 点击。 */
+  cvr: string;
+  /** CPS 佣金（达人分佣）。 */
+  commission: string;
+  /** CPS 花费（佣金 + 服务费，品牌侧成本）。 */
+  cpsSpend: string;
+  /** CPS ROAS = GMV / CPS 花费。 */
+  roas: string;
+  /** 点击数 Clicks（归因到带货链路）。 */
+  clicks: string;
+  /** 点击率 CTR = 点击 / 曝光。 */
+  ctr: string;
+  /** 每次点击收益 EPC = GMV / 点击。 */
+  epc: string;
+  /** 退款率（可选）。 */
+  refundRate?: string;
+}
+
+/**
+ * 单个投放位 / 渠道（Bio Link / Story / Live / Shopping Ads …）的带货效果。
+ * 对齐 affiliate/CPS 看板的 placement 维度：一个达人可挂多个投放位，
+ * 各自归因 Revenue / Clicks / Conversions，并占该达人总收入的一份（revenueShare）。
+ */
+export interface PlacementTrendPoint {
+  label: string;
+  value: number;
+}
+
+export interface PlacementPerformance {
+  /** 投放位类型，如 'Bio Link' / 'Story' / 'Live' / 'Shopping Ads'。 */
+  type: string;
+  /** 投放位截图 URL（可选，空 → 占位）。 */
+  screenshot?: string;
+  /** 带货收入（GMV 归因到该投放位）。 */
+  revenue: string;
+  /** 收入占比（该投放位 / 该达人总收入）。 */
+  revenueShare: string;
+  /** 点击。 */
+  clicks: string;
+  /** 点击率 CTR。 */
+  ctr: string;
+  /** 转化数（订单）。 */
+  conversions: string;
+  /** 转化率 CVR。 */
+  cvr: string;
+  /** 每次点击收益 EPC = 收入 / 点击。 */
+  epc: string;
+  /** 佣金。 */
+  commission: string;
+  /** ROAS = 收入 / 该投放位花费。 */
+  roas: string;
+  /** 趋势数据点（时间 → 数值，供迷你趋势图）。 */
+  trend?: PlacementTrendPoint[];
+  /** 备注（定性，如 "High intent traffic"）。 */
+  notes?: string;
+}
+
+/** 投放位类型汇总（campaign 维度，按 type 聚合所有达人）：对齐看板 placement-type 表。 */
+export interface PlacementTypeSummary {
+  type: string;
+  revenue: string;
+  revenueShare: string;
+  clicks: string;
+  ctr: string;
+  conversions: string;
+  cvr: string;
+  epc: string;
+  roas: string;
+  trend?: PlacementTrendPoint[];
+}
+
+/** 达人执行效果汇总（上线帖数 + 累计曝光/互动 + 平均互动率）。 */
+export interface CreatorPerformanceSummary {
+  posts: number;
+  totalImpressions: string;
+  totalEngagement: string;
+  avgEngagementRate: string;
+}
+
+/** 达人在单个 campaign 的执行效果：汇总 + 帖子明细 + 投放位明细 + CPS。 */
+export interface CreatorCampaignPerformance {
+  campaignId: string;
+  creatorId: string;
+  creatorName: string;
+  handle?: string;
+  platform: string;
+  tier: string;
+  summary: CreatorPerformanceSummary;
+  /** 帖子效果明细。 */
+  posts: PostEffect[];
+  /** 投放位 / 渠道带货明细（affiliate 维度）。 */
+  placements: PlacementPerformance[];
+  /** CPS 带货汇总。 */
+  cps: CreatorCps;
+}
+
 /** 业务线（mock 查找表 BUSINESS_LINE_META 的条目）。 */
 export interface BusinessLine {
   /** 简称，与 BUSINESS_LINES 中的条目一致，例如 'FT'。 */
@@ -875,8 +1016,10 @@ export interface PackageCardData {
  * 业绩看板（≈PRD CMP-B1）：KPI 矩阵。复用 TableData 形状，
  * 约定列顺序 [指标, 数值, 对比]；对比为 "+15%"/"-2%" 文本，渲染层按首字符上色。
  */
-export type KpiBoardVariant = 'grid' | 'row' | 'compact' | 'card' | 'gradient' | 'minimal';
+export type KpiBoardVariant = 'grid' | 'row' | 'compact' | 'card' | 'gradient' | 'minimal' | 'flat';
 export type KpiColorToken = 'primary' | 'success' | 'warning' | 'danger' | 'info';
+/** 环比方向：positive=升为好（默认） / inverse=降为好（CPA/CPC/退款率等逆向指标）。 */
+export type KpiTrendDirection = 'positive' | 'inverse';
 
 export interface KpiBoardData {
   variant: KpiBoardVariant;
@@ -888,6 +1031,10 @@ export interface KpiBoardData {
   valueColors?: (KpiColorToken | null)[];
   /** 图标 weight，缺省 'regular'。 */
   iconWeight?: IconWeight;
+  /** 每行环比方向（按 rows 索引）；positive=升好 / inverse=降好。缺省视为 positive。 */
+  trendDirections?: (KpiTrendDirection | null)[];
+  /** 环比对比基准文字（全局），如 "vs 06.01–06.30" / "vs 目标"；缺省回退 "vs 上期"。 */
+  compareLabel?: string;
 }
 
 /** 基础信息横排卡组（达人画像页 BASE/TYPE/TIER）。复用 TableData 形态。 */

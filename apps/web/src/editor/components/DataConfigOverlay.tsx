@@ -312,6 +312,7 @@ export function DataConfigOverlay({ onClose }: Props) {
                             engagement: cr.engagement ?? '',
                             category: cr.category ?? '',
                             region: cr.region ?? '',
+                            metrics: [],
                           },
                         )
                       }

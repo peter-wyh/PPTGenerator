@@ -67,9 +67,9 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     '--space-pad-sm': `${spacing.sm}px`,
     '--space-pad-md': `${spacing.md}px`,
     '--space-pad-lg': `${spacing.lg}px`,
-    // 向后兼容：--accent-primary / --accent-secondary（index.css 与旧 chrome 仍用）
-    '--accent-primary': t.color.primary,
-    '--accent-secondary': t.color.secondary,
+    // 注：--accent-primary / --accent-secondary 刻意【不】在此覆盖 —— 它们是编辑器
+    // chrome（选中框 / 面板高亮 / 库图标）的固定强调色，由 index.css :root 提供常量，
+    // 不应随品牌色变化。品牌色统一走 --color-primary / --color-secondary（组件内容引用）。
     // 布局
     '--grid-size': `${t.layout?.gridSize ?? DEFAULT_THEME.layout!.gridSize}px`,
     '--safe-margin': `${t.layout?.safeMargin ?? DEFAULT_THEME.layout!.safeMargin}px`,

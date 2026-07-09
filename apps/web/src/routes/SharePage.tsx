@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getSharedProject } from '../api/projects';
 import { useEditorStore } from '../editor/store';
 import { PageView, fitScale } from '../editor/preview/PageView';
+import { themeToCssVars, injectFontLinks } from '../editor/theme';
+import { DEFAULT_THEME } from '@mediakit/shared';
 import type { ProjectDetail } from '@mediakit/shared';
 
 /**
@@ -22,6 +25,14 @@ export function SharePage() {
   const pages = useEditorStore((s) => s.pages);
   const canvasWidth = useEditorStore((s) => s.canvasWidth) || 1280;
   const canvasHeight = useEditorStore((s) => s.canvasHeight) || 720;
+
+  // 报告主题（品牌色 / 字体）：分享页 / PDF 导出同样按项目主题渲染。
+  // themeStyle 挂在内容根节点 → CSS 变量级联到 PageView 组件；字体按需注入 <head>。
+  const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
+  const themeStyle = useMemo<CSSProperties>(() => themeToCssVars(theme), [theme]);
+  useEffect(() => {
+    injectFontLinks(theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!token) return;
@@ -52,7 +63,7 @@ export function SharePage() {
   // 打印模式：连续渲染所有页（每页 page-break），供 puppeteer 截 PDF。
   if (isPrint) {
     return (
-      <div>
+      <div style={themeStyle}>
         {pages.map((page, i) => (
           <div
             key={page.id}
@@ -78,7 +89,7 @@ export function SharePage() {
   const scale = fitScale(canvasWidth, canvasHeight, viewportW, viewportH);
 
   return (
-    <div className="flex h-screen flex-col bg-neutral-900">
+    <div className="flex h-screen flex-col bg-neutral-900" style={themeStyle}>
       <div className="flex h-12 items-center justify-between px-4 text-white">
         <span className="text-sm font-medium">{detail.name}</span>
         <span className="text-xs text-white/50">只读分享</span>

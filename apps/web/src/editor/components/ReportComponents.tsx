@@ -8,6 +8,7 @@
  */
 import type {
   KpiBoardData,
+  KpiTrendDirection,
   MetaStripData,
   PlacementData,
   PostListData,
@@ -22,10 +23,12 @@ import { KPI_COLOR_TOKENS } from '../kpiTokens';
 
 /* -------------------------------- kpi board ------------------------------- */
 
-/** 对比文本按首字符上色：+ 绿 / - 红 / 其他灰。 */
-function compareColor(compare: string): string {
+/** 对比文本上色：positive=升绿/降红；inverse（CPA/CPC 等降为好）=降绿/升红。 */
+function compareColor(compare: string, direction: KpiTrendDirection = 'positive'): string {
   if (!compare) return 'transparent';
-  return compare.trim().startsWith('-') ? '#EF4444' : '#22C55E';
+  const isDown = compare.trim().startsWith('-');
+  const good = direction === 'inverse' ? isDown : !isDown;
+  return good ? '#22C55E' : '#EF4444';
 }
 
 export function KpiBoard({ data }: { data: KpiBoardData }) {
@@ -33,12 +36,13 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
   const items = rows.map((r, i) => {
     const token = data.valueColors?.[i] ?? null;
     const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : undefined;
-    return { label: r[0] ?? '', value: r[1] ?? '', compare: r[2] ?? '', color };
+    const direction = data.trendDirections?.[i] ?? 'positive';
+    return { label: r[0] ?? '', value: r[1] ?? '', compare: r[2] ?? '', color, direction };
   });
 
   const Card = ({
-    label, value, compare, color,
-  }: { label: string; value: string; compare: string; color?: string }) => (
+    label, value, compare, color, direction = 'positive',
+  }: { label: string; value: string; compare: string; color?: string; direction?: KpiTrendDirection }) => (
     <div className="flex flex-col justify-center">
       <div className="text-[11px] text-foreground-secondary">{label}</div>
       <div
@@ -48,7 +52,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
         {value}
       </div>
       {compare && (
-        <div className="text-[11px] font-medium" style={{ color: compareColor(compare) }}>
+        <div className="text-[11px] font-medium" style={{ color: compareColor(compare, direction) }}>
           {compare}
         </div>
       )}
@@ -63,7 +67,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
             <span className="text-[11px] text-foreground-secondary">{it.label}</span>
             <span className="font-data text-base font-semibold text-foreground-primary">{it.value}</span>
             {it.compare && (
-              <span className="text-[10px]" style={{ color: compareColor(it.compare) }}>
+              <span className="text-[10px]" style={{ color: compareColor(it.compare, it.direction) }}>
                 {it.compare}
               </span>
             )}
@@ -122,13 +126,44 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
               <div className="mt-2 text-[11px] text-foreground-secondary">{it.label}</div>
               <div className="font-data text-xl font-bold text-foreground-primary">{it.value}</div>
               {it.compare && (
-                <div className="text-[11px] font-medium" style={{ color: compareColor(it.compare) }}>
+                <div className="text-[11px] font-medium" style={{ color: compareColor(it.compare, it.direction) }}>
                   {it.compare}
                 </div>
               )}
             </div>
           );
         })}
+      </div>
+    );
+  }
+
+  if (variant === 'flat') {
+    // 平铺指标条（参考图风格）：单行等宽卡 —— 标题 + 大数值（按类型染色）+ 环比 + 对比基准锚点。
+    const compareLabel = data.compareLabel?.trim() ? data.compareLabel : 'vs 上期';
+    return (
+      <div className="flex h-full w-full items-stretch gap-2 overflow-auto">
+        {items.map((it, i) => (
+          <div
+            key={i}
+            className="flex flex-1 flex-col justify-center rounded-xl border border-border-subtle bg-surface-primary px-3.5 py-2.5"
+          >
+            <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{it.label}</div>
+            <div
+              className="font-data text-2xl font-bold leading-tight"
+              style={it.color ? { color: it.color } : undefined}
+            >
+              {it.value}
+            </div>
+            <div className="mt-0.5 flex items-baseline gap-1.5">
+              {it.compare && (
+                <span className="text-[11px] font-semibold" style={{ color: compareColor(it.compare, it.direction) }}>
+                  {it.compare}
+                </span>
+              )}
+              <span className="text-[10px] text-foreground-muted">{compareLabel}</span>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -159,7 +194,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
                   {it.value}
                 </div>
                 {it.compare && (
-                  <div className="text-xs font-medium" style={{ color: compareColor(it.compare) }}>
+                  <div className="text-xs font-medium" style={{ color: compareColor(it.compare, it.direction) }}>
                     {it.compare}
                   </div>
                 )}
@@ -461,7 +496,7 @@ function StrategyDefault({ data }: { data: StrategyBlockData }) {
         return (
           <div key={i} className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-accent-secondary" />}
+              {Icon && <Icon size={16} className="text-secondary" />}
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
                 {title}
               </span>
@@ -490,8 +525,8 @@ function StrategyLabeled({ data }: { data: StrategyBlockData }) {
         return (
           <div key={i} className={`flex flex-col gap-1 ${i > 0 ? 'mt-3 border-t border-border-subtle pt-3' : ''}`}>
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-accent-secondary" />}
-              <span className="text-xs font-semibold uppercase tracking-wide text-accent-secondary">
+              {Icon && <Icon size={16} className="text-secondary" />}
+              <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
                 {title}
               </span>
             </div>
@@ -522,7 +557,7 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
   return (
     <div className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary p-4 shadow-sm">
       <div className="flex items-center gap-1.5">
-        {HeaderIcon && <HeaderIcon size={16} className="text-accent-secondary" />}
+        {HeaderIcon && <HeaderIcon size={16} className="text-secondary" />}
         <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
           {hTitle}
         </span>
@@ -533,7 +568,7 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
             const content = r[2] || r[1] || '';
             return (
               <div key={i} className="flex gap-2 py-0.5 text-sm text-foreground-secondary">
-                <span className="flex-none text-accent-secondary">•</span>
+                <span className="flex-none text-secondary">•</span>
                 <div
                   className="min-w-0 flex-1 [&_ul]:my-0.5 [&_ul]:list-disc [&_ul]:pl-4"
                   dangerouslySetInnerHTML={{ __html: renderHtmlWithHighlights(content, data.highlights) }}
@@ -582,15 +617,15 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
               <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
               <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(v: number) => v} />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]} fill="var(--color-accent-primary, #FF5C00)">
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} fill="var(--color-primary, #FF5C00)">
                 <LabelList dataKey="sold" position="right" style={{ fontSize: 11 }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
         {insight && (
-          <div className="flex w-[220px] flex-none flex-col justify-center rounded-lg bg-accent-primary/5 p-3">
-            <div className="mb-1 text-[11px] font-semibold text-accent-primary">Insight</div>
+          <div className="flex w-[220px] flex-none flex-col justify-center rounded-lg bg-primary/5 p-3">
+            <div className="mb-1 text-[11px] font-semibold text-primary">Insight</div>
             <div className="text-xs text-foreground-secondary">{insight}</div>
           </div>
         )}
@@ -634,8 +669,8 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
         )}
       </div>
       {insight && (
-        <div className="flex w-[260px] flex-none flex-col justify-center rounded-lg bg-accent-primary/5 p-3">
-          <div className="mb-1 text-[11px] font-semibold text-accent-primary">Insight</div>
+        <div className="flex w-[260px] flex-none flex-col justify-center rounded-lg bg-primary/5 p-3">
+          <div className="mb-1 text-[11px] font-semibold text-primary">Insight</div>
           <div className="text-xs text-foreground-secondary">{insight}</div>
         </div>
       )}
@@ -657,7 +692,7 @@ export function PlacementDisplay({ data }: { data: PlacementData }) {
         <ImgOrPlaceholder url={it.img} label={it.name} cls="h-full w-1/2" />
         <div className="flex flex-1 flex-col justify-center">
           <div className="text-sm font-semibold text-foreground-primary">{it.name}</div>
-          <div className="mt-1 font-data text-lg font-bold text-accent-primary">{it.metric}</div>
+          <div className="mt-1 font-data text-lg font-bold text-primary">{it.metric}</div>
         </div>
       </div>
     );
@@ -678,7 +713,7 @@ export function PlacementDisplay({ data }: { data: PlacementData }) {
         <div className="grid flex-none grid-cols-2 gap-2 border-t border-border-subtle pt-2">
           {highlights && (
             <div>
-              <div className="text-[11px] font-semibold text-accent-primary">Highlights</div>
+              <div className="text-[11px] font-semibold text-primary">Highlights</div>
               <div className="text-[11px] text-foreground-secondary">{highlights}</div>
             </div>
           )}

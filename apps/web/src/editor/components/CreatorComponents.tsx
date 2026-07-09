@@ -61,7 +61,7 @@ function Avatar({ data, size }: { data: CreatorAvatarCardData; size: number }) {
   return (
     <div
       style={{ width: size, height: size, fontSize: size * 0.4 }}
-      className="flex flex-none items-center justify-center rounded-full bg-accent-primary/10 text-accent-primary"
+      className="flex flex-none items-center justify-center rounded-full bg-primary/10 text-primary"
     >
       {data.name?.slice(0, 1) || '?'}
     </div>
@@ -89,7 +89,7 @@ function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
             {PLATFORM_LABEL[data.platform] ?? data.platform}
           </span>
         </div>
-        <div className="mt-0.5 text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
+        <div className="mt-0.5 text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
         {data.intro && <div className="mt-1 line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
         <StatsLine data={data} />
       </div>
@@ -107,7 +107,7 @@ function AvatarVertical({ data }: { data: CreatorAvatarCardData }) {
           {PLATFORM_LABEL[data.platform] ?? data.platform}
         </span>
       </div>
-      <div className="text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
+      <div className="text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
       {data.intro && <div className="line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
       <StatsLine data={data} />
     </div>
@@ -121,7 +121,7 @@ function AvatarCompact({ data }: { data: CreatorAvatarCardData }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-semibold text-foreground-primary">{data.name}</span>
-          <span className="truncate text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</span>
+          <span className="truncate text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</span>
         </div>
         <div className="truncate text-[11px] text-foreground-secondary">
           {PLATFORM_LABEL[data.platform] ?? data.platform}
@@ -136,7 +136,7 @@ function AvatarBadge({ data }: { data: CreatorAvatarCardData }) {
   return (
     <div
       className="flex h-full w-full items-center gap-2 rounded-full border border-border-default px-2"
-      style={{ background: 'linear-gradient(135deg, var(--color-accent-primary, #FF5C00)14, transparent)' }}
+      style={{ background: 'linear-gradient(135deg, var(--color-primary, #FF5C00)14, transparent)' }}
     >
       <Avatar data={data} size={40} />
       <span className="truncate text-sm font-semibold text-foreground-primary">{data.name}</span>
@@ -152,7 +152,7 @@ function AvatarBanner({ data }: { data: CreatorAvatarCardData }) {
   return (
     <div className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary pb-3">
       {/* 顶部全宽背景色条 */}
-      <div className="h-6 w-full rounded-t-xl" style={{ background: 'var(--color-accent-primary, #FF5C00)1A' }} />
+      <div className="h-6 w-full rounded-t-xl" style={{ background: 'var(--color-primary, #FF5C00)1A' }} />
       <div className="-mt-8 flex flex-col items-center gap-1 px-3 text-center">
         <Avatar data={data} size={64} />
         <div className="flex items-center gap-2">
@@ -161,7 +161,7 @@ function AvatarBanner({ data }: { data: CreatorAvatarCardData }) {
             {PLATFORM_LABEL[data.platform] ?? data.platform}
           </span>
         </div>
-        <div className="text-[11px] text-accent-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
+        <div className="text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
         <StatsLine data={data} />
       </div>
     </div>
@@ -755,7 +755,7 @@ export function CreatorList({ data }: { data: CreatorListData }) {
 function ListAvatar({ url, name, size }: { url: string; name: string; size: number }) {
   if (url) return <img src={url} alt={name} className="flex-none rounded-full object-cover" style={{ width: size, height: size }} draggable={false} />;
   return (
-    <div className="flex flex-none items-center justify-center rounded-full bg-accent-primary/10 text-accent-primary" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+    <div className="flex flex-none items-center justify-center rounded-full bg-primary/10 text-primary" style={{ width: size, height: size, fontSize: size * 0.4 }}>
       {name?.slice(0, 1) || '?'}
     </div>
   );
@@ -781,7 +781,7 @@ function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers
           <div className="min-w-0 flex-1 truncate text-sm font-medium text-foreground-primary">{it.name}</div>
           <div className="w-20 flex-none text-center text-[11px] text-foreground-secondary">{PLATFORM_LABEL_SHORT[it.platform] ?? it.platform}</div>
           <div className="w-20 flex-none text-right font-data text-sm text-foreground-primary">{it.followers}</div>
-          <div className="w-16 flex-none text-right font-data text-sm text-accent-primary">{it.engagement}</div>
+          <div className="w-16 flex-none text-right font-data text-sm text-primary">{it.engagement}</div>
           <div className="w-16 flex-none truncate text-right text-[11px] text-foreground-secondary">{it.category}</div>
         </div>
       ))}
@@ -817,7 +817,7 @@ function CreatorListCompact({ items }: { items: CreatorListRow[]; headers: strin
           <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.name}</div>
           <span className="w-16 flex-none truncate text-[11px] text-foreground-secondary">{PLATFORM_LABEL_SHORT[it.platform] ?? it.platform}</span>
           <span className="w-20 flex-none text-right font-data text-sm text-foreground-primary">{it.followers}</span>
-          <span className="w-14 flex-none text-right text-[11px] text-accent-primary">{it.engagement}</span>
+          <span className="w-14 flex-none text-right text-[11px] text-primary">{it.engagement}</span>
         </div>
       ))}
     </div>

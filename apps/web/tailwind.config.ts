@@ -30,6 +30,10 @@ export default {
           primary: 'var(--accent-primary)',
           secondary: 'var(--accent-secondary)',
         },
+        // 品牌色（幻灯片内容引用）：随项目主题变化（编辑器根节点覆盖 --color-*）。
+        // accent.* = 编辑器 chrome 固定强调色（选中框/面板高亮），不随品牌色变。
+        primary: 'var(--color-primary)',
+        secondary: 'var(--color-secondary)',
         green: 'var(--green)',
         red: 'var(--red)',
         'red-bg': 'var(--red-bg)',

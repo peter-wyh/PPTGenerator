@@ -268,13 +268,16 @@ export function getDefaultData(type: ComponentType): ComponentData {
         rows: [
           ['Sales', '¥1.24M', '+15%'],
           ['Commission', '¥98K', '+12%'],
-          ['CVR', '3.8%', '+0.4%'],
-          ['New Customer', '62%', '+5%'],
+          ['ROAS', '3.21', '+12%'],
           ['Clicks', '120K', '-3%'],
-          ['Orders', '8.4K', '+9%'],
+          ['Conversions', '4.35K', '+18%'],
+          ['CVR', '3.8%', '+0.4%'],
+          ['AOV', '¥72.5', '+1%'],
+          ['New Customer', '62%', '+5%'],
         ],
-        icons: ['currency', 'percent', 'percent', 'users', 'eye', 'cart'],
-        valueColors: ['success', 'success', 'info', 'info', 'warning', 'success'],
+        icons: ['currency', 'currency', 'target', 'eye', 'cart', 'percent', 'currency', 'users'],
+        valueColors: ['success', 'success', 'info', 'warning', 'success', 'info', 'primary', 'info'],
+        compareLabel: 'vs 上期',
       };
     case 'meta-strip':
       return {

@@ -325,7 +325,7 @@ export function TableComponent({ data }: { data: TableData }) {
 /** M4 占位：业务组件二级分发在此实现。M1 仅渲染一个占位框。 */
 export function BusinessBlockPlaceholder({ data }: { data: { title?: string; businessKind?: string } }) {
   return (
-    <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-accent-primary/40 bg-accent-primary/5 text-center text-sm text-accent-primary">
+    <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-primary/40 bg-primary/5 text-center text-sm text-primary">
       业务组件 · {data.businessKind ?? 'unknown'}
       {data.title ? ` · ${data.title}` : ''}
     </div>

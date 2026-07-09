@@ -18,7 +18,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
       {src ? (
         <img src={src} alt={name} className="h-8 max-w-[80%] object-contain" draggable={false} />
       ) : (
-        <div className="flex h-8 w-8 items-center justify-center rounded bg-accent-primary/10 text-sm font-semibold text-accent-primary">
+        <div className="flex h-8 w-8 items-center justify-center rounded bg-primary/10 text-sm font-semibold text-primary">
           {name?.slice(0, 1) || '?'}
         </div>
       )}
@@ -67,7 +67,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
             {l.src ? (
               <img src={l.src} alt={l.name} className="h-14 w-14 rounded-full object-cover" draggable={false} />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-primary/10 text-lg font-semibold text-accent-primary">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
                 {l.name?.slice(0, 1) || '?'}
               </div>
             )}
@@ -87,7 +87,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
             {l.src ? (
               <img src={l.src} alt={l.name} className="h-9 max-w-[80%] object-contain" draggable={false} />
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded bg-accent-primary/10 text-sm font-semibold text-accent-primary">
+              <div className="flex h-9 w-9 items-center justify-center rounded bg-primary/10 text-sm font-semibold text-primary">
                 {l.name?.slice(0, 1) || '?'}
               </div>
             )}
@@ -117,16 +117,16 @@ export function PackageCard({ data }: { data: PackageCardData }) {
   const wrap =
     variant === 'compact'
       ? 'rounded-xl border bg-surface-primary p-3 ' +
-        (highlighted ? 'border-accent-primary ring-1 ring-accent-primary/40' : 'border-border-default')
+        (highlighted ? 'border-primary ring-1 ring-primary/40' : 'border-border-default')
       : 'flex h-full w-full flex-col rounded-xl border bg-surface-primary p-4 ' +
-        (highlighted ? 'border-accent-primary ring-1 ring-accent-primary/40' : 'border-border-default');
+        (highlighted ? 'border-primary ring-1 ring-primary/40' : 'border-border-default');
 
   if (variant === 'compact') {
     return (
       <div className={wrap}>
         <div className="flex items-baseline justify-between gap-2">
           <span className="truncate text-sm font-semibold text-foreground-primary">{name}</span>
-          <span className="flex-none font-data text-sm font-semibold text-accent-primary">{price}</span>
+          <span className="flex-none font-data text-sm font-semibold text-primary">{price}</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-foreground-secondary">
           {features.map((f, i) => (
@@ -142,7 +142,7 @@ export function PackageCard({ data }: { data: PackageCardData }) {
     return (
       <div className="flex h-full w-full items-center gap-3 px-3">
         <span className="w-28 flex-none truncate text-sm font-semibold text-foreground-primary">{name}</span>
-        <span className="w-20 flex-none font-data text-sm font-semibold text-accent-primary">{price}</span>
+        <span className="w-20 flex-none font-data text-sm font-semibold text-primary">{price}</span>
         <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">
           {features.filter(Boolean).join('、')}
         </span>
@@ -156,14 +156,14 @@ export function PackageCard({ data }: { data: PackageCardData }) {
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground-primary">{name}</span>
         {highlighted && (
-          <span className="rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary">推荐</span>
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">推荐</span>
         )}
       </div>
-      <div className="mt-1 font-data text-2xl font-bold text-accent-primary">{price}</div>
+      <div className="mt-1 font-data text-2xl font-bold text-primary">{price}</div>
       <ul className="mt-3 flex-1 space-y-1.5 text-xs text-foreground-secondary">
         {features.map((f, i) => (
           <li key={i} className="flex gap-1.5">
-            <span className="text-accent-primary">✓</span>
+            <span className="text-primary">✓</span>
             <span>{f}</span>
           </li>
         ))}

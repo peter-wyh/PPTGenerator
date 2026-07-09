@@ -4,9 +4,19 @@ import { MockData } from '@/routes/MockData';
 
 const { listCampaignsMock } = vi.hoisted(() => ({ listCampaignsMock: vi.fn() }));
 const { listCreatorsMock } = vi.hoisted(() => ({ listCreatorsMock: vi.fn() }));
+const { listCreatorPerformanceMock } = vi.hoisted(() => ({
+  listCreatorPerformanceMock: vi.fn(),
+}));
+const { listPlacementTypeSummaryMock } = vi.hoisted(() => ({
+  listPlacementTypeSummaryMock: vi.fn(),
+}));
 
 vi.mock('@/api/campaigns', () => ({ listCampaigns: () => listCampaignsMock() }));
 vi.mock('@/api/creators', () => ({ listCreators: () => listCreatorsMock() }));
+vi.mock('@/api/creatorPerformance', () => ({
+  listCreatorPerformance: (id: string) => listCreatorPerformanceMock(id),
+  listPlacementTypeSummary: (id: string) => listPlacementTypeSummaryMock(id),
+}));
 
 describe('MockData page', () => {
   beforeEach(() => {
@@ -35,8 +45,11 @@ describe('MockData page', () => {
         engagement: '8.7%',
         category: 'Beauty',
         region: 'US / UK',
+        metrics: [],
       },
     ]);
+    listCreatorPerformanceMock.mockResolvedValue([]);
+    listPlacementTypeSummaryMock.mockResolvedValue([]);
   });
 
   it('renders campaign and creator tables from the mock APIs', async () => {
@@ -44,8 +57,8 @@ describe('MockData page', () => {
     expect(screen.getByText(/Campaign 数据 ·/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText('达人数据 · 1')).toBeInTheDocument());
 
-    // campaign 数据
-    expect(screen.getByText('GlowLab Q4 上市')).toBeInTheDocument();
+    // campaign 数据（名称现出现在表格 + Campaign 选择器两处）
+    expect(screen.getAllByText('GlowLab Q4 上市').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('投放中')).toBeInTheDocument();
     // 达人数据
     expect(screen.getByText('Mia Chen')).toBeInTheDocument();
@@ -57,5 +70,90 @@ describe('MockData page', () => {
     listCreatorsMock.mockResolvedValue([]);
     render(<MockData />);
     await waitFor(() => expect(screen.getAllByText('暂无数据').length).toBe(2));
+  });
+
+  it('renders creator performance (posts + CPS) for the selected campaign', async () => {
+    listCreatorPerformanceMock.mockResolvedValue([
+      {
+        campaignId: 'c1',
+        creatorId: 'cr1',
+        creatorName: 'Mia Chen',
+        handle: '@miaglowup',
+        platform: 'TikTok',
+        tier: '头部',
+        summary: {
+          posts: 2,
+          totalImpressions: '1.46M',
+          totalEngagement: '120K',
+          avgEngagementRate: '8.2%',
+        },
+        posts: [
+          {
+            id: 'c1-cr1-p1',
+            title: '敏感肌7天急救 vlog',
+            publishedAt: '2026-10-14',
+            format: 'video',
+            impressions: '850K',
+            plays: '697K',
+            likes: '40,000',
+            comments: '7,800',
+            shares: '12,800',
+            saves: '10,700',
+            engagementRate: '8.4%',
+          },
+        ],
+        placements: [
+          {
+            type: 'Bio Link',
+            screenshot: '',
+            revenue: '¥92,160',
+            revenueShare: '48.0%',
+            clicks: '12,300',
+            ctr: '3.15%',
+            conversions: '488',
+            cvr: '3.97%',
+            epc: '¥7.50',
+            commission: '¥11,059',
+            roas: '7.71',
+            notes: 'High intent traffic',
+          },
+        ],
+        cps: {
+          gmv: '¥192,000',
+          orders: '1,016',
+          aov: '¥189',
+          cvr: '1.8%',
+          commission: '¥23,040',
+          cpsSpend: '¥24,883',
+          roas: '7.71',
+          clicks: '30,760',
+          ctr: '2.7%',
+          epc: '¥6.24',
+          refundRate: '1.8%',
+        },
+      },
+    ]);
+    listPlacementTypeSummaryMock.mockResolvedValue([
+      {
+        type: 'Bio Link',
+        revenue: '¥92,160',
+        revenueShare: '48.0%',
+        clicks: '12,300',
+        ctr: '3.15%',
+        conversions: '488',
+        cvr: '3.97%',
+        epc: '¥7.50',
+        roas: '7.71',
+      },
+    ]);
+
+    render(<MockData />);
+    // 帖子标题（仅 perf 卡渲染后出现）
+    await waitFor(() => expect(screen.getByText('敏感肌7天急救 vlog')).toBeInTheDocument());
+    // 投放位类型汇总表（campaign 维度）
+    expect(screen.getByText('投放位类型汇总（campaign 维度）')).toBeInTheDocument();
+    // CPS 数值（GMV 唯一；ROAS 在汇总/投放位/CPS 三处都出现，故取 all）
+    expect(screen.getByText('¥192,000')).toBeInTheDocument();
+    expect(screen.getAllByText('7.71').length).toBeGreaterThan(0);
   });
 });

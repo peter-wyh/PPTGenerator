@@ -16,6 +16,11 @@
   --border-default: #e5e7eb;
   --accent-primary: #ff5c00;
   --accent-secondary: #ff8533;
+  /* 品牌（内容）主色 / 辅色默认值：与 accent 对齐。
+     themeToCssVars 在编辑器根节点按项目主题覆盖；
+     未应用 themeStyle 的场景（分享页 / PDF 导出）回退到此处常量。 */
+  --color-primary: #ff5c00;
+  --color-secondary: #ff8533;
   --green: #22c55e;
   --red: #ef4444;
   --red-bg: #fef2f2;

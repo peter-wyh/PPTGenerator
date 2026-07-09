@@ -1,4 +1,4 @@
-import type { CampaignMetric, KpiColorToken } from '@mediakit/shared';
+import type { CampaignMetric, KpiColorToken, KpiTrendDirection } from '@mediakit/shared';
 
 /**
  * 把 Campaign 投放表现指标映射为 kpi-board 数据补丁。
@@ -12,6 +12,7 @@ export interface KpiRowsPatch {
   rows: string[][];
   icons: (string | null)[];
   valueColors: (KpiColorToken | null)[];
+  trendDirections: (KpiTrendDirection | null)[];
 }
 
 export function metricsToRows(metrics: CampaignMetric[]): KpiRowsPatch {
@@ -21,5 +22,6 @@ export function metricsToRows(metrics: CampaignMetric[]): KpiRowsPatch {
     rows,
     icons: rows.map(() => null),
     valueColors: rows.map(() => null),
+    trendDirections: rows.map(() => null),
   };
 }

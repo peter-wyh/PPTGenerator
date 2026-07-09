@@ -97,11 +97,88 @@ describe('KpiBoard · grid/row 去边框', () => {
   });
 });
 
+describe('KpiBoard · flat 变体（平铺指标条）', () => {
+  it('渲染 label/value/compare 与「vs 上期」锚点，并按 valueColors 染色', () => {
+    const data: KpiBoardData = {
+      variant: 'flat',
+      headers: ['指标', '数值', '对比'],
+      rows: [['ROAS', '3.21', '+12%']],
+      valueColors: ['info'],
+    };
+    const { container } = render(<KpiBoard data={data} />);
+    expect(screen.getByText('ROAS')).toBeInTheDocument();
+    expect(screen.getByText('3.21')).toBeInTheDocument();
+    expect(screen.getByText('+12%')).toBeInTheDocument();
+    expect(screen.getByText('vs 上期')).toBeInTheDocument();
+    // valueColors 非 primary 时数值上 inline 色（info = #3B82F6）
+    const valueEl = container.querySelector('.font-data') as HTMLElement;
+    expect(valueEl.style.color).toBe('rgb(59, 130, 246)');
+  });
+});
+
+describe('KpiBoard · 对比基准与逆向指标', () => {
+  it('flat 渲染自定义 compareLabel', () => {
+    render(
+      <KpiBoard
+        data={{
+          variant: 'flat',
+          headers: ['指标', '数值', '对比'],
+          rows: [['A', '1', '+1%']],
+          compareLabel: 'vs 06.01–06.30',
+        }}
+      />,
+    );
+    expect(screen.getByText('vs 06.01–06.30')).toBeInTheDocument();
+  });
+
+  it('flat 缺省 compareLabel 回退「vs 上期」', () => {
+    render(
+      <KpiBoard data={{ variant: 'flat', headers: ['指标', '数值', '对比'], rows: [['A', '1', '+1%']] }} />,
+    );
+    expect(screen.getByText('vs 上期')).toBeInTheDocument();
+  });
+
+  it('inverse 方向：-5% 染绿（降为好）', () => {
+    render(
+      <KpiBoard
+        data={{
+          variant: 'flat',
+          headers: ['指标', '数值', '对比'],
+          rows: [['CPA', '5', '-5%']],
+          trendDirections: ['inverse'],
+        }}
+      />,
+    );
+    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('rgb(34, 197, 94)'); // #22C55E
+  });
+
+  it('positive（默认）：-5% 染红', () => {
+    render(
+      <KpiBoard data={{ variant: 'flat', headers: ['指标', '数值', '对比'], rows: [['A', '5', '-5%']] }} />,
+    );
+    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('rgb(239, 68, 68)'); // #EF4444
+  });
+
+  it('inverse 同样作用于 card 变体', () => {
+    render(
+      <KpiBoard
+        data={{
+          variant: 'card',
+          headers: ['指标', '数值', '对比'],
+          rows: [['CPA', '5', '-5%']],
+          trendDirections: ['inverse'],
+        }}
+      />,
+    );
+    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('rgb(34, 197, 94)');
+  });
+});
+
 describe('kpi-board 注册与默认数据', () => {
-  it('REGISTRY 暴露 6 个 variant（含 card）', () => {
+  it('REGISTRY 暴露 7 个 variant（含 card 与 flat）', () => {
     const def = REGISTRY['kpi-board'];
     const ids = def.variants?.map((v) => v.id);
-    expect(ids).toEqual(['grid', 'row', 'compact', 'card', 'gradient', 'minimal']);
+    expect(ids).toEqual(['grid', 'row', 'compact', 'card', 'gradient', 'minimal', 'flat']);
   });
 
   it('默认数据含 icons 与 valueColors 示例', () => {
@@ -158,10 +235,10 @@ describe('KpiRowStyleField', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    // 默认 6 行，第一行 label 是 'Sales'
+    // 默认 8 行，第一行 label 是 'Sales'
     expect(screen.getByText('Sales')).toBeInTheDocument();
-    // 每行 5 个色块，title='红' 每行一个 → 6 行共 6 个
-    expect(screen.getAllByTitle('红').length).toBe(6);
+    // 每行 5 个色块，title='红' 每行一个 → 8 行共 8 个
+    expect(screen.getAllByTitle('红').length).toBe(8);
   });
 
   it('点色块写入 valueColors[i]', () => {

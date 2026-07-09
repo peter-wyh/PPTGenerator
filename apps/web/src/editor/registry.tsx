@@ -329,6 +329,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'card', label: '卡片' },
       { id: 'gradient', label: '渐变' },
       { id: 'minimal', label: '极简线框' },
+      { id: 'flat', label: '平铺指标条' },
     ],
     propertySchema: [{ key: '', label: 'KPI 列表', kind: 'table' }],
   },

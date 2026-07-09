@@ -1,7 +1,10 @@
 /**
  * 上游达人（Creator / Influencer）接口（demo 中 mock）。
  * 真实环境对接达人库/CRM；这里返回固定 mock 列表，带模拟延迟。
+ * metrics 为跨该达人参与的所有 campaign 的汇总（见 creatorPerformance.rollupCreatorTotals）。
  */
+import type { CampaignMetric } from '@mediakit/shared';
+import { rollupCreatorTotals } from './creatorPerformance';
 
 export interface Creator {
   id: string;
@@ -13,9 +16,12 @@ export interface Creator {
   engagement: string;
   category: string;
   region: string;
+  /** 跨该达人参与的所有 campaign 的汇总指标（GMV/ROAS/转化/佣金）。 */
+  metrics: CampaignMetric[];
 }
 
-const MOCK_CREATORS: Creator[] = [
+/** 达人元数据（花名册）；metrics 在导出时由 rollupCreatorTotals 注入。 */
+const CREATOR_META: Omit<Creator, 'metrics'>[] = [
   {
     id: 'cre-mia',
     name: 'Mia Chen',
@@ -94,6 +100,11 @@ const MOCK_CREATORS: Creator[] = [
     region: 'US',
   },
 ];
+
+const MOCK_CREATORS: Creator[] = CREATOR_META.map((c) => ({
+  ...c,
+  metrics: rollupCreatorTotals(c.id),
+}));
 
 /** 模拟上游拉取达人列表。 */
 export function listCreators(): Promise<Creator[]> {
