@@ -947,10 +947,14 @@ function RichTextField({ value, onChange }: { value: string; onChange: (html: st
           •
         </button>
       </div>
+      {/* onInput 实时提交：Canvas 点击组件时 mousedown.preventDefault 会阻止 contentEditable 失焦，
+          仅依赖 onBlur 会导致编辑后的内容永远无法同步到画板；onInput 使内容随输入即时入库。
+          useEffect 仍在聚焦时跳过回写（见上），避免光标跳动。 */}
       <div
         ref={ref}
         contentEditable
         suppressContentEditableWarning
+        onInput={commit}
         onBlur={commit}
         className="min-h-[60px] px-2 py-1 text-xs text-foreground-primary focus:outline-none [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
       />
