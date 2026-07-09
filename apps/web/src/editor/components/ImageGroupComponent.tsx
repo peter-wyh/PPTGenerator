@@ -84,6 +84,30 @@ export function resolveLayout(variant: ImageGroupLayoutId | undefined, count: nu
   return best;
 }
 
+/** 网格容器样式：列/行模板按版式铺满。 */
+export function buildGridStyle(layout: LayoutDef, gap: number): CSSProperties {
+  return {
+    display: 'grid',
+    gap,
+    gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
+    gridTemplateRows: layout.rowHeights
+      ? layout.rowHeights.map((h) => `${h}fr`).join(' ')
+      : `repeat(${layout.rows}, 1fr)`,
+    width: '100%',
+    height: '100%',
+  };
+}
+
+/** 单元格样式：列/行起点 + 跨度 + 圆角。 */
+export function cellStyle(cell: LayoutCell): CSSProperties {
+  return {
+    gridColumn: `${cell.c} / span ${cell.cs ?? 1}`,
+    gridRow: `${cell.r} / span ${cell.rs ?? 1}`,
+    overflow: 'hidden',
+    borderRadius: 8,
+  };
+}
+
 export function ImageGroupComponent({ data }: { data: ImageGroupData }) {
   const { variant, images = [], gap = 8 } = data;
 
@@ -97,29 +121,13 @@ export function ImageGroupComponent({ data }: { data: ImageGroupData }) {
   }
 
   const layout = resolveLayout(variant, images.length);
-  const gridStyle: CSSProperties = {
-    display: 'grid',
-    gap,
-    gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
-    gridTemplateRows: layout.rowHeights
-      ? layout.rowHeights.map((h) => `${h}fr`).join(' ')
-      : `repeat(${layout.rows}, 1fr)`,
-    width: '100%',
-    height: '100%',
-  };
 
   return (
-    <div className="h-full w-full" style={gridStyle}>
+    <div className="h-full w-full" style={buildGridStyle(layout, gap)}>
       {layout.cells.map((cell, i) => {
         const src = images[i]?.src;
-        const cellStyle: CSSProperties = {
-          gridColumn: `${cell.c} / span ${cell.cs ?? 1}`,
-          gridRow: `${cell.r} / span ${cell.rs ?? 1}`,
-          overflow: 'hidden',
-          borderRadius: 8,
-        };
         return (
-          <div key={i} style={cellStyle} className="bg-surface-hover">
+          <div key={i} style={cellStyle(cell)} className="bg-surface-hover">
             {src ? (
               <img src={src} alt="" draggable={false} className="h-full w-full object-cover" />
             ) : (
