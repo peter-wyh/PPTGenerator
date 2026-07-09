@@ -578,12 +578,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     // 拖动期间的实时更新：不落 history（在 commit() 统一落）。
     updateComponent: (id, patch) =>
-      set((s) => ({
-        dirty: true,
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+      set((s) => {
+        const cur = s.pages.find((p) => p.id === s.currentPageId);
+        const isTitleComp = cur?.pageType === 'media-report' && cur?.titleComponentId === id;
+        const pages = withCurrentComponents(s.pages, s.currentPageId, (cs) =>
           cs.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-        ),
-      })),
+        );
+        let finalPages = pages;
+        if (isTitleComp && patch.data && cur) {
+          const oldContent = (cur.components.find((c) => c.id === id)?.data as { content?: string } | undefined)?.content;
+          const newContent = (patch.data as { content?: string }).content;
+          if (newContent !== undefined && newContent !== oldContent) {
+            finalPages = pages.map((p) =>
+              p.id === s.currentPageId ? { ...p, titleOverridden: true, name: newContent } : p,
+            );
+          }
+        }
+        return { dirty: true, pages: finalPages };
+      }),
 
     updateComponentData: (id, dataPatch) =>
       mutateAndCommit((s) => ({
@@ -810,7 +822,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     renamePage: (id, name) =>
       mutateAndCommit((s) => ({
-        pages: s.pages.map((p) => (p.id === id ? { ...p, name: name.trim() || p.name } : p)),
+        pages: s.pages.map((p) => {
+          if (p.id !== id) return p;
+          const next = name.trim() || p.name;
+          if (next === p.name) return p; // 无变化不改状态
+          if (p.pageType !== 'media-report' || !p.titleComponentId) return { ...p, name: next };
+          return {
+            ...p,
+            name: next,
+            titleOverridden: true,
+            components: p.components.map((c) =>
+              c.id === p.titleComponentId
+                ? { ...c, data: { ...(c.data as object), content: next } as unknown as ComponentData }
+                : c,
+            ),
+          };
+        }),
       })),
 
     updatePage: (id, patch) =>

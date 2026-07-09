@@ -138,3 +138,49 @@ describe('refreshReportTitle 不脏化已正确的项目', () => {
     expect(useEditorStore.getState().dirty).toBe(false);
   });
 });
+
+describe('手改标题停止自动跟随', () => {
+  beforeEach(() => load({ advertiser: 'GlowLab', scenarioSub: 'weekly' }));
+
+  it('编辑标题组件 content → titleOverridden=true 且 name 同步', () => {
+    const s = useEditorStore.getState();
+    s.setPageType('p1', 'media-report');
+    const titleId = page().titleComponentId!;
+    const data = page().components.find((c) => c.id === titleId)!.data as { content: string; fontSize: number; color: string };
+    s.updateComponent(titleId, { data: { ...data, content: '自定义标题' } });
+    s.commit();
+    const p = page();
+    expect(p.titleOverridden).toBe(true);
+    expect(p.name).toBe('自定义标题');
+  });
+
+  it('改标题组件字号（非 content）不触发 overridden', () => {
+    const s = useEditorStore.getState();
+    s.setPageType('p1', 'media-report');
+    const titleId = page().titleComponentId!;
+    const data = page().components.find((c) => c.id === titleId)!.data as { content: string; fontSize: number; color: string };
+    s.updateComponent(titleId, { data: { ...data, fontSize: 40 } });
+    s.commit();
+    expect(page().titleOverridden).toBe(false);
+  });
+
+  it('拖拽标题组件（非 data patch）不触发 overridden', () => {
+    const s = useEditorStore.getState();
+    s.setPageType('p1', 'media-report');
+    const titleId = page().titleComponentId!;
+    s.updateComponent(titleId, { x: 200, y: 100 });
+    expect(page().titleOverridden).toBe(false);
+  });
+
+  it('侧栏改名 media-report 页 → overridden=true 且标题组件同步', () => {
+    const s = useEditorStore.getState();
+    s.setPageType('p1', 'media-report');
+    s.renamePage('p1', '我的封面');
+    const p = page();
+    expect(p.titleOverridden).toBe(true);
+    expect(p.name).toBe('我的封面');
+    expect(
+      (p.components.find((c) => c.id === p.titleComponentId)!.data as { content: string }).content,
+    ).toBe('我的封面');
+  });
+});
