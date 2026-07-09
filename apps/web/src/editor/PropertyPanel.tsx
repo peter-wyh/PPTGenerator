@@ -707,6 +707,7 @@ function MultiSelectPanel({ ids }: { ids: string[] }) {
 /** 数值字段（几何 + 字号等）。onChange 实时更新不进 history，onBlur commit。 */
 function NumberField({ comp, field }: { comp: EditorComponent; field: PropertyField }) {
   const updateComponent = useEditorStore((s) => s.updateComponent);
+  const sanitizeComponent = useEditorStore((s) => s.sanitizeComponent);
   const commit = useEditorStore((s) => s.commit);
   const value = readValue(comp, field) as number;
   const [v, setV] = useState(String(value ?? 0));
@@ -725,7 +726,10 @@ function NumberField({ comp, field }: { comp: EditorComponent; field: PropertyFi
             updateComponent(comp.id, { [field.key]: Number(e.target.value) } as Partial<EditorComponent>);
           }
         }}
-        onBlur={() => commit()}
+        onBlur={() => {
+          if (field.inData === false) sanitizeComponent(comp.id); // 几何字段失焦夹进安全区
+          commit();
+        }}
         className="w-full rounded border border-border-default px-1.5 py-1 text-foreground-primary"
       />
     </label>

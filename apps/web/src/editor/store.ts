@@ -22,7 +22,7 @@ import {
   MIN_W,
   DEFAULT_GRID_SIZE,
 } from './defaults';
-import { snapMove, snapResize, safeRectFrom } from './snap';
+import { snapMove, snapResize, clampRect, clampResize, safeRectFrom, type SafeRect } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
 import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
@@ -112,6 +112,7 @@ export interface EditorState {
   addShape: (shape: ShapeKind) => void;
   addShapeAt: (shape: ShapeKind, x: number, y: number) => void;
   updateComponent: (id: string, patch: Partial<EditorComponent>) => void;
+  sanitizeComponent: (id: string) => void;
   updateComponentData: (id: string, dataPatch: Record<string, unknown>) => void;
   /** 整体替换组件 data（导入数据用），落 history + 标脏。 */
   setComponentData: (id: string, data: ComponentData) => void;
@@ -223,6 +224,14 @@ function snapCtx(
       ? safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch)
       : null;
   return { grid, safe };
+}
+
+/** 夹紧用的安全区：只看 safeMargin>0，不看 showSafeArea（隐藏参考线仍夹紧）。与 snapCtx 的磁吸 safe 解耦。
+ *  仅当主题含 layout 时生效（无 meta/无 layout 视为「未定义安全距离」，不夹紧）——与 snapCtx 的 null-meta 行为一致。 */
+function clampSafeFrom(meta: ProjectMeta | null, cw: number, ch: number): SafeRect | null {
+  const layout = meta?.theme?.layout;
+  if (!layout) return null;
+  return safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch);
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
@@ -399,13 +408,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => {
         const size = DEFAULT_SIZES[type] ?? { w: 300, h: 200 };
         const { x, y } = centered(size.w, size.h, s.canvasWidth, s.canvasHeight);
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type,
-          x,
-          y,
-          w: size.w,
-          h: size.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: getDefaultData(type),
         };
         return {
@@ -419,13 +429,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const layout = getLayout(kind);
         const item = getBusinessItem(kind);
         const { x, y } = centered(layout.w, layout.h, s.canvasWidth, s.canvasHeight);
+        const cl = clampRect({ x, y, w: layout.w, h: layout.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'business-block',
-          x,
-          y,
-          w: layout.w,
-          h: layout.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: {
             businessKind: kind,
             layoutForm: layout.form,
@@ -446,7 +457,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const size = DEFAULT_SIZES[type] ?? { w: 300, h: 200 };
         const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
         const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
-        const comp: EditorComponent = { id: newId(), type, x, y, w: size.w, h: size.h, data: getDefaultData(type) };
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
+        const comp: EditorComponent = { id: newId(), type, x: cl.x, y: cl.y, w: cl.w, h: cl.h, data: getDefaultData(type) };
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
           selectedIds: [comp.id],
@@ -459,13 +471,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const item = getBusinessItem(kind);
         const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
         const { x, y } = placed(layout.w, layout.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
+        const cl = clampRect({ x, y, w: layout.w, h: layout.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'business-block',
-          x,
-          y,
-          w: layout.w,
-          h: layout.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: {
             businessKind: kind,
             layoutForm: layout.form,
@@ -485,13 +498,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => {
         const size = shape === 'line' ? { w: 200, h: 4 } : DEFAULT_SIZES['shape'];
         const { x, y } = centered(size.w, size.h, s.canvasWidth, s.canvasHeight);
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'shape',
-          x,
-          y,
-          w: size.w,
-          h: size.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: getDefaultShapeData(shape),
         };
         return {
@@ -505,13 +519,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const size = shape === 'line' ? { w: 200, h: 4 } : DEFAULT_SIZES['shape'];
         const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
         const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'shape',
-          x,
-          y,
-          w: size.w,
-          h: size.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: getDefaultShapeData(shape),
         };
         return {
@@ -529,6 +544,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
         ),
       })),
 
+    /** 把组件当前几何夹进安全区（不入 history；PropertyPanel 失焦时调用，紧接 commit()）。 */
+    sanitizeComponent: (id) =>
+      set((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return {
+          dirty: true,
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+            cs.map((c) => {
+              if (c.id !== id) return c;
+              const cl = clampRect({ x: c.x, y: c.y, w: c.w, h: c.h }, safe);
+              return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+            }),
+          ),
+        };
+      }),
+
     updateComponentData: (id, dataPatch) =>
       mutateAndCommit((s) => ({
         pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
@@ -542,14 +573,16 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     move: (ids, dx, dy) =>
       set((s) => {
-        const { grid, safe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const { grid, safe: snapSafe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
         return {
           dirty: true,
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
             cs.map((c) => {
               if (!ids.includes(c.id) || c.locked) return c;
-              const { x, y } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, safe);
-              return { ...c, x, y };
+              const { x: sx, y: sy } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, snapSafe);
+              const cl = clampRect({ x: sx, y: sy, w: c.w, h: c.h }, clampSafe);
+              return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
             }),
           ),
         };
@@ -557,7 +590,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     resize: (id, dir, dx, dy, start) =>
       set((s) => {
-        const { grid, safe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const { grid, safe: snapSafe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
         return {
           dirty: true,
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
@@ -574,8 +608,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
                 h = Math.max(MIN_H, start.h - dy);
                 y = start.y + start.h - h;
               }
-              const snapped = snapResize({ x, y, w, h }, dir, grid, safe);
-              return { ...c, ...snapped };
+              const snapped = snapResize({ x, y, w, h }, dir, grid, snapSafe);
+              const cl = clampResize(snapped, dir, clampSafe);
+              return { ...c, ...cl };
             }),
           ),
         };
@@ -595,10 +630,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     duplicateSelected: () =>
       mutateAndCommit((s) => {
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
         const cur = s.currentPage()?.components ?? [];
         const dupes = cur
           .filter((c) => s.selectedIds.includes(c.id))
-          .map((c) => ({ ...clone(c), id: newId(), x: c.x + 20, y: c.y + 20 }));
+          .map((c) => {
+            const cl = clampRect({ x: c.x + 20, y: c.y + 20, w: c.w, h: c.h }, clampSafe);
+            return { ...clone(c), id: newId(), x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+          });
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, ...dupes]),
           selectedIds: dupes.map((c) => c.id),
@@ -606,13 +645,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }),
 
     nudge: (dx, dy) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
-          cs.map((c) =>
-            s.selectedIds.includes(c.id) && !c.locked ? { ...c, x: c.x + dx, y: c.y + dy } : c,
+      mutateAndCommit((s) => {
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return {
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+            cs.map((c) => {
+              if (!s.selectedIds.includes(c.id) || c.locked) return c;
+              const cl = clampRect({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, clampSafe);
+              return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+            }),
           ),
-        ),
-      })),
+        };
+      }),
 
     copy: () =>
       set((s) => {
@@ -636,7 +680,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const clip = get().clipboard;
       if (!clip || clip.length === 0) return;
       mutateAndCommit((s) => {
-        const pasted = clip.map((c) => ({ ...clone(c), id: newId(), x: c.x + 20, y: c.y + 20 }));
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const pasted = clip.map((c) => {
+          const cl = clampRect({ x: c.x + 20, y: c.y + 20, w: c.w, h: c.h }, clampSafe);
+          return { ...clone(c), id: newId(), x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+        });
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, ...pasted]),
           selectedIds: pasted.map((c) => c.id),
@@ -675,29 +723,34 @@ export const useEditorStore = create<EditorState>((set, get) => {
       })),
 
     alignComponents: (ids, alignment) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => alignInPlace(cs, ids, alignment)),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => alignInPlace(cs, ids, alignment, safe)) };
+      }),
 
     distributeH: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'h')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'h', safe)) };
+      }),
 
     distributeV: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'v')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => distribute(cs, ids, 'v', safe)) };
+      }),
 
     equalWidth: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'w')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'w', safe)) };
+      }),
 
     equalHeight: (ids) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'h')),
-      })),
+      mutateAndCommit((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return { pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => equalize(cs, ids, 'h', safe)) };
+      }),
 
     setPage: (id) => mutateAndCommit(() => ({ currentPageId: id, selectedIds: [] })),
 
@@ -840,8 +893,8 @@ function moveItem(comps: EditorComponent[], id: string, step: 1 | -1): EditorCom
   return next;
 }
 
-/** 多选对齐：按选中组件 bbox 计算，原地改 x/y。 */
-function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignment): EditorComponent[] {
+/** 多选对齐：按选中组件 bbox 计算，原地改 x/y；结果夹进安全区。 */
+function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignment, safe: SafeRect | null): EditorComponent[] {
   const sel = comps.filter((c) => ids.includes(c.id));
   if (sel.length < 2) return comps;
   const minX = Math.min(...sel.map((c) => c.x));
@@ -857,12 +910,13 @@ function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignm
     else if (alignment === 'top') y = minY;
     else if (alignment === 'bottom') y = maxY - c.h;
     else if (alignment === 'middle-v') y = Math.round((minY + maxY) / 2 - c.h / 2);
-    return { ...c, x: Math.round(x), y: Math.round(y) };
+    const cl = clampRect({ x: Math.round(x), y: Math.round(y), w: c.w, h: c.h }, safe);
+    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
   });
 }
 
-/** 多选分布：沿水平/垂直方向均匀排布间距（保持顺序，首尾不动）。 */
-function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v'): EditorComponent[] {
+/** 多选分布：沿水平/垂直方向均匀排布间距（保持顺序，首尾不动）；结果夹进安全区。 */
+function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v', safe: SafeRect | null): EditorComponent[] {
   const sel = comps.filter((c) => ids.includes(c.id));
   if (sel.length < 3) return comps;
   const pos = (c: EditorComponent, start: boolean) => (axis === 'h' ? (start ? c.x : c.x + c.w) : start ? c.y : c.y + c.h);
@@ -883,14 +937,22 @@ function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v'): E
     if (!ids.includes(c.id)) return c;
     const np = newPos.get(c.id);
     if (np === undefined) return c;
-    return axis === 'h' ? { ...c, x: Math.round(np) } : { ...c, y: Math.round(np) };
+    const box =
+      axis === 'h' ? { x: Math.round(np), y: c.y, w: c.w, h: c.h } : { x: c.x, y: Math.round(np), w: c.w, h: c.h };
+    const cl = clampRect(box, safe);
+    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
   });
 }
 
-/** 多选等宽/等高：全部设为均值。 */
-function equalize(comps: EditorComponent[], ids: string[], dim: 'w' | 'h'): EditorComponent[] {
+/** 多选等宽/等高：全部设为均值；结果夹进安全区。 */
+function equalize(comps: EditorComponent[], ids: string[], dim: 'w' | 'h', safe: SafeRect | null): EditorComponent[] {
   const sel = comps.filter((c) => ids.includes(c.id));
   if (sel.length < 2) return comps;
   const avg = Math.round(sel.reduce((acc, c) => acc + c[dim], 0) / sel.length);
-  return comps.map((c) => (ids.includes(c.id) ? { ...c, [dim]: avg } : c));
+  return comps.map((c) => {
+    if (!ids.includes(c.id)) return c;
+    const next = dim === 'w' ? { ...c, w: avg } : { ...c, h: avg };
+    const cl = clampRect({ x: next.x, y: next.y, w: next.w, h: next.h }, safe);
+    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+  });
 }
