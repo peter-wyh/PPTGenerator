@@ -55,3 +55,50 @@ function cleanNode(node: Element): void {
     }
   }
 }
+
+/**
+ * 清洗 HTML 后，在「文本节点」上按高亮词（逗号分隔）切分，命中词包成强调 span。
+ * 标签结构不被破坏；正则用捕获组配合 split，分隔（命中）片段保留在结果数组中。
+ */
+export function renderHtmlWithHighlights(html: string, highlights?: string): string {
+  const safe = sanitizeRichText(html);
+  const words = (highlights ?? '')
+    .split(/[,，]/)
+    .map((w) => w.trim())
+    .filter(Boolean);
+  if (words.length === 0 || !safe) return safe;
+
+  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp(`(${escaped.join('|')})`, 'i');
+  const lower = words.map((w) => w.toLowerCase());
+
+  const root = document.createElement('div');
+  root.innerHTML = safe;
+  highlightTextNodes(root, re, lower);
+  return root.innerHTML;
+}
+
+function highlightTextNodes(node: Node, re: RegExp, lower: string[]): void {
+  for (const child of Array.from(node.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const text = child.textContent ?? '';
+      if (!text || !re.test(text)) continue;
+      const parts = text.split(re);
+      const frag = document.createDocumentFragment();
+      for (const p of parts) {
+        if (!p) continue;
+        if (lower.includes(p.toLowerCase())) {
+          const span = document.createElement('span');
+          span.className = 'text-accent-secondary font-medium';
+          span.textContent = p;
+          frag.appendChild(span);
+        } else {
+          frag.appendChild(document.createTextNode(p));
+        }
+      }
+      child.replaceWith(frag);
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      highlightTextNodes(child, re, lower);
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeRichText } from '@/editor/richText';
+import { renderHtmlWithHighlights } from '@/editor/richText';
 
 describe('sanitizeRichText', () => {
   it('纯文本原样返回', () => {
@@ -38,5 +39,43 @@ describe('sanitizeRichText', () => {
 
   it('空输入返回空字符串', () => {
     expect(sanitizeRichText('')).toBe('');
+  });
+});
+
+describe('renderHtmlWithHighlights', () => {
+  it('无高亮词 → 仅清洗', () => {
+    expect(renderHtmlWithHighlights('<b>x</b>', '')).toBe('<b>x</b>');
+    expect(renderHtmlWithHighlights('<a href="x">click</a>')).toBe('click');
+  });
+
+  it('纯文本命中 → 包强调 span', () => {
+    expect(renderHtmlWithHighlights('focus on tips', 'tips')).toBe(
+      'focus on <span class="text-accent-secondary font-medium">tips</span>',
+    );
+  });
+
+  it('大小写无关命中', () => {
+    expect(renderHtmlWithHighlights('Focus on TIPS', 'tips')).toBe(
+      'Focus on <span class="text-accent-secondary font-medium">TIPS</span>',
+    );
+  });
+
+  it('在富文本标签内的文本节点上高亮（不破坏标签）', () => {
+    expect(renderHtmlWithHighlights('<b>big tips</b>', 'tips')).toBe(
+      '<b>big <span class="text-accent-secondary font-medium">tips</span></b>',
+    );
+  });
+
+  it('逗号分隔多词（中英文逗号）', () => {
+    const out = renderHtmlWithHighlights('beauty and tips', 'beauty，tips');
+    expect(out).toBe(
+      '<span class="text-accent-secondary font-medium">beauty</span> and <span class="text-accent-secondary font-medium">tips</span>',
+    );
+  });
+
+  it('先清洗后高亮：script 被剥离，剩余命中', () => {
+    expect(renderHtmlWithHighlights('<script>x</script>tips', 'tips')).toBe(
+      '<span class="text-accent-secondary font-medium">tips</span>',
+    );
   });
 });
