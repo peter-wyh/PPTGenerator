@@ -133,13 +133,13 @@ import { campaignWorkScreenshots } from '@/api/creatorPerformance';
 
 describe('campaignWorkScreenshots', () => {
   it('returns deterministic creator-work screenshots for a known campaign', () => {
-    const shots = campaignWorkScreenshots('camp-glowlow-q4');
+    const shots = campaignWorkScreenshots('camp-glowlab-q4');
     // Mia(头部,4) + Sofia(腰部,3) + Tom(KOC,2) = 9
     expect(shots).toHaveLength(9);
     expect(shots.every((s) => s.src.startsWith('https://picsum.photos/seed/'))).toBe(true);
     expect(shots[0].caption ?? '').toContain('·');
     // 同输入 → 同输出（确定性）
-    expect(campaignWorkScreenshots('camp-glowlow-q4')).toEqual(shots);
+    expect(campaignWorkScreenshots('camp-glowlab-q4')).toEqual(shots);
   });
 
   it('returns [] for an unknown campaign', () => {
@@ -369,7 +369,7 @@ Then replace the `case 'work-screenshot':` block (lines 398–407) with:
       return {
         variant: 'auto',
         title: '达人作品截图',
-        images: campaignWorkScreenshots('camp-glowlow-q4'),
+        images: campaignWorkScreenshots('camp-glowlab-q4'),
       };
 ```
 
@@ -378,7 +378,7 @@ Then replace the `case 'work-screenshot':` block (lines 398–407) with:
 In `apps/web/tests/property-works.test.tsx`, in the `WorkScreenshotFields` describe, change the first test's assertion (the comment says "默认 3 张"):
 
 ```tsx
-    expect(screen.getAllByPlaceholderText('说明').length).toBe(9); // 默认 9 张（camp-glowlow-q4）
+    expect(screen.getAllByPlaceholderText('说明').length).toBe(9); // 默认 9 张（camp-glowlab-q4）
 ```
 
 The "edits a caption" test needs no change (it writes to `images[0].caption` regardless of seed).
@@ -417,7 +417,7 @@ Add `ReportCampaign` to the `@mediakit/shared` type import, then append this tes
     const store = useEditorStore.getState();
     store.loadProject(emptyProject, 'p');
     store.setReportData({
-      campaign: { id: 'camp-glowlow-q4', name: 'GlowLab Q4' } as unknown as ReportCampaign,
+      campaign: { id: 'camp-glowlab-q4', name: 'GlowLab Q4' } as unknown as ReportCampaign,
       creators: [],
     });
     store.addComponent('work-screenshot');

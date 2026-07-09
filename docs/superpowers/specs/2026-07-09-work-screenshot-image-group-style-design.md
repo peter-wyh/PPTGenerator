@@ -27,9 +27,9 @@
 
 - `resolveLayout(variant, count)` 已从 `ImageGroupComponent.tsx` 导出；未命中 `BY_ID` 的 variant 值会落到按张数的 auto 选版——**天然向后兼容**旧 variant（grid/masonry/hero/skew）。
 - 服务端 `pageSchema` 对 `components` 用 `z.any()`（`projects.schema.ts:19`），改 variant 类型与默认数据**零服务端改动**。
-- `listCampaigns()`（`api/campaigns.ts`）的 campaign id（`camp-glowlow-q4` 等）与 `creatorPerformance.ts` 的 `CAMPAIGN_PROFILE` key 完全一致 → 导入器用 `reportData.campaign?.id` 调 `listCreatorPerformance` 可命中真实 mock。
+- `listCampaigns()`（`api/campaigns.ts`）的 campaign id（`camp-glowlab-q4` 等）与 `creatorPerformance.ts` 的 `CAMPAIGN_PROFILE` key 完全一致 → 导入器用 `reportData.campaign?.id` 调 `listCreatorPerformance` 可命中真实 mock。
 - `PostEffect.cover` = `https://picsum.photos/seed/${pid}/640/360`（确定性）。
-- `camp-glowlow-q4`：Mia(头部,4帖)+Sofia(腰部,3)+Tom(KOC,2) = **9 张**作品封面。
+- `camp-glowlab-q4`：Mia(头部,4帖)+Sofia(腰部,3)+Tom(KOC,2) = **9 张**作品封面。
 
 ## 设计
 
@@ -66,7 +66,7 @@ export function campaignWorkScreenshots(campaignId: string): WorkScreenshotItem[
 ```
 
 - 确定性、同步（直接读 `MOCK_PERFORMANCE`，不走 `setTimeout`）。
-- `camp-glowlow-q4` → 9 张 → auto 选 nona(3×3)。
+- `camp-glowlab-q4` → 9 张 → auto 选 nona(3×3)。
 
 ### D3. 组图版式工具抽取（`ImageGroupComponent.tsx`）
 
@@ -109,7 +109,7 @@ case 'work-screenshot':
   return {
     variant: 'auto',
     title: '达人作品截图',
-    images: campaignWorkScreenshots('camp-glowlow-q4'),
+    images: campaignWorkScreenshots('camp-glowlab-q4'),
   };
 ```
 
@@ -148,7 +148,7 @@ variants: [
 |---|---|
 | `works.test.tsx` | 变体集合 grid/masonry/hero/skew → 组图版式；调整默认图与占位断言 |
 | `property-works.test.tsx` | 默认图数 3 → 9；新增导入器测试（mock store reportData.campaign + listCreatorPerformance） |
-| 新增 `campaignWorkScreenshots` 单测 | 断言 `camp-glowlow-q4` → 9 项、确定性 |
+| 新增 `campaignWorkScreenshots` 单测 | 断言 `camp-glowlab-q4` → 9 项、确定性 |
 | `registry.test.ts` | **不动**（无新 ComponentType） |
 
 recharts/jsdom 约定不涉及（无图表）。组件 shell 文本断言沿用现有约定。
@@ -157,7 +157,7 @@ recharts/jsdom 约定不涉及（无图表）。组件 shell 文本断言沿用�
 
 ```
 添加组件 → getDefaultData('work-screenshot')
-        → campaignWorkScreenshots('camp-glowlow-q4') [同步, 读 MOCK_PERFORMANCE]
+        → campaignWorkScreenshots('camp-glowlab-q4') [同步, 读 MOCK_PERFORMANCE]
         → 9 张 {src: picsum cover, caption: 达人·标题}
 渲染 → WorkScreenshot → resolveLayout(variant, 9) → nona(3×3) → Shell + Screenshot
 导入 → ReportWorkScreenshotImporter

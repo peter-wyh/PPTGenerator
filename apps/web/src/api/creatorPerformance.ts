@@ -8,6 +8,7 @@ import type {
   PlacementTrendPoint,
   PostEffect,
   PostFormat,
+  WorkScreenshotItem,
 } from '@mediakit/shared';
 
 /**
@@ -615,4 +616,20 @@ export function listPlacementTypeSummary(
   return new Promise((resolve) => {
     setTimeout(() => resolve(clone(MOCK_PLACEMENT_SUMMARY[campaignId] ?? [])), 250);
   });
+}
+
+/**
+ * 取某 campaign 下各合作达人作品的截图（mock，同步、确定性）。
+ * 把 MOCK_PERFORMANCE 中各达人 posts 的 cover 拍平为 { src, caption }，
+ * 供 work-screenshot 组件默认种子 / 导入复用。
+ */
+export function campaignWorkScreenshots(campaignId: string): WorkScreenshotItem[] {
+  const perfs = MOCK_PERFORMANCE[campaignId] ?? [];
+  const out: WorkScreenshotItem[] = [];
+  for (const p of perfs) {
+    for (const post of p.posts) {
+      out.push({ src: post.cover ?? '', caption: `${p.creatorName} · ${post.title}` });
+    }
+  }
+  return out;
 }
