@@ -19,8 +19,9 @@ import {
   HISTORY_CAP,
   MIN_H,
   MIN_W,
-  MOVE_SNAP,
+  DEFAULT_GRID_SIZE,
 } from './defaults';
+import { snapMove, snapResize, safeRectFrom } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
 import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
@@ -31,6 +32,7 @@ export type ThemePatch = {
   font?: Partial<ProjectTheme['font']>;
   density?: ThemeDensity;
   radius?: ThemeRadius;
+  layout?: Partial<NonNullable<ProjectTheme['layout']>>;
   preset?: string;
 };
 
@@ -195,10 +197,27 @@ function placed(
   cy: number,
   cw: number,
   ch: number,
+  grid: number,
 ): { x: number; y: number } {
-  const x = Math.round(Math.max(0, Math.min(cx - w / 2, cw - w)) / MOVE_SNAP) * MOVE_SNAP;
-  const y = Math.round(Math.max(0, Math.min(cy - h / 2, ch - h)) / MOVE_SNAP) * MOVE_SNAP;
+  const g = grid > 0 ? grid : DEFAULT_GRID_SIZE;
+  const x = Math.round(Math.max(0, Math.min(cx - w / 2, cw - w)) / g) * g;
+  const y = Math.round(Math.max(0, Math.min(cy - h / 2, ch - h)) / g) * g;
   return { x, y };
+}
+
+/** 从当前 meta + 画布尺寸解析吸附上下文（grid + safe）。showSafeArea=false → 不吸附（参考线也隐藏）。 */
+function snapCtx(
+  meta: ProjectMeta | null,
+  cw: number,
+  ch: number,
+): { grid: number; safe: ReturnType<typeof safeRectFrom> } {
+  const layout = meta?.theme?.layout;
+  const grid = layout?.gridSize ?? DEFAULT_GRID_SIZE;
+  const safe =
+    layout && layout.showSafeArea !== false
+      ? safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch)
+      : null;
+  return { grid, safe };
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
@@ -331,6 +350,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
           font: { ...current.font, ...patch.font },
           density: patch.density ?? current.density,
           radius: patch.radius ?? current.radius,
+          layout: { ...(current.layout ?? DEFAULT_THEME.layout), ...patch.layout } as NonNullable<
+            ProjectTheme['layout']
+          >,
           preset: 'preset' in patch ? patch.preset : current.preset,
         };
         return {
@@ -408,7 +430,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     addComponentAt: (type, cx, cy) =>
       mutateAndCommit((s) => {
         const size = DEFAULT_SIZES[type] ?? { w: 300, h: 200 };
-        const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight);
+        const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
+        const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
         const comp: EditorComponent = { id: newId(), type, x, y, w: size.w, h: size.h, data: getDefaultData(type) };
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
@@ -420,7 +443,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => {
         const layout = getLayout(kind);
         const item = getBusinessItem(kind);
-        const { x, y } = placed(layout.w, layout.h, cx, cy, s.canvasWidth, s.canvasHeight);
+        const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
+        const { x, y } = placed(layout.w, layout.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
         const comp: EditorComponent = {
           id: newId(),
           type: 'business-block',
@@ -465,7 +489,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     addShapeAt: (shape, cx, cy) =>
       mutateAndCommit((s) => {
         const size = shape === 'line' ? { w: 200, h: 4 } : DEFAULT_SIZES['shape'];
-        const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight);
+        const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
+        const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
         const comp: EditorComponent = {
           id: newId(),
           type: 'shape',
@@ -502,39 +527,45 @@ export const useEditorStore = create<EditorState>((set, get) => {
       })),
 
     move: (ids, dx, dy) =>
-      set((s) => ({
-        dirty: true,
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
-          cs.map((c) => {
-            if (!ids.includes(c.id) || c.locked) return c;
-            const nx = Math.round((c.x + dx) / MOVE_SNAP) * MOVE_SNAP;
-            const ny = Math.round((c.y + dy) / MOVE_SNAP) * MOVE_SNAP;
-            return { ...c, x: nx, y: ny };
-          }),
-        ),
-      })),
+      set((s) => {
+        const { grid, safe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return {
+          dirty: true,
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+            cs.map((c) => {
+              if (!ids.includes(c.id) || c.locked) return c;
+              const { x, y } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, safe);
+              return { ...c, x, y };
+            }),
+          ),
+        };
+      }),
 
     resize: (id, dir, dx, dy, start) =>
-      set((s) => ({
-        dirty: true,
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
-          cs.map((c) => {
-            if (c.id !== id) return c;
-            let { x, y, w, h } = start;
-            if (dir.includes('e')) w = Math.max(MIN_W, start.w + dx);
-            if (dir.includes('w')) {
-              w = Math.max(MIN_W, start.w - dx);
-              x = start.x + start.w - w;
-            }
-            if (dir.includes('s')) h = Math.max(MIN_H, start.h + dy);
-            if (dir.includes('n')) {
-              h = Math.max(MIN_H, start.h - dy);
-              y = start.y + start.h - h;
-            }
-            return { ...c, x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
-          }),
-        ),
-      })),
+      set((s) => {
+        const { grid, safe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return {
+          dirty: true,
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+            cs.map((c) => {
+              if (c.id !== id) return c;
+              let { x, y, w, h } = start;
+              if (dir.includes('e')) w = Math.max(MIN_W, start.w + dx);
+              if (dir.includes('w')) {
+                w = Math.max(MIN_W, start.w - dx);
+                x = start.x + start.w - w;
+              }
+              if (dir.includes('s')) h = Math.max(MIN_H, start.h + dy);
+              if (dir.includes('n')) {
+                h = Math.max(MIN_H, start.h - dy);
+                y = start.y + start.h - h;
+              }
+              const snapped = snapResize({ x, y, w, h }, dir, grid, safe);
+              return { ...c, ...snapped };
+            }),
+          ),
+        };
+      }),
 
     commit: () => {
       pushHistory();
