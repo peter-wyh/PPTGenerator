@@ -43,6 +43,7 @@ describe('setPageType — 投放报告标题', () => {
     const p = page();
     expect(p.pageType).toBeUndefined();
     expect(p.components.length).toBeGreaterThan(0);
+    expect(p.titleComponentId).toBeUndefined();
   });
 
   it('结案：标题取 campaign 区间', () => {
@@ -55,14 +56,20 @@ describe('setPageType — 投放报告标题', () => {
 describe('restoreReportTitle', () => {
   beforeEach(() => load({ advertiser: 'GlowLab', scenarioSub: 'weekly' }));
 
-  it('清除 overridden 标记', () => {
+  it('清除 overridden 并按 meta 重算标题', () => {
     const s = useEditorStore.getState();
     s.setPageType('p1', 'media-report');
+    // 模拟手改后 overridden 且标题变陈旧
     useEditorStore.setState((st) => ({
-      pages: st.pages.map((p) => (p.id === 'p1' ? { ...p, titleOverridden: true } : p)),
+      pages: st.pages.map((p) => (p.id === 'p1' ? { ...p, titleOverridden: true, name: '陈旧标题' } : p)),
     }));
     s.restoreReportTitle('p1');
-    expect(page().titleOverridden).toBe(false);
+    const p = page();
+    expect(p.titleOverridden).toBe(false);
+    expect(p.name).toBe("GlowLab's MEDIA REPORT · 上周");
+    expect(
+      (p.components.find((c) => c.id === p.titleComponentId)!.data as { content: string }).content,
+    ).toBe("GlowLab's MEDIA REPORT · 上周");
   });
 });
 
@@ -107,5 +114,27 @@ describe('loadProject 刷新投放报告标题', () => {
     });
     useEditorStore.getState().loadProject(detail, detail.name);
     expect(page().name).toBe('自定义标题');
+  });
+});
+
+describe('refreshReportTitle 不脏化已正确的项目', () => {
+  it('标题已正确时 loadProject 不把项目标脏', () => {
+    const detail = makeDetail({
+      meta: { advertiser: 'GlowLab', scenarioSub: 'weekly' } as ProjectMeta,
+      pages: [
+        {
+          id: 'p1',
+          name: "GlowLab's MEDIA REPORT · 上周",
+          components: [
+            { id: 'c1', type: 'text', x: 0, y: 0, w: 100, h: 50, data: { content: "GlowLab's MEDIA REPORT · 上周", fontSize: 56, color: '#000' } },
+          ],
+          pageType: 'media-report',
+          titleComponentId: 'c1',
+          titleOverridden: false,
+        },
+      ],
+    });
+    useEditorStore.getState().loadProject(detail, detail.name);
+    expect(useEditorStore.getState().dirty).toBe(false);
   });
 });

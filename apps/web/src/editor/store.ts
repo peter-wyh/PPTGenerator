@@ -269,7 +269,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     if (!p || p.pageType !== 'media-report' || p.titleOverridden) return;
     const title = buildReportTitle(s.projectMeta ?? {});
     const titleId = p.titleComponentId;
-    const titleComp = titleId ? p.components.find((c) => c.id === titleId) : undefined;
+    const titleComp = titleId ? p.components.find((c) => c.id === titleId && c.type === 'text') : undefined;
     const currentContent = titleComp ? (titleComp.data as { content?: string }).content : undefined;
     if (p.name === title && currentContent === title) return; // 无变化不标脏
     set({
@@ -841,7 +841,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           }
           const title = buildReportTitle(s.projectMeta ?? {});
           const titleId = p.titleComponentId;
-          const hasTitleComp = !!titleId && !!p.components.find((c) => c.id === titleId);
+          const hasTitleComp = !!titleId && !!p.components.find((c) => c.id === titleId && c.type === 'text');
           if (!hasTitleComp) {
             const created = makeTitleComponent(title);
             return {
@@ -868,10 +868,30 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     restoreReportTitle: (pageId) => {
-      mutateAndCommit((s) => ({
-        pages: s.pages.map((p) => (p.id === pageId ? { ...p, titleOverridden: false } : p)),
-      }));
-      refreshReportTitle(pageId);
+      mutateAndCommit((s) => {
+        const p = s.pages.find((pg) => pg.id === pageId);
+        if (!p || p.pageType !== 'media-report') return {};
+        const title = buildReportTitle(s.projectMeta ?? {});
+        const titleId = p.titleComponentId;
+        const titleComp = titleId ? p.components.find((c) => c.id === titleId && c.type === 'text') : undefined;
+        return {
+          pages: s.pages.map((pg) => {
+            if (pg.id !== pageId) return pg;
+            if (!titleComp) {
+              const created = makeTitleComponent(title);
+              return { ...pg, titleOverridden: false, name: title, components: [created, ...pg.components], titleComponentId: created.id };
+            }
+            return {
+              ...pg,
+              titleOverridden: false,
+              name: title,
+              components: pg.components.map((c) =>
+                c.id === titleId ? { ...c, data: { ...(c.data as object), content: title } as unknown as ComponentData } : c,
+              ),
+            };
+          }),
+        };
+      });
     },
 
     undo: () => {
