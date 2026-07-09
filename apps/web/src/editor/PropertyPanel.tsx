@@ -160,6 +160,8 @@ const LABELS: Record<string, string> = {
   'pie-chart': '饼图',
   table: '表格',
   'business-block': '业务组件',
+  'strategy-block': '策略块',
+  'meta-strip': '基础信息',
   'creator-avatar-card': '达人头像卡',
   'creator-stats-strip': '达人数据条',
   'creator-works-list': '达人作品列表',
@@ -1563,11 +1565,9 @@ function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
         {rows.map((row, i) => (
           <div key={i} className="space-y-1 rounded border border-border-subtle p-1">
             <div className="flex items-center gap-1">
-              <input
+              <TableCellIconPicker
                 value={row[0] ?? ''}
-                onChange={(e) => setRow(i, [e.target.value, row[1] ?? '', row[2] ?? ''])}
-                placeholder="图标 key"
-                className="w-16 rounded border border-border-default px-1 py-0.5 text-xs"
+                onChange={(key) => setRow(i, [key, row[1] ?? '', row[2] ?? ''])}
               />
               <input
                 value={row[1] ?? ''}
