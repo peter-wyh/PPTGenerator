@@ -68,6 +68,15 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
     ],
   },
   {
+    group: '联盟营销',
+    items: [
+      { type: 'geo-map', label: '地理地图', icon: '◴' },
+      { type: 'gauge-card', label: '仪表盘', icon: '◍' },
+      { type: 'wide-table', label: '宽表', icon: '▦' },
+      { type: 'status-legend', label: '状态图例', icon: '●' },
+    ],
+  },
+  {
     group: '商务·品牌',
     items: [
       { type: 'brand-wall', label: '品牌墙', icon: '▦' },

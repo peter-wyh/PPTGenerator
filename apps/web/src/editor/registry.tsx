@@ -38,6 +38,7 @@ import {
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
 import { TitleBlock } from './components/BasicComponents';
+import { GeoMap, GaugeCard, WideTable, StatusLegend } from './components/AffiliateComponents';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -578,6 +579,75 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'subtitle', label: '副标题', kind: 'text' },
       { key: '', label: '作品列表', kind: 'table' },
+    ],
+  },
+  'geo-map': {
+    Component: GeoMap,
+    defaultSize: DEFAULT_SIZES['geo-map'],
+    defaultData: () => getDefaultData('geo-map'),
+    variants: [
+      { id: 'world', label: '世界地图' },
+      { id: 'list', label: '仅列表' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'metricLabel', label: '指标名', kind: 'text' },
+      { key: 'colorScheme', label: '色阶方案', kind: 'select', options: [
+        { value: 'orange', label: '橙' },
+        { value: 'blue', label: '蓝' },
+        { value: 'green', label: '绿' },
+        { value: 'purple', label: '紫' },
+        { value: 'red', label: '红' },
+      ] },
+      { key: 'insight', label: 'AI 洞察', kind: 'textarea' },
+      { key: '', label: '国家数据', kind: 'table' },
+    ],
+  },
+  'gauge-card': {
+    Component: GaugeCard,
+    defaultSize: DEFAULT_SIZES['gauge-card'],
+    defaultData: () => getDefaultData('gauge-card'),
+    variants: [
+      { id: 'full', label: '整圆' },
+      { id: 'semi', label: '半圆' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'value', label: '显示值', kind: 'text' },
+      { key: 'progress', label: '进度(0-100)', kind: 'number' },
+      { key: 'color', label: '颜色', kind: 'color' },
+      { key: 'centerLabel', label: '中心标签', kind: 'text' },
+      { key: 'compare', label: '同比', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+    ],
+  },
+  'status-legend': {
+    Component: StatusLegend,
+    defaultSize: DEFAULT_SIZES['status-legend'],
+    defaultData: () => getDefaultData('status-legend'),
+    propertySchema: [
+      { key: 'title', label: '标题（可选）', kind: 'text' },
+      { key: '', label: '图例项', kind: 'table' },
+    ],
+  },
+  'wide-table': {
+    Component: WideTable,
+    defaultSize: DEFAULT_SIZES['wide-table'],
+    defaultData: () => getDefaultData('wide-table'),
+    variants: [
+      { id: 'standard', label: '标准' },
+      { id: 'zebra', label: '斑马纹' },
+      { id: 'compact', label: '紧凑' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'freezeFirstCol', label: '冻结首列', kind: 'select', options: [
+        { value: 'true', label: '是' },
+        { value: 'false', label: '否' },
+      ] },
+      { key: '', label: '宽表数据', kind: 'table' },
     ],
   },
 };

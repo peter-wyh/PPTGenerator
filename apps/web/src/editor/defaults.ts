@@ -40,6 +40,10 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'campaign-analysis': { w: 520, h: 360 },
   'creator-work-metrics': { w: 560, h: 280 },
   'creator-works-table': { w: 700, h: 320 },
+  'geo-map': { w: 720, h: 440 },
+  'gauge-card': { w: 280, h: 280 },
+  'status-legend': { w: 480, h: 60 },
+  'wide-table': { w: 900, h: 360 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -495,6 +499,59 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['', '日常 vlog', '432K', '28K', '960', '420', '35%'],
           ['', '好物推荐', '678K', '41K', '1.5K', '670', '40%'],
         ],
+      };
+    case 'geo-map':
+      return {
+        title: 'Top Markets by Revenue',
+        subtitle: '按国家收入分布',
+        colorScheme: 'orange',
+        metricLabel: 'Revenue',
+        countries: [
+          { code: 'US', name: 'United States', value: 45200, display: '$45.2K', share: '32.5%' },
+          { code: 'GB', name: 'United Kingdom', value: 18900, display: '$18.9K', share: '13.6%' },
+          { code: 'DE', name: 'Germany', value: 14200, display: '$14.2K', share: '10.2%' },
+          { code: 'CA', name: 'Canada', value: 11600, display: '$11.6K', share: '8.3%' },
+          { code: 'AU', name: 'Australia', value: 9800, display: '$9.8K', share: '7.1%' },
+          { code: 'FR', name: 'France', value: 7400, display: '$7.4K', share: '5.3%' },
+          { code: 'JP', name: 'Japan', value: 6100, display: '$6.1K', share: '4.4%' },
+          { code: 'BR', name: 'Brazil', value: 4200, display: '$4.2K', share: '3.0%' },
+        ],
+        insight: '北美市场贡献 40.8% 的收入，UK+EU 合计 23.8%。建议加大 DE/FR 本地化素材投入。',
+      };
+    case 'gauge-card':
+      return {
+        title: 'New Customer Rate',
+        value: '34.6%',
+        progress: 34.6,
+        shape: 'full',
+        color: '#8B5CF6',
+        centerLabel: 'New Customer',
+        compare: '+5.2pp vs 上期',
+        subtitle: '近 30 天新客占比',
+      };
+    case 'status-legend':
+      return {
+        title: '',
+        items: [
+          { status: 'good', label: 'Performing Well' },
+          { status: 'warn', label: 'Needs Improvement' },
+          { status: 'bad', label: 'Underperforming' },
+        ],
+      };
+    case 'wide-table':
+      return {
+        title: 'Top Publishers by Revenue',
+        subtitle: '联盟营销 Publisher 排行',
+        freezeFirstCol: true,
+        headers: ['Publisher', 'Clicks', 'Impressions', 'CTR', 'Conversions', 'CVR', 'Revenue', 'Commission', 'EPC', 'ROAS', 'AOV', 'Status'],
+        rows: [
+          ['GlamourBlog', '12.4K', '1.2M', '1.03%', '386', '3.11%', '$72.9K', '$8.7K', '$5.88', '4.2x', '$189', 'good'],
+          ['BeautyHub', '8.9K', '890K', '1.00%', '241', '2.71%', '$45.6K', '$5.5K', '$5.12', '3.8x', '$189', 'good'],
+          ['TrendyDaily', '6.2K', '620K', '1.00%', '142', '2.29%', '$26.8K', '$3.2K', '$4.32', '2.9x', '$189', 'warn'],
+          ['StyleMaven', '4.1K', '410K', '1.00%', '78', '1.90%', '$14.7K', '$1.8K', '$3.59', '2.1x', '$189', 'warn'],
+          ['ViralVogue', '2.8K', '280K', '1.00%', '34', '1.21%', '$6.4K', '$770', '$2.29', '1.3x', '$189', 'bad'],
+        ],
+        rowStatus: ['good', 'good', 'warn', 'warn', 'bad'],
       };
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };

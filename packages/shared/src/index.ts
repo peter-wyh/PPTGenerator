@@ -313,6 +313,44 @@ export interface PlacementTypeSummary {
   trend?: PlacementTrendPoint[];
 }
 
+/** 联盟营销 — Publisher 表行数据。 */
+export interface PublisherPerformance {
+  publisher: string;
+  clicks: string;
+  impressions: string;
+  ctr: string;
+  conversions: string;
+  cvr: string;
+  revenue: string;
+  commission: string;
+  epc: string;
+  roas: string;
+  aov: string;
+  status: 'good' | 'warn' | 'bad';
+}
+
+/** 联盟营销 — GEO 国家维度。 */
+export interface GeoPerformance {
+  code: string;
+  name: string;
+  revenue: number;
+  display: string;
+  share: string;
+}
+
+/** 联盟营销 — 宽表 Placement 行数据（9 列）。 */
+export interface PlacementWideRow {
+  placement: string;
+  publisher: string;
+  clicks: string;
+  ctr: string;
+  conversions: string;
+  cvr: string;
+  revenue: string;
+  epc: string;
+  status: 'good' | 'warn' | 'bad';
+}
+
 /** 达人执行效果汇总（上线帖数 + 累计曝光/互动 + 平均互动率）。 */
 export interface CreatorPerformanceSummary {
   posts: number;
@@ -801,7 +839,15 @@ export type ComponentType =
   // 业绩·商品域：单达人作品数据指标（拆分子分类）
   | 'creator-work-metrics'
   // 业绩·商品域：达人作品列表（带封面+数据列，mock 数据）
-  | 'creator-works-table';
+  | 'creator-works-table'
+  // 联盟营销域：地理分布地图（世界 SVG 底图 + 国家级数据色阶 + Top 列表）
+  | 'geo-map'
+  // 联盟营销域：环形进度仪表（单值 + 环形/半圆 + 同比）
+  | 'gauge-card'
+  // 联盟营销域：状态图例（Performing Well / Needs Improvement / Underperforming）
+  | 'status-legend'
+  // 联盟营销域：宽表横向滚动（Publisher 12 列 / Placement 9 列）
+  | 'wide-table';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -1320,6 +1366,91 @@ export interface CommentWordcloudData {
   words: CommentWordItem[];
 }
 
+/* ---- Geo Map：地理分布地图 ---- */
+
+export interface GeoMapCountry {
+  /** ISO 3166-1 alpha-2 国家代码，如 'US', 'CN', 'JP'。 */
+  code: string;
+  /** 国家名称，如 'United States'。 */
+  name: string;
+  /** 数值（如 Revenue），用于色阶映射。 */
+  value: number;
+  /** 可选：显示文本（如 '$45.2K'），若缺省用 value 格式化。 */
+  display?: string;
+  /** 可选：占比文本（如 '32.5%'）。 */
+  share?: string;
+}
+
+export type GeoMapColorScheme = 'orange' | 'blue' | 'green' | 'purple' | 'red';
+
+export interface GeoMapData {
+  title: string;
+  subtitle?: string;
+  /** 色阶方案。 */
+  colorScheme?: GeoMapColorScheme;
+  /** 数据值标签（如 'Revenue' / 'GMV'）。 */
+  metricLabel?: string;
+  /** 国家数据列表。 */
+  countries: GeoMapCountry[];
+  /** AI 洞察。 */
+  insight?: string;
+}
+
+/* ---- Gauge Card：环形进度仪表 ---- */
+
+export type GaugeCardShape = 'full' | 'semi';
+export type GaugeCardColor = '#FF5C00' | '#3B82F6' | '#22C55E' | '#8B5CF6' | '#F59E0B' | '#EC4899';
+
+export interface GaugeCardData {
+  title: string;
+  /** 主数值显示文本，如 '34.6%'。 */
+  value: string;
+  /** 进度值（0-100），控制环形填充比例。 */
+  progress: number;
+  /** 环形形状：full=整圆，semi=半圆。 */
+  shape?: GaugeCardShape;
+  /** 环形颜色。 */
+  color?: string;
+  /** 副标题/说明文本。 */
+  subtitle?: string;
+  /** 同比文本，如 '+5.2pp vs 上期'。 */
+  compare?: string;
+  /** 中心标签（如 'New Customer Rate'）。 */
+  centerLabel?: string;
+}
+
+/* ---- Status Legend：状态图例 ---- */
+
+export type LegendStatus = 'good' | 'warn' | 'bad';
+
+export interface StatusLegendItem {
+  /** 状态：good=绿, warn=黄, bad=红。 */
+  status: LegendStatus;
+  /** 标签，如 'Performing Well'。 */
+  label: string;
+}
+
+export interface StatusLegendData {
+  items: StatusLegendItem[];
+  /** 可选标题。 */
+  title?: string;
+}
+
+/* ---- Wide Table：宽表横向滚动 ---- */
+
+export interface WideTableData {
+  title?: string;
+  subtitle?: string;
+  /** 列定义。 */
+  headers: string[];
+  /** 行数据（二维字符串数组）。 */
+  rows: string[][];
+  /** 可选：每行的状态（good/warn/bad），用于行级配色。 */
+  rowStatus?: LegendStatus[];
+  /** 冻结首列（如 Publisher 名称），默认 true。 */
+  freezeFirstCol?: boolean;
+}
+
 export type ComponentData =
   | TextData
   | ImageData
@@ -1351,7 +1482,11 @@ export type ComponentData =
   | TitleBlockData
   | CampaignAnalysisData
   | CreatorWorkMetricsData
-  | CreatorWorksTableData;
+  | CreatorWorksTableData
+  | GeoMapData
+  | GaugeCardData
+  | StatusLegendData
+  | WideTableData;
 
 export interface EditorComponent {
   id: string;
