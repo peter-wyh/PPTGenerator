@@ -469,6 +469,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { label: 'CVR', value: 65, max: 100 },
           { label: 'CPM', value: 78, max: 100 },
         ],
+        funnelSteps: [
+          { label: 'Impressions', value: 1250000 },
+          { label: 'Clicks', value: 48200 },
+          { label: 'Add to Cart', value: 6840 },
+          { label: 'Checkout', value: 3120 },
+          { label: 'Purchase', value: 1846 },
+        ],
         insight: '该达人在曝光和互动维度表现突出，但转化率有提升空间。',
       };
     case 'creator-work-metrics':
@@ -486,6 +493,35 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { label: '完播率', value: '42%', sub: '+3pt', color: '#F59E0B' },
           { label: '收藏', value: '5.6K', sub: '+12%', color: '#EC4899' },
         ],
+        audience: {
+          topCities: [
+            { label: '上海', value: 23, color: '#FF5C00' },
+            { label: '北京', value: 18, color: '#3B82F6' },
+            { label: '广州', value: 14, color: '#22C55E' },
+            { label: '深圳', value: 11, color: '#8B5CF6' },
+            { label: '杭州', value: 8, color: '#F59E0B' },
+          ],
+          genderSplit: [
+            { label: '女', value: 72, color: '#EC4899' },
+            { label: '男', value: 28, color: '#3B82F6' },
+          ],
+          ageRange: [
+            { label: '18-24', value: 35, color: '#8B5CF6' },
+            { label: '25-34', value: 42, color: '#A78BFA' },
+            { label: '35-44', value: 15, color: '#C4B5FD' },
+            { label: '45+', value: 8, color: '#DDD6FE' },
+          ],
+          trend: [
+            { label: 'D1', value: 12000 },
+            { label: 'D2', value: 28000 },
+            { label: 'D3', value: 45000 },
+            { label: 'D4', value: 52000 },
+            { label: 'D5', value: 61000 },
+            { label: 'D6', value: 78000 },
+            { label: 'D7', value: 86000 },
+          ],
+          trendLabel: '播放趋势',
+        },
       };
     case 'creator-works-table':
       return {
@@ -498,6 +534,136 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['', '开箱测评', '856K', '52K', '1.8K', '890', '38%'],
           ['', '日常 vlog', '432K', '28K', '960', '420', '35%'],
           ['', '好物推荐', '678K', '41K', '1.5K', '670', '40%'],
+          ['', '成分科普干货', '1.05M', '73K', '3.1K', '1.4K', '46%'],
+          ['', '秋冬换季护肤', '389K', '24K', '820', '510', '33%'],
+        ],
+        insights: [
+          {
+            topCities: [
+              { label: '上海', value: 23, color: '#FF5C00' },
+              { label: '北京', value: 18, color: '#FF8C42' },
+              { label: '广州', value: 12, color: '#FFB380' },
+            ],
+            genderSplit: [
+              { label: '女', value: 72, color: '#EC4899' },
+              { label: '男', value: 28, color: '#3B82F6' },
+            ],
+            trend: [
+              { label: 'D1', value: 12000 },
+              { label: 'D2', value: 28000 },
+              { label: 'D3', value: 45000 },
+              { label: 'D4', value: 52000 },
+              { label: 'D5', value: 61000 },
+              { label: 'D6', value: 78000 },
+              { label: 'D7', value: 86000 },
+            ],
+            trendLabel: '播放趋势',
+          },
+          {
+            topCities: [
+              { label: '杭州', value: 21, color: '#FF5C00' },
+              { label: '成都', value: 16, color: '#FF8C42' },
+              { label: '武汉', value: 11, color: '#FFB380' },
+            ],
+            genderSplit: [
+              { label: '女', value: 85, color: '#EC4899' },
+              { label: '男', value: 15, color: '#3B82F6' },
+            ],
+            trend: [
+              { label: 'D1', value: 8000 },
+              { label: 'D2', value: 15000 },
+              { label: 'D3', value: 22000 },
+              { label: 'D4', value: 38000 },
+              { label: 'D5', value: 44000 },
+              { label: 'D6', value: 51000 },
+              { label: 'D7', value: 54000 },
+            ],
+            trendLabel: '互动趋势',
+          },
+          {
+            topCities: [
+              { label: '深圳', value: 19, color: '#FF5C00' },
+              { label: '苏州', value: 14, color: '#FF8C42' },
+              { label: '南京', value: 10, color: '#FFB380' },
+            ],
+            genderSplit: [
+              { label: '女', value: 68, color: '#EC4899' },
+              { label: '男', value: 32, color: '#3B82F6' },
+            ],
+            trend: [
+              { label: 'D1', value: 5000 },
+              { label: 'D2', value: 12000 },
+              { label: 'D3', value: 18000 },
+              { label: 'D4', value: 25000 },
+              { label: 'D5', value: 32000 },
+              { label: 'D6', value: 38000 },
+              { label: 'D7', value: 42000 },
+            ],
+            trendLabel: '播放趋势',
+          },
+          {
+            topCities: [
+              { label: '北京', value: 20, color: '#FF5C00' },
+              { label: '上海', value: 15, color: '#FF8C42' },
+              { label: '西安', value: 9, color: '#FFB380' },
+            ],
+            genderSplit: [
+              { label: '女', value: 76, color: '#EC4899' },
+              { label: '男', value: 24, color: '#3B82F6' },
+            ],
+            trend: [
+              { label: 'D1', value: 10000 },
+              { label: 'D2', value: 22000 },
+              { label: 'D3', value: 35000 },
+              { label: 'D4', value: 42000 },
+              { label: 'D5', value: 50000 },
+              { label: 'D6', value: 58000 },
+              { label: 'D7', value: 64000 },
+            ],
+            trendLabel: '播放趋势',
+          },
+          {
+            topCities: [
+              { label: '广州', value: 22, color: '#FF5C00' },
+              { label: '深圳', value: 17, color: '#FF8C42' },
+              { label: '佛山', value: 8, color: '#FFB380' },
+            ],
+            genderSplit: [
+              { label: '女', value: 91, color: '#EC4899' },
+              { label: '男', value: 9, color: '#3B82F6' },
+            ],
+            trend: [
+              { label: 'D1', value: 15000 },
+              { label: 'D2', value: 32000 },
+              { label: 'D3', value: 58000 },
+              { label: 'D4', value: 72000 },
+              { label: 'D5', value: 88000 },
+              { label: 'D6', value: 95000 },
+              { label: 'D7', value: 105000 },
+            ],
+            trendLabel: '互动趋势',
+          },
+          {
+            topCities: [
+              { label: '成都', value: 18, color: '#FF5C00' },
+              { label: '重庆', value: 13, color: '#FF8C42' },
+              { label: '昆明', value: 7, color: '#FFB380' },
+            ],
+            genderSplit: [
+              { label: '女', value: 70, color: '#EC4899' },
+              { label: '男', value: 30, color: '#3B82F6' },
+            ],
+            trend: [
+              { label: 'D1', value: 4000 },
+              { label: 'D2', value: 9000 },
+              { label: 'D3', value: 14000 },
+              { label: 'D4', value: 20000 },
+              { label: 'D5', value: 26000 },
+              { label: 'D6', value: 31000 },
+              { label: 'D7', value: 35000 },
+            ],
+            trendLabel: '播放趋势',
+          },
         ],
       };
     case 'geo-map':
@@ -515,8 +681,15 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { code: 'FR', name: 'France', value: 7400, display: '$7.4K', share: '5.3%' },
           { code: 'JP', name: 'Japan', value: 6100, display: '$6.1K', share: '4.4%' },
           { code: 'BR', name: 'Brazil', value: 4200, display: '$4.2K', share: '3.0%' },
+          { code: 'CN', name: 'China', value: 3850, display: '$3.85K', share: '2.8%' },
+          { code: 'IN', name: 'India', value: 3360, display: '$3.36K', share: '2.4%' },
+          { code: 'KR', name: 'South Korea', value: 2940, display: '$2.94K', share: '2.1%' },
+          { code: 'IT', name: 'Italy', value: 2520, display: '$2.52K', share: '1.8%' },
+          { code: 'ES', name: 'Spain', value: 2100, display: '$2.1K', share: '1.5%' },
+          { code: 'MX', name: 'Mexico', value: 1820, display: '$1.82K', share: '1.3%' },
+          { code: 'NL', name: 'Netherlands', value: 1540, display: '$1.54K', share: '1.1%' },
         ],
-        insight: '北美市场贡献 40.8% 的收入，UK+EU 合计 23.8%。建议加大 DE/FR 本地化素材投入。',
+        insight: '北美市场贡献 40.8% 的收入，UK+EU 合计 23.8%。建议加大 DE/FR 本地化素材投入。亚太市场（CN/IN/JP/KR）合计 11.7%，增长潜力显著。',
       };
     case 'gauge-card':
       return {
@@ -550,8 +723,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['TrendyDaily', '6.2K', '620K', '1.00%', '142', '2.29%', '$26.8K', '$3.2K', '$4.32', '2.9x', '$189', 'warn'],
           ['StyleMaven', '4.1K', '410K', '1.00%', '78', '1.90%', '$14.7K', '$1.8K', '$3.59', '2.1x', '$189', 'warn'],
           ['ViralVogue', '2.8K', '280K', '1.00%', '34', '1.21%', '$6.4K', '$770', '$2.29', '1.3x', '$189', 'bad'],
+          ['ChicWeekly', '9.6K', '960K', '1.00%', '258', '2.69%', '$48.8K', '$5.9K', '$5.08', '3.6x', '$189', 'good'],
+          ['GlowGuide', '7.4K', '740K', '1.00%', '176', '2.38%', '$33.3K', '$4.0K', '$4.50', '3.1x', '$189', 'good'],
+          ['FashionPulse', '5.3K', '530K', '1.00%', '108', '2.04%', '$20.4K', '$2.4K', '$3.85', '2.6x', '$189', 'warn'],
+          ['UrbanMirror', '3.6K', '360K', '1.00%', '61', '1.69%', '$11.5K', '$1.4K', '$3.19', '1.9x', '$189', 'warn'],
+          ['TrendFlow', '2.1K', '210K', '1.00%', '22', '1.05%', '$4.2K', '$500', '$2.00', '1.1x', '$189', 'bad'],
         ],
-        rowStatus: ['good', 'good', 'warn', 'warn', 'bad'],
+        rowStatus: ['good', 'good', 'warn', 'warn', 'bad', 'good', 'good', 'warn', 'warn', 'bad'],
       };
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };

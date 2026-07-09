@@ -18,6 +18,7 @@ import type {
   ProductPerformanceData,
   StrategyBlockData,
   TimelineCompareData,
+  WorkAudienceInsight,
 } from '@mediakit/shared';
 import {
   Bar,
@@ -28,6 +29,7 @@ import {
   LabelList,
   Legend,
   Line,
+  LineChart,
   Pie,
   PieChart,
   PolarAngleAxis,
@@ -1083,6 +1085,150 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     );
   }
 
+  if (variant === 'audience') {
+    // 受众画像：顶部作品信息 + 性别水平堆叠条 + 年龄段迷你条。
+    const ins = data.audience;
+    return (
+      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        {ins ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+            {/* 性别分布：水平堆叠条 */}
+            {ins.genderSplit && ins.genderSplit.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <div className="text-[10px] font-medium text-foreground-secondary">性别分布</div>
+                <div className="flex h-5 w-full overflow-hidden rounded-full bg-surface-hover">
+                  {ins.genderSplit.map((g, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-center text-[10px] font-medium text-white"
+                      style={{
+                        width: `${Math.max(g.value, 4)}%`,
+                        backgroundColor: g.color ?? (g.label.includes('女') ? '#EC4899' : '#3B82F6'),
+                      }}
+                    >
+                      {g.value >= 12 ? `${g.label} ${g.value}%` : ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* 年龄段：迷你水平占比条 */}
+            {ins.ageRange && ins.ageRange.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <div className="text-[10px] font-medium text-foreground-secondary">年龄分布</div>
+                {ins.ageRange.map((a, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="w-12 flex-none text-[10px] text-foreground-secondary">{a.label}</span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-hover">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${Math.min(100, a.value)}%`, backgroundColor: a.color ?? '#8B5CF6' }}
+                      />
+                    </div>
+                    <span className="w-8 flex-none text-right text-[10px] font-data text-foreground-primary">{a.value}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-[11px] text-foreground-muted">
+            暂无受众数据
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === 'city') {
+    // 城市分布：Top 城市水平进度条。
+    const ins = data.audience;
+    const cities = ins?.topCities ?? [];
+    return (
+      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        {cities.length > 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5 overflow-auto">
+            {cities.map((c, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="w-16 flex-none truncate text-[11px] text-foreground-secondary">{c.label}</span>
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-hover">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color ?? CAMPAIGN_COLORS[i % CAMPAIGN_COLORS.length] }}
+                  />
+                </div>
+                <span className="w-9 flex-none text-right text-[10px] font-data text-foreground-primary">{c.value}%</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-[11px] text-foreground-muted">
+            暂无城市数据
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === 'trend') {
+    // 趋势：mini 折线图（播放/互动等随时间）。
+    const ins = data.audience;
+    const trend = ins?.trend ?? [];
+    const trendLabel = ins?.trendLabel ?? '数据趋势';
+    return (
+      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        {trend.length > 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="mb-1 text-[10px] text-foreground-muted">{trendLabel}</div>
+            <div className="min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #F3F4F6)" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+                  <Tooltip
+                    contentStyle={{ fontSize: 11, borderRadius: 6 }}
+                    labelStyle={{ fontSize: 11 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="var(--color-primary, #FF5C00)"
+                    strokeWidth={2}
+                    dot={{ r: 2.5 }}
+                    activeDot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-[11px] text-foreground-muted">
+            暂无趋势数据
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // grid（默认）：3 列指标网格，label 小号灰 / value 大号粗（按 color 染色）/ sub 小号绿红。
   return (
     <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
@@ -1119,7 +1265,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
 // 列顺序 [封面URL, 作品名, 播放, 点赞, 评论, 转发, 完播率]。
 
 export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
-  const { variant = 'list', title, subtitle, headers = [], rows = [] } = data;
+  const { variant = 'list', title, subtitle, headers = [], rows = [], insights } = data;
   const items = rows.map((r) => ({
     cover: r[0] ?? '',
     name: r[1] ?? '',
@@ -1185,6 +1331,118 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'insight') {
+    // 列表 + 每行展开受众画像（性别条 + Top3 城市 + 趋势 sparkline）。
+    const numHeaders = headers.slice(2);
+    return (
+      <div className="flex h-full w-full flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        <div className="flex flex-1 flex-col gap-1 overflow-auto">
+          <div className="flex items-center gap-2 border-b border-border-default pb-1.5">
+            <span className="w-10 flex-none" />
+            <span className="min-w-0 flex-1 text-[10px] font-medium uppercase tracking-wide text-foreground-muted">
+              {headers[1] ?? '作品'}
+            </span>
+            {numHeaders.map((h, i) => (
+              <span key={i} className="w-14 flex-none text-right text-[10px] font-medium uppercase tracking-wide text-foreground-muted">
+                {h}
+              </span>
+            ))}
+          </div>
+          {items.map((it, i) => {
+            const ins: WorkAudienceInsight | undefined = insights?.[i];
+            const hasInsight = ins && (ins.topCities?.length || ins.genderSplit?.length || ins.trend?.length);
+            return (
+              <div key={i} className="rounded-lg border border-border-subtle p-1.5">
+                {/* 主行：封面 + 作品名 + 数字列 */}
+                <div className="flex items-center gap-2">
+                  <ImgOrPlaceholder url={it.cover} label={it.name} cls="h-9 w-9 flex-none" />
+                  <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground-primary">{it.name}</div>
+                  <span className="w-14 flex-none text-right font-data text-xs font-semibold text-foreground-primary">{it.play}</span>
+                  <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.like}</span>
+                  <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.completion}</span>
+                </div>
+                {/* 展开行：性别条 + Top3 城市 + sparkline */}
+                {hasInsight && (
+                  <div className="mt-1.5 grid grid-cols-3 gap-2 border-t border-border-subtle pt-1.5">
+                    {/* 性别 */}
+                    {ins.genderSplit && ins.genderSplit.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        <div className="text-[9px] text-foreground-muted">性别</div>
+                        <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-hover">
+                          {ins.genderSplit.map((g, gi) => (
+                            <div
+                              key={gi}
+                              style={{
+                                width: `${Math.max(g.value, 4)}%`,
+                                backgroundColor: g.color ?? (g.label.includes('女') ? '#EC4899' : '#3B82F6'),
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-x-2 text-[9px] text-foreground-secondary">
+                          {ins.genderSplit.map((g, gi) => (
+                            <span key={gi}>{g.label} {g.value}%</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Top3 城市 */}
+                    {ins.topCities && ins.topCities.length > 0 && (
+                      <div className="flex flex-col gap-0.5">
+                        <div className="text-[9px] text-foreground-muted">城市 Top</div>
+                        {ins.topCities.slice(0, 3).map((c, ci) => (
+                          <div key={ci} className="flex items-center gap-1">
+                            <span className="w-10 flex-none truncate text-[9px] text-foreground-secondary">{c.label}</span>
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
+                              <div
+                                className="h-full rounded-full"
+                                style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color ?? '#FF5C00' }}
+                              />
+                            </div>
+                            <span className="w-6 flex-none text-right text-[9px] font-data text-foreground-primary">{c.value}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Sparkline 趋势 */}
+                    {ins.trend && ins.trend.length > 1 && (
+                      <div className="flex flex-col gap-0.5">
+                        <div className="text-[9px] text-foreground-muted">{ins.trendLabel ?? '趋势'}</div>
+                        <div className="h-8">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={ins.trend} margin={{ top: 1, right: 1, bottom: 1, left: 1 }}>
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke="var(--color-primary, #FF5C00)"
+                                strokeWidth={1.5}
+                                dot={false}
+                              />
+                              <Tooltip
+                                contentStyle={{ fontSize: 9, padding: '2px 4px', borderRadius: 4 }}
+                                labelStyle={{ fontSize: 9 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );

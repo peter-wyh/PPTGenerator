@@ -557,6 +557,9 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'strip', label: '横向条' },
       { id: 'card', label: '卡片' },
       { id: 'detailed', label: '详细' },
+      { id: 'audience', label: '受众画像' },
+      { id: 'city', label: '城市分布' },
+      { id: 'trend', label: '趋势图' },
     ],
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
@@ -574,6 +577,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'list', label: '列表' },
       { id: 'cards', label: '卡片' },
       { id: 'compact', label: '紧凑' },
+      { id: 'insight', label: '受众洞察' },
     ],
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },

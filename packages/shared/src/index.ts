@@ -351,6 +351,80 @@ export interface PlacementWideRow {
   status: 'good' | 'warn' | 'bad';
 }
 
+/** Campaign 汇总概要 — 报告首页用。 */
+export interface CampaignSummary {
+  campaignId: string;
+  campaignName: string;
+  period: string;            // e.g. "2026-10-12 ~ 2026-11-12"
+  totalSpend: string;
+  totalRevenue: string;
+  totalCommission: string;
+  roas: string;
+  totalClicks: string;
+  totalImpressions: string;
+  totalConversions: string;
+  avgCtr: string;
+  avgCvr: string;
+  avgEpc: string;
+  newCustomers: number;
+  returningCustomers: number;
+  newCustomerRate: string;
+}
+
+/** 设备分布。 */
+export interface DeviceBreakdown {
+  device: string;            // Mobile / Desktop / Tablet
+  sessions: string;
+  revenue: string;
+  share: string;
+  trend: string;             // +12% etc
+}
+
+/** 内容主题表现。 */
+export interface ContentTopicPerformance {
+  topic: string;
+  posts: number;
+  impressions: string;
+  engagement: string;
+  revenue: string;
+  roas: string;
+  status: 'good' | 'warn' | 'bad';
+}
+
+/** 收入时间线（日维度）。 */
+export interface RevenueTimelinePoint {
+  date: string;
+  revenue: number;
+  spend: number;
+  commission: number;
+  orders: number;
+}
+
+/** 转化漏斗。 */
+export interface ConversionFunnelStep {
+  step: string;              // Impressions / Clicks / Add to Cart / Checkout / Purchase
+  value: number;
+  rate: string;              // conversion rate from previous step
+}
+
+/** 时段效果（一天24小时分布）。 */
+export interface HourlyPerformance {
+  hour: string;              // "00", "01", ... "23"
+  impressions: number;
+  clicks: number;
+  conversions: number;
+}
+
+/** 关键词/搜索词表现。 */
+export interface SearchTermPerformance {
+  term: string;
+  clicks: string;
+  conversions: string;
+  ctr: string;
+  revenue: string;
+  status: 'good' | 'warn' | 'bad';
+}
+
 /** 达人执行效果汇总（上线帖数 + 累计曝光/互动 + 平均互动率）。 */
 export interface CreatorPerformanceSummary {
   posts: number;
@@ -619,6 +693,82 @@ export const STYLE_PRESETS: StylePreset[] = [
       radius: 'small',
       layout: { safeMargin: 56, gridSize: 10, showGrid: true, showSafeArea: true },
       preset: 'minimal-elegant',
+    },
+  },
+  {
+    key: 'affiliate-bold',
+    name: '联盟带货',
+    description: '紫蓝霓虹高对比 + 圆角发光卡片，联盟营销报告风格',
+    theme: {
+      color: {
+        primary: '#6366F1',
+        secondary: '#8B5CF6',
+        chartPalette: ['#6366F1', '#8B5CF6', '#3B82F6', '#EC4899', '#F59E0B', '#22D3EE'],
+        neutralText: '#FFFFFF',
+        neutralBg: '#0F0B2E',
+      },
+      font: { text: 'inter', number: 'ibm-plex-mono', heading: 'funnel-sans' },
+      density: 'spacious',
+      radius: 'large',
+      layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true },
+      preset: 'affiliate-bold',
+    },
+  },
+  {
+    key: 'magazine-editorial',
+    name: '杂志编辑',
+    description: '高对比黑白 + 思源宋体大标题 + 红色强调，杂志编辑风格',
+    theme: {
+      color: {
+        primary: '#DC2626',
+        secondary: '#1A1A1A',
+        chartPalette: ['#1A1A1A', '#DC2626', '#6B7280', '#9CA3AF', '#374151', '#D1D5DB'],
+        neutralText: '#1A1A1A',
+        neutralBg: '#FFFFFF',
+      },
+      font: { text: 'noto-sans-sc', number: 'inter', heading: 'noto-serif-sc' },
+      density: 'spacious',
+      radius: 'sharp',
+      layout: { safeMargin: 64, gridSize: 12, showGrid: true, showSafeArea: true },
+      preset: 'magazine-editorial',
+    },
+  },
+  {
+    key: 'dark-dashboard',
+    name: '暗色看板',
+    description: '深色背景 + 青绿数据色 + 等宽数字，数据看板风格',
+    theme: {
+      color: {
+        primary: '#00D9A3',
+        secondary: '#0F3460',
+        chartPalette: ['#00D9A3', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#22D3EE'],
+        neutralText: '#E5E7EB',
+        neutralBg: '#1A1A2E',
+      },
+      font: { text: 'inter', number: 'ibm-plex-mono', heading: 'inter' },
+      density: 'compact',
+      radius: 'small',
+      layout: { safeMargin: 40, gridSize: 8, showGrid: true, showSafeArea: true },
+      preset: 'dark-dashboard',
+    },
+  },
+  {
+    key: 'playful-pastel',
+    name: '粉彩活力',
+    description: '柔和粉彩背景 + 圆润大圆角，活泼亲和风格',
+    theme: {
+      color: {
+        primary: '#EC4899',
+        secondary: '#8B5CF6',
+        chartPalette: ['#F472B6', '#A78BFA', '#6EE7B7', '#FBBF24', '#60A5FA', '#FCA5A5'],
+        neutralText: '#3B0764',
+        neutralBg: '#FFF8F0',
+      },
+      font: { text: 'noto-sans-sc', number: 'inter', heading: 'funnel-sans' },
+      density: 'spacious',
+      radius: 'large',
+      layout: { safeMargin: 56, gridSize: 12, showGrid: true, showSafeArea: true },
+      preset: 'playful-pastel',
     },
   },
 ];
@@ -948,7 +1098,7 @@ export interface CampaignAnalysisData {
 
 /* ---- 单达人作品数据指标（拆分子分类） ---- */
 
-export type CreatorWorkMetricsVariant = 'grid' | 'strip' | 'card' | 'detailed';
+export type CreatorWorkMetricsVariant = 'grid' | 'strip' | 'card' | 'detailed' | 'audience' | 'city' | 'trend';
 
 export interface CreatorWorkMetricsData {
   variant: CreatorWorkMetricsVariant;
@@ -960,11 +1110,13 @@ export interface CreatorWorkMetricsData {
   workName?: string;
   /** 指标列表 */
   metrics: { label: string; value: string; sub?: string; color?: string }[];
+  /** 受众画像 + 趋势数据（audience / city / trend 变体用）。 */
+  audience?: WorkAudienceInsight;
 }
 
 /* ---- 达人作品列表（封面+数据列，mock 数据） ---- */
 
-export type CreatorWorksTableVariant = 'list' | 'cards' | 'compact';
+export type CreatorWorksTableVariant = 'list' | 'cards' | 'compact' | 'insight';
 
 export interface CreatorWorksTableData {
   variant: CreatorWorksTableVariant;
@@ -973,6 +1125,8 @@ export interface CreatorWorksTableData {
   headers: string[];
   /** 每行：[封面URL, 作品名, 播放, 点赞, 评论, 转发, 完播率] */
   rows: string[][];
+  /** 'insight' 变体下，按 rows 索引对齐的受众洞察数据；缺省=无洞察。 */
+  insights?: WorkAudienceInsight[];
 }
 
 export type IndicatorCardVariant = 'plain' | 'icon-left' | 'icon-top' | 'icon-bg' | 'spotlight' | 'duo';
