@@ -328,10 +328,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'labeled', label: '卡片标签' },
       { id: 'bulleted', label: '卡片列表' },
     ],
-    propertySchema: [
-      { key: '', label: '策略块', kind: 'table' },
-      { key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' },
-    ],
+    // 行编辑（图标/标题/富文本内容）由 PropertyPanel 的 StrategyBlockFields 负责。
+    propertySchema: [{ key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' }],
   },
   'timeline-compare': {
     Component: TimelineCompare,
