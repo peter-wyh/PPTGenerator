@@ -2,6 +2,7 @@ import type {
   CampaignMetric,
   CreatorCampaignPerformance,
   CreatorCps,
+  CreatorDaily,
   PlacementPerformance,
   PlacementTypeSummary,
   PlacementTrendPoint,
@@ -243,6 +244,63 @@ function trendPoints(total: number, seed: number): PlacementTrendPoint[] {
   return pts;
 }
 
+/* ------------------------------ 作品 / 每日 工具 ------------------------------ */
+
+/** 内容标签池（确定性轮转）。 */
+const HASHTAGS = [
+  '#护肤 #敏感肌 #屏障修护',
+  '#成分党 #实测分享',
+  '#好物推荐 #种草',
+  '#开箱 #真实测评',
+  '#日常分享 #生活记录',
+  '#干货 #教程',
+];
+
+/** 平台专属作品链接（mock，确定性）。 */
+function postUrl(platform: string, handle: string, id: string): string {
+  const tail = id.replace(/[^a-z0-9]/gi, '').slice(-8);
+  switch (platform) {
+    case 'TikTok': return `https://www.tiktok.com/${handle}/video/${tail}`;
+    case '抖音': return `https://www.douyin.com/video/${tail}`;
+    case '小红书': return `https://www.xiaohongshu.com/explore/${tail}`;
+    case 'B站': return `https://www.bilibili.com/video/BV${tail.slice(0, 6)}`;
+    case 'YouTube': return `https://www.youtube.com/watch?v=${tail}`;
+    case 'Instagram': return `https://www.instagram.com/p/${tail}`;
+    case '微信': return `https://mp.weixin.qq.com/s/${tail}`;
+    default: return `https://example.com/${handle.replace('@', '')}/${tail}`;
+  }
+}
+
+/** 视频时长（"M:SS"），确定性。 */
+function videoDuration(seed: number): string {
+  const total = 18 + (seed % 7) * 11; // 18~84s
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * 生成 campaign 周期内每天的效果序列（确定性 S 曲线分布，中期峰值）。
+ * 权重之和归一，故 daily 各指标之和 ≈ 传入 totals（与 summary/cps 自洽）。
+ */
+function buildDaily(
+  startDate: string,
+  totals: { impressions: number; engagement: number; clicks: number; gmv: number; orders: number },
+): CreatorDaily[] {
+  const DAYS = 28;
+  const weights = Array.from({ length: DAYS }, (_, i) => {
+    const t = i / (DAYS - 1);
+    return Math.sin(t * Math.PI) * 0.9 + 0.15 + 0.08 * ((i * 7) % 3);
+  });
+  const wSum = weights.reduce((a, b) => a + b, 0) || 1;
+  return weights.map((w, i) => ({
+    date: addDays(startDate, i),
+    impressions: fmt((totals.impressions * w) / wSum),
+    engagement: fmt((totals.engagement * w) / wSum),
+    clicks: fmt((totals.clicks * w) / wSum),
+    gmv: money((totals.gmv * w) / wSum),
+    orders: fmt((totals.orders * w) / wSum),
+  }));
+}
+
 /* ------------------------------ 生成单达人效果 ------------------------------ */
 
 /** 投放位原始数值（供 campaign 维度 rollup 聚合，避免从格式化字符串反解析）。 */
@@ -282,7 +340,7 @@ function buildPerformance(
   const k = profile.intensity;
   const isVideo = VIDEO_PLATFORMS.has(profile.platform);
   const format: PostFormat = isVideo ? 'video' : 'image';
-  const numPosts = 2;
+  const numPosts = cr.tier === '头部' ? 4 : cr.tier === '腰部' ? 3 : 2;
 
   const posts: PostEffect[] = [];
   let totalImpr = 0;
@@ -295,13 +353,18 @@ function buildPerformance(
     totalImpr += impr;
     totalEng += eng;
 
+    const pid = `${campaignId}-${creatorId}-p${p + 1}`;
     posts.push({
-      id: `${campaignId}-${creatorId}-p${p + 1}`,
+      id: pid,
       title: profile.titles[(cIdx + p) % profile.titles.length],
+      cover: `https://picsum.photos/seed/${pid}/640/360`,
+      url: postUrl(profile.platform, cr.handle, pid),
       publishedAt: addDays(profile.startDate, 2 + cIdx * 4 + p * 6),
+      platform: profile.platform,
       format,
+      ...(isVideo ? { duration: videoDuration(cIdx + p), plays: compact(Math.round(impr * 0.82)) } : {}),
+      hashtags: HASHTAGS[(cIdx + p) % HASHTAGS.length],
       impressions: compact(impr),
-      ...(isVideo ? { plays: compact(Math.round(impr * 0.82)) } : {}),
       likes: fmt(eng * 0.56),
       comments: fmt(eng * 0.11),
       shares: fmt(eng * 0.18),
@@ -392,6 +455,13 @@ function buildPerformance(
         avgEngagementRate: pct((totalEng / totalImpr) * 100),
       },
       posts,
+      daily: buildDaily(profile.startDate, {
+        impressions: totalImpr,
+        engagement: Math.round(totalEng),
+        clicks,
+        gmv,
+        orders,
+      }),
       placements,
       cps,
     },

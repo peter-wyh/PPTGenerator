@@ -91,8 +91,13 @@ describe('MockData page', () => {
           {
             id: 'c1-cr1-p1',
             title: '敏感肌7天急救 vlog',
+            cover: 'https://picsum.photos/seed/c1-cr1-p1/640/360',
+            url: 'https://www.tiktok.com/@miaglowup/video/c1cr1p1',
             publishedAt: '2026-10-14',
+            platform: 'TikTok',
             format: 'video',
+            duration: '0:45',
+            hashtags: '#护肤 #敏感肌',
             impressions: '850K',
             plays: '697K',
             likes: '40,000',
@@ -101,6 +106,10 @@ describe('MockData page', () => {
             saves: '10,700',
             engagementRate: '8.4%',
           },
+        ],
+        daily: [
+          { date: '2026-10-12', impressions: '52,000', engagement: '4,300', clicks: '1,100', gmv: '¥6,900', orders: '36' },
+          { date: '2026-10-13', impressions: '61,000', engagement: '5,100', clicks: '1,300', gmv: '¥8,200', orders: '43' },
         ],
         placements: [
           {

@@ -265,12 +265,14 @@ function PerfCard({ perf }: { perf: CreatorCampaignPerformance }) {
 
       {/* 帖子效果表 */}
       <div className="mt-2 overflow-auto">
-        <table className="w-full min-w-[720px] border-collapse text-xs">
+        <table className="w-full min-w-[860px] border-collapse text-xs">
           <thead>
             <tr className="bg-surface-hover text-left text-foreground-muted">
-              <th className="px-2 py-1.5 font-medium">帖子标题</th>
+              <th className="px-2 py-1.5 font-medium">作品</th>
+              <th className="px-2 py-1.5 font-medium">平台</th>
               <th className="px-2 py-1.5 font-medium">发布</th>
               <th className="px-2 py-1.5 font-medium">类型</th>
+              <th className="px-2 py-1.5 text-right font-medium">时长</th>
               <th className="px-2 py-1.5 text-right font-medium">曝光</th>
               <th className="px-2 py-1.5 text-right font-medium">播放</th>
               <th className="px-2 py-1.5 text-right font-medium">赞</th>
@@ -283,14 +285,38 @@ function PerfCard({ perf }: { perf: CreatorCampaignPerformance }) {
           <tbody>
             {perf.posts.map((post) => (
               <tr key={post.id} className="border-t border-border-subtle">
-                <td className="max-w-[280px] truncate px-2 py-1.5 font-medium text-foreground-primary">
-                  {post.title}
+                <td className="max-w-[280px] px-2 py-1.5">
+                  <div className="flex items-center gap-2">
+                    {post.cover && (
+                      <img
+                        src={post.cover}
+                        alt=""
+                        className="h-8 w-12 flex-shrink-0 rounded object-cover"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <a
+                        href={post.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block truncate font-medium text-foreground-primary hover:text-accent-primary"
+                      >
+                        {post.title}
+                      </a>
+                      {post.hashtags && (
+                        <div className="truncate text-[10px] text-foreground-muted">{post.hashtags}</div>
+                      )}
+                    </div>
+                  </div>
                 </td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-foreground-secondary">
-                  {post.publishedAt}
-                </td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-foreground-secondary">{post.platform}</td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-foreground-secondary">{post.publishedAt}</td>
                 <td className="whitespace-nowrap px-2 py-1.5 text-foreground-secondary">
                   {post.format === 'video' ? '视频' : post.format === 'live-clip' ? '直播切片' : '图文'}
+                </td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">
+                  {post.duration ?? '—'}
                 </td>
                 <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-primary">
                   {post.impressions}
@@ -298,18 +324,10 @@ function PerfCard({ perf }: { perf: CreatorCampaignPerformance }) {
                 <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">
                   {post.plays ?? '—'}
                 </td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">
-                  {post.likes}
-                </td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">
-                  {post.comments}
-                </td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">
-                  {post.shares}
-                </td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">
-                  {post.saves}
-                </td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">{post.likes}</td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">{post.comments}</td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">{post.shares}</td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-foreground-secondary">{post.saves}</td>
                 <td className="whitespace-nowrap px-2 py-1.5 text-right font-data text-accent-primary">
                   {post.engagementRate}
                 </td>
@@ -377,6 +395,39 @@ function PerfCard({ perf }: { perf: CreatorCampaignPerformance }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* 每日数据序列 */}
+      <div className="mt-2">
+        <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-foreground-muted">
+          每日数据 · {perf.daily.length} 天
+        </div>
+        <div className="max-h-44 overflow-auto rounded border border-border-subtle">
+          <table className="w-full min-w-[560px] border-collapse text-xs">
+            <thead className="sticky top-0">
+              <tr className="bg-surface-hover text-left text-foreground-muted">
+                <th className="px-2 py-1.5 font-medium">日期</th>
+                <th className="px-2 py-1.5 text-right font-medium">曝光</th>
+                <th className="px-2 py-1.5 text-right font-medium">互动</th>
+                <th className="px-2 py-1.5 text-right font-medium">点击</th>
+                <th className="px-2 py-1.5 text-right font-medium">GMV</th>
+                <th className="px-2 py-1.5 text-right font-medium">订单</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perf.daily.map((d) => (
+                <tr key={d.date} className="border-t border-border-subtle">
+                  <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{d.date}</td>
+                  <td className="whitespace-nowrap px-2 py-1 text-right font-data text-foreground-primary">{d.impressions}</td>
+                  <td className="whitespace-nowrap px-2 py-1 text-right font-data text-foreground-secondary">{d.engagement}</td>
+                  <td className="whitespace-nowrap px-2 py-1 text-right font-data text-foreground-secondary">{d.clicks}</td>
+                  <td className="whitespace-nowrap px-2 py-1 text-right font-data text-accent-primary">{d.gmv}</td>
+                  <td className="whitespace-nowrap px-2 py-1 text-right font-data text-foreground-secondary">{d.orders}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* CPS 汇总 */}

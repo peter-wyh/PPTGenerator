@@ -195,7 +195,13 @@ export interface PostEffect {
   url?: string;
   /** 发布日期 YYYY-MM-DD。 */
   publishedAt: string;
+  /** 作品平台（TikTok / 抖音 / 小红书 …）。 */
+  platform: string;
   format: PostFormat;
+  /** 视频时长（"M:SS"）；图文为空。 */
+  duration?: string;
+  /** 内容标签 / 话题（逗号分隔）。 */
+  hashtags?: string;
   /** 曝光（impressions）。 */
   impressions: string;
   /** 播放（视频类）；图文为空。 */
@@ -210,6 +216,22 @@ export interface PostEffect {
   saves: string;
   /** 互动率 = (赞+评+转+藏) / 曝光。 */
   engagementRate: string;
+}
+
+/** 达人在某 campaign 下每天的效果数据（时间序列，供趋势/明细）。 */
+export interface CreatorDaily {
+  /** 日期 YYYY-MM-DD。 */
+  date: string;
+  /** 曝光。 */
+  impressions: string;
+  /** 互动（赞+评+转+藏）。 */
+  engagement: string;
+  /** 点击。 */
+  clicks: string;
+  /** 带货 GMV。 */
+  gmv: string;
+  /** 订单（转化）。 */
+  orders: string;
 }
 
 /** 达人在某 campaign 的 CPS（按销售分成 / 带货）汇总数据。 */
@@ -310,6 +332,8 @@ export interface CreatorCampaignPerformance {
   summary: CreatorPerformanceSummary;
   /** 帖子效果明细。 */
   posts: PostEffect[];
+  /** 每天效果时间序列（campaign 周期内逐天）。 */
+  daily: CreatorDaily[];
   /** 投放位 / 渠道带货明细（affiliate 维度）。 */
   placements: PlacementPerformance[];
   /** CPS 带货汇总。 */
