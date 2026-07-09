@@ -4,6 +4,7 @@ import type {
   ComponentType,
   EditorComponent,
   Page,
+  PageType,
   ProjectDetail,
   ProjectMeta,
   ProjectTheme,
@@ -12,7 +13,7 @@ import type {
   ThemeDensity,
   ThemeRadius,
 } from '@mediakit/shared';
-import { DEFAULT_THEME, normalizeTheme } from '@mediakit/shared';
+import { buildReportTitle, DEFAULT_THEME, normalizeTheme } from '@mediakit/shared';
 import {
   DEFAULT_SIZES,
   getDefaultData,
@@ -148,8 +149,8 @@ export interface EditorState {
   // ---- pages ----
   setPage: (id: string) => void;
   addPage: () => void;
-  addPageWithComponents: (name: string, components: EditorComponent[]) => void;
-  addPagesBatch: (pages: { name: string; components: EditorComponent[] }[]) => void;
+  addPageWithComponents: (name: string, components: EditorComponent[], opts?: { titleComponentIndex?: number }) => void;
+  addPagesBatch: (pages: { name: string; components: EditorComponent[]; titleComponentIndex?: number }[]) => void;
   copyPage: (id: string) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
@@ -159,6 +160,11 @@ export interface EditorState {
    *  再调 updatePage() 推一次 history，否则无法撤销。 */
   patchPageLive: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage'>>) => void;
   reorderPage: (from: number, to: number) => void;
+
+  /** 设页面类型；'media-report' 会确保存在标题组件并生成默认标题。 */
+  setPageType: (pageId: string, pageType: PageType | undefined) => void;
+  /** 「恢复自动」：清除 overridden 并重算标题。 */
+  restoreReportTitle: (pageId: string) => void;
 
   // ---- history ----
   undo: () => void;
@@ -252,6 +258,55 @@ export const useEditorStore = create<EditorState>((set, get) => {
     set({ dirty: true });
   }
 
+  /** 构造一个大号文本组件作为页面标题。 */
+  function makeTitleComponent(content: string): EditorComponent {
+    return {
+      id: newId(),
+      type: 'text',
+      x: 120,
+      y: 240,
+      w: 1000,
+      h: 120,
+      data: { content, fontSize: 56, fontWeight: 700, fontFamily: '', color: '#1A1A1A' },
+    };
+  }
+
+  /** 重算并写回某投放报告页的标题（仅 pageType='media-report' 且未 overridden）。 */
+  function refreshReportTitle(pageId: string) {
+    const s = get();
+    const p = s.pages.find((pg) => pg.id === pageId);
+    if (!p || p.pageType !== 'media-report' || p.titleOverridden) return;
+    const title = buildReportTitle(s.projectMeta ?? {});
+    const titleId = p.titleComponentId;
+    const titleComp = titleId ? p.components.find((c) => c.id === titleId && c.type === 'text') : undefined;
+    const currentContent = titleComp ? (titleComp.data as { content?: string }).content : undefined;
+    if (p.name === title && currentContent === title) return; // 无变化不标脏
+    set({
+      dirty: true,
+      pages: s.pages.map((pg) => {
+        if (pg.id !== pageId) return pg;
+        if (!titleComp) {
+          const created = makeTitleComponent(title);
+          return { ...pg, name: title, components: [created, ...pg.components], titleComponentId: created.id };
+        }
+        return {
+          ...pg,
+          name: title,
+          components: pg.components.map((c) =>
+            c.id === titleId ? { ...c, data: { ...(c.data as object), content: title } as unknown as ComponentData } : c,
+          ),
+        };
+      }),
+    });
+  }
+
+  /** 遍历所有未 overridden 的投放报告页，重算标题。 */
+  function refreshAllReportTitles() {
+    get().pages.forEach((p) => {
+      if (p.pageType === 'media-report' && !p.titleOverridden) refreshReportTitle(p.id);
+    });
+  }
+
   return {
     projectId: null,
     projectName: '未命名项目',
@@ -314,6 +369,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         // 报告全局数据上下文：从 projectMeta.reportData 初始化。
         reportData: projectMeta?.reportData ?? {},
       });
+      refreshAllReportTitles();
     },
 
     markSaved: () => set({ dirty: false }),
@@ -537,12 +593,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     // 拖动期间的实时更新：不落 history（在 commit() 统一落）。
     updateComponent: (id, patch) =>
-      set((s) => ({
-        dirty: true,
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+      set((s) => {
+        const cur = s.pages.find((p) => p.id === s.currentPageId);
+        const isTitleComp = cur?.pageType === 'media-report' && cur?.titleComponentId === id;
+        const pages = withCurrentComponents(s.pages, s.currentPageId, (cs) =>
           cs.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-        ),
-      })),
+        );
+        let finalPages = pages;
+        if (isTitleComp && patch.data && cur) {
+          const oldContent = (cur.components.find((c) => c.id === id)?.data as { content?: string } | undefined)?.content;
+          const newContent = (patch.data as { content?: string }).content;
+          if (newContent !== undefined && newContent !== oldContent) {
+            finalPages = pages.map((p) =>
+              p.id === s.currentPageId ? { ...p, titleOverridden: true, name: newContent } : p,
+            );
+          }
+        }
+        return { dirty: true, pages: finalPages };
+      }),
 
     /** 把组件当前几何夹进安全区（不入 history；PropertyPanel 失焦时调用，紧接 commit()）。 */
     sanitizeComponent: (id) =>
@@ -760,41 +828,71 @@ export const useEditorStore = create<EditorState>((set, get) => {
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
       }),
 
-    addPageWithComponents: (name, components) =>
+    addPageWithComponents: (name, components, opts) => {
+      let pageId: string | undefined;
       mutateAndCommit((s) => {
-        // 模板带入的组件重新分配 id，避免与现有冲突。
         const reid = components.map((c) => ({ ...clone(c), id: newId() }));
         const page: Page = { id: newId(), name, components: reid };
+        pageId = page.id;
+        const idx = opts?.titleComponentIndex;
+        if (idx != null && reid[idx]) {
+          page.pageType = 'media-report';
+          page.titleComponentId = reid[idx].id;
+          page.titleOverridden = false;
+        }
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
-      }),
+      });
+      if (pageId) refreshReportTitle(pageId);
+    },
 
-    addPagesBatch: (pages) =>
+    addPagesBatch: (pages) => {
+      const newIds: string[] = [];
       mutateAndCommit((s) => {
-        // 一次生成多页（场景模板用），每页组件重新分配 id，单个 history 条目。
-        const built: Page[] = pages.map((p) => ({
-          id: newId(),
-          name: p.name,
-          components: p.components.map((c) => ({ ...clone(c), id: newId() })),
-        }));
+        const built: Page[] = pages.map((p) => {
+          const reid = p.components.map((c) => ({ ...clone(c), id: newId() }));
+          const page: Page = { id: newId(), name: p.name, components: reid };
+          newIds.push(page.id);
+          const idx = p.titleComponentIndex;
+          if (idx != null && reid[idx]) {
+            page.pageType = 'media-report';
+            page.titleComponentId = reid[idx].id;
+            page.titleOverridden = false;
+          }
+          return page;
+        });
         if (built.length === 0) return {};
         return { pages: [...s.pages, ...built], currentPageId: built[0].id, selectedIds: [] };
-      }),
+      });
+      newIds.forEach((id) => refreshReportTitle(id));
+    },
 
-    copyPage: (id) =>
+    copyPage: (id) => {
+      let newPageId: string | undefined;
       mutateAndCommit((s) => {
         const src = s.pages.find((p) => p.id === id);
         if (!src) return {};
+        const idMap = new Map<string, string>();
+        const copiedComps = src.components.map((c) => {
+          const nid = newId();
+          idMap.set(c.id, nid);
+          return { ...clone(c), id: nid };
+        });
         const copied: Page = {
           id: newId(),
           name: `${src.name} (副本)`,
-          components: src.components.map((c) => ({ ...clone(c), id: newId() })),
+          components: copiedComps,
+          ...(src.pageType ? { pageType: src.pageType } : {}),
+          ...(src.titleComponentId ? { titleComponentId: idMap.get(src.titleComponentId) } : {}),
+          ...(src.titleOverridden ? { titleOverridden: src.titleOverridden } : {}),
         };
-        // 插入到原页之后。
+        newPageId = copied.id;
         const idx = s.pages.findIndex((p) => p.id === id);
         const pages = [...s.pages];
         pages.splice(idx + 1, 0, copied);
         return { pages };
-      }),
+      });
+      if (newPageId) refreshReportTitle(newPageId);
+    },
 
     deletePage: (id) =>
       mutateAndCommit((s) => {
@@ -807,7 +905,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     renamePage: (id, name) =>
       mutateAndCommit((s) => ({
-        pages: s.pages.map((p) => (p.id === id ? { ...p, name: name.trim() || p.name } : p)),
+        pages: s.pages.map((p) => {
+          if (p.id !== id) return p;
+          const next = name.trim() || p.name;
+          if (next === p.name) return p; // 无变化不改状态
+          if (p.pageType !== 'media-report' || !p.titleComponentId) return { ...p, name: next };
+          return {
+            ...p,
+            name: next,
+            titleOverridden: true,
+            components: p.components.map((c) =>
+              c.id === p.titleComponentId
+                ? { ...c, data: { ...(c.data as object), content: next } as unknown as ComponentData }
+                : c,
+            ),
+          };
+        }),
       })),
 
     updatePage: (id, patch) =>
@@ -828,6 +941,68 @@ export const useEditorStore = create<EditorState>((set, get) => {
         pages.splice(to, 0, moved);
         return { pages };
       }),
+
+    setPageType: (pageId, pageType) => {
+      mutateAndCommit((s) => ({
+        pages: s.pages.map((p) => {
+          if (p.id !== pageId) return p;
+          if (pageType !== 'media-report') {
+            return { ...p, pageType: undefined, titleComponentId: undefined, titleOverridden: undefined };
+          }
+          const title = buildReportTitle(s.projectMeta ?? {});
+          const titleId = p.titleComponentId;
+          const hasTitleComp = !!titleId && !!p.components.find((c) => c.id === titleId && c.type === 'text');
+          if (!hasTitleComp) {
+            const created = makeTitleComponent(title);
+            return {
+              ...p,
+              pageType: 'media-report',
+              titleComponentId: created.id,
+              titleOverridden: false,
+              components: [created, ...p.components],
+              name: title,
+            };
+          }
+          return {
+            ...p,
+            pageType: 'media-report',
+            titleComponentId: titleId,
+            titleOverridden: false,
+            name: title,
+            components: p.components.map((c) =>
+              c.id === titleId ? { ...c, data: { ...(c.data as object), content: title } as unknown as ComponentData } : c,
+            ),
+          };
+        }),
+      }));
+    },
+
+    restoreReportTitle: (pageId) => {
+      mutateAndCommit((s) => {
+        const p = s.pages.find((pg) => pg.id === pageId);
+        if (!p || p.pageType !== 'media-report') return {};
+        const title = buildReportTitle(s.projectMeta ?? {});
+        const titleId = p.titleComponentId;
+        const titleComp = titleId ? p.components.find((c) => c.id === titleId && c.type === 'text') : undefined;
+        return {
+          pages: s.pages.map((pg) => {
+            if (pg.id !== pageId) return pg;
+            if (!titleComp) {
+              const created = makeTitleComponent(title);
+              return { ...pg, titleOverridden: false, name: title, components: [created, ...pg.components], titleComponentId: created.id };
+            }
+            return {
+              ...pg,
+              titleOverridden: false,
+              name: title,
+              components: pg.components.map((c) =>
+                c.id === titleId ? { ...c, data: { ...(c.data as object), content: title } as unknown as ComponentData } : c,
+              ),
+            };
+          }),
+        };
+      });
+    },
 
     undo: () => {
       const { historyIndex, history } = get();

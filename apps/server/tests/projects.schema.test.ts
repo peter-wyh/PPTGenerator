@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { createProjectSchema, updateProjectSchema } from '../src/modules/projects/projects.schema';
+import {
+  createProjectSchema,
+  updateProjectSchema,
+  pageSchema,
+} from '../src/modules/projects/projects.schema';
 
 /** 含渐变的页（模拟前端保存时的 pages 项）。 */
 const pageWithGradient = {
@@ -80,5 +84,32 @@ describe('projectThemeSchema.layout', () => {
 
   it('rejects safeMargin out of range (negative)', () => {
     expect(() => parseTheme({ layout: { safeMargin: -5, gridSize: 10 } })).toThrow();
+  });
+});
+
+describe('pageSchema — 页面类型字段', () => {
+  it('接受带 pageType/titleComponentId/titleOverridden 的页面', () => {
+    const r = pageSchema.parse({
+      id: 'p1',
+      name: '封面',
+      components: [],
+      pageType: 'media-report',
+      titleComponentId: 'c1',
+      titleOverridden: false,
+    });
+    expect(r.pageType).toBe('media-report');
+    expect(r.titleComponentId).toBe('c1');
+    expect(r.titleOverridden).toBe(false);
+  });
+
+  it('接受无 pageType 的旧页面（向后兼容）', () => {
+    const r = pageSchema.parse({ id: 'p1', name: 'n', components: [] });
+    expect(r.pageType).toBeUndefined();
+    expect(r.titleComponentId).toBeUndefined();
+    expect(r.titleOverridden).toBeUndefined();
+  });
+
+  it('拒绝非法 pageType 取值', () => {
+    expect(() => pageSchema.parse({ id: 'p1', name: 'n', components: [], pageType: 'bogus' })).toThrow();
   });
 });

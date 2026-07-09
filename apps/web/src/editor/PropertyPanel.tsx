@@ -55,6 +55,8 @@ export function PropertyPanel() {
     if (selectedIds.length !== 1) return null;
     return s.currentComponents().find((c) => c.id === selectedIds[0]) ?? null;
   });
+  const currentPage = useEditorStore((s) => s.pages.find((p) => p.id === s.currentPageId));
+  const restoreReportTitle = useEditorStore((s) => s.restoreReportTitle);
 
   if (selectedIds.length > 1) {
     return <MultiSelectPanel ids={selectedIds} />;
@@ -85,6 +87,17 @@ export function PropertyPanel() {
       <div className="font-headings text-sm font-semibold text-foreground-primary">
         {LABELS[comp.type] ?? comp.type}
       </div>
+
+      {currentPage?.pageType === 'media-report' &&
+        currentPage.titleComponentId === comp.id &&
+        currentPage.titleOverridden && (
+          <button
+            onClick={() => restoreReportTitle(currentPage.id)}
+            className="rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+          >
+            🔄 恢复自动标题
+          </button>
+        )}
 
       {(comp.type === 'bar-chart' ||
         comp.type === 'line-chart' ||
