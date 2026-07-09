@@ -18,7 +18,7 @@
 - `apps/web/src/editor/snap.ts` — 吸附纯函数 + 阈值常量 + `SafeRect` 类型。`safeRectFrom` / `snapMove` / `snapResize`。无 React、无 store 依赖（仅从 `defaults.ts` 取 `MIN_W/MIN_H`），可单测。
 - `apps/web/tests/theme-layout.test.ts` — `normalizeTheme` 对 `layout` 的兜底/部分覆盖、`DEFAULT_THEME.layout`、4 套 `STYLE_PRESETS` 各含 `layout`。
 - `apps/web/tests/snap.test.ts` — `snapMove`/`snapResize`/`safeRectFrom` 行为。
-- `apps/server/src/modules/projects/projects.schema.test.ts` — `projectThemeSchema` 接受含 `layout` 主题、拒绝越界值。
+- `apps/server/tests/projects.schema.test.ts`（Modify，已存在）— 追加 `projectThemeSchema` 接受含 `layout` 主题、拒绝越界值的用例。
 
 **修改：**
 - `packages/shared/src/index.ts` — `ProjectTheme.layout` 类型、`DEFAULT_THEME.layout`、`normalizeTheme` 解析 `layout`、4 套 `STYLE_PRESETS` 补 `layout`。
@@ -828,14 +828,11 @@ EOF
 
 **Files:**
 - Modify: `apps/server/src/modules/projects/projects.schema.ts:34-56`
-- Test: `apps/server/src/modules/projects/projects.schema.test.ts`（Create，与 `templates.service.test.ts` 同一 co-located 约定）
+- Modify: `apps/server/tests/projects.schema.test.ts`（已存在，测 bgGradient round-trip；在文件末尾追加 `projectThemeSchema.layout` describe 块，复用顶部已 import 的 `createProjectSchema`，不新增 import）
 
-- [ ] **Step 1: 写失败测试 `apps/server/src/modules/projects/projects.schema.test.ts`**
+- [ ] **Step 1: 在已存在的 `apps/server/tests/projects.schema.test.ts` 末尾追加 layout describe 块（复用文件顶部已 import 的 `createProjectSchema`）**
 
 ```ts
-import { describe, it, expect } from 'vitest';
-import { createProjectSchema } from './projects.schema';
-
 /** 取 createProjectSchema 内嵌的 projectThemeSchema 解析结果（meta.theme）。 */
 function parseTheme(theme: unknown) {
   return createProjectSchema.parse({
@@ -869,7 +866,7 @@ describe('projectThemeSchema.layout', () => {
 
 - [ ] **Step 2: 运行测试，确认失败（red）**
 
-Run: `pnpm --filter @mediakit/server exec vitest run src/modules/projects/projects.schema.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run tests/projects.schema.test.ts`
 Expected: FAIL — `layout` 字段被 Zod 剥掉（`r.meta?.theme?.layout` 为 `undefined`，第一个用例 `toEqual(...)` 不通过；越界用例不 throw）。
 
 - [ ] **Step 3: `projects.schema.ts` 的 `projectThemeSchema` 增 `layout`（第 52–54 行 `preset` 之后、对象收尾之前）**
@@ -901,7 +898,7 @@ Expected: FAIL — `layout` 字段被 Zod 剥掉（`r.meta?.theme?.layout` 为 `
 
 - [ ] **Step 4: 运行测试，确认通过（green）**
 
-Run: `pnpm --filter @mediakit/server exec vitest run src/modules/projects/projects.schema.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run tests/projects.schema.test.ts`
 Expected: PASS。
 
 - [ ] **Step 5: server typecheck**
@@ -912,7 +909,7 @@ Expected: 通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add apps/server/src/modules/projects/projects.schema.ts apps/server/src/modules/projects/projects.schema.test.ts
+git add apps/server/src/modules/projects/projects.schema.ts apps/server/tests/projects.schema.test.ts
 git commit -m "$(cat <<'EOF'
 feat(server): projectThemeSchema 增 layout（safeMargin/gridSize）Zod 校验
 
