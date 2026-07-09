@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useEditorStore } from './store';
+import { DEFAULT_GRID_SIZE } from './defaults';
 
 /** 是否聚焦在可编辑元素（输入框等），键盘快捷键需跳过。 */
 function isEditing(target: EventTarget | null): boolean {
@@ -88,7 +89,8 @@ export function useEditorKeyboard(): void {
       if (e.key.startsWith('Arrow')) {
         if (st.selectedIds.length === 0) return;
         e.preventDefault();
-        const d = e.shiftKey ? 10 : 1;
+        const layout = st.projectMeta?.theme?.layout;
+        const d = e.shiftKey ? layout?.gridSize ?? DEFAULT_GRID_SIZE : 1;
         if (e.key === 'ArrowUp') st.nudge(0, -d);
         else if (e.key === 'ArrowDown') st.nudge(0, d);
         else if (e.key === 'ArrowLeft') st.nudge(-d, 0);
