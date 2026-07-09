@@ -39,7 +39,7 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    expect(screen.getAllByPlaceholderText('说明').length).toBe(3); // 默认 3 张
+    expect(screen.getAllByPlaceholderText('说明').length).toBe(9); // 默认 9 张（camp-glowlab-q4）
     expect(screen.getByRole('button', { name: /添加图片/ })).toBeInTheDocument();
   });
 

@@ -1208,11 +1208,13 @@ export interface WorkScreenshotItem {
   caption?: string;
 }
 
-/** 作品截图墙。variant 控制组图版式；缺省 'grid'。 */
+/** 作品截图墙。复用组图版式引擎（variant = ImageGroupLayoutId）；缺省 'auto'。 */
 export interface WorkScreenshotData {
-  variant?: 'grid' | 'masonry' | 'hero' | 'skew';
+  variant?: ImageGroupLayoutId;
   title?: string;
   images: WorkScreenshotItem[];
+  /** 单元格间距（px）；可选，缺省 8（与组图一致）。 */
+  gap?: number;
 }
 
 export interface WorkMetricItem {
