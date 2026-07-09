@@ -98,10 +98,10 @@ describe('KpiBoard · grid/row 去边框', () => {
 });
 
 describe('kpi-board 注册与默认数据', () => {
-  it('REGISTRY 暴露 4 个 variant（含 card）', () => {
+  it('REGISTRY 暴露 6 个 variant（含 card）', () => {
     const def = REGISTRY['kpi-board'];
     const ids = def.variants?.map((v) => v.id);
-    expect(ids).toEqual(['grid', 'row', 'compact', 'card']);
+    expect(ids).toEqual(['grid', 'row', 'compact', 'card', 'gradient', 'minimal']);
   });
 
   it('默认数据含 icons 与 valueColors 示例', () => {

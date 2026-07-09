@@ -13,10 +13,11 @@ import type {
   PageGradient,
   GradientStop,
   Sentiment,
-  WorkMetricsData,
-  WorkScreenshotData,
   ShapeData,
   ShapeKind,
+  StrategyBlockData,
+  WorkMetricsData,
+  WorkScreenshotData,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from './store';
@@ -29,6 +30,7 @@ import { ImageInput } from '@/components/ImageInput';
 import { parseCreatorLink } from './creatorLink';
 import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from './icons/IconPickerOverlay';
 import { findIcon } from './icons/catalog';
+import { sanitizeRichText } from './richText';
 import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from './kpiTokens';
 import { IconKit } from './icons/IconKit';
 import type { IconWeight } from '@mediakit/shared';
@@ -131,6 +133,7 @@ export function PropertyPanel() {
       {comp.type === 'comment-wordcloud' && <CommentWordcloudFields comp={comp} />}
       {comp.type === 'shape' && <ShapeFields comp={comp} />}
       {comp.type === 'image-group' && <ImageGroupFields comp={comp} />}
+      {comp.type === 'strategy-block' && <StrategyBlockFields comp={comp} />}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button
@@ -876,6 +879,83 @@ function TextareaField({ comp, field }: { comp: EditorComponent; field: Property
   );
 }
 
+/**
+ * 轻量富文本字段：toolbar（加粗/斜体/列表）+ contentEditable。
+ * 不受控：挂载时以 sanitize 后的 HTML 初始化；onBlur 时清洗并写回。
+ * contentEditable / execCommand 在 jsdom 不可用，编辑交互不单测。
+ */
+function RichTextField({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // 同步外部 value → contentEditable：仅在未聚焦时写入，避免覆盖用户正在编辑的光标。
+  // 这样删除/重排行（index key 复用实例）或 undo 时，正文也能正确跟随 data。
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (document.activeElement === el) return; // 聚焦中：不干预编辑。
+    const sanitized = sanitizeRichText(value);
+    if (el.innerHTML !== sanitized) el.innerHTML = sanitized;
+  }, [value]);
+
+  const exec = (cmd: string) => {
+    document.execCommand(cmd);
+    ref.current?.focus();
+  };
+
+  const commit = () => {
+    if (!ref.current) return;
+    const next = sanitizeRichText(ref.current.innerHTML);
+    if (next !== sanitizeRichText(value)) onChange(next);
+  };
+
+  return (
+    <div className="rounded border border-border-default">
+      <div className="flex gap-1 border-b border-border-subtle px-1 py-0.5">
+        <button
+          type="button"
+          title="加粗"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('bold');
+          }}
+          className="font-bold px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          B
+        </button>
+        <button
+          type="button"
+          title="斜体"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('italic');
+          }}
+          className="italic px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          I
+        </button>
+        <button
+          type="button"
+          title="列表"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('insertUnorderedList');
+          }}
+          className="px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          •
+        </button>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={commit}
+        className="min-h-[60px] px-2 py-1 text-xs text-foreground-primary focus:outline-none [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+      />
+    </div>
+  );
+}
+
 function DataNumberField({ comp, field }: { comp: EditorComponent; field: PropertyField }) {
   const update = useDataUpdate(comp);
   const value = Number(readValue(comp, field) ?? 0);
@@ -1460,6 +1540,58 @@ function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
       </div>
       <button onClick={add} className="text-xs text-accent-primary hover:underline">
         + 添加图片
+      </button>
+    </FieldGroup>
+  );
+}
+
+/** strategy-block 专属编辑：每行 = 图标 key + 标题 + 富文本内容；可增删行。 */
+function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
+  const update = useDataUpdate(comp);
+  const data = comp.data as StrategyBlockData;
+  const rows = data.rows ?? [];
+
+  const setRow = (i: number, next: string[]) => {
+    update('rows', rows.map((r, idx) => (idx === i ? next : r)));
+  };
+  const addRow = () => update('rows', [...rows, ['', '', '']]);
+  const removeRow = (i: number) => update('rows', rows.filter((_, idx) => idx !== i));
+
+  return (
+    <FieldGroup title="策略块">
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="space-y-1 rounded border border-border-subtle p-1">
+            <div className="flex items-center gap-1">
+              <input
+                value={row[0] ?? ''}
+                onChange={(e) => setRow(i, [e.target.value, row[1] ?? '', row[2] ?? ''])}
+                placeholder="图标 key"
+                className="w-16 rounded border border-border-default px-1 py-0.5 text-xs"
+              />
+              <input
+                value={row[1] ?? ''}
+                onChange={(e) => setRow(i, [row[0] ?? '', e.target.value, row[2] ?? ''])}
+                placeholder="标题"
+                className="flex-1 rounded border border-border-default px-1 py-0.5 text-xs"
+              />
+              <button
+                onClick={() => removeRow(i)}
+                title="删除该项"
+                className="text-foreground-muted hover:text-red"
+              >
+                ✕
+              </button>
+            </div>
+            <RichTextField
+              value={row[2] ?? ''}
+              onChange={(html) => setRow(i, [row[0] ?? '', row[1] ?? '', html])}
+            />
+          </div>
+        ))}
+      </div>
+      <button onClick={addRow} className="mt-1 text-xs text-accent-primary hover:underline">
+        + 添加项
       </button>
     </FieldGroup>
   );

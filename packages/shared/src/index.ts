@@ -883,7 +883,11 @@ export interface StrategyBlockData {
   variant?: StrategyBlockVariant;
   /** 约定 ['图标', '标题', '内容']。 */
   headers: string[];
-  /** 每行 [iconKey?, title, content]。 */
+  /**
+   * 每行 [iconKey?, title, content]。
+   * content 为受限 HTML 字符串（允许 b/strong/i/em/ul/ol/li/br/p，无属性），
+   * 渲染前经 sanitizeRichText 清洗；旧数据（纯文本）自动兼容。
+   */
   rows: string[][];
   /** 全局高亮词，逗号分隔；渲染时 split，命中 content 的词包粉色 span。 */
   highlights?: string;

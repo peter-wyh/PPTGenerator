@@ -170,7 +170,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'trend', label: '副文本', kind: 'text' },
       { key: 'trendUp', label: '趋势', kind: 'select', options: [{ value: 'true', label: '上升' }, { value: 'false', label: '下降' }] },
       { key: 'colorTheme', label: '主题色', kind: 'select', options: THEMES },
-      { key: 'icon', label: '图标', kind: 'icon' },
+      // 注：图标字段不放进 propertySchema——PropertyPanel 会按当前变体的 icon 声明注入（plain 隐藏，其余显示），
+      // 否则会与变体注入重复渲染（key 冲突）并在 plain 下误显示。
     ],
   },
   'bar-chart': {
@@ -353,10 +354,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'labeled', label: '卡片标签' },
       { id: 'bulleted', label: '卡片列表' },
     ],
-    propertySchema: [
-      { key: '', label: '策略块', kind: 'table' },
-      { key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' },
-    ],
+    // 行编辑（图标/标题/富文本内容）由 PropertyPanel 的 StrategyBlockFields 负责。
+    propertySchema: [{ key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' }],
   },
   'timeline-compare': {
     Component: TimelineCompare,

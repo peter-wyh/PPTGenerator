@@ -67,8 +67,8 @@ describe('REGISTRY', () => {
 describe('indicator-card variants', () => {
   const def = REGISTRY['indicator-card'];
 
-  it('declares 4 variants', () => {
-    expect(def.variants?.map((v) => v.id)).toEqual(['plain', 'icon-left', 'icon-top', 'icon-bg']);
+  it('declares 6 variants', () => {
+    expect(def.variants?.map((v) => v.id)).toEqual(['plain', 'icon-left', 'icon-top', 'icon-bg', 'spotlight', 'duo']);
   });
 
   it('plain has no icon slot; the other three declare icon slots', () => {

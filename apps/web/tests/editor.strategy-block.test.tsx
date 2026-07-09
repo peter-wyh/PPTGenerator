@@ -59,4 +59,34 @@ describe('StrategyBlockComponent variants', () => {
     expect(screen.getByText('INSIGHT')).toBeInTheDocument();
     expect(screen.queryByText('•')).not.toBeInTheDocument();
   });
+
+  it('default 富文本内容：渲染 <b> 与高亮 span', () => {
+    const { container } = render(
+      <StrategyBlockComponent
+        data={{ headers, rows: [['sparkle', 'INSIGHT', 'focus on <b>beauty tips</b>']], highlights: 'beauty, tips' } as StrategyBlockData}
+      />,
+    );
+    expect(container.querySelector('b')).not.toBeNull();
+    expect(container.querySelectorAll('.text-accent-secondary').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('default 富文本内容：<ul> 列表渲染', () => {
+    const { container } = render(
+      <StrategyBlockComponent
+        data={{ headers, rows: [['target', 'STRATEGY', '<ul><li>a</li><li>b</li></ul>']] } as StrategyBlockData}
+      />,
+    );
+    expect(container.querySelector('ul')).not.toBeNull();
+    expect(container.querySelectorAll('li').length).toBe(2);
+  });
+
+  it('bulleted 变体保留外层 • 且内容富文本可含列表', () => {
+    const { container } = render(
+      <StrategyBlockComponent
+        data={{ variant: 'bulleted', headers, rows: [['target', 'STRATEGY', ''], ['sparkle', 'X', '<ul><li>a</li></ul>']] } as StrategyBlockData}
+      />,
+    );
+    expect(screen.getAllByText('•')).toHaveLength(1);
+    expect(container.querySelector('ul')).not.toBeNull();
+  });
 });

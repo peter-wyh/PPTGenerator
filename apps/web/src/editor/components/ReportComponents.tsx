@@ -17,6 +17,7 @@ import type {
 } from '@mediakit/shared';
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { findIcon } from '../icons/catalog';
+import { renderHtmlWithHighlights } from '../richText';
 import { KPI_COLOR_TOKENS } from '../kpiTokens';
 
 /* -------------------------------- kpi board ------------------------------- */
@@ -440,25 +441,6 @@ export function MetaStripComponent({ data }: { data: MetaStripData }) {
 
 /* ---------------------------- strategy block ----------------------------- */
 
-/** 把 content 按 highlights 词（逗号分隔）切分，命中词包成高亮 span。 */
-function renderHighlighted(content: string, highlights?: string) {
-  const words = (highlights ?? '')
-    .split(/[,，]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (words.length === 0 || !content) return content;
-  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const re = new RegExp(`(${escaped.join('|')})`, 'gi');
-  const lower = words.map((w) => w.toLowerCase());
-  return content.split(re).map((part, i) =>
-    lower.includes(part.toLowerCase()) ? (
-      <span key={i} className="font-medium text-accent-secondary">{part}</span>
-    ) : (
-      <span key={i}>{part}</span>
-    ),
-  );
-}
-
 export function StrategyBlockComponent({ data }: { data: StrategyBlockData }) {
   const { variant = 'default' } = data;
   if (variant === 'labeled') return <StrategyLabeled data={data} />;
@@ -484,9 +466,10 @@ function StrategyDefault({ data }: { data: StrategyBlockData }) {
                 {title}
               </span>
             </div>
-            <div className="whitespace-pre-wrap text-sm text-foreground-secondary">
-              {renderHighlighted(content, data.highlights)}
-            </div>
+            <div
+              className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+              dangerouslySetInnerHTML={{ __html: renderHtmlWithHighlights(content, data.highlights) }}
+            />
           </div>
         );
       })}
@@ -512,9 +495,10 @@ function StrategyLabeled({ data }: { data: StrategyBlockData }) {
                 {title}
               </span>
             </div>
-            <div className="whitespace-pre-wrap text-sm text-foreground-secondary">
-              {renderHighlighted(content, data.highlights)}
-            </div>
+            <div
+              className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+              dangerouslySetInnerHTML={{ __html: renderHtmlWithHighlights(content, data.highlights) }}
+            />
           </div>
         );
       })}
@@ -550,7 +534,10 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
             return (
               <div key={i} className="flex gap-2 py-0.5 text-sm text-foreground-secondary">
                 <span className="flex-none text-accent-secondary">•</span>
-                <span className="whitespace-pre-wrap">{renderHighlighted(content, data.highlights)}</span>
+                <div
+                  className="min-w-0 flex-1 [&_ul]:my-0.5 [&_ul]:list-disc [&_ul]:pl-4"
+                  dangerouslySetInnerHTML={{ __html: renderHtmlWithHighlights(content, data.highlights) }}
+                />
               </div>
             );
           })}
