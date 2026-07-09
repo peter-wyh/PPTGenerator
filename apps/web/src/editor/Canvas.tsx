@@ -1,18 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorStore, type ResizeDir } from './store';
 import type { EditorComponent } from '@mediakit/shared';
 import { CanvasComponent } from './components/CanvasComponent';
 import { ContextMenu, type MenuItem } from './components/ContextMenu';
 import { PALETTE_MIME, type PalettePayload } from './ComponentPanel';
 import { resolvePageBackground } from './background';
+import { DEFAULT_THEME } from '@mediakit/shared';
+import { DEFAULT_GRID_SIZE } from './defaults';
+import { snapMove, safeRectFrom } from './snap';
 
 type DragState =
-  | { kind: 'move'; mouseX: number; mouseY: number; comps: { id: string; x: number; y: number; locked?: boolean }[] }
+  | {
+      kind: 'move';
+      mouseX: number;
+      mouseY: number;
+      comps: { id: string; x: number; y: number; w: number; h: number; locked?: boolean }[];
+    }
   | { kind: 'resize'; mouseX: number; mouseY: number; comp: { x: number; y: number; w: number; h: number }; id: string; dir: ResizeDir }
   | { kind: 'pan'; mouseX: number; mouseY: number; panX0: number; panY0: number }
   | { kind: 'marquee'; startCanvasX: number; startCanvasY: number; shift: boolean };
-
-const SNAP = 10;
 
 export function Canvas() {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -30,6 +36,17 @@ export function Canvas() {
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; compId: string } | null>(null);
 
+  const gridSize = useEditorStore((s) => s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE);
+  const safeMargin = useEditorStore(
+    (s) => s.projectMeta?.theme?.layout?.safeMargin ?? DEFAULT_THEME.layout!.safeMargin,
+  );
+  const showGrid = useEditorStore((s) => s.projectMeta?.theme?.layout?.showGrid ?? true);
+  const showSafeArea = useEditorStore((s) => s.projectMeta?.theme?.layout?.showSafeArea ?? true);
+  const safeRect = useMemo(
+    () => safeRectFrom(safeMargin, canvasWidth, canvasHeight),
+    [safeMargin, canvasWidth, canvasHeight],
+  );
+
   /** 屏幕 → 画布坐标（含 pan，因为 viewport 的 rect 反映了 translate）。 */
   function clientToCanvas(clientX: number, clientY: number) {
     const rect = viewportRef.current!.getBoundingClientRect();
@@ -46,12 +63,16 @@ export function Canvas() {
       if (drag.kind === 'move') {
         const dx = (e.clientX - drag.mouseX) / st.zoom;
         const dy = (e.clientY - drag.mouseY) / st.zoom;
+        const layout = st.projectMeta?.theme?.layout;
+        const grid = layout?.gridSize ?? DEFAULT_GRID_SIZE;
+        const safe =
+          layout && layout.showSafeArea !== false
+            ? safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, st.canvasWidth, st.canvasHeight)
+            : null;
         for (const c of drag.comps) {
           if (c.locked) continue;
-          st.updateComponent(c.id, {
-            x: Math.round((c.x + dx) / SNAP) * SNAP,
-            y: Math.round((c.y + dy) / SNAP) * SNAP,
-          });
+          const { x, y } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, safe);
+          st.updateComponent(c.id, { x, y });
         }
       } else if (drag.kind === 'resize') {
         const dx = (e.clientX - drag.mouseX) / st.zoom;
@@ -149,7 +170,7 @@ export function Canvas() {
       .getState()
       .currentComponents()
       .filter((c) => ids.includes(c.id))
-      .map((c) => ({ id: c.id, x: c.x, y: c.y, locked: c.locked }));
+      .map((c) => ({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h, locked: c.locked }));
     dragRef.current = { kind: 'move', mouseX: e.clientX, mouseY: e.clientY, comps };
     e.preventDefault();
     e.stopPropagation();
@@ -273,15 +294,30 @@ export function Canvas() {
             transform: `scale(${zoom})`,
           }}
         >
-          {/* 20px 网格 */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              backgroundImage:
-                'linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px)',
-              backgroundSize: '20px 20px',
-            }}
-          />
+          {/* 网格叠加：大小 = theme.layout.gridSize */}
+          {showGrid && (
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px)',
+                backgroundSize: `${gridSize}px ${gridSize}px`,
+              }}
+            />
+          )}
+          {/* 安全区参考线（仅编辑画布；导出走 PageView，不渲染） */}
+          {showSafeArea && safeRect && (
+            <div
+              className="pointer-events-none absolute"
+              style={{
+                left: safeRect.left,
+                top: safeRect.top,
+                width: safeRect.right - safeRect.left,
+                height: safeRect.bottom - safeRect.top,
+                border: '1px dashed rgba(0,0,0,0.25)',
+              }}
+            />
+          )}
           {components.map((comp) => (
             <CanvasComponent
               key={comp.id}
