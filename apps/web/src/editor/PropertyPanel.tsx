@@ -29,6 +29,7 @@ import { ImageInput } from '@/components/ImageInput';
 import { parseCreatorLink } from './creatorLink';
 import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from './icons/IconPickerOverlay';
 import { findIcon } from './icons/catalog';
+import { sanitizeRichText } from './richText';
 import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from './kpiTokens';
 import { IconKit } from './icons/IconKit';
 import type { IconWeight } from '@mediakit/shared';
@@ -868,6 +869,82 @@ function TextareaField({ comp, field }: { comp: EditorComponent; field: Property
         className="w-full resize-y rounded border border-border-default px-2 py-1 text-foreground-primary"
       />
     </label>
+  );
+}
+
+/**
+ * 轻量富文本字段：toolbar（加粗/斜体/列表）+ contentEditable。
+ * 不受控：挂载时以 sanitize 后的 HTML 初始化；onBlur 时清洗并写回。
+ * contentEditable / execCommand 在 jsdom 不可用，编辑交互不单测。
+ */
+export function RichTextField({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+
+  // 仅挂载时初始化一次（避免重渲染覆盖用户正在编辑的内容）。
+  useEffect(() => {
+    if (ref.current && !initialized.current) {
+      ref.current.innerHTML = sanitizeRichText(value);
+      initialized.current = true;
+    }
+  }, [value]);
+
+  const exec = (cmd: string) => {
+    document.execCommand(cmd);
+    ref.current?.focus();
+  };
+
+  const commit = () => {
+    if (!ref.current) return;
+    const next = sanitizeRichText(ref.current.innerHTML);
+    if (next !== sanitizeRichText(value)) onChange(next);
+  };
+
+  return (
+    <div className="rounded border border-border-default">
+      <div className="flex gap-1 border-b border-border-subtle px-1 py-0.5">
+        <button
+          type="button"
+          title="加粗"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('bold');
+          }}
+          className="font-bold px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          B
+        </button>
+        <button
+          type="button"
+          title="斜体"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('italic');
+          }}
+          className="italic px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          I
+        </button>
+        <button
+          type="button"
+          title="列表"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('insertUnorderedList');
+          }}
+          className="px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          •
+        </button>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={commit}
+        className="min-h-[60px] px-2 py-1 text-xs text-foreground-primary focus:outline-none [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+      />
+    </div>
   );
 }
 
