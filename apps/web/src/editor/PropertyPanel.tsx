@@ -9,6 +9,7 @@ import type {
   ImageGroupData,
   KpiBoardData,
   KpiColorToken,
+  KpiTrendDirection,
   Page,
   PageGradient,
   GradientStop,
@@ -126,6 +127,7 @@ export function PropertyPanel() {
       {comp.type === 'creator-stats-strip' && <ReportCreatorStatsImporter comp={comp} />}
       {comp.type === 'creator-stats-strip' && <CreatorStatsFields comp={comp} />}
 
+      {comp.type === 'kpi-board' && <KpiCompareLabelField comp={comp} />}
       {comp.type === 'kpi-board' && <KpiRowStyleField comp={comp} />}
 
       {comp.type === 'work-screenshot' && <WorkScreenshotFields comp={comp} />}
@@ -947,10 +949,14 @@ function RichTextField({ value, onChange }: { value: string; onChange: (html: st
           •
         </button>
       </div>
+      {/* onInput 实时提交：Canvas 点击组件时 mousedown.preventDefault 会阻止 contentEditable 失焦，
+          仅依赖 onBlur 会导致编辑后的内容永远无法同步到画板；onInput 使内容随输入即时入库。
+          useEffect 仍在聚焦时跳过回写（见上），避免光标跳动。 */}
       <div
         ref={ref}
         contentEditable
         suppressContentEditableWarning
+        onInput={commit}
         onBlur={commit}
         className="min-h-[60px] px-2 py-1 text-xs text-foreground-primary focus:outline-none [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
       />
@@ -1413,6 +1419,23 @@ function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
   );
 }
 
+/** kpi-board：环比对比基准文字（全局），如 "vs 上期" / "vs 06.01–06.30" / "vs 目标"。 */
+function KpiCompareLabelField({ comp }: { comp: EditorComponent }) {
+  const update = useDataUpdate(comp);
+  const data = comp.data as KpiBoardData;
+  return (
+    <FieldGroup title="对比基准">
+      <input
+        value={data.compareLabel ?? ''}
+        placeholder="vs 上期"
+        onChange={(e) => update('compareLabel', e.target.value || undefined)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary outline-none focus:border-foreground-primary"
+      />
+      <div className="text-[11px] text-foreground-muted">显示在每行环比旁（平铺指标条等变体）；留空回退「vs 上期」。</div>
+    </FieldGroup>
+  );
+}
+
 /** kpi-board：每行配图标 + 数值主题色（写 data.icons / data.valueColors）。 */
 function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
   const update = useDataUpdate(comp);
@@ -1434,6 +1457,10 @@ function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
   function setColor(i: number, token: KpiColorToken | null) {
     update('valueColors', withAt(ensureLen(valueColors), i, token));
   }
+  const directions = data.trendDirections ?? [];
+  function setDirection(i: number, d: KpiTrendDirection | null) {
+    update('trendDirections', withAt(ensureLen(directions), i, d));
+  }
 
   return (
     <FieldGroup title="卡片样式（每行）">
@@ -1442,6 +1469,7 @@ function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
         const iconKey = icons[i] ?? null;
         const Icon = findIcon(iconKey ?? undefined)?.Comp;
         const color = valueColors[i] ?? null;
+        const direction: KpiTrendDirection = directions[i] ?? 'positive';
         return (
           <div key={i} className="flex items-center gap-2">
             <span className="w-20 truncate text-[11px] text-foreground-secondary">{r[0] ?? `行${i + 1}`}</span>
@@ -1473,6 +1501,21 @@ function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
                 />
               ))}
             </div>
+            <button
+              title={
+                direction === 'inverse'
+                  ? '逆向指标：下降为好（CPA/CPC 等）— 点击切回正向'
+                  : '正向指标：上升为好 — 点击切为逆向'
+              }
+              onClick={() => setDirection(i, direction === 'inverse' ? null : 'inverse')}
+              className={`rounded border px-1.5 text-[10px] font-medium ${
+                direction === 'inverse'
+                  ? 'border-[#22C55E] text-[#22C55E]'
+                  : 'border-border-default text-foreground-muted'
+              }`}
+            >
+              {direction === 'inverse' ? '降好' : '升好'}
+            </button>
           </div>
         );
       })}
