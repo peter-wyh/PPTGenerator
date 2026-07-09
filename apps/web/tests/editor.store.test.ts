@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useEditorStore, type ResizeDir } from '@/editor/store';
-import type { ProjectDetail } from '@mediakit/shared';
+import { type ProjectDetail, DEFAULT_THEME } from '@mediakit/shared';
 
 function makeDetail(overrides: Partial<ProjectDetail> = {}): ProjectDetail {
   return {
@@ -301,7 +301,7 @@ describe('editor store — safe-area hard clamp (move/resize/nudge)', () => {
   function loadWithSafe(components: ReturnType<typeof comp>[], showSafeArea = true) {
     useEditorStore.getState().loadProject(
       makeDetail({
-        meta: { theme: { layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea } } },
+        meta: { theme: { ...DEFAULT_THEME, layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea } } },
         pages: [{ id: 'p1', name: 'p', components }],
       }),
       'p',
@@ -388,5 +388,16 @@ describe('editor store — safe-area hard clamp (move/resize/nudge)', () => {
     const pasted = currentComps()[1];
     expect(pasted.x + pasted.w).toBeLessThanOrEqual(1232);
     expect(pasted.y + pasted.h).toBeLessThanOrEqual(672);
+  });
+
+  it('sanitizeComponent clamps current geometry into safe area (no history push)', () => {
+    loadWithSafe([comp('c1', 100, 100)]);
+    const before = useEditorStore.getState().historyIndex;
+    useEditorStore.getState().updateComponent('c1', { x: 5, y: 5 }); // 裸写越界
+    useEditorStore.getState().sanitizeComponent('c1');
+    const c = currentComps()[0];
+    expect(c.x).toBe(48);
+    expect(c.y).toBe(48);
+    expect(useEditorStore.getState().historyIndex).toBe(before); // 不入 history，由调用方 commit
   });
 });

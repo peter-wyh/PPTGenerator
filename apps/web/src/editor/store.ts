@@ -112,6 +112,7 @@ export interface EditorState {
   addShape: (shape: ShapeKind) => void;
   addShapeAt: (shape: ShapeKind, x: number, y: number) => void;
   updateComponent: (id: string, patch: Partial<EditorComponent>) => void;
+  sanitizeComponent: (id: string) => void;
   updateComponentData: (id: string, dataPatch: Record<string, unknown>) => void;
   /** 整体替换组件 data（导入数据用），落 history + 标脏。 */
   setComponentData: (id: string, data: ComponentData) => void;
@@ -542,6 +543,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
           cs.map((c) => (c.id === id ? { ...c, ...patch } : c)),
         ),
       })),
+
+    /** 把组件当前几何夹进安全区（不入 history；PropertyPanel 失焦时调用，紧接 commit()）。 */
+    sanitizeComponent: (id) =>
+      set((s) => {
+        const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return {
+          dirty: true,
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+            cs.map((c) => {
+              if (c.id !== id) return c;
+              const cl = clampRect({ x: c.x, y: c.y, w: c.w, h: c.h }, safe);
+              return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+            }),
+          ),
+        };
+      }),
 
     updateComponentData: (id, dataPatch) =>
       mutateAndCommit((s) => ({

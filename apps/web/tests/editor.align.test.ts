@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useEditorStore } from '@/editor/store';
-import type { ProjectDetail } from '@mediakit/shared';
+import { type ProjectDetail, DEFAULT_THEME } from '@mediakit/shared';
 
 const detail: ProjectDetail = {
   id: 'p',
@@ -101,7 +101,7 @@ describe('editor store — align / distribute / equalize', () => {
 });
 
 describe('align / distribute / equalize — safe-area clamp', () => {
-  const safeMeta = { theme: { layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true } } };
+  const safeMeta = { theme: { ...DEFAULT_THEME, layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true } } };
   // safe = {48,48,1232,672}
   function loadAtSafe(components: ReturnType<typeof comp>[]) {
     useEditorStore.getState().loadProject(
