@@ -51,6 +51,14 @@ const projectThemeSchema = z
       .optional(),
     density: z.enum(['compact', 'standard', 'spacious']).optional(),
     radius: z.enum(['sharp', 'small', 'large']).optional(),
+    layout: z
+      .object({
+        safeMargin: z.number().min(0).max(500),
+        gridSize: z.number().min(1).max(100),
+        showGrid: z.boolean().optional(),
+        showSafeArea: z.boolean().optional(),
+      })
+      .optional(),
     preset: z.string().max(120).optional(),
   })
   .optional();

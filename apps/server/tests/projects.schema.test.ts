@@ -52,3 +52,33 @@ describe('pageSchema 保留 bgGradient（存盘/重载 round-trip）', () => {
     expect(page.bgGradient).toBeUndefined();
   });
 });
+
+/** 取 createProjectSchema 内嵌的 projectThemeSchema 解析结果（meta.theme）。 */
+function parseTheme(theme: unknown) {
+  return createProjectSchema.parse({
+    name: 'p',
+    width: 1280,
+    height: 720,
+    meta: { theme: theme as never },
+  });
+}
+
+describe('projectThemeSchema.layout', () => {
+  it('accepts a theme with a valid layout', () => {
+    const r = parseTheme({ layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true } });
+    expect(r.meta?.theme?.layout).toEqual({ safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true });
+  });
+
+  it('accepts a theme without layout (optional)', () => {
+    const r = parseTheme({ color: { primary: '#FF5C00' } });
+    expect(r.meta?.theme?.layout).toBeUndefined();
+  });
+
+  it('rejects gridSize out of range (0)', () => {
+    expect(() => parseTheme({ layout: { safeMargin: 40, gridSize: 0 } })).toThrow();
+  });
+
+  it('rejects safeMargin out of range (negative)', () => {
+    expect(() => parseTheme({ layout: { safeMargin: -5, gridSize: 10 } })).toThrow();
+  });
+});
