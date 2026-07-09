@@ -3,6 +3,7 @@
  * 避免循环依赖（REGISTRY 含 React 组件）。忠实 demo.html。
  */
 import type { ComponentType, ComponentData, MetaStripData, ShapeKind, ShapeData } from '@mediakit/shared';
+import { campaignWorkScreenshots } from '@/api/creatorPerformance';
 
 export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   text: { w: 300, h: 60 },
@@ -398,13 +399,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'work-screenshot':
       return {
-        variant: 'grid',
-        title: '作品截图',
-        images: [
-          { src: '', caption: '代表作 1' },
-          { src: '', caption: '代表作 2' },
-          { src: '', caption: '代表作 3' },
-        ],
+        variant: 'auto',
+        title: '达人作品截图',
+        images: campaignWorkScreenshots('camp-glowlab-q4'),
       };
     case 'work-metrics':
       return {

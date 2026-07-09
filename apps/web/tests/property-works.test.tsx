@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { useEditorStore } from '@/editor/store';
 import { PropertyPanel } from '@/editor/PropertyPanel';
 import type {
   CommentWordcloudData,
   ProjectDetail,
+  ReportCampaign,
   WorkMetricsData,
   WorkScreenshotData,
 } from '@mediakit/shared';
@@ -39,7 +40,7 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    expect(screen.getAllByPlaceholderText('说明').length).toBe(3); // 默认 3 张
+    expect(screen.getAllByPlaceholderText('说明').length).toBe(9); // 默认 9 张（camp-glowlab-q4）
     expect(screen.getByRole('button', { name: /添加图片/ })).toBeInTheDocument();
   });
 
@@ -53,6 +54,34 @@ describe('WorkScreenshotFields', () => {
     fireEvent.change(screen.getAllByPlaceholderText('说明')[0], { target: { value: '代表作 A' } });
     const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
     expect(data.images[0].caption).toBe('代表作 A');
+  });
+
+  it('imports creator work screenshots from a bound campaign', async () => {
+    const store = useEditorStore.getState();
+    store.loadProject(emptyProject, 'p');
+    store.setReportData({
+      campaign: { id: 'camp-glowlab-q4', name: 'GlowLab Q4' } as unknown as ReportCampaign,
+      creators: [],
+    });
+    store.addComponent('work-screenshot');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+    // 先清空，验证导入确实写入 9 张
+    store.updateComponentData(id, { images: [] });
+    store.commit();
+
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /导入「GlowLab Q4」/ }));
+
+    await waitFor(() => {
+      const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
+      expect(data.images).toHaveLength(9);
+      expect(data.images[0].src).toContain('picsum.photos');
+    });
   });
 });
 

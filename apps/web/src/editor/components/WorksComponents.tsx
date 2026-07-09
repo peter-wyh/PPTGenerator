@@ -8,8 +8,8 @@ import type {
   Sentiment,
   WorkMetricsData,
   WorkScreenshotData,
-  WorkScreenshotItem,
 } from '@mediakit/shared';
+import { resolveLayout, buildGridStyle, cellStyle } from './ImageGroupComponent';
 
 /* ------------------------------ shared shell ------------------------------ */
 
@@ -45,9 +45,9 @@ function Screenshot({ src, caption, cls }: { src: string; caption?: string; cls?
   );
 }
 
-/** 作品截图墙：4 种组图版式，由 data.variant 切换；缺省 'grid'。 */
+/** 作品截图墙：复用组图按张数自动选版的马赛克引擎；外壳保留标题 + 截图说明。 */
 export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
-  const { variant = 'grid', title, images = [] } = data;
+  const { variant, title, images = [], gap = 8 } = data;
 
   if (images.length === 0) {
     return (
@@ -58,71 +58,19 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
       </Shell>
     );
   }
-  if (variant === 'masonry') return <MasonryGallery title={title} images={images} />;
-  if (variant === 'hero') return <HeroGallery title={title} images={images} />;
-  if (variant === 'skew') return <SkewGallery title={title} images={images} />;
-  return <GridGallery title={title} images={images} />;
-}
 
-function GridGallery({ title, images }: { title?: string; images: WorkScreenshotItem[] }) {
+  const layout = resolveLayout(variant, images.length);
   return (
     <Shell title={title}>
-      <div className="grid h-full w-full grid-cols-3 gap-2">
-        {images.map((im, i) => (
-          <Screenshot key={i} src={im.src} caption={im.caption} cls="aspect-square w-full" />
-        ))}
-      </div>
-    </Shell>
-  );
-}
-
-function MasonryGallery({ title, images }: { title?: string; images: WorkScreenshotItem[] }) {
-  return (
-    <Shell title={title}>
-      <div className="h-full w-full columns-3 gap-2">
-        {images.map((im, i) => (
-          <div key={i} className="mb-2 break-inside-avoid">
-            <Screenshot src={im.src} caption={im.caption} cls="aspect-[4/5] w-full" />
-          </div>
-        ))}
-      </div>
-    </Shell>
-  );
-}
-
-function HeroGallery({ title, images }: { title?: string; images: WorkScreenshotItem[] }) {
-  const [main, ...rest] = images;
-  return (
-    <Shell title={title}>
-      <div className="flex h-full w-full flex-col gap-2">
-        <div className="min-h-0 flex-1">
-          <Screenshot src={main.src} caption={main.caption} />
-        </div>
-        {rest.length > 0 && (
-          <div className="flex flex-none gap-2 overflow-x-auto">
-            {rest.map((im, i) => (
-              <Screenshot key={i} src={im.src} caption={im.caption} cls="h-16 w-16 flex-none" />
-            ))}
-          </div>
-        )}
-      </div>
-    </Shell>
-  );
-}
-
-function SkewGallery({ title, images }: { title?: string; images: WorkScreenshotItem[] }) {
-  return (
-    <Shell title={title}>
-      <div className="grid h-full w-full content-center grid-cols-3 gap-3 p-2">
-        {images.map((im, i) => (
-          <div
-            key={i}
-            className="aspect-square w-full shadow-md"
-            style={{ transform: `rotate(${i % 2 === 0 ? -3 : 3}deg)` }}
-          >
-            <Screenshot src={im.src} caption={im.caption} />
-          </div>
-        ))}
+      <div className="h-full w-full" style={buildGridStyle(layout, gap)}>
+        {layout.cells.map((cell, i) => {
+          const im = images[i];
+          return (
+            <div key={i} style={cellStyle(cell)} className="bg-surface-hover">
+              <Screenshot src={im?.src ?? ''} caption={im?.caption} />
+            </div>
+          );
+        })}
       </div>
     </Shell>
   );

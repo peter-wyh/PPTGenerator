@@ -6,7 +6,7 @@ import type { WorkScreenshotData, WorkMetricsData } from '@mediakit/shared';
 describe('WorkScreenshot', () => {
   it('renders the title and a placeholder tile for each image lacking src', () => {
     const data: WorkScreenshotData = {
-      variant: 'grid',
+      variant: 'auto',
       title: '代表作',
       images: [{ src: '' }, { src: '' }],
     };
@@ -18,7 +18,7 @@ describe('WorkScreenshot', () => {
 
   it('renders provided screenshot images', () => {
     const data: WorkScreenshotData = {
-      variant: 'grid',
+      variant: 'auto',
       images: [{ src: 'a.jpg' }, { src: 'b.jpg' }],
     };
     render(<WorkScreenshot data={data} />);
@@ -26,8 +26,28 @@ describe('WorkScreenshot', () => {
     expect(imgs.map((i) => i.getAttribute('src'))).toEqual(['a.jpg', 'b.jpg']);
   });
 
-  it('every variant renders the images without throwing', () => {
-    for (const v of ['grid', 'masonry', 'hero', 'skew'] as const) {
+  it('uses count-based mosaic layout: 2 images → 2 columns (duo)', () => {
+    const { container } = render(
+      <WorkScreenshot data={{ variant: 'auto', images: [{ src: 'a.jpg' }, { src: 'b.jpg' }] }} />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(grid?.style.gridTemplateColumns).toBe('repeat(2, 1fr)');
+  });
+
+  it('uses count-based mosaic layout: 9 images → 3 columns (nona)', () => {
+    const { container } = render(
+      <WorkScreenshot
+        data={{ variant: 'auto', images: Array.from({ length: 9 }, () => ({ src: 'x.jpg' })) }}
+      />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(grid?.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
+  });
+
+  it('every image-group variant renders the images without throwing', () => {
+    for (const v of [
+      'auto', 'duo', 'trio', 'quad', 'mosaic-5', 'hex', 'septet', 'nona', 'duoza',
+    ] as const) {
       const { unmount } = render(
         <WorkScreenshot data={{ variant: v, images: [{ src: 'x.jpg' }, { src: 'y.jpg' }] }} />,
       );
@@ -37,7 +57,7 @@ describe('WorkScreenshot', () => {
   });
 
   it('shows an empty hint when there are no images', () => {
-    render(<WorkScreenshot data={{ variant: 'grid', images: [] }} />);
+    render(<WorkScreenshot data={{ variant: 'auto', images: [] }} />);
     expect(screen.getByText('暂无作品截图')).toBeInTheDocument();
   });
 });
