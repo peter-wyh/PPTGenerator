@@ -70,6 +70,9 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     // 向后兼容：--accent-primary / --accent-secondary（index.css 与旧 chrome 仍用）
     '--accent-primary': t.color.primary,
     '--accent-secondary': t.color.secondary,
+    // 布局
+    '--grid-size': `${t.layout?.gridSize ?? DEFAULT_THEME.layout!.gridSize}px`,
+    '--safe-margin': `${t.layout?.safeMargin ?? DEFAULT_THEME.layout!.safeMargin}px`,
   };
 
   // 图表配色：--chart-1 … --chart-6
