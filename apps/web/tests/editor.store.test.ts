@@ -296,3 +296,68 @@ describe('editor store — undo / redo', () => {
     expect(useEditorStore.getState().historyIndex).toBe(0);
   });
 });
+
+describe('editor store — safe-area hard clamp (move/resize/nudge)', () => {
+  function loadWithSafe(components: ReturnType<typeof comp>[], showSafeArea = true) {
+    useEditorStore.getState().loadProject(
+      makeDetail({
+        meta: { theme: { layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea } } },
+        pages: [{ id: 'p1', name: 'p', components }],
+      }),
+      'p',
+    );
+  }
+  // safeRectFrom(48,1280,720) = {left:48,top:48,right:1232,bottom:672}
+
+  it('move clamps a component dragged past the safe edge', () => {
+    loadWithSafe([comp('c1', 100, 100)]);
+    useEditorStore.getState().move(['c1'], -200, -200); // → -100,-100 → clamp 48,48
+    const c = currentComps()[0];
+    expect(c.x).toBe(48);
+    expect(c.y).toBe(48);
+  });
+
+  it('move still clamps when showSafeArea is false (decoupled from guide)', () => {
+    loadWithSafe([comp('c1', 100, 100)], false);
+    useEditorStore.getState().move(['c1'], -200, -200);
+    const c = currentComps()[0];
+    expect(c.x).toBe(48);
+    expect(c.y).toBe(48);
+  });
+
+  it('move shrinks an oversized component to fit on first touch', () => {
+    loadWithSafe([comp('c1', 0, 0, 2000, 1000)]);
+    useEditorStore.getState().move(['c1'], 5, 5);
+    const c = currentComps()[0];
+    expect(c.w).toBe(1184);
+    expect(c.h).toBe(624);
+    expect(c.x).toBe(48);
+    expect(c.y).toBe(48);
+  });
+
+  it('resize clamps the east edge to the safe right line', () => {
+    loadWithSafe([comp('c1', 1100, 100, 100, 80)]);
+    useEditorStore.getState().resize('c1', 'e', 500, 0, { x: 1100, y: 100, w: 100, h: 80 });
+    const c = currentComps()[0];
+    expect(c.x).toBe(1100);
+    expect(c.w).toBe(132); // 1232-1100（clamp 在 grid snap 之后，不重新对齐）
+    expect(c.x + c.w).toBe(1232);
+  });
+
+  it('resize clamps west edge, preserving the right edge', () => {
+    loadWithSafe([comp('c1', 100, 100)]); // w=200, right=300
+    useEditorStore.getState().resize('c1', 'w', -200, 0, { x: 100, y: 100, w: 200, h: 80 });
+    const c = currentComps()[0];
+    expect(c.x).toBe(48);
+    expect(c.x + c.w).toBe(300); // 对边不动
+  });
+
+  it('nudge clamps into safe area', () => {
+    loadWithSafe([comp('c1', 50, 50)]);
+    useEditorStore.getState().select('c1');
+    useEditorStore.getState().nudge(-100, -100); // → -50,-50 → clamp 48,48
+    const c = currentComps()[0];
+    expect(c.x).toBe(48);
+    expect(c.y).toBe(48);
+  });
+});

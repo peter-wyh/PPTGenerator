@@ -22,7 +22,7 @@ import {
   MIN_W,
   DEFAULT_GRID_SIZE,
 } from './defaults';
-import { snapMove, snapResize, safeRectFrom } from './snap';
+import { snapMove, snapResize, clampRect, clampResize, safeRectFrom, type SafeRect } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
 import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
@@ -223,6 +223,12 @@ function snapCtx(
       ? safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch)
       : null;
   return { grid, safe };
+}
+
+/** 夹紧用的安全区：只看 safeMargin>0，不看 showSafeArea（隐藏参考线仍夹紧）。与 snapCtx 的磁吸 safe 解耦。 */
+function clampSafeFrom(meta: ProjectMeta | null, cw: number, ch: number): SafeRect | null {
+  const margin = meta?.theme?.layout?.safeMargin ?? DEFAULT_THEME.layout!.safeMargin;
+  return safeRectFrom(margin, cw, ch);
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
@@ -542,14 +548,16 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     move: (ids, dx, dy) =>
       set((s) => {
-        const { grid, safe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const { grid, safe: snapSafe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
         return {
           dirty: true,
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
             cs.map((c) => {
               if (!ids.includes(c.id) || c.locked) return c;
-              const { x, y } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, safe);
-              return { ...c, x, y };
+              const { x: sx, y: sy } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, snapSafe);
+              const cl = clampRect({ x: sx, y: sy, w: c.w, h: c.h }, clampSafe);
+              return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
             }),
           ),
         };
@@ -557,7 +565,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     resize: (id, dir, dx, dy, start) =>
       set((s) => {
-        const { grid, safe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const { grid, safe: snapSafe } = snapCtx(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
         return {
           dirty: true,
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
@@ -574,8 +583,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
                 h = Math.max(MIN_H, start.h - dy);
                 y = start.y + start.h - h;
               }
-              const snapped = snapResize({ x, y, w, h }, dir, grid, safe);
-              return { ...c, ...snapped };
+              const snapped = snapResize({ x, y, w, h }, dir, grid, snapSafe);
+              const cl = clampResize(snapped, dir, clampSafe);
+              return { ...c, ...cl };
             }),
           ),
         };
@@ -606,13 +616,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }),
 
     nudge: (dx, dy) =>
-      mutateAndCommit((s) => ({
-        pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
-          cs.map((c) =>
-            s.selectedIds.includes(c.id) && !c.locked ? { ...c, x: c.x + dx, y: c.y + dy } : c,
+      mutateAndCommit((s) => {
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        return {
+          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
+            cs.map((c) => {
+              if (!s.selectedIds.includes(c.id) || c.locked) return c;
+              const cl = clampRect({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, clampSafe);
+              return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+            }),
           ),
-        ),
-      })),
+        };
+      }),
 
     copy: () =>
       set((s) => {
