@@ -7,10 +7,14 @@ interface Props {
 
 /** 把场景模板（多页序列）展开成一批页面，一次性生成。 */
 function applyScenario(scenario: ScenarioTemplate) {
-  const pages = scenario.pages.map((sp) => ({
-    name: sp.name,
-    components: getTemplate(sp.templateId)?.components() ?? [],
-  }));
+  const pages = scenario.pages.map((sp) => {
+    const tpl = getTemplate(sp.templateId);
+    return {
+      name: sp.name,
+      components: tpl?.components() ?? [],
+      ...(tpl?.pageTitleIndex != null ? { titleComponentIndex: tpl.pageTitleIndex } : {}),
+    };
+  });
   useEditorStore.getState().addPagesBatch(pages);
 }
 

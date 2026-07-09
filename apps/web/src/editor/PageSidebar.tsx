@@ -27,7 +27,13 @@ export function PageSidebar() {
     if (tpl.id === 'blank') {
       useEditorStore.getState().addPage();
     } else {
-      useEditorStore.getState().addPageWithComponents(tpl.name, tpl.components());
+      useEditorStore
+        .getState()
+        .addPageWithComponents(
+          tpl.name,
+          tpl.components(),
+          tpl.pageTitleIndex != null ? { titleComponentIndex: tpl.pageTitleIndex } : undefined,
+        );
     }
     setShowTemplates(false);
   }
@@ -93,6 +99,18 @@ export function PageSidebar() {
                 </span>
               )}
               <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                <button
+                  title={p.pageType === 'media-report' ? '取消投放报告标题' : '设为投放报告标题'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useEditorStore
+                      .getState()
+                      .setPageType(p.id, p.pageType === 'media-report' ? undefined : 'media-report');
+                  }}
+                  className="rounded px-1 py-0.5 text-xs hover:bg-surface-hover"
+                >
+                  {p.pageType === 'media-report' ? '🔹' : '⚪'}
+                </button>
                 <button
                   title="复制页面"
                   onClick={(e) => {
