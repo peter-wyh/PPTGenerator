@@ -536,7 +536,7 @@ function mockCompare(campaignId: string, idx: number): string {
 
 /**
  * campaign 维度汇总：其下所有达人 totals 之和 → 9 项合并指标
- * （覆盖参考图：GMV/佣金/ROAS/点击/转化/CVR/AOV + 花费/展示）。
+ * （GMV/Commission/ROAS/Clicks/Conversions/CVR/AOV/Spend/Impressions，默认英文标签）。
  * campaign = Σ creators，保证看板汇总与达人明细自洽。
  */
 export function rollupCampaignMetrics(campaignId: string): CampaignMetric[] {
@@ -557,14 +557,14 @@ export function rollupCampaignMetrics(campaignId: string): CampaignMetric[] {
   const aov = sum.orders ? sum.gmv / sum.orders : 0;
   return [
     { label: 'GMV', value: money(sum.gmv), compare: mockCompare(campaignId, 0) },
-    { label: '佣金', value: money(sum.commission), compare: mockCompare(campaignId, 1) },
+    { label: 'Commission', value: money(sum.commission), compare: mockCompare(campaignId, 1) },
     { label: 'ROAS', value: roas.toFixed(2), compare: mockCompare(campaignId, 2) },
-    { label: '点击', value: fmt(sum.clicks), compare: mockCompare(campaignId, 3) },
-    { label: '转化', value: fmt(sum.orders), compare: mockCompare(campaignId, 4) },
+    { label: 'Clicks', value: fmt(sum.clicks), compare: mockCompare(campaignId, 3) },
+    { label: 'Conversions', value: fmt(sum.orders), compare: mockCompare(campaignId, 4) },
     { label: 'CVR', value: pct2(cvr), compare: mockCompare(campaignId, 5) },
     { label: 'AOV', value: money(aov), compare: mockCompare(campaignId, 6) },
-    { label: '花费', value: money(sum.cpsSpend), compare: mockCompare(campaignId, 7) },
-    { label: '展示', value: compact(sum.impressions), compare: mockCompare(campaignId, 8) },
+    { label: 'Spend', value: money(sum.cpsSpend), compare: mockCompare(campaignId, 7) },
+    { label: 'Impressions', value: compact(sum.impressions), compare: mockCompare(campaignId, 8) },
   ];
 }
 
@@ -592,8 +592,8 @@ export function rollupCreatorTotals(creatorId: string): CampaignMetric[] {
   return [
     { label: 'GMV', value: money(sum.gmv), compare: '' },
     { label: 'ROAS', value: roas.toFixed(2), compare: '' },
-    { label: '转化', value: fmt(sum.orders), compare: '' },
-    { label: '佣金', value: money(sum.commission), compare: '' },
+    { label: 'Conversions', value: fmt(sum.orders), compare: '' },
+    { label: 'Commission', value: money(sum.commission), compare: '' },
   ];
 }
 

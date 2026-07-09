@@ -111,7 +111,7 @@ export interface CampaignInfo {
 
 /** Campaign 投放表现指标项；与 kpi-board 行 [指标, 数值, 对比] 同构。 */
 export interface CampaignMetric {
-  label: string;   // 指标名，如 "花费"
+  label: string;   // 指标名，如 "Spend"（默认英文，与 kpi-board 默认指标对齐）
   value: string;   // 数值，如 "¥128,000"
   compare: string; // 对比文本，如 "+15%"（kpi-board 渲染器按首字符 +/- 自动着色）
 }

@@ -89,4 +89,28 @@ describe('StrategyBlockComponent variants', () => {
     expect(screen.getAllByText('•')).toHaveLength(1);
     expect(container.querySelector('ul')).not.toBeNull();
   });
+
+  it('bulleted 多行内容两两成对：body 为 grid-cols-2，每视觉行 2 个 bullet', () => {
+    const { container } = render(
+      <StrategyBlockComponent
+        data={{
+          variant: 'bulleted',
+          headers,
+          rows: [
+            ['target', 'HEADER', ''],
+            ['sparkle', 'X', 'item1'],
+            ['sparkle', 'X', 'item2'],
+            ['sparkle', 'X', 'item3'],
+            ['sparkle', 'X', 'item4'],
+          ],
+          highlights,
+        } as StrategyBlockData}
+      />,
+    );
+    // 首行作标题；4 个 body 行 → 4 个项目符号。
+    expect(screen.getByText('HEADER')).toBeInTheDocument();
+    expect(screen.getAllByText('•')).toHaveLength(4);
+    // body 列表容器为 2 列网格（两两成对：1 卡片含 2 个策略块配置）。
+    expect(container.querySelector('.grid-cols-2')).not.toBeNull();
+  });
 });

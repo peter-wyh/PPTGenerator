@@ -214,9 +214,9 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
     );
   }
 
-  // grid（默认 3 列）
+  // grid（默认 3 列）：指标格无 gap，彼此紧贴并贴区块边缘（默认尺寸不留 padding）。
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto">
+    <div className="grid h-full w-full grid-cols-3 overflow-auto">
       {items.map((it, i) => (
         <Card key={i} {...it} />
       ))}
@@ -541,7 +541,7 @@ function StrategyLabeled({ data }: { data: StrategyBlockData }) {
   );
 }
 
-/** bulleted（参考#5）：卡片 + 首行作小标题（图标+标题、下方分隔）+ 其余行 • 项目符号列表。 */
+/** bulleted（参考#5）：卡片 + 首行作小标题（图标+标题、下方分隔）+ 其余行 • 项目符号列表（两两成对，1 卡含 2 个策略块配置）。 */
 function StrategyBulleted({ data }: { data: StrategyBlockData }) {
   const rows = data.rows ?? [];
   if (rows.length === 0) {
@@ -563,7 +563,7 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
         </span>
       </div>
       {bodyRows.length > 0 && (
-        <div className="mt-3 border-t border-border-subtle pt-3">
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-0.5 border-t border-border-subtle pt-3">
           {bodyRows.map((r, i) => {
             const content = r[2] || r[1] || '';
             return (

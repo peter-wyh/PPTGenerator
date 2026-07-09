@@ -61,13 +61,16 @@ describe('KpiBoard · card 变体', () => {
 });
 
 describe('KpiBoard · grid/row 去边框', () => {
-  it('grid 无 border class、无外层 padding', () => {
+  it('grid 无 border class、无外层 padding、指标格无 gap 紧贴', () => {
     const { container } = render(
       <KpiBoard data={{ variant: 'grid', headers: ['指标', '数值', '对比'], rows: [['A', '1', '']] }} />,
     );
     expect(container.querySelector('.border-border-default')).toBeNull();
     expect(container.querySelector('.border-border-subtle')).toBeNull();
     expect(container.querySelector('.bg-surface-primary')).toBeNull();
+    // 指标格之间、与区块边缘之间不留间距（默认尺寸不要留 padding）。
+    expect(container.querySelector('.gap-2')).toBeNull();
+    expect(container.querySelector('.gap-3')).toBeNull();
   });
 
   it('row 无 border class', () => {
@@ -188,6 +191,13 @@ describe('kpi-board 注册与默认数据', () => {
     expect(data.icons?.length).toBe(data.rows.length);
     expect(data.valueColors?.length).toBe(data.rows.length);
   });
+
+  it('默认数据 = campaign 全量 9 项英文指标', () => {
+    const data = getDefaultData('kpi-board') as KpiBoardData;
+    expect(data.rows.map((r) => r[0])).toEqual([
+      'GMV', 'Commission', 'ROAS', 'Clicks', 'Conversions', 'CVR', 'AOV', 'Spend', 'Impressions',
+    ]);
+  });
 });
 
 describe('KpiImportButton', () => {
@@ -235,10 +245,10 @@ describe('KpiRowStyleField', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    // 默认 8 行，第一行 label 是 'Sales'
-    expect(screen.getByText('Sales')).toBeInTheDocument();
-    // 每行 5 个色块，title='红' 每行一个 → 8 行共 8 个
-    expect(screen.getAllByTitle('红').length).toBe(8);
+    // 默认 9 行，第一行 label 是 'GMV'
+    expect(screen.getByText('GMV')).toBeInTheDocument();
+    // 每行 5 个色块，title='红' 每行一个 → 9 行共 9 个
+    expect(screen.getAllByTitle('红').length).toBe(9);
   });
 
   it('点色块写入 valueColors[i]', () => {

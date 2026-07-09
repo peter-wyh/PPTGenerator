@@ -31,7 +31,7 @@ import { ImageInput } from '@/components/ImageInput';
 import { parseCreatorLink } from './creatorLink';
 import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from './icons/IconPickerOverlay';
 import { findIcon } from './icons/catalog';
-import { sanitizeRichText } from './richText';
+import { sanitizeRichText, renderHtmlWithHighlights } from './richText';
 import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from './kpiTokens';
 import { IconKit } from './icons/IconKit';
 import type { IconWeight } from '@mediakit/shared';
@@ -903,20 +903,32 @@ function TextareaField({ comp, field }: { comp: EditorComponent; field: Property
 /**
  * 轻量富文本字段：toolbar（加粗/斜体/列表）+ contentEditable。
  * 不受控：挂载时以 sanitize 后的 HTML 初始化；onBlur 时清洗并写回。
+ * 高亮整合：未聚焦时按 highlights 属性渲染高亮 span（命中词包强调色），
+ *   内容随 highlights 属性变化即时重算（「内容伴随属性调整」）；
+ *   聚焦中不回写以保光标；commit 始终存清洗后的纯 HTML（高亮 span 不入库）。
  * contentEditable / execCommand 在 jsdom 不可用，编辑交互不单测。
  */
-function RichTextField({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+function RichTextField({
+  value,
+  highlights,
+  onChange,
+}: {
+  value: string;
+  highlights?: string;
+  onChange: (html: string) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // 同步外部 value → contentEditable：仅在未聚焦时写入，避免覆盖用户正在编辑的光标。
-  // 这样删除/重排行（index key 复用实例）或 undo 时，正文也能正确跟随 data。
+  // 同步外部 value/highlights → contentEditable：仅在未聚焦时写入，避免覆盖用户正在编辑的光标。
+  // 这样删除/重排行（index key 复用实例）或 undo 时，正文也能正确跟随 data；
+  // 改高亮词时，未聚焦的编辑器即时重算高亮（聚焦中的编辑器失焦后再重算）。
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     if (document.activeElement === el) return; // 聚焦中：不干预编辑。
-    const sanitized = sanitizeRichText(value);
-    if (el.innerHTML !== sanitized) el.innerHTML = sanitized;
-  }, [value]);
+    const html = renderHtmlWithHighlights(value, highlights);
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }, [value, highlights]);
 
   const exec = (cmd: string) => {
     document.execCommand(cmd);
@@ -1419,7 +1431,7 @@ function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
         </button>
       )}
       <div className="text-[11px] text-foreground-muted">
-        导入选中 campaign 的投放表现指标（花费/展示/点击/转化/CTR/ROAS），覆盖当前表格。
+        导入选中 campaign 的投放表现指标（Spend/Impressions/Clicks/Conversions/CTR/ROAS），覆盖当前表格。
       </div>
       {open && (
         <ImportCampaignModal
@@ -1621,6 +1633,16 @@ function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
 
   return (
     <FieldGroup title="策略块">
+      {/* 全局高亮词：渲染时对各行命中词包强调 span；编辑器内未聚焦时即时预览。 */}
+      <label className="block text-xs text-foreground-secondary">
+        <span className="mb-1 block">高亮词（逗号分隔）</span>
+        <input
+          value={data.highlights ?? ''}
+          placeholder="高亮词（逗号分隔）"
+          onChange={(e) => update('highlights', e.target.value)}
+          className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary outline-none focus:border-foreground-primary"
+        />
+      </label>
       <div className="space-y-2">
         {rows.map((row, i) => (
           <div key={i} className="space-y-1 rounded border border-border-subtle p-1">
@@ -1645,6 +1667,7 @@ function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
             </div>
             <RichTextField
               value={row[2] ?? ''}
+              highlights={data.highlights}
               onChange={(html) => setRow(i, [row[0] ?? '', row[1] ?? '', html])}
             />
           </div>

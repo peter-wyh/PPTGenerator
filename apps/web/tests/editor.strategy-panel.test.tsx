@@ -83,4 +83,36 @@ describe('StrategyBlockFields panel', () => {
     expect(editables[0].textContent).toContain('content-beta');
     expect(editables[0].textContent).not.toContain('content-alpha');
   });
+
+  it('高亮词输入：编辑写入 data.highlights（高亮控件整合进策略块编辑器）', () => {
+    setStrategyBlock([['sparkle', 'INSIGHT', 'focus on tips']]);
+    render(<PropertyPanel />);
+    const input = screen.getByPlaceholderText('高亮词（逗号分隔）') as HTMLInputElement;
+    expect(input.value).toBe('tips'); // 初始回填
+    fireEvent.change(input, { target: { value: 'beauty, tips' } });
+    const comp = useEditorStore.getState().pages[0].components[0];
+    expect((comp.data as any).highlights).toBe('beauty, tips');
+  });
+
+  it('RichTextField 未聚焦时对命中词渲染高亮 span（高亮整合进富文本编辑器、随属性联动）', () => {
+    setStrategyBlock([['sparkle', 'INSIGHT', 'focus on tips']]); // highlights: 'tips'
+    render(<PropertyPanel />);
+    const editable = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    expect(editable).toBeTruthy();
+    // 未聚焦 → 编辑器内对命中词 'tips' 渲染高亮 span（内容随 highlights 属性调整）。
+    expect(editable.querySelector('.text-accent-secondary')).not.toBeNull();
+  });
+
+  it('改高亮词 → 未聚焦的编辑器即时重算高亮（内容伴随属性调整）', () => {
+    setStrategyBlock([['sparkle', 'INSIGHT', 'focus on beauty tips']]); // highlights: 'tips'
+    render(<PropertyPanel />);
+    const editable = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    // 初始 highlights='tips' → 仅 'tips' 命中。
+    expect(editable.querySelectorAll('.text-accent-secondary')).toHaveLength(1);
+    expect(editable.querySelector('.text-accent-secondary')?.textContent).toBe('tips');
+    // 改高亮词为 'beauty' → 重算后 'beauty' 命中、'tips' 不再命中。
+    fireEvent.change(screen.getByPlaceholderText('高亮词（逗号分隔）'), { target: { value: 'beauty' } });
+    expect(editable.querySelectorAll('.text-accent-secondary')).toHaveLength(1);
+    expect(editable.querySelector('.text-accent-secondary')?.textContent).toBe('beauty');
+  });
 });

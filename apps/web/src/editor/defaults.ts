@@ -266,17 +266,18 @@ export function getDefaultData(type: ComponentType): ComponentData {
         variant: 'grid',
         headers: ['指标', '数值', '对比'],
         rows: [
-          ['Sales', '¥1.24M', '+15%'],
+          ['GMV', '¥1.24M', '+15%'],
           ['Commission', '¥98K', '+12%'],
           ['ROAS', '3.21', '+12%'],
           ['Clicks', '120K', '-3%'],
           ['Conversions', '4.35K', '+18%'],
           ['CVR', '3.8%', '+0.4%'],
           ['AOV', '¥72.5', '+1%'],
-          ['New Customer', '62%', '+5%'],
+          ['Spend', '¥128K', '+8%'],
+          ['Impressions', '4.2M', '+6%'],
         ],
-        icons: ['currency', 'currency', 'target', 'eye', 'cart', 'percent', 'currency', 'users'],
-        valueColors: ['success', 'success', 'info', 'warning', 'success', 'info', 'primary', 'info'],
+        icons: ['currency', 'currency', 'target', 'eye', 'cart', 'percent', 'currency', 'currency', 'eye'],
+        valueColors: ['success', 'success', 'info', 'warning', 'success', 'info', 'primary', 'warning', 'info'],
         compareLabel: 'vs 上期',
       };
     case 'meta-strip':

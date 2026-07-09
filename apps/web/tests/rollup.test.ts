@@ -9,10 +9,10 @@ import {
 const num = (s: string): number => Number(s.replace(/[^\d.]/g, ''));
 
 describe('rollupCampaignMetrics · campaign = Σ creators', () => {
-  it('9 项合并指标 + 固定标签顺序（覆盖参考图 + 花费/展示）', () => {
+  it('9 项合并指标 + 固定英文标签顺序（GMV/Commission/ROAS/Clicks/Conversions/CVR/AOV/Spend/Impressions）', () => {
     const m = rollupCampaignMetrics('camp-glowlab-q4');
     expect(m.map((x) => x.label)).toEqual([
-      'GMV', '佣金', 'ROAS', '点击', '转化', 'CVR', 'AOV', '花费', '展示',
+      'GMV', 'Commission', 'ROAS', 'Clicks', 'Conversions', 'CVR', 'AOV', 'Spend', 'Impressions',
     ]);
   });
 
@@ -28,18 +28,18 @@ describe('rollupCampaignMetrics · campaign = Σ creators', () => {
     expect(campaignGmv).toBe(sumCreatorGmv);
   });
 
-  it('campaign 转化(订单) = 其下所有达人订单之和', async () => {
+  it('campaign Conversions(订单) = 其下所有达人订单之和', async () => {
     const metrics = rollupCampaignMetrics('camp-nova-home-618');
-    const campaignOrders = num(metrics.find((m) => m.label === '转化')!.value);
+    const campaignOrders = num(metrics.find((m) => m.label === 'Conversions')!.value);
     const perfs = await listCreatorPerformance('camp-nova-home-618');
     const sumOrders = perfs.reduce((s, p) => s + num(p.cps.orders), 0);
     expect(campaignOrders).toBe(sumOrders);
   });
 
-  it('ROAS = GMV / 花费（汇总后重算，非加性指标）', () => {
+  it('ROAS = GMV / Spend（汇总后重算，非加性指标）', () => {
     const metrics = rollupCampaignMetrics('camp-glowlab-q4');
     const gmv = num(metrics.find((m) => m.label === 'GMV')!.value);
-    const spend = num(metrics.find((m) => m.label === '花费')!.value);
+    const spend = num(metrics.find((m) => m.label === 'Spend')!.value);
     const roas = num(metrics.find((m) => m.label === 'ROAS')!.value);
     expect(roas).toBeCloseTo(gmv / spend, 1);
   });
@@ -51,9 +51,9 @@ describe('rollupCampaignMetrics · campaign = Σ creators', () => {
 });
 
 describe('rollupCreatorTotals · 达人跨 campaign 汇总', () => {
-  it('4 项主要指标 + 固定标签', () => {
+  it('4 项主要指标 + 固定英文标签', () => {
     expect(rollupCreatorTotals('cre-mia').map((x) => x.label)).toEqual([
-      'GMV', 'ROAS', '转化', '佣金',
+      'GMV', 'ROAS', 'Conversions', 'Commission',
     ]);
   });
 

@@ -93,7 +93,9 @@ describe('gap 组件注册与默认数据', () => {
     expect(REGISTRY['meta-strip']).toBeTruthy();
     expect(REGISTRY['strategy-block']).toBeTruthy();
     expect(REGISTRY['meta-strip'].propertySchema.some((f) => f.kind === 'table')).toBe(true);
-    expect(REGISTRY['strategy-block'].propertySchema.some((f) => f.kind === 'textarea')).toBe(true);
+    // strategy-block 的行编辑（图标/标题/富文本）+ 高亮词均由 PropertyPanel 的 StrategyBlockFields
+    // 负责，propertySchema 为空（与 creator-stats-strip 同：自定义面板接管编辑）。
+    expect(REGISTRY['strategy-block'].propertySchema).toEqual([]);
   });
 
   it('默认数据合法（headers + rows 对齐）', () => {
