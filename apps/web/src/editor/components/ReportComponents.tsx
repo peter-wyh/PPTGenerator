@@ -15,7 +15,9 @@ import type {
   StrategyBlockData,
   TimelineCompareData,
 } from '@mediakit/shared';
+import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { findIcon } from '../icons/catalog';
+import { renderHtmlWithHighlights } from '../richText';
 import { KPI_COLOR_TOKENS } from '../kpiTokens';
 
 /* -------------------------------- kpi board ------------------------------- */
@@ -79,6 +81,54 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
             <Card {...it} />
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (variant === 'gradient') {
+    // 渐变深色卡片：每个 KPI 用渐变背景 + 白色文字，2 列网格。
+    return (
+      <div className="grid h-full w-full grid-cols-2 gap-3 overflow-auto">
+        {items.map((it, i) => {
+          const token = data.valueColors?.[i] ?? 'primary';
+          const c = KPI_COLOR_TOKENS[token];
+          return (
+            <div
+              key={i}
+              className="flex flex-col justify-center rounded-2xl p-5"
+              style={{ background: `linear-gradient(135deg, ${c.fg}, ${c.fg}CC)`, color: '#fff' }}
+            >
+              <div className="text-xs text-white/70">{it.label}</div>
+              <div className="font-data text-2xl font-bold text-white">{it.value}</div>
+              {it.compare && (
+                <div className="text-[11px] font-medium text-white/80">{it.compare}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (variant === 'minimal') {
+    // 极简线框：无背景色，顶部 2px 颜色线 + label + 大数值，等宽排列。
+    return (
+      <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto">
+        {items.map((it, i) => {
+          const token = data.valueColors?.[i] ?? null;
+          const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : '#9CA3AF';
+          return (
+            <div key={i} className="flex flex-col justify-center" style={{ borderTop: `2px solid ${color}` }}>
+              <div className="mt-2 text-[11px] text-foreground-secondary">{it.label}</div>
+              <div className="font-data text-xl font-bold text-foreground-primary">{it.value}</div>
+              {it.compare && (
+                <div className="text-[11px] font-medium" style={{ color: compareColor(it.compare) }}>
+                  {it.compare}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -154,6 +204,45 @@ function statusChip(status: string) {
 
 export function TimelineCompare({ data }: { data: TimelineCompareData }) {
   const { variant = 'standard', headers = [], rows = [] } = data;
+
+  if (variant === 'cards') {
+    // 卡片：每行数据用独立卡片展示，2 列网格。指标名在顶部，本期/上期并列大数值，状态在底部色块。
+    const curLabel = headers[1] ?? '本期';
+    const prevLabel = headers[2] ?? '上期';
+    return (
+      <div className="grid h-full w-full grid-cols-2 gap-3 overflow-auto">
+        {rows.map((row, ri) => {
+          const label = row[0] ?? '';
+          const cur = row[1] ?? '';
+          const prev = row[2] ?? '';
+          const status = row[3] ?? '';
+          const chip = statusChip(status);
+          return (
+            <div key={ri} className="flex flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+              <div className="text-xs font-medium text-foreground-secondary">{label}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-foreground-muted">{curLabel}</span>
+                  <span className="font-data text-lg font-bold text-foreground-primary">{cur}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-foreground-muted">{prevLabel}</span>
+                  <span className="font-data text-lg font-semibold text-foreground-secondary">{prev}</span>
+                </div>
+              </div>
+              {status && (
+                <div className="mt-auto">
+                  <span className="rounded px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: chip.bg, color: chip.fg }}>
+                    {status}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (variant === 'mini') {
     // 仅指标 + 本期 + 变化方向（两列紧凑）。
@@ -352,25 +441,6 @@ export function MetaStripComponent({ data }: { data: MetaStripData }) {
 
 /* ---------------------------- strategy block ----------------------------- */
 
-/** 把 content 按 highlights 词（逗号分隔）切分，命中词包成高亮 span。 */
-function renderHighlighted(content: string, highlights?: string) {
-  const words = (highlights ?? '')
-    .split(/[,，]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (words.length === 0 || !content) return content;
-  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const re = new RegExp(`(${escaped.join('|')})`, 'gi');
-  const lower = words.map((w) => w.toLowerCase());
-  return content.split(re).map((part, i) =>
-    lower.includes(part.toLowerCase()) ? (
-      <span key={i} className="font-medium text-accent-secondary">{part}</span>
-    ) : (
-      <span key={i}>{part}</span>
-    ),
-  );
-}
-
 export function StrategyBlockComponent({ data }: { data: StrategyBlockData }) {
   const { variant = 'default' } = data;
   if (variant === 'labeled') return <StrategyLabeled data={data} />;
@@ -396,9 +466,10 @@ function StrategyDefault({ data }: { data: StrategyBlockData }) {
                 {title}
               </span>
             </div>
-            <div className="whitespace-pre-wrap text-sm text-foreground-secondary">
-              {renderHighlighted(content, data.highlights)}
-            </div>
+            <div
+              className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+              dangerouslySetInnerHTML={{ __html: renderHtmlWithHighlights(content, data.highlights) }}
+            />
           </div>
         );
       })}
@@ -424,9 +495,10 @@ function StrategyLabeled({ data }: { data: StrategyBlockData }) {
                 {title}
               </span>
             </div>
-            <div className="whitespace-pre-wrap text-sm text-foreground-secondary">
-              {renderHighlighted(content, data.highlights)}
-            </div>
+            <div
+              className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+              dangerouslySetInnerHTML={{ __html: renderHtmlWithHighlights(content, data.highlights) }}
+            />
           </div>
         );
       })}
@@ -462,7 +534,10 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
             return (
               <div key={i} className="flex gap-2 py-0.5 text-sm text-foreground-secondary">
                 <span className="flex-none text-accent-secondary">•</span>
-                <span className="whitespace-pre-wrap">{renderHighlighted(content, data.highlights)}</span>
+                <div
+                  className="min-w-0 flex-1 [&_ul]:my-0.5 [&_ul]:list-disc [&_ul]:pl-4"
+                  dangerouslySetInnerHTML={{ __html: renderHtmlWithHighlights(content, data.highlights) }}
+                />
               </div>
             );
           })}
@@ -491,6 +566,37 @@ function ImgOrPlaceholder({ url, label, cls }: { url: string; label: string; cls
 export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
   const { variant = 'cards', insight, rows = [] } = data;
   const items = rows.map((r) => ({ name: r[0] ?? '', img: r[1] ?? '', sold: r[2] ?? '', share: r[3] ?? '', cat: r[4] ?? '' }));
+
+  if (variant === 'bar') {
+    // 条形图：横向 BarChart(layout=vertical) 展示 TOP 商品销量。
+    // sold 字段可能是 "1.2K"/"85%" 文本，解析首段数字作 value；无数字则按行号递减占位。
+    const chartData = items.map((it, i) => {
+      const m = it.sold.match(/-?\d+(\.\d+)?/);
+      return { name: it.name || `#${i + 1}`, value: m ? parseFloat(m[0]) : items.length - i, sold: it.sold };
+    });
+    return (
+      <div className="flex h-full w-full gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+        <div className="min-w-0 flex-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart layout="vertical" data={chartData} margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
+              <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+              <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(v: number) => v} />
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} fill="var(--color-accent-primary, #FF5C00)">
+                <LabelList dataKey="sold" position="right" style={{ fontSize: 11 }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {insight && (
+          <div className="flex w-[220px] flex-none flex-col justify-center rounded-lg bg-accent-primary/5 p-3">
+            <div className="mb-1 text-[11px] font-semibold text-accent-primary">Insight</div>
+            <div className="text-xs text-foreground-secondary">{insight}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const Row = ({ it, rank }: { it: (typeof items)[number]; rank: number }) => (
     <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 last:border-b-0">

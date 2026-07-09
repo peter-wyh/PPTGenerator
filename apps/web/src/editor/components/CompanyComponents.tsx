@@ -55,6 +55,49 @@ export function BrandWall({ data }: { data: BrandWallData }) {
     );
   }
 
+  if (variant === 'circle') {
+    // 圆形头像式：Logo 以圆形(56px)展示，名称在下方，网格排列 4-6 列。
+    return (
+      <div
+        className="grid h-full w-full gap-3 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3"
+        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}
+      >
+        {logos.map((l, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5">
+            {l.src ? (
+              <img src={l.src} alt={l.name} className="h-14 w-14 rounded-full object-cover" draggable={false} />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-primary/10 text-lg font-semibold text-accent-primary">
+                {l.name?.slice(0, 1) || '?'}
+              </div>
+            )}
+            <span className="max-w-full truncate text-[10px] text-foreground-secondary">{l.name}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (variant === 'fade') {
+    // 渐入：单行横排，第一个 opacity 100%，之后每项递减 5%。
+    return (
+      <div className="flex h-full w-full items-center justify-start gap-5 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+        {logos.map((l, i) => (
+          <div key={i} className="flex w-[110px] flex-none flex-col items-center gap-1" style={{ opacity: Math.max(0.3, 1 - i * 0.05) }}>
+            {l.src ? (
+              <img src={l.src} alt={l.name} className="h-9 max-w-[80%] object-contain" draggable={false} />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded bg-accent-primary/10 text-sm font-semibold text-accent-primary">
+                {l.name?.slice(0, 1) || '?'}
+              </div>
+            )}
+            <span className="max-w-full truncate text-[10px] text-foreground-secondary">{l.name}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   // grid（默认）
   return (
     <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
@@ -90,6 +133,19 @@ export function PackageCard({ data }: { data: PackageCardData }) {
             <span key={i}>{f}</span>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (variant === 'table') {
+    // 表格行风格：单行展示 套餐名 | 价格 | 特性列表(逗号分隔)，无卡片边框。
+    return (
+      <div className="flex h-full w-full items-center gap-3 px-3">
+        <span className="w-28 flex-none truncate text-sm font-semibold text-foreground-primary">{name}</span>
+        <span className="w-20 flex-none font-data text-sm font-semibold text-accent-primary">{price}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">
+          {features.filter(Boolean).join('、')}
+        </span>
       </div>
     );
   }

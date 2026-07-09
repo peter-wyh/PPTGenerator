@@ -132,6 +132,49 @@ export interface Campaign {
   metrics?: CampaignMetric[];
 }
 
+/* ------------------------------------------------------------------ */
+/* 报告全局数据上下文                                                    */
+/* 编辑器「数据配置」面板统一选择 Campaign + 达人，存入 store 供各组件    */
+/* 一键导入，避免每个组件重复手动填写。                                   */
+/* ------------------------------------------------------------------ */
+
+/** 报告中选中的 Campaign 信息（精简版，用于展示 + 组件取数）。 */
+export interface ReportCampaign {
+  id: string;
+  name: string;
+  advertiser?: string;
+  platform?: string;
+  startDate?: string;
+  endDate?: string;
+  budget?: string;
+  status?: string;
+  metrics?: CampaignMetric[];
+}
+
+/** 报告中选中的达人信息（精简版，用于达人组件一键填充）。 */
+export interface ReportCreator {
+  id: string;
+  name: string;
+  handle?: string;
+  platform?: string;
+  tier?: string;
+  followers?: string;
+  engagement?: string;
+  category?: string;
+  region?: string;
+  avatar?: string;
+  /** 达人数据条 KPI（由数据配置面板从上游填充）。 */
+  stats?: CreatorStatItem[];
+}
+
+/** 报告全局数据上下文：Campaign + 达人列表。存入编辑器 store，随项目保存。 */
+export interface ReportDataContext {
+  /** 绑定的 Campaign（可空）。 */
+  campaign?: ReportCampaign | null;
+  /** 选中的达人列表（可多个）。 */
+  creators?: ReportCreator[];
+}
+
 /** 业务线（mock 查找表 BUSINESS_LINE_META 的条目）。 */
 export interface BusinessLine {
   /** 简称，与 BUSINESS_LINES 中的条目一致，例如 'FT'。 */
@@ -506,6 +549,8 @@ export interface ProjectMeta {
   campaignInfo?: CampaignInfo;
   /** 报告主题（品牌色等）。 */
   theme?: ProjectTheme;
+  /** 报告全局数据上下文（Campaign + 达人），「数据配置」面板编辑，随项目保存。 */
+  reportData?: ReportDataContext;
 }
 
 /* ------------------------------------------------------------------ */
@@ -528,6 +573,7 @@ export type ComponentType =
   | 'creator-avatar-card'
   | 'creator-stats-strip'
   | 'creator-works-list'
+  | 'creator-list'
   // 业务组件（试点：公司/报价域，从原整页版式拆出的可复用语义块）
   | 'brand-wall'
   | 'package-card'
@@ -616,7 +662,7 @@ export interface ImageGroupData {
   gap?: number;
 }
 
-export type IndicatorCardVariant = 'plain' | 'icon-left' | 'icon-top' | 'icon-bg';
+export type IndicatorCardVariant = 'plain' | 'icon-left' | 'icon-top' | 'icon-bg' | 'spotlight' | 'duo';
 
 export interface IndicatorCardData {
   /** 样式变体；缺省 'plain'（向后兼容老数据，无 variant 字段时按旧外观渲染）。 */
@@ -697,7 +743,7 @@ export type CreatorPlatform = 'xiaohongshu' | 'tiktok' | 'instagram' | 'youtube'
 export type CreatorTier = 'mega' | 'macro' | 'micro';
 
 /** 达人头像卡：头像 + 名称 + 平台 + 层级 + 简介。 */
-export type CreatorAvatarVariant = 'horizontal' | 'vertical' | 'compact';
+export type CreatorAvatarVariant = 'horizontal' | 'vertical' | 'compact' | 'badge' | 'banner';
 export interface CreatorAvatarCardData {
   variant: CreatorAvatarVariant;
   avatar: string;
@@ -714,7 +760,7 @@ export interface CreatorAvatarCardData {
 }
 
 /** 达人数据条：一组 KPI（粉丝/互动率/触达/曝光…）。复用 {label,value,color} 形状。 */
-export type CreatorStatsVariant = 'cards' | 'plain' | 'metric';
+export type CreatorStatsVariant = 'cards' | 'plain' | 'metric' | 'progress' | 'ring';
 
 /** 达人数据条单项。key 命中指标库；selected 缺省视为 true（向后兼容）。 */
 export interface CreatorStatItem {
@@ -752,10 +798,47 @@ export const CREATOR_METRIC_CATALOG: {
  * 约定列顺序：[封面URL, 标题, 转, 赞, 评]；渲染层把列0当图片、列2-4当互动数据。
  * 注：试点刻意复用 table 字段编辑器，强类型 object-list 留后续。
  */
-export type CreatorWorksVariant = 'cards' | 'row' | 'compact';
+export type CreatorWorksVariant = 'cards' | 'row' | 'compact' | 'detailed';
+
+/** 作品趋势数据点（时间→数值，用于作品详情的趋势迷你图）。 */
+export interface WorkTrendPoint {
+  label: string;
+  value: number;
+}
+
+/** 单个作品的受众维度数据（可选，用于 'detailed' 变体展开展示）。 */
+export interface WorkAudienceInsight {
+  /** 粉丝受众 Top 城市/区域 [{label, value}]。 */
+  topCities?: { label: string; value: number; color?: string }[];
+  /** 性别分布 [{label: '男'|'女', value: 百分比, color}]。 */
+  genderSplit?: { label: string; value: number; color?: string }[];
+  /** 年龄段分布 [{label: '18-24', value: 百分比, color}]。 */
+  ageRange?: { label: string; value: number; color?: string }[];
+  /** 数据趋势（播放/互动等随时间的变化）。 */
+  trend?: WorkTrendPoint[];
+  /** 趋势指标名称（如"播放趋势""互动趋势"），缺省 '数据趋势'。 */
+  trendLabel?: string;
+}
+
+/** 作品详情行：在基础 [封面,标题,转,赞,评] 之外，携带受众画像 + 趋势数据。 */
 export interface CreatorWorksListData {
   variant: CreatorWorksVariant;
   headers: string[];
+  rows: string[][];
+  /** 'detailed' 变体下，按 rows 索引对齐的受众洞察数据；缺省=无洞察。 */
+  insights?: WorkAudienceInsight[];
+}
+
+/**
+ * 达人列表：多达人汇总展示。复用 TableData 形状，
+ * 约定列顺序 [头像URL, 名称, 平台, 粉丝数, 互动率, 分类]。
+ */
+export type CreatorListVariant = 'table' | 'cards' | 'compact';
+export interface CreatorListData {
+  variant: CreatorListVariant;
+  /** 列标题（可自定义文案）。 */
+  headers: string[];
+  /** 每行：[头像URL, 名称, 平台, 粉丝数, 互动率, 分类]。 */
   rows: string[][];
 }
 
@@ -765,7 +848,7 @@ export interface CreatorWorksListData {
  * 品牌墙：Logo 网格。复用 TableData 形状（{headers,rows}）。
  * 约定列顺序：[品牌名, Logo URL]；无 URL 时渲染品牌名首字占位。
  */
-export type BrandWallVariant = 'grid' | 'row' | 'marquee';
+export type BrandWallVariant = 'grid' | 'row' | 'marquee' | 'circle' | 'fade';
 export interface BrandWallData {
   variant: BrandWallVariant;
   headers: string[];
@@ -776,7 +859,7 @@ export interface BrandWallData {
  * 套餐卡：单个方案。features 复用 TableData 形状（headers+rows，单列 [特性]，每行一条），
  * 以便复用 table 字段编辑器（与 brand-wall / works-list 一致的对象列表方案）。
  */
-export type PackageCardVariant = 'standard' | 'featured' | 'compact';
+export type PackageCardVariant = 'standard' | 'featured' | 'compact' | 'table';
 export interface PackageCardData {
   variant: PackageCardVariant;
   name: string;
@@ -792,7 +875,7 @@ export interface PackageCardData {
  * 业绩看板（≈PRD CMP-B1）：KPI 矩阵。复用 TableData 形状，
  * 约定列顺序 [指标, 数值, 对比]；对比为 "+15%"/"-2%" 文本，渲染层按首字符上色。
  */
-export type KpiBoardVariant = 'grid' | 'row' | 'compact' | 'card';
+export type KpiBoardVariant = 'grid' | 'row' | 'compact' | 'card' | 'gradient' | 'minimal';
 export type KpiColorToken = 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 export interface KpiBoardData {
@@ -827,7 +910,11 @@ export interface StrategyBlockData {
   variant?: StrategyBlockVariant;
   /** 约定 ['图标', '标题', '内容']。 */
   headers: string[];
-  /** 每行 [iconKey?, title, content]。 */
+  /**
+   * 每行 [iconKey?, title, content]。
+   * content 为受限 HTML 字符串（允许 b/strong/i/em/ul/ol/li/br/p，无属性），
+   * 渲染前经 sanitizeRichText 清洗；旧数据（纯文本）自动兼容。
+   */
   rows: string[][];
   /** 全局高亮词，逗号分隔；渲染时 split，命中 content 的词包粉色 span。 */
   highlights?: string;
@@ -837,7 +924,7 @@ export interface StrategyBlockData {
  * 周期对比表（≈PRD CMP-B13）：本期 vs 上期 + 状态。复用 TableData 形状，
  * 约定列顺序 [指标, 本期, 上期, 状态]；状态值 Optimized/Exceeded/Stable 渲染为色块。
  */
-export type TimelineCompareVariant = 'standard' | 'mini' | 'with-bar';
+export type TimelineCompareVariant = 'standard' | 'mini' | 'with-bar' | 'cards';
 export interface TimelineCompareData {
   variant: TimelineCompareVariant;
   headers: string[];
@@ -848,7 +935,7 @@ export interface TimelineCompareData {
  * 商品表现（≈PRD CMP-B12）：TOP N 商品。复用 TableData 形状，
  * 约定列顺序 [商品名, 图URL, 销量, 占比, 品类]；insight 为可选 AI 洞察文本。
  */
-export type ProductPerformanceVariant = 'cards' | 'rank' | 'grid';
+export type ProductPerformanceVariant = 'cards' | 'rank' | 'grid' | 'bar';
 export interface ProductPerformanceData {
   variant: ProductPerformanceVariant;
   insight: string;

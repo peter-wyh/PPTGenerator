@@ -13,10 +13,11 @@ import type {
   PageGradient,
   GradientStop,
   Sentiment,
-  WorkMetricsData,
-  WorkScreenshotData,
   ShapeData,
   ShapeKind,
+  StrategyBlockData,
+  WorkMetricsData,
+  WorkScreenshotData,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from './store';
@@ -29,6 +30,7 @@ import { ImageInput } from '@/components/ImageInput';
 import { parseCreatorLink } from './creatorLink';
 import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from './icons/IconPickerOverlay';
 import { findIcon } from './icons/catalog';
+import { sanitizeRichText } from './richText';
 import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from './kpiTokens';
 import { IconKit } from './icons/IconKit';
 import type { IconWeight } from '@mediakit/shared';
@@ -94,7 +96,10 @@ export function PropertyPanel() {
         </>
       )}
 
+      {comp.type === 'creator-avatar-card' && <ReportCreatorAvatarImporter comp={comp} />}
       {comp.type === 'creator-avatar-card' && <CreatorLinkImporter comp={comp} />}
+      {comp.type === 'creator-list' && <ReportCreatorListImporter comp={comp} />}
+      {comp.type === 'creator-works-list' && <ReportCreatorWorksImporter comp={comp} />}
 
       <FieldGroup title="位置与尺寸">
         <div className="grid grid-cols-2 gap-2">
@@ -118,6 +123,7 @@ export function PropertyPanel() {
 
       {comp.type === 'business-block' && <BusinessFields comp={comp} />}
 
+      {comp.type === 'creator-stats-strip' && <ReportCreatorStatsImporter comp={comp} />}
       {comp.type === 'creator-stats-strip' && <CreatorStatsFields comp={comp} />}
 
       {comp.type === 'kpi-board' && <KpiRowStyleField comp={comp} />}
@@ -127,6 +133,7 @@ export function PropertyPanel() {
       {comp.type === 'comment-wordcloud' && <CommentWordcloudFields comp={comp} />}
       {comp.type === 'shape' && <ShapeFields comp={comp} />}
       {comp.type === 'image-group' && <ImageGroupFields comp={comp} />}
+      {comp.type === 'strategy-block' && <StrategyBlockFields comp={comp} />}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button
@@ -156,6 +163,7 @@ const LABELS: Record<string, string> = {
   'creator-avatar-card': '达人头像卡',
   'creator-stats-strip': '达人数据条',
   'creator-works-list': '达人作品列表',
+  'creator-list': '达人列表',
   'creator-fan-gender': '性别占比',
   'creator-fan-city': '城市分布',
   'creator-fan-age': '年龄段',
@@ -871,6 +879,83 @@ function TextareaField({ comp, field }: { comp: EditorComponent; field: Property
   );
 }
 
+/**
+ * 轻量富文本字段：toolbar（加粗/斜体/列表）+ contentEditable。
+ * 不受控：挂载时以 sanitize 后的 HTML 初始化；onBlur 时清洗并写回。
+ * contentEditable / execCommand 在 jsdom 不可用，编辑交互不单测。
+ */
+function RichTextField({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // 同步外部 value → contentEditable：仅在未聚焦时写入，避免覆盖用户正在编辑的光标。
+  // 这样删除/重排行（index key 复用实例）或 undo 时，正文也能正确跟随 data。
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (document.activeElement === el) return; // 聚焦中：不干预编辑。
+    const sanitized = sanitizeRichText(value);
+    if (el.innerHTML !== sanitized) el.innerHTML = sanitized;
+  }, [value]);
+
+  const exec = (cmd: string) => {
+    document.execCommand(cmd);
+    ref.current?.focus();
+  };
+
+  const commit = () => {
+    if (!ref.current) return;
+    const next = sanitizeRichText(ref.current.innerHTML);
+    if (next !== sanitizeRichText(value)) onChange(next);
+  };
+
+  return (
+    <div className="rounded border border-border-default">
+      <div className="flex gap-1 border-b border-border-subtle px-1 py-0.5">
+        <button
+          type="button"
+          title="加粗"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('bold');
+          }}
+          className="font-bold px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          B
+        </button>
+        <button
+          type="button"
+          title="斜体"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('italic');
+          }}
+          className="italic px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          I
+        </button>
+        <button
+          type="button"
+          title="列表"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec('insertUnorderedList');
+          }}
+          className="px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          •
+        </button>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={commit}
+        className="min-h-[60px] px-2 py-1 text-xs text-foreground-primary focus:outline-none [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+      />
+    </div>
+  );
+}
+
 function DataNumberField({ comp, field }: { comp: EditorComponent; field: PropertyField }) {
   const update = useDataUpdate(comp);
   const value = Number(readValue(comp, field) ?? 0);
@@ -969,6 +1054,12 @@ function TableField({ comp }: { comp: EditorComponent }) {
   const headers = data.headers;
   const rows = data.rows;
 
+  /** 判断某列是否为图标列（列名匹配 icon/Icon/iconKey）。 */
+  const isIconCol = (ci: number) => {
+    const h = (headers[ci] ?? '').toLowerCase();
+    return h === 'icon' || h === 'iconkey' || h === 'icon-key' || h === '图标';
+  };
+
   const setHeader = (i: number, v: string) => {
     const headers2 = headers.map((h, idx) => (idx === i ? v : h));
     update('headers', headers2);
@@ -1012,14 +1103,22 @@ function TableField({ comp }: { comp: EditorComponent }) {
         </div>
         {rows.map((row, ri) => (
           <div key={ri} className="flex items-center gap-1">
-            {row.map((cell, ci) => (
-              <input
-                key={ci}
-                value={cell}
-                onChange={(e) => setCell(ri, ci, e.target.value)}
-                className="w-16 rounded border border-border-default px-1 py-0.5"
-              />
-            ))}
+            {row.map((cell, ci) =>
+              isIconCol(ci) ? (
+                <TableCellIconPicker
+                  key={ci}
+                  value={cell}
+                  onChange={(v) => setCell(ri, ci, v)}
+                />
+              ) : (
+                <input
+                  key={ci}
+                  value={cell}
+                  onChange={(e) => setCell(ri, ci, e.target.value)}
+                  className="w-16 rounded border border-border-default px-1 py-0.5"
+                />
+              ),
+            )}
             <button
               onClick={() => removeRow(ri)}
               title="删除该行"
@@ -1039,6 +1138,38 @@ function TableField({ comp }: { comp: EditorComponent }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** 表格单元格内的图标选择器：点击弹出 IconPickerOverlay，选中后写入 cell。 */
+function TableCellIconPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const Icon = value ? findIcon(value)?.Comp : null;
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        title={value ? (findIcon(value)?.label ?? '选择图标') : '选择图标'}
+        className="flex h-6 w-16 items-center justify-center rounded border border-border-default text-foreground-primary hover:bg-surface-hover"
+      >
+        {Icon ? <Icon size={16} /> : <span className="text-[10px] text-foreground-muted">选图标</span>}
+      </button>
+      {open && (
+        <IconPickerOverlay
+          value={value || undefined}
+          weight="regular"
+          onPick={(key) => {
+            onChange(key);
+            setOpen(false);
+          }}
+          onClear={() => {
+            onChange('');
+            setOpen(false);
+          }}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -1223,22 +1354,51 @@ function KpiImportButton({ comp }: { comp: EditorComponent }) {
 function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
   const setComponentData = useEditorStore((s) => s.setComponentData);
   const defaultCampaignId = useEditorStore((s) => s.projectMeta?.campaignId);
+  const boundCampaign = useEditorStore((s) => s.reportData.campaign);
   const [open, setOpen] = useState(false);
+
+  /** 一键从已绑定 Campaign 导入（无需弹模态框）。 */
+  function quickImport() {
+    if (!boundCampaign?.metrics?.length) return;
+    const patch = metricsToRows(boundCampaign.metrics);
+    setComponentData(comp.id, { ...comp.data, ...patch });
+  }
 
   return (
     <FieldGroup title="从 Campaign 导入">
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
-      >
-        选择 Campaign 导入
-      </button>
+      {/* 已绑定 Campaign 时，显示一键导入快捷按钮 */}
+      {boundCampaign && boundCampaign.metrics && boundCampaign.metrics.length > 0 ? (
+        <>
+          <button
+            onClick={quickImport}
+            className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+          >
+            ⚡ 导入「{boundCampaign.name}」
+          </button>
+          <div className="text-[11px] text-foreground-muted">
+            从「数据配置」绑定的 Campaign 一键导入 {boundCampaign.metrics.length} 项指标。
+          </div>
+          <button
+            onClick={() => setOpen(true)}
+            className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+          >
+            换一个 Campaign…
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+        >
+          选择 Campaign 导入
+        </button>
+      )}
       <div className="text-[11px] text-foreground-muted">
         导入选中 campaign 的投放表现指标（花费/展示/点击/转化/CTR/ROAS），覆盖当前表格。
       </div>
       {open && (
         <ImportCampaignModal
-          defaultCampaignId={defaultCampaignId}
+          defaultCampaignId={defaultCampaignId ?? boundCampaign?.id}
           onConfirm={(metrics) => {
             const patch = metricsToRows(metrics);
             setComponentData(comp.id, { ...comp.data, ...patch });
@@ -1380,6 +1540,58 @@ function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
       </div>
       <button onClick={add} className="text-xs text-accent-primary hover:underline">
         + 添加图片
+      </button>
+    </FieldGroup>
+  );
+}
+
+/** strategy-block 专属编辑：每行 = 图标 key + 标题 + 富文本内容；可增删行。 */
+function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
+  const update = useDataUpdate(comp);
+  const data = comp.data as StrategyBlockData;
+  const rows = data.rows ?? [];
+
+  const setRow = (i: number, next: string[]) => {
+    update('rows', rows.map((r, idx) => (idx === i ? next : r)));
+  };
+  const addRow = () => update('rows', [...rows, ['', '', '']]);
+  const removeRow = (i: number) => update('rows', rows.filter((_, idx) => idx !== i));
+
+  return (
+    <FieldGroup title="策略块">
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="space-y-1 rounded border border-border-subtle p-1">
+            <div className="flex items-center gap-1">
+              <input
+                value={row[0] ?? ''}
+                onChange={(e) => setRow(i, [e.target.value, row[1] ?? '', row[2] ?? ''])}
+                placeholder="图标 key"
+                className="w-16 rounded border border-border-default px-1 py-0.5 text-xs"
+              />
+              <input
+                value={row[1] ?? ''}
+                onChange={(e) => setRow(i, [row[0] ?? '', e.target.value, row[2] ?? ''])}
+                placeholder="标题"
+                className="flex-1 rounded border border-border-default px-1 py-0.5 text-xs"
+              />
+              <button
+                onClick={() => removeRow(i)}
+                title="删除该项"
+                className="text-foreground-muted hover:text-red"
+              >
+                ✕
+              </button>
+            </div>
+            <RichTextField
+              value={row[2] ?? ''}
+              onChange={(html) => setRow(i, [row[0] ?? '', row[1] ?? '', html])}
+            />
+          </div>
+        ))}
+      </div>
+      <button onClick={addRow} className="mt-1 text-xs text-accent-primary hover:underline">
+        + 添加项
       </button>
     </FieldGroup>
   );
@@ -1620,6 +1832,247 @@ export function ShapeFields({ comp }: { comp: EditorComponent }) {
           <input type="checkbox" checked={data.dash ?? false} onChange={(e) => set({ dash: e.target.checked })} />
           虚线
         </label>
+      )}
+    </FieldGroup>
+  );
+}
+
+/* ------------------- 报告数据快捷导入（达人组件） ------------------- */
+
+/**
+ * creator-avatar-card：从「数据配置」面板已选达人中选一个，一键填充头像卡字段。
+ */
+function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent }) {
+  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [selected, setSelected] = useState('');
+
+  if (creators.length === 0) return null;
+
+  function apply() {
+    const cr = creators.find((c) => c.id === selected);
+    if (!cr) return;
+    updateComponentData(comp.id, {
+      name: cr.name,
+      platform: (cr.platform ?? 'TikTok') as CreatorAvatarCardData['platform'],
+      handle: cr.handle,
+      followers: cr.followers,
+      engagement: cr.engagement,
+      intro: cr.category ? `${cr.category} · ${cr.region ?? ''}`.trim() : '',
+    });
+    commit();
+    setSelected('');
+  }
+
+  return (
+    <FieldGroup title="从项目数据导入">
+      <select
+        value={selected}
+        onChange={(e) => setSelected(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择达人…</option>
+        {creators.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}（{c.platform} · {c.tier}）
+          </option>
+        ))}
+      </select>
+      {selected && (
+        <button
+          onClick={apply}
+          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          ⚡ 导入到头像卡
+        </button>
+      )}
+    </FieldGroup>
+  );
+}
+
+/**
+ * creator-stats-strip：从「数据配置」面板已选达人中选一个，一键填充达人数据条 KPI。
+ */
+function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) {
+  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [selected, setSelected] = useState('');
+
+  if (creators.length === 0) return null;
+
+  function apply() {
+    const cr = creators.find((c) => c.id === selected);
+    if (!cr || !cr.stats?.length) return;
+    updateComponentData(comp.id, { stats: cr.stats.map((s) => ({ ...s })) });
+    commit();
+    setSelected('');
+  }
+
+  const selectedCreator = creators.find((c) => c.id === selected);
+  const hasStats = (selectedCreator?.stats?.length ?? 0) > 0;
+
+  return (
+    <FieldGroup title="从项目数据导入">
+      <select
+        value={selected}
+        onChange={(e) => setSelected(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择达人…</option>
+        {creators.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}（{(c.stats?.length ?? 0)} 项 KPI）
+          </option>
+        ))}
+      </select>
+      {selected && hasStats && (
+        <button
+          onClick={apply}
+          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          ⚡ 导入 {selectedCreator!.stats!.length} 项 KPI
+        </button>
+      )}
+      {selected && !hasStats && (
+        <p className="mt-1 text-[11px] text-foreground-muted">该达人未配置 KPI 数据</p>
+      )}
+    </FieldGroup>
+  );
+}
+
+/**
+ * creator-list：多选达人 → 一键填充达人列表 rows。
+ * 约定列顺序 [Avatar, Name, Platform, Followers, Engagement, Category]。
+ */
+function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
+  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  if (creators.length === 0) return null;
+
+  function toggle(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function applyAll() {
+    const picked = creators.filter((c) => selectedIds.includes(c.id));
+    if (!picked.length) return;
+    const headers = ['Avatar', 'Name', 'Platform', 'Followers', 'Engagement', 'Category'];
+    const rows = picked.map((cr) => [
+      cr.avatar ?? '',
+      cr.name,
+      cr.platform ?? '',
+      cr.followers ?? '',
+      cr.engagement ?? '',
+      cr.category ?? '',
+    ]);
+    updateComponentData(comp.id, { headers, rows });
+    commit();
+    setSelectedIds([]);
+  }
+
+  function applyAllCreators() {
+    const headers = ['Avatar', 'Name', 'Platform', 'Followers', 'Engagement', 'Category'];
+    const rows = creators.map((cr) => [
+      cr.avatar ?? '',
+      cr.name,
+      cr.platform ?? '',
+      cr.followers ?? '',
+      cr.engagement ?? '',
+      cr.category ?? '',
+    ]);
+    updateComponentData(comp.id, { headers, rows });
+    commit();
+  }
+
+  return (
+    <FieldGroup title="从项目数据导入">
+      <div className="space-y-1">
+        {creators.map((c) => (
+          <label key={c.id} className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(c.id)}
+              onChange={() => toggle(c.id)}
+              className="h-3 w-3"
+            />
+            <span className="text-foreground-primary">{c.name}</span>
+            <span className="text-foreground-muted">{c.platform} · {c.followers}</span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2">
+        {selectedIds.length > 0 && (
+          <button
+            onClick={applyAll}
+            className="rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+          >
+            ⚡ 导入选中 ({selectedIds.length})
+          </button>
+        )}
+        <button
+          onClick={applyAllCreators}
+          className="rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+        >
+          导入全部 ({creators.length})
+        </button>
+      </div>
+    </FieldGroup>
+  );
+}
+
+/**
+ * creator-works-list：选一个达人 → 用其 name/platform/followers 等填充作品列表行。
+ * 因为 reportData 不含作品列表，这里生成达人基本信息行。
+ */
+function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) {
+  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [selected, setSelected] = useState('');
+
+  if (creators.length === 0) return null;
+
+  function apply() {
+    const cr = creators.find((c) => c.id === selected);
+    if (!cr) return;
+    const data = comp.data as { headers?: string[]; rows?: string[][] };
+    const headers = data.headers?.length
+      ? data.headers
+      : ['Cover', 'Title', 'Shares', 'Likes', 'Comments'];
+    // 在已有 rows 基础上追加一行达人信息
+    const newRow = ['', `${cr.name} · 精选作品`, cr.followers ?? '--', cr.engagement ?? '--', '--'];
+    const rows = [...(data.rows ?? []), newRow];
+    updateComponentData(comp.id, { headers, rows });
+    commit();
+    setSelected('');
+  }
+
+  return (
+    <FieldGroup title="从项目数据导入">
+      <select
+        value={selected}
+        onChange={(e) => setSelected(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择达人追加一行…</option>
+        {creators.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}（{c.platform}）
+          </option>
+        ))}
+      </select>
+      {selected && (
+        <button
+          onClick={apply}
+          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          ⚡ 追加达人信息行
+        </button>
       )}
     </FieldGroup>
   );

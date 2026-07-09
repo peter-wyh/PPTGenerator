@@ -16,6 +16,7 @@ import {
   CreatorAvatarCard,
   CreatorStatsStrip,
   CreatorWorksList,
+  CreatorList,
   CreatorFanGender,
   CreatorFanCity,
   CreatorFanAge,
@@ -160,6 +161,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'icon-left', label: '图标左', icon: { position: 'left', defaultKey: 'trend-up', defaultWeight: 'regular' } },
       { id: 'icon-top', label: '图标上', icon: { position: 'top', defaultKey: 'trend-up', defaultWeight: 'fill' } },
       { id: 'icon-bg', label: '图标水印', icon: { position: 'bg', defaultKey: 'trend-up', defaultWeight: 'fill' } },
+      { id: 'spotlight', label: '聚光', icon: { position: 'left', defaultKey: 'trend-up', defaultWeight: 'fill' } },
+      { id: 'duo', label: '双值', icon: { position: 'left', defaultKey: 'chart-bar', defaultWeight: 'regular' } },
     ],
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
@@ -167,6 +170,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'trend', label: '副文本', kind: 'text' },
       { key: 'trendUp', label: '趋势', kind: 'select', options: [{ value: 'true', label: '上升' }, { value: 'false', label: '下降' }] },
       { key: 'colorTheme', label: '主题色', kind: 'select', options: THEMES },
+      // 注：图标字段不放进 propertySchema——PropertyPanel 会按当前变体的 icon 声明注入（plain 隐藏，其余显示），
+      // 否则会与变体注入重复渲染（key 冲突）并在 plain 下误显示。
     ],
   },
   'bar-chart': {
@@ -223,6 +228,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'horizontal', label: '横排' },
       { id: 'vertical', label: '竖排' },
       { id: 'compact', label: '紧凑' },
+      { id: 'badge', label: '徽章' },
+      { id: 'banner', label: '横幅' },
     ],
     propertySchema: [
       { key: 'avatar', label: '头像 URL', kind: 'image-url' },
@@ -244,6 +251,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'cards', label: '卡片' },
       { id: 'plain', label: '极简' },
       { id: 'metric', label: '指标' },
+      { id: 'progress', label: '进度条' },
+      { id: 'ring', label: '环形' },
     ],
     // stats 由 PropertyPanel 的自定义区块 CreatorStatsFields 负责（指标库勾选 + 文案编辑）。
     propertySchema: [],
@@ -256,8 +265,20 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'cards', label: '卡片' },
       { id: 'row', label: '列表行' },
       { id: 'compact', label: '紧凑' },
+      { id: 'detailed', label: '详细+受众' },
     ],
     propertySchema: [{ key: '', label: '作品内容', kind: 'table' }],
+  },
+  'creator-list': {
+    Component: CreatorList,
+    defaultSize: DEFAULT_SIZES['creator-list'],
+    defaultData: () => getDefaultData('creator-list'),
+    variants: [
+      { id: 'table', label: '表格' },
+      { id: 'cards', label: '卡片' },
+      { id: 'compact', label: '紧凑' },
+    ],
+    propertySchema: [{ key: '', label: '达人列表', kind: 'table' }],
   },
   'brand-wall': {
     Component: BrandWall,
@@ -267,6 +288,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'grid', label: '网格' },
       { id: 'row', label: '横排' },
       { id: 'marquee', label: '条带' },
+      { id: 'circle', label: '圆形头像' },
+      { id: 'fade', label: '渐入网格' },
     ],
     propertySchema: [{ key: '', label: '品牌列表', kind: 'table' }],
   },
@@ -278,6 +301,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'standard', label: '标准' },
       { id: 'featured', label: '推荐' },
       { id: 'compact', label: '紧凑' },
+      { id: 'table', label: '表格行' },
     ],
     propertySchema: [
       { key: 'name', label: '套餐名', kind: 'text' },
@@ -303,6 +327,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'row', label: '横排' },
       { id: 'compact', label: '紧凑' },
       { id: 'card', label: '卡片' },
+      { id: 'gradient', label: '渐变' },
+      { id: 'minimal', label: '极简线框' },
     ],
     propertySchema: [{ key: '', label: 'KPI 列表', kind: 'table' }],
   },
@@ -328,10 +354,8 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'labeled', label: '卡片标签' },
       { id: 'bulleted', label: '卡片列表' },
     ],
-    propertySchema: [
-      { key: '', label: '策略块', kind: 'table' },
-      { key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' },
-    ],
+    // 行编辑（图标/标题/富文本内容）由 PropertyPanel 的 StrategyBlockFields 负责。
+    propertySchema: [{ key: 'highlights', label: '高亮词（逗号分隔）', kind: 'textarea' }],
   },
   'timeline-compare': {
     Component: TimelineCompare,
@@ -341,6 +365,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'standard', label: '标准' },
       { id: 'mini', label: '极简' },
       { id: 'with-bar', label: '带变化条' },
+      { id: 'cards', label: '卡片' },
     ],
     propertySchema: [{ key: '', label: '对比数据', kind: 'table' }],
   },
@@ -352,6 +377,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'cards', label: '卡片' },
       { id: 'rank', label: '排行榜' },
       { id: 'grid', label: '网格' },
+      { id: 'bar', label: '条形图' },
     ],
     propertySchema: [
       { key: 'insight', label: 'AI 洞察', kind: 'textarea' },
