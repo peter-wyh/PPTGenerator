@@ -16,6 +16,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'creator-avatar-card': { w: 320, h: 120 },
   'creator-stats-strip': { w: 600, h: 100 },
   'creator-works-list': { w: 700, h: 200 },
+  'creator-list': { w: 700, h: 300 },
   'brand-wall': { w: 700, h: 200 },
   'package-card': { w: 320, h: 320 },
   'kpi-board': { w: 900, h: 240 },
@@ -139,6 +140,98 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['', '7-Day Skin Diary · Day 1', '1.2K', '86K', '2.4K'],
           ['', 'Sensitive Skin Serum Test', '980', '54K', '1.8K'],
           ['', 'Morning Skincare Routine', '760', '42K', '1.2K'],
+        ],
+        insights: [
+          {
+            topCities: [
+              { label: '上海', value: 23, color: '#FF5C00' },
+              { label: '北京', value: 18, color: '#FF8C42' },
+              { label: '广州', value: 12, color: '#FFB380' },
+              { label: '深圳', value: 9, color: '#FFD4B3' },
+            ],
+            genderSplit: [
+              { label: '女', value: 72, color: '#EC4899' },
+              { label: '男', value: 28, color: '#3B82F6' },
+            ],
+            ageRange: [
+              { label: '18-24', value: 35, color: '#8B5CF6' },
+              { label: '25-34', value: 42, color: '#A78BFA' },
+              { label: '35-44', value: 15, color: '#C4B5FD' },
+              { label: '45+', value: 8, color: '#DDD6FE' },
+            ],
+            trend: [
+              { label: 'D1', value: 12000 },
+              { label: 'D2', value: 28000 },
+              { label: 'D3', value: 45000 },
+              { label: 'D4', value: 52000 },
+              { label: 'D5', value: 61000 },
+              { label: 'D6', value: 78000 },
+              { label: 'D7', value: 86000 },
+            ],
+            trendLabel: '播放趋势',
+          },
+          {
+            topCities: [
+              { label: '杭州', value: 21, color: '#FF5C00' },
+              { label: '成都', value: 16, color: '#FF8C42' },
+              { label: '武汉', value: 11, color: '#FFB380' },
+            ],
+            genderSplit: [
+              { label: '女', value: 85, color: '#EC4899' },
+              { label: '男', value: 15, color: '#3B82F6' },
+            ],
+            ageRange: [
+              { label: '18-24', value: 48, color: '#8B5CF6' },
+              { label: '25-34', value: 32, color: '#A78BFA' },
+              { label: '35-44', value: 14, color: '#C4B5FD' },
+            ],
+            trend: [
+              { label: 'D1', value: 8000 },
+              { label: 'D2', value: 15000 },
+              { label: 'D3', value: 22000 },
+              { label: 'D4', value: 38000 },
+              { label: 'D5', value: 44000 },
+              { label: 'D6', value: 51000 },
+              { label: 'D7', value: 54000 },
+            ],
+            trendLabel: '互动趋势',
+          },
+          {
+            topCities: [
+              { label: '南京', value: 19, color: '#FF5C00' },
+              { label: '苏州', value: 14, color: '#FF8C42' },
+            ],
+            genderSplit: [
+              { label: '女', value: 68, color: '#EC4899' },
+              { label: '男', value: 32, color: '#3B82F6' },
+            ],
+            ageRange: [
+              { label: '18-24', value: 29, color: '#8B5CF6' },
+              { label: '25-34', value: 47, color: '#A78BFA' },
+            ],
+            trend: [
+              { label: 'D1', value: 5000 },
+              { label: 'D2', value: 12000 },
+              { label: 'D3', value: 18000 },
+              { label: 'D4', value: 25000 },
+              { label: 'D5', value: 32000 },
+              { label: 'D6', value: 38000 },
+              { label: 'D7', value: 42000 },
+            ],
+            trendLabel: '播放趋势',
+          },
+        ],
+      };
+    case 'creator-list':
+      return {
+        variant: 'table',
+        headers: ['Avatar', 'Name', 'Platform', 'Followers', 'Engagement', 'Category'],
+        rows: [
+          ['', '林小美', 'xiaohongshu', '128.5K', '4.8%', '美妆'],
+          ['', '张一凡', 'douyin', '456K', '6.2%', '时尚'],
+          ['', 'Emily Chen', 'instagram', '89.3K', '5.1%', '生活方式'],
+          ['', '王大力', 'youtube', '1.2M', '3.4%', '美食'],
+          ['', 'Sarah W.', 'tiktok', '567K', '7.8%', '娱乐'],
         ],
       };
     case 'brand-wall':

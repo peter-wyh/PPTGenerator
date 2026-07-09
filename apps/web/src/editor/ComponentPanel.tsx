@@ -36,6 +36,7 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'creator-avatar-card', label: '头像卡', icon: '◒' },
       { type: 'creator-stats-strip', label: '数据条', icon: '▤' },
       { type: 'creator-works-list', label: '作品列表', icon: '▦' },
+      { type: 'creator-list', label: '达人列表', icon: '◳' },
       { type: 'creator-fan-gender', label: '性别占比', icon: '◑' },
       { type: 'creator-fan-city', label: '城市分布', icon: '≣' },
       { type: 'creator-fan-age', label: '年龄段', icon: '▤' },

@@ -83,6 +83,8 @@ const INDICATOR_VARIANT_ICON: Record<
   'icon-left': { position: 'left', defaultKey: 'trend-up', defaultWeight: 'regular' },
   'icon-top': { position: 'top', defaultKey: 'trend-up', defaultWeight: 'fill' },
   'icon-bg': { position: 'bg', defaultKey: 'trend-up', defaultWeight: 'fill' },
+  'spotlight': { position: 'left', defaultKey: 'trend-up', defaultWeight: 'fill' },
+  'duo': { position: 'left', defaultKey: 'chart-bar', defaultWeight: 'regular' },
 };
 
 export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
@@ -141,6 +143,52 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
         {data.trend && (
           <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
             {data.trendUp ? '▲' : '▼'} {data.trend}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === 'spotlight') {
+    // 聚光：深色渐变背景 + 大数值 + 右上角图标徽章。
+    return (
+      <div
+        className="relative h-full w-full overflow-hidden rounded-xl px-4"
+        style={{ background: `linear-gradient(135deg, ${t.fg}, ${t.fg}CC)` }}
+      >
+        <div className="absolute right-3 top-3 opacity-90" style={{ color: '#fff' }}>
+          <IconKit name={iconKey} weight={iconWeight} size={20} color="#fff" />
+        </div>
+        <div className="flex h-full w-full flex-col justify-center">
+          <div className="text-xs text-white/70">{data.title}</div>
+          <div className="font-data text-3xl font-bold text-white">{data.value}</div>
+          {data.trend && (
+            <div className="mt-0.5 text-xs text-white/80">
+              {data.trendUp ? '▲' : '▼'} {data.trend}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'duo') {
+    // 双值：主数值 + 副数值（trend 文案充当副值），左图标 + 分割线。
+    return (
+      <div className="flex h-full w-full items-center gap-3 rounded-xl border border-border-default bg-surface-primary px-4">
+        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg" style={{ backgroundColor: `${t.fg}1A`, color: t.fg }}>
+          <IconKit name={iconKey} weight={iconWeight} size={22} color={t.fg} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs text-foreground-secondary">{data.title}</div>
+          <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+        </div>
+        {data.trend && (
+          <div className="flex-none border-l border-border-subtle pl-3 text-right">
+            <div className="text-[10px] text-foreground-muted">变化</div>
+            <div className="font-data text-sm font-semibold" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+              {data.trendUp ? '▲' : '▼'} {data.trend}
+            </div>
           </div>
         )}
       </div>

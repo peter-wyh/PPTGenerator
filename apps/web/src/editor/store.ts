@@ -7,6 +7,7 @@ import type {
   ProjectDetail,
   ProjectMeta,
   ProjectTheme,
+  ReportDataContext,
   ShapeKind,
   ThemeDensity,
   ThemeRadius,
@@ -70,6 +71,10 @@ export interface EditorState {
   saving: boolean;
   /** 编辑模式：项目（默认）或模板。决定 save() 调 projectsApi 还是 templatesApi。 */
   saveMode: 'project' | 'template';
+  /** 报告全局数据上下文（Campaign + 达人）。由「数据配置」面板编辑，存入 projectMeta.reportData。 */
+  reportData: ReportDataContext;
+  /** 更新报告数据上下文（深合并 projectMeta.reportData，标脏）。 */
+  setReportData: (data: ReportDataContext) => void;
 
   // ---- selectors ----
   currentPage: () => Page | null;
@@ -239,6 +244,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     dirty: false,
     saving: false,
     saveMode: 'project',
+    reportData: {},
     previewOpen: false,
     previewPageIndex: 0,
 
@@ -277,10 +283,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
         saving: false,
         // 编辑模式：决定 save() 落库到 projects 还是 templates。
         saveMode: mode ?? 'project',
+        // 报告全局数据上下文：从 projectMeta.reportData 初始化。
+        reportData: projectMeta?.reportData ?? {},
       });
     },
 
     markSaved: () => set({ dirty: false }),
+
+    setReportData(data) {
+      const s = get();
+      const nextMeta: ProjectMeta = { ...(s.projectMeta ?? {}), reportData: data };
+      set({ reportData: data, projectMeta: nextMeta, dirty: true });
+    },
 
     async save() {
       const s = get();
@@ -531,7 +545,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
               h = Math.max(MIN_H, start.h - dy);
               y = start.y + start.h - h;
             }
-            return { ...c, x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+            // 网格吸附：所有维度（x/y/w/h）对齐到 MOVE_SNAP 网格。
+            const snap = (v: number) => Math.round(v / MOVE_SNAP) * MOVE_SNAP;
+            return { ...c, x: snap(x), y: snap(y), w: snap(w), h: snap(h) };
           }),
         ),
       })),

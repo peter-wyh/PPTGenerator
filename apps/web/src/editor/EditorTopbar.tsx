@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from './store';
 import { ExportMenu } from './components/ExportMenu';
 import { ReportSettingsOverlay } from './components/ReportSettingsOverlay';
+import { DataConfigOverlay } from './components/DataConfigOverlay';
 import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 
 /** 顶栏：返回 + 项目名（可编辑）+ meta 标签、撤销/重做、报告设置、预览、导出/分享（M6）。 */
@@ -21,6 +22,11 @@ export function EditorTopbar() {
   const saving = useEditorStore((s) => s.saving);
   const save = useEditorStore((s) => s.save);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDataConfig, setShowDataConfig] = useState(false);
+  const hasReportData = useEditorStore((s) => {
+    const rd = s.reportData;
+    return !!rd.campaign || (rd.creators?.length ?? 0) > 0;
+  });
 
   const metaTags: string[] = [];
   if (meta?.businessLine) metaTags.push(meta.businessLine);
@@ -87,6 +93,17 @@ export function EditorTopbar() {
         </div>
         <span className="mx-1 h-4 w-px bg-border-default" />
         <button
+          onClick={() => setShowDataConfig(true)}
+          className={
+            hasReportData
+              ? 'rounded px-2 py-1 text-sm text-accent-primary hover:bg-surface-hover'
+              : 'rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary'
+          }
+          title="配置 Campaign 和达人数据"
+        >
+          数据配置{hasReportData ? ' ●' : ''}
+        </button>
+        <button
           onClick={() => setShowSettings(true)}
           className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
           title="报告设置（品牌色等）"
@@ -104,6 +121,7 @@ export function EditorTopbar() {
         <ExportMenu />
       </div>
       {showSettings && <ReportSettingsOverlay onClose={() => setShowSettings(false)} />}
+      {showDataConfig && <DataConfigOverlay onClose={() => setShowDataConfig(false)} />}
     </header>
   );
 }
