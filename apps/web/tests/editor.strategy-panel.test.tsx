@@ -59,4 +59,28 @@ describe('StrategyBlockFields panel', () => {
 
     expect(screen.getAllByTitle('删除该项')).toHaveLength(3);
   });
+
+  it('删除首行后，剩余行的富文本内容正确跟随（RichTextField sync）', () => {
+    // 用一个两行、内容不同的 strategy-block；rows 内容分别为 content-alpha / content-beta。
+    setStrategyBlock([
+      ['sparkle', 'INSIGHT', 'content-alpha'],
+      ['target', 'STRATEGY', 'content-beta'],
+    ]);
+    render(<PropertyPanel />);
+
+    // 删除前：两个 contentEditable，第一个含 content-alpha。
+    let editables = document.querySelectorAll('[contenteditable="true"]');
+    expect(editables.length).toBe(2);
+    expect(editables[0].textContent).toContain('content-alpha');
+
+    // 点击第一行的删除按钮。
+    const removeBtns = screen.getAllByTitle('删除该项');
+    fireEvent.click(removeBtns[0]);
+
+    // 删除后：剩一个 contentEditable；它应显示第二行内容 content-beta（而非残留的 content-alpha）。
+    editables = document.querySelectorAll('[contenteditable="true"]');
+    expect(editables.length).toBe(1);
+    expect(editables[0].textContent).toContain('content-beta');
+    expect(editables[0].textContent).not.toContain('content-alpha');
+  });
 });
