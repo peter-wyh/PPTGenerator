@@ -81,3 +81,48 @@ export function snapResize(
   }
   return { x, y, w, h };
 }
+
+/**
+ * 硬夹紧：把矩形完全关进安全区，塞不下则收缩 w/h（保 MIN_W/MIN_H）。
+ * 与 snapMove/snapResize 的「磁吸（可出血）」互补——这是兜底硬墙。
+ * 用于 move/nudge/add/duplicate/paste/align/distribute/属性面板失焦。
+ * safe=null（margin=0 或安全区≥画布）时原样返回。
+ */
+export function clampRect(
+  rect: { x: number; y: number; w: number; h: number },
+  safe: SafeRect | null,
+): { x: number; y: number; w: number; h: number } {
+  if (!safe) return rect;
+  const w = Math.max(MIN_W, Math.min(rect.w, safe.right - safe.left));
+  const h = Math.max(MIN_H, Math.min(rect.h, safe.bottom - safe.top));
+  const x = Math.max(safe.left, Math.min(rect.x, safe.right - w));
+  const y = Math.max(safe.top, Math.min(rect.y, safe.bottom - h));
+  return { x, y, w, h };
+}
+
+/**
+ * 缩放硬夹紧：按 dir 把「动边」限制在安全区内，对边不动。
+ * w/e 触界时分别钉 left=right-w 或 right=left+w；n/s 同理。MIN_W/MIN_H 优先。
+ * dir 结构同 snapResize（含 'n','e','s','w' 子串）。safe=null 原样返回。
+ */
+export function clampResize(
+  rect: { x: number; y: number; w: number; h: number },
+  dir: string,
+  safe: SafeRect | null,
+): { x: number; y: number; w: number; h: number } {
+  if (!safe) return rect;
+  let { x, y, w, h } = rect;
+  if (dir.includes('w') && x < safe.left) {
+    w = Math.max(MIN_W, x + w - safe.left);
+    x = safe.left;
+  } else if (dir.includes('e') && x + w > safe.right) {
+    w = Math.max(MIN_W, safe.right - x);
+  }
+  if (dir.includes('n') && y < safe.top) {
+    h = Math.max(MIN_H, y + h - safe.top);
+    y = safe.top;
+  } else if (dir.includes('s') && y + h > safe.bottom) {
+    h = Math.max(MIN_H, safe.bottom - y);
+  }
+  return { x, y, w, h };
+}
