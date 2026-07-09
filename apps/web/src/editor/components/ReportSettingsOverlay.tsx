@@ -33,6 +33,7 @@ const PRESET_PRIMARIES = [
 /** 报告设置浮层：整体风格（预设 + 配色 + 字体 + 密度 + 圆角）+ 解析参考图占位。 */
 export function ReportSettingsOverlay({ onClose }: Props) {
   const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
+  const layout = theme.layout ?? DEFAULT_THEME.layout!;
   const setTheme = useEditorStore((s) => s.setTheme);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -45,6 +46,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
       font: { ...preset.theme.font },
       density: preset.theme.density,
       radius: preset.theme.radius,
+      layout: { ...preset.theme.layout },
       preset: preset.key,
     };
     setTheme(patch);
@@ -75,6 +77,14 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     setTheme({ radius: r, preset: undefined });
   }
 
+  /** 手改布局字段：清空 preset 高亮。 */
+  function updateLayout<K extends keyof NonNullable<ProjectTheme['layout']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['layout']>[K],
+  ) {
+    setTheme({ layout: { [field]: value }, preset: undefined });
+  }
+
   /** 解析参考图占位：弹 toast（为后续 vision 接入预留入口）。 */
   function handleParseReference() {
     setToast('参考图解析即将上线，敬请期待');
@@ -100,8 +110,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
         {/* 标题栏 */}
         <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
           <div>
-            <div className="font-headings text-lg font-semibold text-foreground-primary">报告设置</div>
-            <p className="text-xs text-foreground-secondary">整体风格驱动整份报告的配色、字体与密度。</p>
+            <div className="font-headings text-lg font-semibold text-foreground-primary">全局样式设置</div>
+            <p className="text-xs text-foreground-secondary">整体风格驱动整份报告的配色、字体、密度与布局。</p>
           </div>
           <button onClick={onClose} className="text-foreground-muted hover:text-foreground-primary">✕</button>
         </div>
@@ -244,7 +254,76 @@ export function ReportSettingsOverlay({ onClose }: Props) {
             </div>
           </section>
 
-          {/* ⑥ 解析参考图（占位） */}
+          {/* ⑥ 布局：安全距离 + 网格 */}
+          <section className="space-y-3">
+            <div className="text-xs font-semibold text-foreground-secondary">布局</div>
+
+            {/* 安全距离 */}
+            <div>
+              <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">安全距离（px）</div>
+              <div className="flex flex-wrap gap-1">
+                {[24, 48, 64, 96].map((m) => (
+                  <Chip key={m} active={layout.safeMargin === m} onClick={() => updateLayout('safeMargin', m)}>
+                    {m}
+                  </Chip>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={0}
+                max={500}
+                value={layout.safeMargin}
+                onChange={(e) =>
+                  updateLayout('safeMargin', Math.max(0, Math.min(500, Number(e.target.value) || 0)))
+                }
+                className="mt-1.5 w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+              />
+            </div>
+
+            {/* 网格大小 */}
+            <div>
+              <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">网格大小（px）</div>
+              <div className="flex flex-wrap gap-1">
+                {[8, 10, 12, 20].map((g) => (
+                  <Chip key={g} active={layout.gridSize === g} onClick={() => updateLayout('gridSize', g)}>
+                    {g}
+                  </Chip>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={layout.gridSize}
+                onChange={(e) =>
+                  updateLayout('gridSize', Math.max(1, Math.min(100, Number(e.target.value) || 1)))
+                }
+                className="mt-1.5 w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+              />
+            </div>
+
+            {/* 显示开关 */}
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={layout.showGrid ?? true}
+                  onChange={(e) => updateLayout('showGrid', e.target.checked)}
+                />
+                显示网格
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={layout.showSafeArea ?? true}
+                  onChange={(e) => updateLayout('showSafeArea', e.target.checked)}
+                />
+                显示安全区
+              </label>
+            </div>
+          </section>
+
+          {/* ⑦ 解析参考图（占位） */}
           <section className="border-t border-border-subtle pt-4">
             <button
               onClick={handleParseReference}

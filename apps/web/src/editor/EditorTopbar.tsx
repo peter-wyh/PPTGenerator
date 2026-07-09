@@ -89,9 +89,9 @@ export function EditorTopbar() {
         <button
           onClick={() => setShowSettings(true)}
           className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
-          title="报告设置（品牌色等）"
+          title="全局样式设置（风格 / 布局）"
         >
-          报告设置
+          全局样式设置
         </button>
         <button
           onClick={() => enterPreview()}
