@@ -360,4 +360,33 @@ describe('editor store — safe-area hard clamp (move/resize/nudge)', () => {
     expect(c.x).toBe(48);
     expect(c.y).toBe(48);
   });
+
+  it('addComponentAt clamps the drop point into safe area', () => {
+    loadWithSafe([]);
+    useEditorStore.getState().addComponentAt('text', 1270, 710); // 落在右下角外
+    const c = currentComps()[0];
+    expect(c.x).toBeGreaterThanOrEqual(48);
+    expect(c.y).toBeGreaterThanOrEqual(48);
+    expect(c.x + c.w).toBeLessThanOrEqual(1232);
+    expect(c.y + c.h).toBeLessThanOrEqual(672);
+  });
+
+  it('duplicateSelected clamps the +20 offset clone into safe area', () => {
+    loadWithSafe([comp('c1', 1220, 660)]); // 本身越界（懒加载不动），副本要夹
+    useEditorStore.getState().select('c1');
+    useEditorStore.getState().duplicateSelected();
+    const dupe = currentComps()[1];
+    expect(dupe.x + dupe.w).toBeLessThanOrEqual(1232);
+    expect(dupe.y + dupe.h).toBeLessThanOrEqual(672);
+  });
+
+  it('paste clamps pasted components into safe area', () => {
+    loadWithSafe([comp('c1', 1220, 660)]);
+    useEditorStore.getState().select('c1');
+    useEditorStore.getState().copy();
+    useEditorStore.getState().paste();
+    const pasted = currentComps()[1];
+    expect(pasted.x + pasted.w).toBeLessThanOrEqual(1232);
+    expect(pasted.y + pasted.h).toBeLessThanOrEqual(672);
+  });
 });

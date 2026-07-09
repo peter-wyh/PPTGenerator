@@ -405,13 +405,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => {
         const size = DEFAULT_SIZES[type] ?? { w: 300, h: 200 };
         const { x, y } = centered(size.w, size.h, s.canvasWidth, s.canvasHeight);
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type,
-          x,
-          y,
-          w: size.w,
-          h: size.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: getDefaultData(type),
         };
         return {
@@ -425,13 +426,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const layout = getLayout(kind);
         const item = getBusinessItem(kind);
         const { x, y } = centered(layout.w, layout.h, s.canvasWidth, s.canvasHeight);
+        const cl = clampRect({ x, y, w: layout.w, h: layout.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'business-block',
-          x,
-          y,
-          w: layout.w,
-          h: layout.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: {
             businessKind: kind,
             layoutForm: layout.form,
@@ -452,7 +454,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const size = DEFAULT_SIZES[type] ?? { w: 300, h: 200 };
         const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
         const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
-        const comp: EditorComponent = { id: newId(), type, x, y, w: size.w, h: size.h, data: getDefaultData(type) };
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
+        const comp: EditorComponent = { id: newId(), type, x: cl.x, y: cl.y, w: cl.w, h: cl.h, data: getDefaultData(type) };
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
           selectedIds: [comp.id],
@@ -465,13 +468,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const item = getBusinessItem(kind);
         const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
         const { x, y } = placed(layout.w, layout.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
+        const cl = clampRect({ x, y, w: layout.w, h: layout.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'business-block',
-          x,
-          y,
-          w: layout.w,
-          h: layout.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: {
             businessKind: kind,
             layoutForm: layout.form,
@@ -491,13 +495,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => {
         const size = shape === 'line' ? { w: 200, h: 4 } : DEFAULT_SIZES['shape'];
         const { x, y } = centered(size.w, size.h, s.canvasWidth, s.canvasHeight);
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'shape',
-          x,
-          y,
-          w: size.w,
-          h: size.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: getDefaultShapeData(shape),
         };
         return {
@@ -511,13 +516,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const size = shape === 'line' ? { w: 200, h: 4 } : DEFAULT_SIZES['shape'];
         const grid = s.projectMeta?.theme?.layout?.gridSize ?? DEFAULT_GRID_SIZE;
         const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
+        const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = {
           id: newId(),
           type: 'shape',
-          x,
-          y,
-          w: size.w,
-          h: size.h,
+          x: cl.x,
+          y: cl.y,
+          w: cl.w,
+          h: cl.h,
           data: getDefaultShapeData(shape),
         };
         return {
@@ -605,10 +611,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     duplicateSelected: () =>
       mutateAndCommit((s) => {
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
         const cur = s.currentPage()?.components ?? [];
         const dupes = cur
           .filter((c) => s.selectedIds.includes(c.id))
-          .map((c) => ({ ...clone(c), id: newId(), x: c.x + 20, y: c.y + 20 }));
+          .map((c) => {
+            const cl = clampRect({ x: c.x + 20, y: c.y + 20, w: c.w, h: c.h }, clampSafe);
+            return { ...clone(c), id: newId(), x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+          });
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, ...dupes]),
           selectedIds: dupes.map((c) => c.id),
@@ -651,7 +661,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const clip = get().clipboard;
       if (!clip || clip.length === 0) return;
       mutateAndCommit((s) => {
-        const pasted = clip.map((c) => ({ ...clone(c), id: newId(), x: c.x + 20, y: c.y + 20 }));
+        const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        const pasted = clip.map((c) => {
+          const cl = clampRect({ x: c.x + 20, y: c.y + 20, w: c.w, h: c.h }, clampSafe);
+          return { ...clone(c), id: newId(), x: cl.x, y: cl.y, w: cl.w, h: cl.h };
+        });
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, ...pasted]),
           selectedIds: pasted.map((c) => c.id),
