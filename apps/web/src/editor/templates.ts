@@ -11,6 +11,8 @@ export interface Template {
   name: string;
   description: string;
   components: () => EditorComponent[];
+  /** 标题组件在 components() 返回数组中的下标；命中则应用时该页为投放报告页（media-report）。 */
+  pageTitleIndex?: number;
 }
 
 /** Get a page template by id. */
@@ -215,6 +217,7 @@ export const TEMPLATES: Template[] = [
     id: 'cover-page',
     name: '封面页',
     description: '大标题 + 副标题',
+    pageTitleIndex: 0,
     components: () => {
       const title = t('text', 120, 240, 1000, 120);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Report Title';
