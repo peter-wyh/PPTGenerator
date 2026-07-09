@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type {
+  Campaign,
   CommentWordcloudData,
   CreatorAvatarCardData,
   EditorComponent,
@@ -19,6 +20,7 @@ import type {
   StrategyBlockData,
   WorkMetricsData,
   WorkScreenshotData,
+  WorkScreenshotItem,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from './store';
@@ -28,6 +30,8 @@ import type { Alignment } from './store';
 import { getStyleOptions, type VariantId } from './business/catalog';
 import { Button } from '@/components/Button';
 import { ImageInput } from '@/components/ImageInput';
+import { listCampaigns } from '@/api/campaigns';
+import { listCreatorPerformance } from '@/api/creatorPerformance';
 import { parseCreatorLink } from './creatorLink';
 import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from './icons/IconPickerOverlay';
 import { findIcon } from './icons/catalog';
@@ -1565,6 +1569,84 @@ function withAt<T>(arr: T[], i: number, v: T): T[] {
 /* --------------------------- 业绩·商品 自定义字段 ---------------------------- */
 
 /** 作品截图：每张图 ImageInput + 说明 + 删除，底部添加。 */
+/** work-screenshot：从已绑 Campaign（或全部 mock campaign）导入达人作品截图。 */
+function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }) {
+  const campaign = useEditorStore((s) => s.reportData.campaign);
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selected, setSelected] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // 未绑定 Campaign 时，拉取全部 mock campaign 供下拉兜底。
+  useEffect(() => {
+    if (campaign) return;
+    let alive = true;
+    listCampaigns()
+      .then((list) => alive && setCampaigns(list))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [campaign]);
+
+  async function importFrom(campaignId: string) {
+    if (!campaignId || loading) return;
+    setLoading(true);
+    const perfs = await listCreatorPerformance(campaignId);
+    const images: WorkScreenshotItem[] = [];
+    for (const p of perfs) {
+      for (const post of p.posts) {
+        images.push({ src: post.cover ?? '', caption: `${p.creatorName} · ${post.title}` });
+      }
+    }
+    if (images.length) {
+      updateComponentData(comp.id, { images });
+      commit();
+    }
+    setLoading(false);
+  }
+
+  return (
+    <FieldGroup title="从达人数据导入">
+      {campaign ? (
+        <button
+          onClick={() => importFrom(campaign.id)}
+          disabled={loading}
+          className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-60"
+        >
+          {loading ? '导入中…' : `⚡ 导入「${campaign.name}」作品`}
+        </button>
+      ) : (
+        <div className="space-y-1">
+          <div className="text-[11px] text-foreground-muted">未绑定 Campaign，可选一个导入：</div>
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+          >
+            <option value="">选择 Campaign…</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {selected && (
+            <button
+              onClick={() => importFrom(selected)}
+              disabled={loading}
+              className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-60"
+            >
+              {loading ? '导入中…' : '⚡ 导入'}
+            </button>
+          )}
+        </div>
+      )}
+    </FieldGroup>
+  );
+}
+
 function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
@@ -1581,29 +1663,32 @@ function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
   const remove = (i: number) => write(images.filter((_, idx) => idx !== i));
 
   return (
-    <FieldGroup title="作品截图">
-      <div className="space-y-2">
-        {images.map((im, i) => (
-          <div key={i} className="space-y-1 rounded border border-border-subtle p-1.5">
-            <ImageInput value={im.src} onChange={(url) => setItem(i, { src: url })} />
-            <div className="flex items-center gap-1">
-              <input
-                value={im.caption ?? ''}
-                placeholder="说明"
-                onChange={(e) => setItem(i, { caption: e.target.value })}
-                className="w-full rounded border border-border-default px-1.5 py-1 text-xs text-foreground-primary"
-              />
-              <button onClick={() => remove(i)} className="text-foreground-muted hover:text-red">
-                ✕
-              </button>
+    <>
+      <ReportWorkScreenshotImporter comp={comp} />
+      <FieldGroup title="作品截图">
+        <div className="space-y-2">
+          {images.map((im, i) => (
+            <div key={i} className="space-y-1 rounded border border-border-subtle p-1.5">
+              <ImageInput value={im.src} onChange={(url) => setItem(i, { src: url })} />
+              <div className="flex items-center gap-1">
+                <input
+                  value={im.caption ?? ''}
+                  placeholder="说明"
+                  onChange={(e) => setItem(i, { caption: e.target.value })}
+                  className="w-full rounded border border-border-default px-1.5 py-1 text-xs text-foreground-primary"
+                />
+                <button onClick={() => remove(i)} className="text-foreground-muted hover:text-red">
+                  ✕
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-      <button onClick={add} className="text-xs text-accent-primary hover:underline">
-        + 添加图片
-      </button>
-    </FieldGroup>
+          ))}
+        </div>
+        <button onClick={add} className="text-xs text-accent-primary hover:underline">
+          + 添加图片
+        </button>
+      </FieldGroup>
+    </>
   );
 }
 
