@@ -204,6 +204,13 @@ export interface ProjectTheme {
   };
   density: ThemeDensity;
   radius: ThemeRadius;
+  /** 布局尺寸：安全距离 + 网格；并入主题，由 4 套预设覆盖。 */
+  layout?: {
+    safeMargin: number;     // 四面统一内缩 px；0=不画安全区
+    gridSize: number;       // 网格大小 px；驱动可见网格 + 移动/拖拽/键盘/缩放吸附
+    showGrid?: boolean;     // 显示可见网格叠加；缺省 true
+    showSafeArea?: boolean; // 显示安全区虚线；缺省 true
+  };
   preset?: string; // 当前命中的预设 key，仅用于 UI 高亮；手改字段后置空
 }
 
@@ -286,6 +293,7 @@ export const DEFAULT_THEME: ProjectTheme = {
   },
   density: 'standard',
   radius: 'small',
+  layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true },
   preset: 'business-sober',
 };
 
@@ -306,6 +314,7 @@ export const STYLE_PRESETS: StylePreset[] = [
       font: { text: 'noto-sans-sc', number: 'inter', heading: undefined },
       density: 'standard',
       radius: 'small',
+      layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true },
       preset: 'business-sober',
     },
   },
@@ -324,6 +333,7 @@ export const STYLE_PRESETS: StylePreset[] = [
       font: { text: 'inter', number: 'ibm-plex-mono', heading: 'inter' },
       density: 'compact',
       radius: 'sharp',
+      layout: { safeMargin: 40, gridSize: 8, showGrid: true, showSafeArea: true },
       preset: 'tech-minimal',
     },
   },
@@ -342,6 +352,7 @@ export const STYLE_PRESETS: StylePreset[] = [
       font: { text: 'noto-sans-sc', number: 'inter', heading: 'funnel-sans' },
       density: 'spacious',
       radius: 'large',
+      layout: { safeMargin: 64, gridSize: 12, showGrid: true, showSafeArea: true },
       preset: 'vibrant-trendy',
     },
   },
@@ -360,6 +371,7 @@ export const STYLE_PRESETS: StylePreset[] = [
       font: { text: 'noto-sans-sc', number: 'inter', heading: 'noto-serif-sc' },
       density: 'standard',
       radius: 'small',
+      layout: { safeMargin: 56, gridSize: 10, showGrid: true, showSafeArea: true },
       preset: 'minimal-elegant',
     },
   },
@@ -438,6 +450,20 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
   const radius = (obj.radius as ThemeRadius) ?? d.radius;
   const preset = typeof obj.preset === 'string' ? obj.preset : obj.preset === undefined ? d.preset : undefined;
 
+  // ---- 布局 layout：缺对象整体补默认；部分缺字段按字段补；非法值回退 ----
+  const layoutRaw = obj.layout as Record<string, unknown> | undefined;
+  const dLayout = d.layout!;
+  const parseGridNum = (v: unknown, def: number, min: number): number => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= min ? Math.round(n) : def;
+  };
+  const layout = {
+    safeMargin: parseGridNum(layoutRaw?.safeMargin, dLayout.safeMargin, 0),
+    gridSize: parseGridNum(layoutRaw?.gridSize, dLayout.gridSize, 1),
+    showGrid: typeof layoutRaw?.showGrid === 'boolean' ? layoutRaw.showGrid : dLayout.showGrid,
+    showSafeArea: typeof layoutRaw?.showSafeArea === 'boolean' ? layoutRaw.showSafeArea : dLayout.showSafeArea,
+  };
+
   return {
     color: {
       primary: (colorRaw?.primary as string) || legacyPrimary || d.color.primary,
@@ -454,6 +480,7 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     density: ['compact', 'standard', 'spacious'].includes(density) ? density : d.density,
     radius: ['sharp', 'small', 'large'].includes(radius) ? radius : d.radius,
     preset,
+    layout,
   };
 }
 
