@@ -23,6 +23,7 @@ import type {
   ShapeData,
   TableData,
   TextData,
+  TitleBlockData,
 } from '@mediakit/shared';
 import { IconKit } from '../icons/IconKit';
 
@@ -346,6 +347,97 @@ export function ShapeComponent({ data }: { data: ShapeData }) {
     );
   return (
     <div className="h-full w-full" style={{ opacity: opacity ?? 1, transform: rotation ? `rotate(${rotation}deg)` : undefined }}>
+      {inner}
+    </div>
+  );
+}
+
+/* ------------------------------- title block ----------------------------- */
+export function TitleBlock({ data }: { data: TitleBlockData }) {
+  const { variant = 'plain', text, subtitle, index, divider } = data;
+  const color = data.color ?? '#FF5C00';
+
+  // 内层：按变体渲染。divider 由外层统一控制（统一加底部分割线）。
+  let inner: React.ReactNode;
+  switch (variant) {
+    case 'plain':
+      inner = (
+        <div className="min-w-0">
+          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
+        </div>
+      );
+      break;
+
+    case 'bar-left':
+      inner = (
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="h-full w-1 flex-none rounded-full" style={{ backgroundColor: color }} />
+          <div className="min-w-0">
+            <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+            {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
+          </div>
+        </div>
+      );
+      break;
+
+    case 'underline':
+      inner = (
+        <div className="min-w-0">
+          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          <div className="mt-1.5 h-0.5 w-full rounded-full" style={{ backgroundColor: color }} />
+          {subtitle && <div className="mt-1.5 text-sm text-foreground-muted">{subtitle}</div>}
+        </div>
+      );
+      break;
+
+    case 'gradient':
+      inner = (
+        <div className="w-full rounded-xl px-5 py-4" style={{ background: `linear-gradient(135deg, ${color}, ${color}99)` }}>
+          <div className="text-2xl font-bold leading-tight text-white">{text}</div>
+          {subtitle && <div className="mt-1 text-sm text-white/80">{subtitle}</div>}
+        </div>
+      );
+      break;
+
+    case 'card':
+      inner = (
+        <div className="w-full rounded-xl border border-border-default bg-surface-primary px-5 py-4">
+          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
+        </div>
+      );
+      break;
+
+    case 'numbered':
+      inner = (
+        <div className="flex min-w-0 items-center gap-3">
+          {index && (
+            <span className="text-4xl font-bold leading-none flex-none" style={{ color }}>
+              {index}
+            </span>
+          )}
+          <div className="min-w-0">
+            <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+            {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
+          </div>
+        </div>
+      );
+      break;
+
+    default:
+      inner = (
+        <div className="min-w-0">
+          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
+        </div>
+      );
+  }
+
+  return (
+    <div
+      className={`h-full w-full flex flex-col justify-center ${divider ? 'border-b border-border-default pb-2' : ''}`}
+    >
       {inner}
     </div>
   );

@@ -793,7 +793,15 @@ export type ComponentType =
   | 'meta-strip'
   | 'strategy-block'
   // 基础组件：组图（按图片数量的预设版式，纯图无 caption）
-  | 'image-group';
+  | 'image-group'
+  // 基础组件：标题块（多样式大标题，用于页头/分隔/强调）
+  | 'title-block'
+  // 业绩·商品域：Campaign 单达人维度分析图表
+  | 'campaign-analysis'
+  // 业绩·商品域：单达人作品数据指标（拆分子分类）
+  | 'creator-work-metrics'
+  // 业绩·商品域：达人作品列表（带封面+数据列，mock 数据）
+  | 'creator-works-table';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -856,6 +864,69 @@ export interface ImageGroupData {
   images: ImageGroupItem[];
   /** 单元格间距（px）；可选，缺省 8。 */
   gap?: number;
+}
+
+/* ---- 标题块：多样式大标题 ---- */
+
+export type TitleBlockStyle = 'plain' | 'bar-left' | 'underline' | 'gradient' | 'card' | 'numbered';
+
+export interface TitleBlockData {
+  variant: TitleBlockStyle;
+  text: string;
+  subtitle?: string;
+  /** 序号（numbered 样式用，如 "01"） */
+  index?: string;
+  /** 主色（bar/underline/gradient/numbered 用） */
+  color?: string;
+  /** 是否显示底部分割线 */
+  divider?: boolean;
+}
+
+/* ---- Campaign 单达人维度分析图表 ---- */
+
+export type CampaignAnalysisVariant = 'radar' | 'combo' | 'funnel';
+
+export interface CampaignAnalysisData {
+  variant: CampaignAnalysisVariant;
+  title: string;
+  subtitle?: string;
+  /** 雷达图维度（variant=radar） */
+  dimensions?: { label: string; value: number; max?: number }[];
+  /** 组合图（柱+线）数据（variant=combo） */
+  series?: { label: string; barValue: number; lineValue: number }[];
+  /** 漏斗图数据（variant=funnel） */
+  funnelSteps?: { label: string; value: number }[];
+  /** AI 洞察文本 */
+  insight?: string;
+}
+
+/* ---- 单达人作品数据指标（拆分子分类） ---- */
+
+export type CreatorWorkMetricsVariant = 'grid' | 'strip' | 'card' | 'detailed';
+
+export interface CreatorWorkMetricsData {
+  variant: CreatorWorkMetricsVariant;
+  title: string;
+  subtitle?: string;
+  /** 作品封面 URL */
+  cover?: string;
+  /** 作品名称 */
+  workName?: string;
+  /** 指标列表 */
+  metrics: { label: string; value: string; sub?: string; color?: string }[];
+}
+
+/* ---- 达人作品列表（封面+数据列，mock 数据） ---- */
+
+export type CreatorWorksTableVariant = 'list' | 'cards' | 'compact';
+
+export interface CreatorWorksTableData {
+  variant: CreatorWorksTableVariant;
+  title: string;
+  subtitle?: string;
+  headers: string[];
+  /** 每行：[封面URL, 作品名, 播放, 点赞, 评论, 转发, 完播率] */
+  rows: string[][];
 }
 
 export type IndicatorCardVariant = 'plain' | 'icon-left' | 'icon-top' | 'icon-bg' | 'spotlight' | 'duo';
@@ -1090,6 +1161,8 @@ export interface KpiBoardData {
   trendDirections?: (KpiTrendDirection | null)[];
   /** 环比对比基准文字（全局），如 "vs 06.01–06.30" / "vs 目标"；缺省回退 "vs 上期"。 */
   compareLabel?: string;
+  /** 被隐藏的行索引（按 rows 索引）；渲染时过滤掉，属性面板可重新显示。 */
+  hiddenIndices?: number[];
 }
 
 /** 基础信息横排卡组（达人画像页 BASE/TYPE/TIER）。复用 TableData 形态。 */
@@ -1137,7 +1210,7 @@ export interface TimelineCompareData {
  * 商品表现（≈PRD CMP-B12）：TOP N 商品。复用 TableData 形状，
  * 约定列顺序 [商品名, 图URL, 销量, 占比, 品类]；insight 为可选 AI 洞察文本。
  */
-export type ProductPerformanceVariant = 'cards' | 'rank' | 'grid' | 'bar';
+export type ProductPerformanceVariant = 'cards' | 'rank' | 'grid' | 'bar' | 'pie';
 export interface ProductPerformanceData {
   variant: ProductPerformanceVariant;
   insight: string;
@@ -1274,7 +1347,11 @@ export type ComponentData =
   | WorkMetricsData
   | CommentWordcloudData
   | ShapeData
-  | ImageGroupData;
+  | ImageGroupData
+  | TitleBlockData
+  | CampaignAnalysisData
+  | CreatorWorkMetricsData
+  | CreatorWorksTableData;
 
 export interface EditorComponent {
   id: string;

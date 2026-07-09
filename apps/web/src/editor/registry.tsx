@@ -31,9 +31,13 @@ import {
   PlacementDisplay,
   PostList,
   ProductPerformance,
+  CampaignAnalysis,
+  CreatorWorkMetrics,
+  CreatorWorksTable,
 } from './components/ReportComponents';
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
+import { TitleBlock } from './components/BasicComponents';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -379,6 +383,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'rank', label: '排行榜' },
       { id: 'grid', label: '网格' },
       { id: 'bar', label: '条形图' },
+      { id: 'pie', label: '品类饼图' },
     ],
     propertySchema: [
       { key: 'insight', label: 'AI 洞察', kind: 'textarea' },
@@ -506,6 +511,74 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'duoza', label: '12 张' },
     ],
     propertySchema: [],
+  },
+  'title-block': {
+    Component: TitleBlock,
+    defaultSize: DEFAULT_SIZES['title-block'],
+    defaultData: () => getDefaultData('title-block'),
+    variants: [
+      { id: 'plain', label: '纯文字' },
+      { id: 'bar-left', label: '左色条' },
+      { id: 'underline', label: '下划线' },
+      { id: 'gradient', label: '渐变背景' },
+      { id: 'card', label: '卡片' },
+      { id: 'numbered', label: '序号' },
+    ],
+    propertySchema: [
+      { key: 'text', label: '标题文字', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'index', label: '序号', kind: 'text' },
+      { key: 'color', label: '主色', kind: 'color' },
+      { key: 'divider', label: '底部分割线', kind: 'select', options: [{ value: 'true', label: '显示' }, { value: 'false', label: '隐藏' }] },
+    ],
+  },
+  'campaign-analysis': {
+    Component: CampaignAnalysis,
+    defaultSize: DEFAULT_SIZES['campaign-analysis'],
+    defaultData: () => getDefaultData('campaign-analysis'),
+    variants: [
+      { id: 'radar', label: '雷达图' },
+      { id: 'combo', label: '柱+线组合' },
+      { id: 'funnel', label: '漏斗图' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'insight', label: 'AI 洞察', kind: 'textarea' },
+    ],
+  },
+  'creator-work-metrics': {
+    Component: CreatorWorkMetrics,
+    defaultSize: DEFAULT_SIZES['creator-work-metrics'],
+    defaultData: () => getDefaultData('creator-work-metrics'),
+    variants: [
+      { id: 'grid', label: '网格' },
+      { id: 'strip', label: '横向条' },
+      { id: 'card', label: '卡片' },
+      { id: 'detailed', label: '详细' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'workName', label: '作品名', kind: 'text' },
+      { key: 'cover', label: '作品封面', kind: 'image-url' },
+      { key: '', label: '指标列表', kind: 'table' },
+    ],
+  },
+  'creator-works-table': {
+    Component: CreatorWorksTable,
+    defaultSize: DEFAULT_SIZES['creator-works-table'],
+    defaultData: () => getDefaultData('creator-works-table'),
+    variants: [
+      { id: 'list', label: '列表' },
+      { id: 'cards', label: '卡片' },
+      { id: 'compact', label: '紧凑' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: '', label: '作品列表', kind: 'table' },
+    ],
   },
 };
 

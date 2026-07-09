@@ -36,6 +36,10 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'comment-wordcloud': { w: 560, h: 360 },
   'shape': { w: 200, h: 120 },
   'image-group': { w: 600, h: 420 },
+  'title-block': { w: 600, h: 80 },
+  'campaign-analysis': { w: 520, h: 360 },
+  'creator-work-metrics': { w: 560, h: 280 },
+  'creator-works-table': { w: 700, h: 320 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -439,6 +443,58 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         variant: 'auto',
         images: [{ src: '' }, { src: '' }, { src: '' }],
+      };
+    case 'title-block':
+      return {
+        variant: 'bar-left',
+        text: '章节标题',
+        subtitle: '副标题（可选）',
+        color: '#FF5C00',
+        divider: true,
+      };
+    case 'campaign-analysis':
+      return {
+        variant: 'radar',
+        title: '达人投放效果分析',
+        subtitle: '多维度对比',
+        dimensions: [
+          { label: '曝光', value: 85, max: 100 },
+          { label: '互动', value: 72, max: 100 },
+          { label: '转化', value: 68, max: 100 },
+          { label: 'CPE', value: 90, max: 100 },
+          { label: 'CVR', value: 65, max: 100 },
+          { label: 'CPM', value: 78, max: 100 },
+        ],
+        insight: '该达人在曝光和互动维度表现突出，但转化率有提升空间。',
+      };
+    case 'creator-work-metrics':
+      return {
+        variant: 'grid',
+        title: '单作品核心指标',
+        subtitle: '近 7 天',
+        workName: '7-Day Skin Diary · Day 1',
+        cover: '',
+        metrics: [
+          { label: '播放', value: '1.2M', sub: '+15%', color: '#FF5C00' },
+          { label: '点赞', value: '86K', sub: '+8%', color: '#3B82F6' },
+          { label: '评论', value: '2.4K', sub: '+22%', color: '#22C55E' },
+          { label: '转发', value: '1.2K', sub: '+5%', color: '#8B5CF6' },
+          { label: '完播率', value: '42%', sub: '+3pt', color: '#F59E0B' },
+          { label: '收藏', value: '5.6K', sub: '+12%', color: '#EC4899' },
+        ],
+      };
+    case 'creator-works-table':
+      return {
+        variant: 'list',
+        title: '达人作品列表',
+        subtitle: '近期发布作品',
+        headers: ['作品', '播放', '点赞', '评论', '转发', '完播率'],
+        rows: [
+          ['', '夏季护肤分享', '1.2M', '86K', '2.4K', '1.2K', '42%'],
+          ['', '开箱测评', '856K', '52K', '1.8K', '890', '38%'],
+          ['', '日常 vlog', '432K', '28K', '960', '420', '35%'],
+          ['', '好物推荐', '678K', '41K', '1.5K', '670', '40%'],
+        ],
       };
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };

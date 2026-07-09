@@ -28,6 +28,7 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'shape', shape: 'rounded', label: '圆角矩形', icon: '▢' },
       { type: 'shape', shape: 'circle', label: '圆形', icon: '◯' },
       { type: 'shape', shape: 'line', label: '直线', icon: '─' },
+      { type: 'title-block', label: '标题块', icon: 'H' },
     ],
   },
   {
@@ -51,6 +52,9 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'kpi-board', label: '业绩看板', icon: '◉' },
       { type: 'timeline-compare', label: '周期对比', icon: '↔' },
       { type: 'product-performance', label: '商品表现', icon: '▣' },
+      { type: 'campaign-analysis', label: '分析图表', icon: '◈' },
+      { type: 'creator-work-metrics', label: '作品指标', icon: '▣' },
+      { type: 'creator-works-table', label: '作品列表', icon: '▦' },
       { type: 'work-screenshot', label: '作品截图', icon: '▦' },
       { type: 'work-metrics', label: '作品数据', icon: '▤' },
       { type: 'comment-wordcloud', label: '评论词云', icon: '◑' },

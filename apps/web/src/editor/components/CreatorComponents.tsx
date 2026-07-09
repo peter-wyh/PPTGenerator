@@ -600,33 +600,35 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
       {slices.length === 0 ? (
         <EmptyChart />
       ) : (
-        <div className="relative h-full w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={slices}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                innerRadius="55%"
-                outerRadius="80%"
-                label={(e: { label?: string }) => e.label ?? ''}
-              >
-                {slices.map((s, i) => (
-                  <Cell key={i} fill={s.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          {center && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-xs font-semibold text-foreground-primary">
-              {center}
-            </div>
-          )}
+        <div className="flex h-full w-full flex-col">
+          <div className="relative min-h-0 flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={slices}
+                  dataKey="value"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="55%"
+                  outerRadius="80%"
+                  label={(e: { label?: string }) => e.label ?? ''}
+                >
+                  {slices.map((s, i) => (
+                    <Cell key={i} fill={s.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            {center && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-xs font-semibold text-foreground-primary">
+                {center}
+              </div>
+            )}
+          </div>
           {/* recharts label 在 jsdom 测试环境下因整体 mock 不会触发；保留一份 DOM 可见的图例作为兜底。 */}
-          <div className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-0.5 text-[10px] text-foreground-secondary">
+          <div className="mt-1 flex flex-none flex-wrap justify-center gap-x-3 gap-y-0.5 text-[10px] text-foreground-secondary">
             {slices.map((s, i) => (
               <span key={i} className="inline-flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />

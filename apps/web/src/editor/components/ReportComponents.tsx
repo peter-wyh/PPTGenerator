@@ -7,6 +7,9 @@
  * 复用 TableData 形状（headers+rows），table 字段兼作对象列表编辑器。
  */
 import type {
+  CampaignAnalysisData,
+  CreatorWorkMetricsData,
+  CreatorWorksTableData,
   KpiBoardData,
   KpiTrendDirection,
   MetaStripData,
@@ -16,7 +19,27 @@ import type {
   StrategyBlockData,
   TimelineCompareData,
 } from '@mediakit/shared';
-import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  LabelList,
+  Legend,
+  Line,
+  Pie,
+  PieChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { findIcon } from '../icons/catalog';
 import { renderHtmlWithHighlights } from '../richText';
 import { KPI_COLOR_TOKENS } from '../kpiTokens';
@@ -33,12 +56,15 @@ function compareColor(compare: string, direction: KpiTrendDirection = 'positive'
 
 export function KpiBoard({ data }: { data: KpiBoardData }) {
   const { variant = 'grid', rows = [] } = data;
-  const items = rows.map((r, i) => {
-    const token = data.valueColors?.[i] ?? null;
-    const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : undefined;
-    const direction = data.trendDirections?.[i] ?? 'positive';
-    return { label: r[0] ?? '', value: r[1] ?? '', compare: r[2] ?? '', color, direction };
-  });
+  const hidden = new Set(data.hiddenIndices ?? []);
+  const items = rows
+    .map((r, i) => {
+      const token = data.valueColors?.[i] ?? null;
+      const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : undefined;
+      const direction = data.trendDirections?.[i] ?? 'positive';
+      return { label: r[0] ?? '', value: r[1] ?? '', compare: r[2] ?? '', color, direction };
+    })
+    .filter((_, i) => !hidden.has(i));
 
   const Card = ({
     label, value, compare, color, direction = 'positive',
@@ -633,6 +659,72 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
     );
   }
 
+  if (variant === 'pie') {
+    // 品类饼图：按品类聚合商品，左侧 PieChart 展示品类分布，右侧 TOP 商品列表。
+    const PIE_COLORS = ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899', '#14B8A6', '#6B7280'];
+    const catMap = new Map<string, number>();
+    items.forEach((it) => {
+      const cat = it.cat || '未分类';
+      const m = it.sold.match(/-?\d+(\.\d+)?/);
+      const v = m ? parseFloat(m[0]) : 1;
+      catMap.set(cat, (catMap.get(cat) ?? 0) + v);
+    });
+    const pieData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
+    return (
+      <div className="flex h-full w-full gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+        <div className="flex min-w-0 flex-1 items-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius="75%"
+                innerRadius="40%"
+                paddingAngle={2}
+              >
+                {pieData.map((_, i) => (
+                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v: number) => v} />
+              <Legend
+                wrapperStyle={{ fontSize: 11 }}
+                iconSize={8}
+                iconType="circle"
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex w-[260px] flex-none flex-col gap-1 overflow-auto">
+          <div className="mb-1 text-[11px] font-semibold text-foreground-secondary">TOP 商品</div>
+          {items.slice(0, 8).map((it, i) => (
+            <div key={i} className="flex items-center gap-2 border-b border-border-subtle py-1 last:border-b-0">
+              <span className="w-4 flex-none text-center text-[10px] text-foreground-muted">{i + 1}</span>
+              <ImgOrPlaceholder url={it.img} label={it.name} cls="h-7 w-7 flex-none" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs text-foreground-primary">{it.name}</div>
+                <div className="text-[10px] text-foreground-muted">{it.cat}</div>
+              </div>
+              <div className="flex-none text-right">
+                <div className="font-data text-xs font-semibold text-foreground-primary">{it.sold}</div>
+                <div className="text-[10px] text-foreground-secondary">{it.share}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {insight && (
+          <div className="flex w-[200px] flex-none flex-col justify-center rounded-lg bg-primary/5 p-3">
+            <div className="mb-1 text-[11px] font-semibold text-primary">Insight</div>
+            <div className="text-xs text-foreground-secondary">{insight}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const Row = ({ it, rank }: { it: (typeof items)[number]; rank: number }) => (
     <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 last:border-b-0">
       <span className="w-5 flex-none text-center text-xs text-foreground-muted">{rank}</span>
@@ -779,6 +871,359 @@ export function PostList({ data }: { data: PostListData }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ---------------------------- campaign analysis --------------------------- */
+// ≈PRD CMP-B17。Campaign 单达人维度分析图表：radar / combo / funnel。
+
+const CAMPAIGN_COLORS = ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899'];
+
+export function CampaignAnalysis({ data }: { data: CampaignAnalysisData }) {
+  const { variant = 'radar', title, subtitle, dimensions = [], series = [], funnelSteps = [], insight } = data;
+
+  return (
+    <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      {(title || subtitle) && (
+        <div className="flex flex-none flex-col">
+          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+        </div>
+      )}
+      <div className="min-h-0 flex-1">
+        {variant === 'radar' && <CampaignRadar dimensions={dimensions} />}
+        {variant === 'combo' && <CampaignCombo series={series} />}
+        {variant === 'funnel' && <CampaignFunnel steps={funnelSteps} />}
+      </div>
+      {insight && (
+        <div className="flex-none rounded-lg bg-primary/5 p-2.5">
+          <div className="mb-0.5 text-[11px] font-semibold text-primary">Insight</div>
+          <div className="text-[11px] text-foreground-secondary">{insight}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CampaignRadar({ dimensions }: { dimensions: CampaignAnalysisData['dimensions'] }) {
+  if (!dimensions || dimensions.length === 0) {
+    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">无维度数据</div>;
+  }
+  const data = dimensions.map((d) => ({ label: d.label, value: d.value, max: d.max ?? 100 }));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <RadarChart data={data} outerRadius="72%">
+        <PolarGrid stroke="var(--color-border-default, #E5E7EB)" />
+        <PolarAngleAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-foreground-secondary, #6B7280)' }} />
+        <PolarRadiusAxis angle={90} domain={[0, 'auto']} tick={{ fontSize: 9, fill: 'var(--color-foreground-muted, #9CA3AF)' }} />
+        <Radar dataKey="value" stroke="#FF5C00" fill="#FF5C00" fillOpacity={0.35} />
+        <Tooltip formatter={(v: number) => v} />
+      </RadarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function CampaignCombo({ series }: { series: CampaignAnalysisData['series'] }) {
+  if (!series || series.length === 0) {
+    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">无系列数据</div>;
+  }
+  const data = series.map((s) => ({ label: s.label, barValue: s.barValue, lineValue: s.lineValue }));
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #F3F4F6)" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="left" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+        <Tooltip />
+        <Bar yAxisId="left" dataKey="barValue" radius={[4, 4, 0, 0]} fill="#FF5C00" barSize="40%" />
+        <Line yAxisId="right" dataKey="lineValue" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+function CampaignFunnel({ steps }: { steps: CampaignAnalysisData['funnelSteps'] }) {
+  if (!steps || steps.length === 0) {
+    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">无漏斗数据</div>;
+  }
+  const max = Math.max(...steps.map((s) => s.value), 1);
+  return (
+    <div className="flex h-full w-full flex-col justify-center gap-2">
+      {steps.map((s, i) => {
+        const pct = Math.round((s.value / max) * 100);
+        const color = CAMPAIGN_COLORS[i % CAMPAIGN_COLORS.length];
+        return (
+          <div key={i} className="flex items-center gap-2">
+            <span className="w-16 flex-none text-right text-[11px] text-foreground-secondary">{s.label}</span>
+            <div className="relative h-7 flex-1 overflow-hidden rounded bg-surface-hover">
+              <div
+                className="flex h-full items-center justify-end rounded px-2 text-[10px] font-medium text-white"
+                style={{
+                  width: `${Math.max(pct, 12)}%`,
+                  background: `linear-gradient(90deg, ${color}, ${color}CC)`,
+                }}
+              >
+                {s.value}
+              </div>
+            </div>
+            <span className="w-10 flex-none text-right text-[10px] text-foreground-muted">{pct}%</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* --------------------------- creator work metrics ------------------------- */
+// ≈PRD CMP-B18。单达人作品数据指标：grid / strip / card / detailed。
+
+export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
+  const { variant = 'grid', title, subtitle, cover, workName, metrics = [] } = data;
+
+  if (variant === 'strip') {
+    return (
+      <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        <div className="flex flex-1 flex-wrap items-stretch">
+          {metrics.map((m, i) => (
+            <div
+              key={i}
+              className={`flex flex-1 flex-col justify-center px-3 ${i > 0 ? 'border-l border-border-subtle' : ''}`}
+            >
+              <div className="text-[10px] text-foreground-muted">{m.label}</div>
+              <div
+                className="font-data text-lg font-bold"
+                style={{ color: m.color ?? 'var(--color-foreground-primary, #1A1A1A)' }}
+              >
+                {m.value}
+              </div>
+              {m.sub && (
+                <div className="text-[10px] font-medium" style={{ color: m.color ?? '#22C55E' }}>{m.sub}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'card') {
+    return (
+      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        <div className="flex flex-1 gap-3">
+          {(cover || workName) && (
+            <div className="flex flex-none flex-col items-center justify-center gap-1.5" style={{ width: 96 }}>
+              <ImgOrPlaceholder url={cover ?? ''} label={workName ?? ''} cls="h-20 w-20" />
+              {workName && (
+                <div className="line-clamp-2 text-center text-[11px] font-medium text-foreground-primary">{workName}</div>
+              )}
+            </div>
+          )}
+          <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+            {metrics.map((m, i) => (
+              <div key={i} className="flex flex-col justify-center">
+                <div className="text-[10px] text-foreground-muted">{m.label}</div>
+                <div
+                  className="font-data text-base font-bold"
+                  style={{ color: m.color ?? 'var(--color-foreground-primary, #1A1A1A)' }}
+                >
+                  {m.value}
+                </div>
+                {m.sub && (
+                  <div className="text-[10px] font-medium" style={{ color: m.color ?? '#22C55E' }}>{m.sub}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'detailed') {
+    // 详细：每个指标卡片带彩色左边框强调。
+    return (
+      <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        <div className="grid flex-1 grid-cols-3 gap-2">
+          {metrics.map((m, i) => {
+            const color = m.color ?? CAMPAIGN_COLORS[i % CAMPAIGN_COLORS.length];
+            return (
+              <div
+                key={i}
+                className="flex flex-col justify-center rounded-lg bg-surface-secondary p-2.5"
+                style={{ borderLeft: `3px solid ${color}` }}
+              >
+                <div className="text-[10px] text-foreground-muted">{m.label}</div>
+                <div className="font-data text-lg font-bold" style={{ color }}>{m.value}</div>
+                {m.sub && <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? '#EF4444' : '#22C55E' }}>{m.sub}</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // grid（默认）：3 列指标网格，label 小号灰 / value 大号粗（按 color 染色）/ sub 小号绿红。
+  return (
+    <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+      {(title || subtitle) && (
+        <div className="flex flex-none flex-col">
+          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+        </div>
+      )}
+      <div className="grid flex-1 grid-cols-3 gap-2">
+        {metrics.map((m, i) => (
+          <div key={i} className="flex flex-col justify-center">
+            <div className="text-[10px] text-foreground-muted">{m.label}</div>
+            <div
+              className="font-data text-lg font-bold"
+              style={{ color: m.color ?? 'var(--color-foreground-primary, #1A1A1A)' }}
+            >
+              {m.value}
+            </div>
+            {m.sub && (
+              <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? '#EF4444' : '#22C55E' }}>
+                {m.sub}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------- creator works table -------------------------- */
+// ≈PRD CMP-B19。达人作品列表：list / cards / compact。
+// 列顺序 [封面URL, 作品名, 播放, 点赞, 评论, 转发, 完播率]。
+
+export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
+  const { variant = 'list', title, subtitle, headers = [], rows = [] } = data;
+  const items = rows.map((r) => ({
+    cover: r[0] ?? '',
+    name: r[1] ?? '',
+    play: r[2] ?? '',
+    like: r[3] ?? '',
+    comment: r[4] ?? '',
+    share: r[5] ?? '',
+    completion: r[6] ?? '',
+  }));
+
+  if (variant === 'compact') {
+    // 纯文本紧凑行，无图片。
+    return (
+      <div className="flex h-full w-full flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        <div className="flex flex-1 flex-col overflow-auto">
+          <div className="flex border-b border-border-default pb-1 text-[10px] font-medium text-foreground-muted">
+            <span className="min-w-0 flex-1 truncate">{headers[1] ?? '作品'}</span>
+            <span className="w-14 flex-none text-right">{headers[2] ?? '播放'}</span>
+            <span className="w-14 flex-none text-right">{headers[3] ?? '点赞'}</span>
+            <span className="w-14 flex-none text-right">{headers[6] ?? '完播'}</span>
+          </div>
+          {items.map((it, i) => (
+            <div key={i} className="flex items-center border-b border-border-subtle py-1 last:border-b-0">
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground-primary">{it.name}</span>
+              <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.play}</span>
+              <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.like}</span>
+              <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.completion}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'cards') {
+    // 横向卡片网格：每张卡含封面 + 作品名 + 关键指标。
+    return (
+      <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+        {(title || subtitle) && (
+          <div className="flex flex-none flex-col">
+            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+          </div>
+        )}
+        <div className="grid flex-1 grid-cols-2 gap-2 overflow-auto">
+          {items.map((it, i) => (
+            <div key={i} className="flex flex-col gap-1 rounded-lg border border-border-subtle p-2">
+              <ImgOrPlaceholder url={it.cover} label={it.name} cls="h-14 w-full" />
+              <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{it.name}</div>
+              <div className="flex justify-between text-[10px] text-foreground-secondary">
+                <span>{headers[2] ?? '播放'} {it.play}</span>
+                <span>{headers[3] ?? '点赞'} {it.like}</span>
+              </div>
+              <div className="flex justify-between text-[10px] text-foreground-muted">
+                <span>{it.comment} 评论</span>
+                <span>{it.completion}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // list（默认）：表头 + 行，含封面缩略图，数字列右对齐。
+  const numHeaders = headers.slice(2);
+  return (
+    <div className="flex h-full w-full flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3">
+      {(title || subtitle) && (
+        <div className="flex flex-none flex-col">
+          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
+        </div>
+      )}
+      <div className="flex flex-1 flex-col overflow-auto">
+        <div className="flex items-center gap-2 border-b border-border-default pb-1.5">
+          <span className="w-10 flex-none" />
+          <span className="min-w-0 flex-1 text-[10px] font-medium uppercase tracking-wide text-foreground-muted">
+            {headers[1] ?? '作品'}
+          </span>
+          {numHeaders.map((h, i) => (
+            <span key={i} className="w-14 flex-none text-right text-[10px] font-medium uppercase tracking-wide text-foreground-muted">
+              {h}
+            </span>
+          ))}
+        </div>
+        {items.map((it, i) => (
+          <div key={i} className="flex items-center gap-2 border-b border-border-subtle py-1.5 last:border-b-0">
+            <ImgOrPlaceholder url={it.cover} label={it.name} cls="h-10 w-10 flex-none" />
+            <div className="min-w-0 flex-1 truncate text-xs text-foreground-primary">{it.name}</div>
+            <span className="w-14 flex-none text-right font-data text-xs font-semibold text-foreground-primary">{it.play}</span>
+            <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.like}</span>
+            <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.comment}</span>
+            <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.share}</span>
+            <span className="w-14 flex-none text-right font-data text-xs text-foreground-secondary">{it.completion}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
