@@ -17,6 +17,12 @@ export const pageSchema = z.object({
   /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
   bgImage: z.string().max(2048).optional(),
   components: z.array(z.any()),
+  /** 页面类型；命中 'media-report' 触发标题规则。 */
+  pageType: z.enum(['media-report']).optional(),
+  /** 标题组件 id。 */
+  titleComponentId: z.string().max(64).optional(),
+  /** 用户手改过标题。 */
+  titleOverridden: z.boolean().optional(),
 });
 
 /** Campaign 信息（仅 campaign 类型场景）。 */
