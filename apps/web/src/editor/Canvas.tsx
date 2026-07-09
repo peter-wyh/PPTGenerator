@@ -7,7 +7,7 @@ import { PALETTE_MIME, type PalettePayload } from './ComponentPanel';
 import { resolvePageBackground } from './background';
 import { DEFAULT_THEME } from '@mediakit/shared';
 import { DEFAULT_GRID_SIZE } from './defaults';
-import { snapMove, safeRectFrom } from './snap';
+import { snapMove, clampRect, safeRectFrom } from './snap';
 
 type DragState =
   | {
@@ -69,10 +69,14 @@ export function Canvas() {
           layout && layout.showSafeArea !== false
             ? safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, st.canvasWidth, st.canvasHeight)
             : null;
+        const clampSafe = layout
+          ? safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, st.canvasWidth, st.canvasHeight)
+          : null;
         for (const c of drag.comps) {
           if (c.locked) continue;
-          const { x, y } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, safe);
-          st.updateComponent(c.id, { x, y });
+          const { x: sx, y: sy } = snapMove({ x: c.x + dx, y: c.y + dy, w: c.w, h: c.h }, grid, safe);
+          const cl = clampRect({ x: sx, y: sy, w: c.w, h: c.h }, clampSafe);
+          st.updateComponent(c.id, { x: cl.x, y: cl.y, w: cl.w, h: cl.h });
         }
       } else if (drag.kind === 'resize') {
         const dx = (e.clientX - drag.mouseX) / st.zoom;
