@@ -1145,6 +1145,9 @@ export interface PageGradient {
   stops: GradientStop[];
 }
 
+/** 页面类型；命中 'media-report' 触发默认标题规则。 */
+export type PageType = 'media-report';
+
 export interface Page {
   id: string;
   name: string;
@@ -1155,6 +1158,12 @@ export interface Page {
   bgGradient?: PageGradient;
   /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
   bgImage?: string;
+  /** 页面类型；命中 'media-report' 触发默认标题规则。 */
+  pageType?: PageType;
+  /** 作为「页面标题」的 text 组件 id（pageType='media-report' 时由标题逻辑维护）。 */
+  titleComponentId?: string;
+  /** 用户曾手改标题 → 停止自动跟随 meta。 */
+  titleOverridden?: boolean;
 }
 
 function clampNum(v: number, lo: number, hi: number): number {

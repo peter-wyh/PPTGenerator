@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CREATOR_METRIC_CATALOG, type CreatorStatItem, type ShapeData, type ShapeKind } from '@mediakit/shared';
+import { CREATOR_METRIC_CATALOG, type CreatorStatItem, type ShapeData, type ShapeKind, type Page, type PageType } from '@mediakit/shared';
 
 describe('creator stat types & catalog', () => {
   it('catalog has 8 standard metrics with stable keys', () => {
@@ -33,5 +33,23 @@ describe('shape types', () => {
     const line: ShapeData = { shape: 'line', stroke: '#E5E7EB', strokeWidth: 1, opacity: 1, rotation: 0, dash: false };
     expect(rect.shape).toBe('rectangle');
     expect(line.shape).toBe('line');
+  });
+});
+
+describe('Page 页面类型字段', () => {
+  it('支持 pageType / titleComponentId / titleOverridden', () => {
+    const p: Page = {
+      id: 'p1',
+      name: 'n',
+      components: [],
+      pageType: 'media-report',
+      titleComponentId: 'c1',
+      titleOverridden: false,
+    };
+    expect(p.pageType).toBe('media-report');
+    expect(p.titleComponentId).toBe('c1');
+    expect(p.titleOverridden).toBe(false);
+    const t: PageType = 'media-report';
+    expect(t).toBe('media-report');
   });
 });
