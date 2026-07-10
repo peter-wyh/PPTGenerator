@@ -7,7 +7,7 @@
  */
 
 /** 允许保留的标签（无属性）。 */
-const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'UL', 'OL', 'LI', 'BR', 'P']);
+const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'UL', 'OL', 'LI', 'BR', 'P', 'MARK']);
 
 /** 连同内容整体移除的标签（避免 script/style 等通过 unpack 泄漏文本或执行）。 */
 const DROP_TAGS = new Set([

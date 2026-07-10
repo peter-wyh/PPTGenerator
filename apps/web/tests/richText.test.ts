@@ -40,6 +40,11 @@ describe('sanitizeRichText', () => {
   it('空输入返回空字符串', () => {
     expect(sanitizeRichText('')).toBe('');
   });
+
+  it('保留 <mark> 高亮标签（去属性）', () => {
+    expect(sanitizeRichText('<mark>tips</mark>')).toBe('<mark>tips</mark>');
+    expect(sanitizeRichText('<mark class="x" style="color:red">tips</mark>')).toBe('<mark>tips</mark>');
+  });
 });
 
 describe('renderHtmlWithHighlights', () => {
