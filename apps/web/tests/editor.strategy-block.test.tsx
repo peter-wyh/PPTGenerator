@@ -10,64 +10,55 @@ const baseRows = [
   ['target', 'STRATEGY', 'Focus on practical beauty tips.'],
 ];
 const headers = ['图标', '标题', '内容'];
-const highlights = 'authenticity, tips';
 
 describe('StrategyBlockComponent variants', () => {
-  it('default（无 variant）→ 平铺，两标题都在，无项目符号', () => {
-    render(<StrategyBlockComponent data={{ headers, rows: baseRows, highlights }} />);
+  it('default（无 variant）→ 平铺，两标题都在', () => {
+    render(<StrategyBlockComponent data={{ headers, rows: baseRows } as StrategyBlockData} />);
     expect(screen.getByText('INSIGHT')).toBeInTheDocument();
     expect(screen.getByText('STRATEGY')).toBeInTheDocument();
-    expect(screen.queryByText('•')).not.toBeInTheDocument();
   });
 
   it('variant:default 显式 → 等同默认', () => {
     render(
-      <StrategyBlockComponent data={{ variant: 'default', headers, rows: baseRows, highlights }} />,
+      <StrategyBlockComponent data={{ variant: 'default', headers, rows: baseRows } as StrategyBlockData} />,
+    );
+    expect(screen.getByText('INSIGHT')).toBeInTheDocument();
+    expect(screen.getByText('STRATEGY')).toBeInTheDocument();
+  });
+
+  it('labeled → 两标题都在', () => {
+    render(
+      <StrategyBlockComponent data={{ variant: 'labeled', headers, rows: baseRows } as StrategyBlockData} />,
+    );
+    expect(screen.getByText('INSIGHT')).toBeInTheDocument();
+    expect(screen.getByText('STRATEGY')).toBeInTheDocument();
+  });
+
+  it('bulleted（卡片列表）→ 每行渲染为独立卡片，标题均在，无项目符号', () => {
+    render(
+      <StrategyBlockComponent data={{ variant: 'bulleted', headers, rows: baseRows } as StrategyBlockData} />,
     );
     expect(screen.getByText('INSIGHT')).toBeInTheDocument();
     expect(screen.getByText('STRATEGY')).toBeInTheDocument();
     expect(screen.queryByText('•')).not.toBeInTheDocument();
   });
 
-  it('labeled → 卡片标签：两标题都在，无项目符号', () => {
-    render(
-      <StrategyBlockComponent data={{ variant: 'labeled', headers, rows: baseRows, highlights } as StrategyBlockData} />,
-    );
-    expect(screen.getByText('INSIGHT')).toBeInTheDocument();
-    expect(screen.getByText('STRATEGY')).toBeInTheDocument();
-    expect(screen.queryByText('•')).not.toBeInTheDocument();
-  });
-
-  it('bulleted → 首行作小标题，其余作 • 列表', () => {
-    render(
-      <StrategyBlockComponent data={{ variant: 'bulleted', headers, rows: baseRows, highlights } as StrategyBlockData} />,
-    );
-    // 首行标题作小标题渲染。
-    expect(screen.getByText('INSIGHT')).toBeInTheDocument();
-    // row[1] 的标题（STRATEGY）丢弃，仅 content 入列表。
-    expect(screen.queryByText('STRATEGY')).not.toBeInTheDocument();
-    // 1 个 body 行 → 1 个项目符号。
-    expect(screen.getAllByText('•')).toHaveLength(1);
-  });
-
-  it('bulleted 单行（仅标题）→ 无项目符号', () => {
+  it('bulleted 单行 → 1 张卡片、标题出现', () => {
     render(
       <StrategyBlockComponent
-        data={{ variant: 'bulleted', headers, rows: [baseRows[0]], highlights } as StrategyBlockData}
+        data={{ variant: 'bulleted', headers, rows: [baseRows[0]] } as StrategyBlockData}
       />,
     );
     expect(screen.getByText('INSIGHT')).toBeInTheDocument();
-    expect(screen.queryByText('•')).not.toBeInTheDocument();
   });
 
-  it('default 富文本内容：渲染 <b> 与高亮 span', () => {
+  it('default 富文本内容：渲染 <b>', () => {
     const { container } = render(
       <StrategyBlockComponent
-        data={{ headers, rows: [['sparkle', 'INSIGHT', 'focus on <b>beauty tips</b>']], highlights: 'beauty, tips' } as StrategyBlockData}
+        data={{ headers, rows: [['sparkle', 'INSIGHT', 'focus on <b>beauty tips</b>']] } as StrategyBlockData}
       />,
     );
     expect(container.querySelector('b')).not.toBeNull();
-    expect(container.querySelectorAll('.text-accent-secondary').length).toBeGreaterThanOrEqual(1);
   });
 
   it('default 富文本内容：<ul> 列表渲染', () => {
@@ -80,37 +71,32 @@ describe('StrategyBlockComponent variants', () => {
     expect(container.querySelectorAll('li').length).toBe(2);
   });
 
-  it('bulleted 变体保留外层 • 且内容富文本可含列表', () => {
+  it('default 内联高亮 <mark> 经 sanitize 保留并渲染', () => {
     const { container } = render(
       <StrategyBlockComponent
-        data={{ variant: 'bulleted', headers, rows: [['target', 'STRATEGY', ''], ['sparkle', 'X', '<ul><li>a</li></ul>']] } as StrategyBlockData}
+        data={{ headers, rows: [['sparkle', 'INSIGHT', 'focus on <mark>beauty</mark>']] } as StrategyBlockData}
       />,
     );
-    expect(screen.getAllByText('•')).toHaveLength(1);
-    expect(container.querySelector('ul')).not.toBeNull();
+    expect(container.querySelector('mark')).not.toBeNull();
   });
 
-  it('bulleted 多行内容两两成对：body 为 grid-cols-2，每视觉行 2 个 bullet', () => {
+  it('bulleted 多行 → 每行一张卡片，grid-cols-2 网格', () => {
     const { container } = render(
       <StrategyBlockComponent
         data={{
           variant: 'bulleted',
           headers,
           rows: [
-            ['target', 'HEADER', ''],
-            ['sparkle', 'X', 'item1'],
-            ['sparkle', 'X', 'item2'],
-            ['sparkle', 'X', 'item3'],
-            ['sparkle', 'X', 'item4'],
+            ['target', 'ONE', 'item1'],
+            ['sparkle', 'TWO', 'item2'],
+            ['sparkle', 'THREE', 'item3'],
+            ['sparkle', 'FOUR', 'item4'],
           ],
-          highlights,
         } as StrategyBlockData}
       />,
     );
-    // 首行作标题；4 个 body 行 → 4 个项目符号。
-    expect(screen.getByText('HEADER')).toBeInTheDocument();
-    expect(screen.getAllByText('•')).toHaveLength(4);
-    // body 列表容器为 2 列网格（两两成对：1 卡片含 2 个策略块配置）。
+    expect(screen.getByText('ONE')).toBeInTheDocument();
+    expect(screen.getByText('FOUR')).toBeInTheDocument();
     expect(container.querySelector('.grid-cols-2')).not.toBeNull();
   });
 });
