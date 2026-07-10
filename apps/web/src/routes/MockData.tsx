@@ -24,7 +24,7 @@ export function MockData() {
       .finally(() => setLoadingCreators(false));
   }, []);
 
-  /** 取达人跨 campaign 汇总指标值（GMV/ROAS/转化/佣金）。 */
+  /** 取达人频道 KPI 指标值（按 label 查找，如 'Avg Reach'）。 */
   const metric = (c: Creator, label: string) =>
     c.metrics.find((m) => m.label === label)?.value ?? '—';
 
