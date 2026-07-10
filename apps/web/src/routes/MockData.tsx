@@ -56,14 +56,14 @@ export function MockData() {
         />
       </section>
 
-      {/* 达人数据 */}
+      {/* 达人库 */}
       <section className="mt-10">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">
-          达人数据 · {creators.length}
+          达人库 · {creators.length}
         </h2>
         <DataTable
           loading={loadingCreators}
-          headers={['达人', 'Handle', '平台', '层级', '粉丝', '互动率', '类目', '地区', 'GMV', 'ROAS', '转化', '佣金']}
+          headers={['达人', 'Handle', '平台', '层级', '粉丝', '互动率', '类目', '地区', 'Avg Reach', 'Impressions', 'Follower Growth', 'CPM']}
           rows={creators.map((c) => [
             c.name,
             c.handle,
@@ -73,10 +73,10 @@ export function MockData() {
             c.engagement,
             c.category,
             c.region,
-            metric(c, 'GMV'),
-            metric(c, 'ROAS'),
-            metric(c, '转化'),
-            metric(c, '佣金'),
+            metric(c, 'Avg Reach'),
+            metric(c, 'Impressions'),
+            metric(c, 'Follower Growth'),
+            metric(c, 'CPM'),
           ])}
         />
       </section>

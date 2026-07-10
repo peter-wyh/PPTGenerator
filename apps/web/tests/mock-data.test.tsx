@@ -55,7 +55,7 @@ describe('MockData page', () => {
   it('renders campaign and creator tables from the mock APIs', async () => {
     render(<MockData />);
     expect(screen.getByText(/Campaign 数据 ·/)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('达人数据 · 1')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('达人库 · 1')).toBeInTheDocument());
 
     // campaign 数据（名称现出现在表格 + Campaign 选择器两处）
     expect(screen.getAllByText('GlowLab Q4 Launch').length).toBeGreaterThanOrEqual(1);
