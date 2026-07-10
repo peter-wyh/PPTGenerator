@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EditorComponent, KpiBoardData, IconWeight } from '@mediakit/shared';
+import { Highlighter } from '@phosphor-icons/react';
 import { useEditorStore } from '../store';
 import type { PropertyField } from '../registry';
 import { REGISTRY } from '../registry';
 import { IconPickerOverlay, ICON_WEIGHT_OPTIONS } from '../icons/IconPickerOverlay';
 import { findIcon } from '../icons/catalog';
 import { IconKit } from '../icons/IconKit';
-import { sanitizeRichText, renderHtmlWithHighlights } from '../richText';
+import { sanitizeRichText } from '../richText';
 import { ImageInput } from '@/components/ImageInput';
 import { useDataUpdate, readValue, FieldGroup } from './helpers';
 
@@ -182,42 +183,29 @@ export function TextareaField({ comp, field }: { comp: EditorComponent; field: P
 }
 
 /**
- * 轻量富文本字段：toolbar（加粗/斜体/列表）+ contentEditable。
- * 不受控：挂载时以 sanitize 后的 HTML 初始化；onBlur 时清洗并写回。
- * 高亮整合：未聚焦时按 highlights 属性渲染高亮 span（命中词包强调色），
- *   内容随 highlights 属性变化即时重算（「内容伴随属性调整」）；
- *   聚焦中不回写以保光标；commit 始终存清洗后的纯 HTML（高亮 span 不入库）。
- * contentEditable / execCommand 在 jsdom 不可用，编辑交互不单测。
-
-/**
- * 轻量富文本字段：toolbar（加粗/斜体/列表）+ contentEditable。
- * 不受控：挂载时以 sanitize 后的 HTML 初始化；onBlur 时清洗并写回。
- * 高亮整合：未聚焦时按 highlights 属性渲染高亮 span（命中词包强调色），
- *   内容随 highlights 属性变化即时重算（「内容伴随属性调整」）；
- *   聚焦中不回写以保光标；commit 始终存清洗后的纯 HTML（高亮 span 不入库）。
- * contentEditable / execCommand 在 jsdom 不可用，编辑交互不单测。
+ * 轻量富文本字段：toolbar（加粗/斜体/列表/高亮）+ contentEditable。
+ * 不受控：挂载/外部 value 变更时以 sanitize 后的 HTML 初始化（仅未聚焦时写回）；onInput/onBlur 清洗写回。
+ * 高亮：选中文字点「高亮」→ 包 <mark>（持久化进 HTML，渲染由全局 mark 样式染色）；
+ *   选区完全覆盖已有 <mark> 再点 → 解包（toggle）。需先选中文本（折叠选区为 no-op）。
+ * contentEditable / execCommand / 选区操作在 jsdom 不可用，编辑交互不单测。
  */
 export function RichTextField({
   value,
-  highlights,
   onChange,
 }: {
   value: string;
-  highlights?: string;
   onChange: (html: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // 同步外部 value/highlights → contentEditable：仅在未聚焦时写入，避免覆盖用户正在编辑的光标。
-  // 这样删除/重排行（index key 复用实例）或 undo 时，正文也能正确跟随 data；
-  // 改高亮词时，未聚焦的编辑器即时重算高亮（聚焦中的编辑器失焦后再重算）。
+  // 同步外部 value → contentEditable：仅在未聚焦时写入，避免覆盖正在编辑的光标。
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     if (document.activeElement === el) return; // 聚焦中：不干预编辑。
-    const html = renderHtmlWithHighlights(value, highlights);
+    const html = sanitizeRichText(value);
     if (el.innerHTML !== html) el.innerHTML = html;
-  }, [value, highlights]);
+  }, [value]);
 
   const exec = (cmd: string) => {
     document.execCommand(cmd);
@@ -230,9 +218,48 @@ export function RichTextField({
     if (next !== sanitizeRichText(value)) onChange(next);
   };
 
+  // 高亮 toggle：选中文字 → 包 <mark>；选区完全覆盖已有 <mark> → 解包。
+  const toggleHighlight = () => {
+    const el = ref.current;
+    const sel = window.getSelection();
+    if (!el || !sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) return;
+
+    // 收集被选区完全包含的 <mark>；有则全部解包（toggle off）。
+    const fullyContained = Array.from(el.querySelectorAll('mark')).filter((m) => {
+      const r = document.createRange();
+      r.selectNodeContents(m);
+      const startOk = range.compareBoundaryPoints(Range.START_TO_START, r) <= 0;
+      const endOk = range.compareBoundaryPoints(Range.END_TO_END, r) >= 0;
+      return startOk && endOk;
+    });
+    if (fullyContained.length > 0) {
+      for (const m of fullyContained) {
+        const parent = m.parentNode;
+        if (!parent) continue;
+        while (m.firstChild) parent.insertBefore(m.firstChild, m);
+        parent.removeChild(m);
+      }
+    } else {
+      const mark = document.createElement('mark');
+      try {
+        range.surroundContents(mark);
+      } catch {
+        // 跨节点边界 → extractContents 包进 <mark> 再插回。
+        const frag = range.extractContents();
+        mark.appendChild(frag);
+        range.insertNode(mark);
+      }
+    }
+    sel.removeAllRanges();
+    commit();
+    el.focus();
+  };
+
   return (
     <div className="rounded border border-border-default">
-      <div className="flex gap-1 border-b border-border-subtle px-1 py-0.5">
+      <div className="flex items-center gap-1 border-b border-border-subtle px-1 py-0.5">
         <button
           type="button"
           title="加粗"
@@ -265,6 +292,17 @@ export function RichTextField({
           className="px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
         >
           •
+        </button>
+        <button
+          type="button"
+          title="高亮"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            toggleHighlight();
+          }}
+          className="flex items-center px-1.5 text-xs text-foreground-secondary hover:bg-surface-hover rounded"
+        >
+          <Highlighter size={13} weight="fill" />
         </button>
       </div>
       {/* onInput 实时提交：Canvas 点击组件时 mousedown.preventDefault 会阻止 contentEditable 失焦，

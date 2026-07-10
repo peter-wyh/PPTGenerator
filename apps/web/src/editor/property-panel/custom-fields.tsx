@@ -447,16 +447,6 @@ export function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
 
   return (
     <FieldGroup title="策略块">
-      {/* 全局高亮词：渲染时对各行命中词包强调 span；编辑器内未聚焦时即时预览。 */}
-      <label className="block text-xs text-foreground-secondary">
-        <span className="mb-1 block">高亮词（逗号分隔）</span>
-        <input
-          value={data.highlights ?? ''}
-          placeholder="高亮词（逗号分隔）"
-          onChange={(e) => update('highlights', e.target.value)}
-          className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary outline-none focus:border-foreground-primary"
-        />
-      </label>
       <div className="space-y-2">
         {rows.map((row, i) => (
           <div key={i} className="space-y-1 rounded border border-border-subtle p-1">
@@ -481,7 +471,6 @@ export function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
             </div>
             <RichTextField
               value={row[2] ?? ''}
-              highlights={data.highlights}
               onChange={(html) => setRow(i, [row[0] ?? '', row[1] ?? '', html])}
             />
           </div>
