@@ -10,6 +10,7 @@ import type {
   PostFormat,
   WorkScreenshotItem,
 } from '@mediakit/shared';
+import { CREATOR_META, type Tier } from './creators';
 
 /**
  * Upstream "Creator Performance" API (mock for demo).
@@ -24,8 +25,6 @@ import type {
  * proportionally, enabling realistic multi-platform campaign scenarios.
  */
 
-type Tier = 'mega' | 'macro' | 'micro';
-
 /** Creator roster (id / name / handle / tier), aligned with creators.ts. */
 interface CreatorRoster {
   id: string;
@@ -34,15 +33,10 @@ interface CreatorRoster {
   tier: Tier;
 }
 
-const ROSTER: Record<string, CreatorRoster> = {
-  'cre-mia': { id: 'cre-mia', name: 'Mia Chen', handle: '@miaglowup', tier: 'mega' },
-  'cre-sofia': { id: 'cre-sofia', name: 'Sofia Lane', handle: '@sofialane', tier: 'macro' },
-  'cre-ava': { id: 'cre-ava', name: 'Ava Park', handle: '@avapark.daily', tier: 'macro' },
-  'cre-jamie': { id: 'cre-jamie', name: 'Jamie Wu', handle: '@jamiewu', tier: 'micro' },
-  'cre-leo': { id: 'cre-leo', name: 'Leo Sato', handle: '@leosato', tier: 'mega' },
-  'cre-nora': { id: 'cre-nora', name: 'Nora Kim', handle: '@nora.kim', tier: 'macro' },
-  'cre-tom': { id: 'cre-tom', name: 'Tom Reyes', handle: '@tomreyes', tier: 'micro' },
-};
+const ROSTER: Record<string, CreatorRoster> = {};
+for (const c of CREATOR_META) {
+  ROSTER[c.id] = { id: c.id, name: c.name, handle: c.handle, tier: c.tier as Tier };
+}
 
 /** Tier baseline: single-post impressions / avg engagement rate / per-campaign GMV potential. */
 const TIER_BASE: Record<Tier, { impr: number; er: number; gmv: number }> = {
@@ -613,32 +607,15 @@ export function rollupCampaignMetrics(campaignId: string): CampaignMetric[] {
 }
 
 /**
- * Creator-level aggregate: across all campaigns the creator participated in, sum totals → key metrics (for creator list).
- * compare left empty (cross-campaign aggregate has no single-period comparison semantics).
+ * 所有参与过至少一个 campaign 的达人 id 并集（campaign 合作达人对达人库的子集视图）。
+ * 供达人库一致性测试与「库内有、未合作」判定使用。
  */
-export function rollupCreatorTotals(creatorId: string): CampaignMetric[] {
-  const picked: RawCreatorTotals[] = [];
-  for (const raws of Object.values(MOCK_RAW)) {
-    const r = raws.find((x) => x.perf.creatorId === creatorId);
-    if (r) picked.push(r.totals);
+export function campaignParticipantIds(): string[] {
+  const ids = new Set<string>();
+  for (const profile of Object.values(CAMPAIGN_PROFILE)) {
+    for (const id of profile.creators) ids.add(id);
   }
-  const sum = picked.reduce(
-    (a, t) => ({
-      gmv: a.gmv + t.gmv,
-      orders: a.orders + t.orders,
-      commission: a.commission + t.commission,
-      clicks: a.clicks + t.clicks,
-      cpsSpend: a.cpsSpend + t.cpsSpend,
-    }),
-    { gmv: 0, orders: 0, commission: 0, clicks: 0, cpsSpend: 0 },
-  );
-  const roas = sum.cpsSpend ? sum.gmv / sum.cpsSpend : 0;
-  return [
-    { label: 'GMV', value: money(sum.gmv), compare: '' },
-    { label: 'ROAS', value: roas.toFixed(2), compare: '' },
-    { label: 'Conversions', value: fmt(sum.orders), compare: '' },
-    { label: 'Commission', value: money(sum.commission), compare: '' },
-  ];
+  return [...ids];
 }
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));

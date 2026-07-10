@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { CREATOR_META, MOCK_CREATORS, buildChannelMetrics } from '@/api/mock/creators';
 import type { Creator } from '@/api/creators';
+import { campaignParticipantIds } from '@/api/creatorPerformance';
 
 /** 解析 compact 格式（"2.40M"/"180.0K"/"567"）为数值。 */
 const parseCompact = (s: string): number => {
@@ -79,5 +80,21 @@ describe('达人库 roster', () => {
     for (const c of MOCK_CREATORS) {
       expect(c.metrics.map((m) => m.label)).toEqual(labels);
     }
+  });
+});
+
+describe('campaign 合作达人是达人库的子集', () => {
+  it('每个 campaign 参与者 id 都存在于达人库', () => {
+    const libIds = new Set(MOCK_CREATORS.map((c) => c.id));
+    for (const id of campaignParticipantIds()) {
+      expect(libIds.has(id), `campaign creator ${id} not in library`).toBe(true);
+    }
+  });
+
+  it('恰好 7 名达人参与 campaign（5 名为库专属未合作）', () => {
+    const participants = new Set(campaignParticipantIds());
+    expect(participants.size).toBe(7);
+    const libraryOnly = MOCK_CREATORS.filter((c) => !participants.has(c.id));
+    expect(libraryOnly).toHaveLength(5);
   });
 });
