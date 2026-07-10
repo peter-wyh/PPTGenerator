@@ -40,7 +40,7 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    expect(screen.getAllByPlaceholderText('Caption').length).toBe(9); // default 9 images (camp-glowlab-q4)
+    expect(screen.getAllByPlaceholderText('Caption').length).toBe(27); // default 27 images (camp-glowlab-q4, 10 creators)
     expect(screen.getByRole('button', { name: /Add image/ })).toBeInTheDocument();
   });
 
@@ -66,7 +66,7 @@ describe('WorkScreenshotFields', () => {
     store.addComponent('work-screenshot');
     const id = store.currentComponents()[0].id;
     store.select(id);
-    // Clear first to verify import writes 9 images
+    // Clear first to verify import writes 27 images
     store.updateComponentData(id, { images: [] });
     store.commit();
 
@@ -82,7 +82,7 @@ describe('WorkScreenshotFields', () => {
 
     await waitFor(() => {
       const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
-      expect(data.images).toHaveLength(9);
+      expect(data.images).toHaveLength(27);
       expect(data.images[0].src).toContain('picsum.photos');
     });
   });

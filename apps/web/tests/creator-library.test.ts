@@ -91,10 +91,10 @@ describe('campaign 合作达人是达人库的子集', () => {
     }
   });
 
-  it('恰好 7 名达人参与 campaign（5 名为库专属未合作）', () => {
+  it('all 12 creators participate in campaigns', () => {
     const participants = new Set(campaignParticipantIds());
-    expect(participants.size).toBe(7);
+    expect(participants.size).toBe(12);
     const libraryOnly = MOCK_CREATORS.filter((c) => !participants.has(c.id));
-    expect(libraryOnly).toHaveLength(5);
+    expect(libraryOnly).toHaveLength(0);
   });
 });
