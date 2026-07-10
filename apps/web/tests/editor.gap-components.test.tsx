@@ -58,23 +58,21 @@ describe('StrategyBlockComponent', () => {
     expect(screen.getByText('STRATEGY')).toBeInTheDocument();
   });
 
-  it('highlights 命中词包成高亮 span', () => {
+  it('正文内联 <mark> 渲染为高亮', () => {
     const { container } = render(
       <StrategyBlockComponent
         data={{
           headers: ['图标', '标题', '内容'],
-          rows: [['', 'INSIGHT', 'practical beauty tips for everyday']],
-          highlights: 'beauty, tips',
+          rows: [['', 'INSIGHT', 'practical <mark>beauty tips</mark> for everyday']],
         }}
       />,
     );
-    const highlights = container.querySelectorAll('.text-accent-secondary');
-    expect(highlights.length).toBe(2);
-    expect(highlights[0].textContent).toBe('beauty');
-    expect(highlights[1].textContent).toBe('tips');
+    const marks = container.querySelectorAll('mark');
+    expect(marks.length).toBe(1);
+    expect(marks[0].textContent).toBe('beauty tips');
   });
 
-  it('无 highlights 时纯文本、无高亮 span', () => {
+  it('正文无 <mark> 时不渲染高亮', () => {
     const { container } = render(
       <StrategyBlockComponent
         data={{
@@ -83,7 +81,7 @@ describe('StrategyBlockComponent', () => {
         }}
       />,
     );
-    expect(container.querySelector('.text-accent-secondary')).toBeNull();
+    expect(container.querySelector('mark')).toBeNull();
     expect(screen.getByText('plain text')).toBeInTheDocument();
   });
 });
@@ -106,6 +104,8 @@ describe('gap 组件注册与默认数据', () => {
     const strat = getDefaultData('strategy-block') as { headers: string[]; rows: string[][]; highlights?: string };
     expect(strat.headers.length).toBe(3);
     expect(strat.rows[0].length).toBe(3);
-    expect(typeof strat.highlights).toBe('string');
+    // 高亮已改为富文本内联 <mark>（不再有全局 highlights 字段）。
+    expect(strat.highlights).toBeUndefined();
+    expect(strat.rows.some((r) => r[2]?.includes('<mark>'))).toBe(true);
   });
 });

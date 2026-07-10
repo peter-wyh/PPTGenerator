@@ -304,10 +304,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
         // variant 缺省 = 'default'（见 StrategyBlockComponent）；此处省略以避开与 PlacementData 的联合类型歧义。
         headers: ['图标', '标题', '内容'],
         rows: [
-          ['sparkle', 'INSIGHT', 'My audience values authenticity and practical beauty tips.'],
-          ['target', 'STRATEGY', 'Focus on practical beauty tips and authentic product reviews.'],
+          ['sparkle', 'INSIGHT', 'My audience values authenticity and practical <mark>beauty tips</mark>.'],
+          ['target', 'STRATEGY', 'Focus on practical <mark>beauty tips</mark> and authentic product reviews.'],
         ],
-        highlights: 'beauty, tips',
       };
     case 'timeline-compare':
       return {
