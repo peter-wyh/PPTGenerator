@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { PropertyPanel } from '@/editor/PropertyPanel';
+import { PropertyPanel } from '@/editor/property-panel';
 import { useEditorStore } from '@/editor/store';
-import { KpiBoard } from '@/editor/components/ReportComponents';
+import { KpiBoard } from '@/editor/components/report';
 import { REGISTRY } from '@/editor/registry';
 import { getDefaultData } from '@/editor/defaults';
 import type { KpiBoardData, ProjectDetail } from '@mediakit/shared';

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { useEditorStore } from '@/editor/store';
-import { PropertyPanel } from '@/editor/PropertyPanel';
+import { PropertyPanel } from '@/editor/property-panel';
 import type { ProjectDetail } from '@mediakit/shared';
 
 const emptyProject: ProjectDetail = {

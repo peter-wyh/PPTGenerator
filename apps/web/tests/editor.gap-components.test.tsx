@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MetaStripComponent, StrategyBlockComponent } from '@/editor/components/ReportComponents';
+import { MetaStripComponent, StrategyBlockComponent } from '@/editor/components/report';
 import { REGISTRY } from '@/editor/registry';
 import { getDefaultData } from '@/editor/defaults';
 

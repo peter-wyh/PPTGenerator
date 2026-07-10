@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MetaStripComponent } from '@/editor/components/ReportComponents';
+import { MetaStripComponent } from '@/editor/components/report';
 import { REGISTRY } from '@/editor/registry';
 import type { MetaStripData } from '@mediakit/shared';
 

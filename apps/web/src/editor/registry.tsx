@@ -34,7 +34,7 @@ import {
   CampaignAnalysis,
   CreatorWorkMetrics,
   CreatorWorksTable,
-} from './components/ReportComponents';
+} from './components/report';
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
 import { TitleBlock } from './components/BasicComponents';

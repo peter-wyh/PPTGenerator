@@ -15,6 +15,7 @@ const TYPES: ComponentType[] = [
   'creator-avatar-card',
   'creator-stats-strip',
   'creator-works-list',
+  'creator-list',
   'brand-wall',
   'package-card',
   'kpi-board',
@@ -29,7 +30,18 @@ const TYPES: ComponentType[] = [
   'work-screenshot',
   'work-metrics',
   'comment-wordcloud',
+  'shape',
+  'meta-strip',
+  'strategy-block',
   'image-group',
+  'title-block',
+  'campaign-analysis',
+  'creator-work-metrics',
+  'creator-works-table',
+  'geo-map',
+  'gauge-card',
+  'status-legend',
+  'wide-table',
 ];
 
 describe('REGISTRY', () => {

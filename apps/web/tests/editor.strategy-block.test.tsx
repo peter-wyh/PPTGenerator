@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { StrategyBlockComponent } from '@/editor/components/ReportComponents';
+import { StrategyBlockComponent } from '@/editor/components/report';
 import type { StrategyBlockData } from '@mediakit/shared';
 
 /* strategy-block 无图表，按 [[web-chart-test-convention]] 断言 shell 文本。 */

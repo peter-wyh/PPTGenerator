@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { ShapeComponent } from '@/editor/components/BasicComponents';
-import { ShapeFields } from '@/editor/PropertyPanel';
+import { ShapeFields } from '@/editor/property-panel';
 import type { ShapeData } from '@mediakit/shared';
 
 describe('ShapeComponent', () => {

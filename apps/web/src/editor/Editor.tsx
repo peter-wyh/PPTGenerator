@@ -7,7 +7,7 @@ import { EditorTopbar } from './EditorTopbar';
 import { PageSidebar } from './PageSidebar';
 import { ComponentPanel } from './ComponentPanel';
 import { Canvas } from './Canvas';
-import { PropertyPanel } from './PropertyPanel';
+import { PropertyPanel } from './property-panel';
 import { PreviewOverlay } from './preview/PreviewOverlay';
 import { useAutosave } from './useAutosave';
 import { useEditorKeyboard } from './useEditorKeyboard';

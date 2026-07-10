@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PropertyPanel } from '@/editor/PropertyPanel';
+import { PropertyPanel } from '@/editor/property-panel';
 import { ContextMenu } from '@/editor/components/ContextMenu';
 import { useEditorStore } from '@/editor/store';
 import type { ProjectDetail } from '@mediakit/shared';

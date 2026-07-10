@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PropertyPanel } from '@/editor/PropertyPanel';
+import { PropertyPanel } from '@/editor/property-panel';
 import { useEditorStore } from '@/editor/store';
 import type { EditorComponent } from '@mediakit/shared';
 

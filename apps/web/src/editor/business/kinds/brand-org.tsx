@@ -1,0 +1,72 @@
+import {
+  ACCENT,
+  Base,
+  Label,
+  STAT_COLORS,
+  Title,
+  type RenderCtx,
+} from '../shared';
+
+/* --------------------------- brand-wall ------------------------- */
+export function renderBrandWall(ctx: RenderCtx): React.ReactNode {
+  const { item, title, meta, details, variant } = ctx;
+  const colors = ['#1A1A1A', ACCENT, '#6B7280', '#1A1A1A', '#9CA3AF'];
+  return (
+    <Base variant={variant}>
+      <div style={{ padding: 18, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <Label item={item} />
+            <Title text={title} style={{ marginTop: 5 }} />
+          </div>
+          <div style={{ fontSize: 11, color: '#777' }}>{meta}</div>
+        </div>
+        <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 8 }}>
+          {details.map((x, i) => (
+            <div
+              key={i}
+              style={{
+                height: 42,
+                border: '1px solid #EEE',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: 12,
+                fontFamily: 'var(--font-heading)',
+                color: colors[i % colors.length],
+              }}
+            >
+              {x}
+            </div>
+          ))}
+        </div>
+      </div>
+    </Base>
+  );
+}
+
+/* ------------------------ org / service ------------------------- */
+export function renderOrgService(ctx: RenderCtx): React.ReactNode {
+  const { item, title, meta, details, variant } = ctx;
+  const kind = ctx.data.businessKind;
+  const subs = kind === 'org' ? ['20%', '25%', '35%', '20%'] : ['策略 · 执行 · 复盘', '策略 · 执行 · 复盘', '策略 · 执行 · 复盘', '策略 · 执行 · 复盘'];
+  return (
+    <Base variant={variant}>
+      <div style={{ padding: 18, height: '100%' }}>
+        <Label item={item} />
+        <Title text={title} style={{ marginTop: 5 }} />
+        <div style={{ fontSize: 10, color: '#777', marginTop: 4 }}>{meta}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginTop: 18 }}>
+          {details.map((x, i) => (
+            <div key={i} style={{ padding: '13px 10px', borderTop: `3px solid ${STAT_COLORS[i % 4]}`, background: '#FAFAFA' }}>
+              <div style={{ fontSize: 11, fontWeight: 700 }}>{x}</div>
+              <div style={{ fontSize: 9, color: '#888', marginTop: 6 }}>{subs[i] || ''}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Base>
+  );
+}

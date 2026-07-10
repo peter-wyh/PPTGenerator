@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { getDefaultData } from '@/editor/defaults';
 import { REGISTRY } from '@/editor/registry';
 import { TEMPLATES } from '@/editor/templates';
-import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from '@/editor/components/ReportComponents';
+import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from '@/editor/components/report';
 
 describe('report components — render', () => {
   it('kpi-board renders labels + values', () => {

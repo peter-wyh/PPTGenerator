@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { useEditorStore } from '@/editor/store';
-import { PropertyPanel } from '@/editor/PropertyPanel';
+import { PropertyPanel } from '@/editor/property-panel';
 import type {
   CommentWordcloudData,
   ProjectDetail,
