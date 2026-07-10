@@ -36,6 +36,10 @@ const PRESET_PRIMARIES = [
 export function ReportSettingsOverlay({ onClose }: Props) {
   const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
   const layout = theme.layout ?? DEFAULT_THEME.layout!;
+  const lineHeight = theme.lineHeight ?? DEFAULT_THEME.lineHeight!;
+  const format = theme.format ?? DEFAULT_THEME.format!;
+  const chart = theme.chart ?? DEFAULT_THEME.chart!;
+  const shadow = theme.shadow ?? DEFAULT_THEME.shadow!;
   const setTheme = useEditorStore((s) => s.setTheme);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -85,6 +89,34 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     value: NonNullable<ProjectTheme['layout']>[K],
   ) {
     setTheme({ layout: { [field]: value }, preset: undefined });
+  }
+
+  /** 手改行高字段：清空 preset 高亮。 */
+  function updateLineHeight<K extends keyof NonNullable<ProjectTheme['lineHeight']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['lineHeight']>[K],
+  ) {
+    setTheme({ lineHeight: { [field]: value }, preset: undefined });
+  }
+
+  /** 手改数字/币种格式字段：清空 preset 高亮。 */
+  function updateFormat<K extends keyof NonNullable<ProjectTheme['format']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['format']>[K],
+  ) {
+    setTheme({ format: { [field]: value }, preset: undefined });
+  }
+
+  /** 手改图表样式字段：清空 preset 高亮。 */
+  function updateChart<K extends keyof NonNullable<ProjectTheme['chart']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['chart']>[K],
+  ) {
+    setTheme({ chart: { [field]: value }, preset: undefined });
+  }
+
+  function updateShadow(s: NonNullable<ProjectTheme['shadow']>) {
+    setTheme({ shadow: s, preset: undefined });
   }
 
   /** 更新品牌配置字段。 */
@@ -354,6 +386,138 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                 />
                 显示安全区
               </label>
+            </div>
+          </section>
+
+          {/* 行高 */}
+          <section className="space-y-2">
+            <div className="text-xs font-semibold text-foreground-secondary">行高（文本组件）</div>
+            <div className="flex gap-2">
+              {(['ratio', 'fixed'] as const).map((m) => (
+                <Chip key={m} active={lineHeight.mode === m} onClick={() => updateLineHeight('mode', m)}>
+                  {m === 'ratio' ? '倍数 ×n' : '加法 +px'}
+                </Chip>
+              ))}
+            </div>
+            <input
+              type="number"
+              min={0}
+              max={lineHeight.mode === 'ratio' ? 3 : 100}
+              step={lineHeight.mode === 'ratio' ? 0.05 : 1}
+              value={lineHeight.value}
+              onChange={(e) => updateLineHeight('value', Math.max(0, Number(e.target.value) || 0))}
+              className="w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+            />
+            <p className="text-[11px] text-foreground-muted">
+              {lineHeight.mode === 'ratio' ? `行高 = 字号 × ${lineHeight.value}` : `行高 = 字号 + ${lineHeight.value}px`}
+            </p>
+          </section>
+
+          {/* 币种与数字 */}
+          <section className="space-y-2">
+            <div className="text-xs font-semibold text-foreground-secondary">币种与数字</div>
+            <div className="flex items-center gap-2">
+              <input
+                value={format.currencySymbol}
+                onChange={(e) => updateFormat('currencySymbol', e.target.value || '$')}
+                className="w-16 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+              />
+              <select
+                value={format.currencyPosition}
+                onChange={(e) => updateFormat('currencyPosition', e.target.value as 'before' | 'after')}
+                className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+              >
+                <option value="before">符号在前</option>
+                <option value="after">符号在后</option>
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={format.thousandsSep}
+                  onChange={(e) => updateFormat('thousandsSep', e.target.checked)}
+                />
+                千分位
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                小数位
+                <select
+                  value={format.decimals}
+                  onChange={(e) => updateFormat('decimals', Number(e.target.value) as 0 | 1 | 2)}
+                  className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
+                >
+                  <option value={0}>0</option>
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={format.compact === 'auto'}
+                  onChange={(e) => updateFormat('compact', e.target.checked ? 'auto' : 'none')}
+                />
+                K/M 缩写
+              </label>
+            </div>
+          </section>
+
+          {/* 图表样式 */}
+          <section className="space-y-2">
+            <div className="text-xs font-semibold text-foreground-secondary">图表样式</div>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={chart.showAxis}
+                  onChange={(e) => updateChart('showAxis', e.target.checked)}
+                />
+                坐标轴
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={chart.showGrid}
+                  onChange={(e) => updateChart('showGrid', e.target.checked)}
+                />
+                网格线
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                图例
+                <select
+                  value={chart.legendPosition}
+                  onChange={(e) => updateChart('legendPosition', e.target.value as 'none' | 'top' | 'bottom' | 'right')}
+                  className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
+                >
+                  <option value="none">无</option>
+                  <option value="top">上</option>
+                  <option value="bottom">下</option>
+                  <option value="right">右</option>
+                </select>
+              </label>
+            </div>
+            <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+              柱圆角 {chart.barRadius}px
+              <input
+                type="range"
+                min={0}
+                max={16}
+                value={chart.barRadius}
+                onChange={(e) => updateChart('barRadius', Math.max(0, Math.min(16, Number(e.target.value) || 0)))}
+              />
+            </label>
+          </section>
+
+          {/* 卡片阴影 */}
+          <section>
+            <div className="mb-2 text-xs font-semibold text-foreground-secondary">卡片阴影</div>
+            <div className="flex flex-wrap gap-2">
+              {(['none', 'subtle', 'soft', 'strong'] as const).map((s) => (
+                <Chip key={s} active={shadow === s} onClick={() => updateShadow(s)}>
+                  {{ none: '无', subtle: '细微', soft: '柔和', strong: '强烈' }[s]}
+                </Chip>
+              ))}
             </div>
           </section>
 
