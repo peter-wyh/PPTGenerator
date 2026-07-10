@@ -744,3 +744,17 @@ Run: `pnpm --filter @mediakit/web dev`，访问 mock 数据页：
 **2. Placeholder scan：** 无 TBD/TODO；每个代码步骤均给出完整代码与精确命令。5 名新达人为具名 persona（非占位）。✓
 
 **3. Type consistency：** `buildChannelMetrics(meta, index)` 签名在 Task 1 定义、Task 2 调用一致；`Tier` 在 Task 1 导出、Task 3 从 creators.ts 复用（删除 creatorPerformance 本地 `type Tier`）；`campaignParticipantIds()` 在 Task 3 导出、Task 3 测试调用一致；指标 4 标签在 Task 1/2/4 全程一致。✓
+
+---
+
+## 实现期修正（落地与计划的偏差）
+
+实现中发现计划两处不准确，已在实现期修正（合并到 main，见 commit `ad25b4e`）：
+
+1. **Task 2 — TDZ 修正（计划的 hoisting 注释错误）**：计划称 `buildChannelMetrics` 是 hoisted function，故 `MOCK_CREATORS` 可留在原位（`CREATOR_META` 之后）引用它。实际错误：`MOCK_CREATORS` 在模块加载时**立即** `CREATOR_META.map(...)` 求值，调用 `buildChannelMetrics`，而后者读取的 `const TIER_CHANNEL_BASE`/`CHANNEL_JITTER`/`VIDEO_PLATFORMS` 声明在文件**后段**（const 不提升 → TDZ）→ `ReferenceError: Cannot access 'TIER_CHANNEL_BASE' before initialization`。修正：将 `MOCK_CREATORS` 移到文件末尾（`buildChannelMetrics` 及其 const 依赖之后）。功能等价，导出不变。
+
+2. **Task 3 — 漏算 `tests/rollup.test.ts`**：计划称「grep 确认仅 creators.ts 用过 `rollupCreatorTotals`」——该 grep 只扫了 `apps/web/src`，漏掉 `apps/web/tests/rollup.test.ts`（含 `describe('rollupCreatorTotals')` 块）。删除函数后 typecheck 报 `TS2305: Module has no exported member 'rollupCreatorTotals'`。修正：一并删除该测试块（保留 `rollupCampaignMetrics` 测试，仍绿）。
+
+3. **合并期对齐（main 并发演进）**：实现期间 `main` 新增 8 个提交（全量英文化 + `$` 货币 via `formatMoney` + 多平台合作形式 + theme v2）。merge 时 4 个重叠文件（`creatorPerformance.ts`/`MockData.tsx`/`mock-data.test.tsx`/`rollup.test.ts`）逐个解决冲突；本分支 CPM 由 `¥` 改为 `formatMoney($)` 对齐 main 货币约定（并更新 `creator-library.test.ts` 断言 ¥→$）；达人区标题采纳 main 的英文 "Creators"（英文化优先于本分支的「达人库」改名，区分度由 "Creators" vs "Creator Performance" 两 section 保证）。
+
+> 教训：删除某符号前 grep 其引用时，**必须含 `tests/` 目录**，不能只扫 `src/`。
