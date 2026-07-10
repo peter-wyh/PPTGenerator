@@ -75,7 +75,7 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
   const radius = (obj.radius as ThemeRadius) ?? d.radius;
   const preset = typeof obj.preset === 'string' ? obj.preset : obj.preset === undefined ? d.preset : undefined;
 
-  // ---- 布局 layout：缺对象整体补默认；部分缺字段按字段补；非法值回退 ----
+  // ---- layout：缺对象整体补默认；部分缺字段按字段补；非法值回退 ----
   const layoutRaw = obj.layout as Record<string, unknown> | undefined;
   const dLayout = d.layout!;
   const parseGridNum = (v: unknown, def: number, min: number): number => {
@@ -88,6 +88,37 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     showGrid: typeof layoutRaw?.showGrid === 'boolean' ? layoutRaw.showGrid : dLayout.showGrid,
     showSafeArea: typeof layoutRaw?.showSafeArea === 'boolean' ? layoutRaw.showSafeArea : dLayout.showSafeArea,
   };
+
+  // ---- branding：可选，部分缺字段补默认 ----
+  const brandingRaw = obj.branding as Record<string, unknown> | undefined;
+  const dB = d.branding!;
+  const branding = brandingRaw
+    ? {
+        logo: typeof brandingRaw.logo === 'string' ? brandingRaw.logo : dB.logo,
+        title: typeof brandingRaw.title === 'string' ? brandingRaw.title : dB.title,
+        subtitle: typeof brandingRaw.subtitle === 'string' ? brandingRaw.subtitle : dB.subtitle,
+        logoHeight: parseGridNum(brandingRaw.logoHeight, dB.logoHeight!, 8),
+        logoRadius: parseGridNum(brandingRaw.logoRadius, dB.logoRadius!, 0),
+      }
+    : undefined;
+
+  // ---- background：可选，部分缺字段补默认 ----
+  const bgRaw = obj.background as Record<string, unknown> | undefined;
+  const bgTypeRaw = (bgRaw?.type as string) ?? 'none';
+  const bgType: 'none' | 'color' | 'gradient' | 'image' = ['none', 'color', 'gradient', 'image'].includes(bgTypeRaw)
+    ? (bgTypeRaw as 'none' | 'color' | 'gradient' | 'image')
+    : 'none';
+  const bgGradient = bgRaw?.gradient && typeof bgRaw.gradient === 'object'
+    ? (bgRaw.gradient as PageGradient)
+    : undefined;
+  const background = bgRaw
+    ? {
+        type: bgType,
+        color: typeof bgRaw.color === 'string' ? bgRaw.color : undefined,
+        gradient: bgGradient,
+        image: typeof bgRaw.image === 'string' ? bgRaw.image : undefined,
+      }
+    : undefined;
 
   return {
     color: {
@@ -106,6 +137,8 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     radius: ['sharp', 'small', 'large'].includes(radius) ? radius : d.radius,
     preset,
     layout,
+    branding,
+    background,
   };
 }
 

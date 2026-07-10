@@ -84,6 +84,14 @@ export const DEFAULT_THEME: ProjectTheme = {
   density: 'standard',
   radius: 'small',
   layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true },
+  branding: {
+    logo: '',
+    title: '',
+    subtitle: '',
+    logoHeight: 32,
+    logoRadius: 0,
+  },
+  background: { type: 'none' },
   preset: 'business-sober',
 };
 

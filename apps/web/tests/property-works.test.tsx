@@ -40,8 +40,8 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    expect(screen.getAllByPlaceholderText('说明').length).toBe(9); // 默认 9 张（camp-glowlab-q4）
-    expect(screen.getByRole('button', { name: /添加图片/ })).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('Caption').length).toBe(9); // default 9 images (camp-glowlab-q4)
+    expect(screen.getByRole('button', { name: /Add image/ })).toBeInTheDocument();
   });
 
   it('edits a caption into data.images[i].caption', () => {
@@ -51,9 +51,9 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    fireEvent.change(screen.getAllByPlaceholderText('说明')[0], { target: { value: '代表作 A' } });
+    fireEvent.change(screen.getAllByPlaceholderText('Caption')[0], { target: { value: 'Best work A' } });
     const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
-    expect(data.images[0].caption).toBe('代表作 A');
+    expect(data.images[0].caption).toBe('Best work A');
   });
 
   it('imports creator work screenshots from a bound campaign', async () => {
@@ -66,7 +66,7 @@ describe('WorkScreenshotFields', () => {
     store.addComponent('work-screenshot');
     const id = store.currentComponents()[0].id;
     store.select(id);
-    // 先清空，验证导入确实写入 9 张
+    // Clear first to verify import writes 9 images
     store.updateComponentData(id, { images: [] });
     store.commit();
 
@@ -76,9 +76,9 @@ describe('WorkScreenshotFields', () => {
       </MemoryRouter>,
     );
 
-    // 等待达人列表加载完成，然后点击「一键导入全部作品」
-    const importAllBtn = await screen.findByRole('button', { name: /一键导入全部作品/ });
-    fireEvent.click(importAllBtn);
+    // Wait for creator list to load, then click import button
+    const importBtn = await screen.findByRole('button', { name: /Import \d+ screenshot/ });
+    fireEvent.click(importBtn);
 
     await waitFor(() => {
       const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;

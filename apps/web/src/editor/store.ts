@@ -35,6 +35,10 @@ export type ThemePatch = {
   density?: ThemeDensity;
   radius?: ThemeRadius;
   layout?: Partial<NonNullable<ProjectTheme['layout']>>;
+  branding?: Partial<NonNullable<ProjectTheme['branding']>>;
+  background?: Partial<Omit<NonNullable<ProjectTheme['background']>, 'type'>> & {
+    type?: NonNullable<ProjectTheme['background']>['type'];
+  };
   preset?: string;
 };
 
@@ -422,7 +426,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setTheme: (patch) =>
       set((s) => {
         const current = s.projectMeta?.theme ?? DEFAULT_THEME;
-        // 深合并 color / font 子对象；density / radius / preset 直接替换。
+        // 深合并 color / font / layout / branding / background 子对象；density / radius / preset 直接替换。
         // preset: 若 patch 显式含 preset key（含 undefined=清空），则用 patch 值；否则保留当前。
         const merged: ProjectTheme = {
           color: { ...current.color, ...patch.color },
@@ -432,6 +436,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
           layout: { ...(current.layout ?? DEFAULT_THEME.layout), ...patch.layout } as NonNullable<
             ProjectTheme['layout']
           >,
+          branding:
+            patch.branding || current.branding
+              ? { ...(current.branding ?? DEFAULT_THEME.branding), ...patch.branding }
+              : undefined,
+          background:
+            patch.background || current.background
+              ? {
+                  type: patch.background?.type ?? current.background?.type ?? 'none',
+                  ...(current.background ?? {}),
+                  ...patch.background,
+                }
+              : undefined,
           preset: 'preset' in patch ? patch.preset : current.preset,
         };
         return {

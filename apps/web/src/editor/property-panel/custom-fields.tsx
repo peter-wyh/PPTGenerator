@@ -407,7 +407,7 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
   return (
     <>
       <ReportWorkScreenshotImporter comp={comp} />
-      <FieldGroup title="作品截图">
+      <FieldGroup title="Screenshots">
         <div className="space-y-2">
           {images.map((im, i) => (
             <div key={i} className="space-y-1 rounded border border-border-subtle p-1.5">
@@ -415,7 +415,7 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
               <div className="flex items-center gap-1">
                 <input
                   value={im.caption ?? ''}
-                  placeholder="说明"
+                  placeholder="Caption"
                   onChange={(e) => setItem(i, { caption: e.target.value })}
                   className="w-full rounded border border-border-default px-1.5 py-1 text-xs text-foreground-primary"
                 />
@@ -427,7 +427,7 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
           ))}
         </div>
         <button onClick={add} className="text-xs text-accent-primary hover:underline">
-          + 添加图片
+          + Add image
         </button>
       </FieldGroup>
     </>

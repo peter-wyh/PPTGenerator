@@ -7,8 +7,10 @@ import {
   type ThemeDensity,
   type ThemeRadius,
 } from '@mediakit/shared';
+import type { PageGradient } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import type { ThemePatch } from '../store';
+import { ImageInput } from '@/components/ImageInput';
 
 interface Props {
   onClose: () => void;
@@ -83,6 +85,38 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     value: NonNullable<ProjectTheme['layout']>[K],
   ) {
     setTheme({ layout: { [field]: value }, preset: undefined });
+  }
+
+  /** 更新品牌配置字段。 */
+  function updateBranding<K extends keyof NonNullable<ProjectTheme['branding']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['branding']>[K],
+  ) {
+    setTheme({ branding: { [field]: value }, preset: undefined });
+  }
+
+  /** 更新默认背景配置字段。 */
+  function updateBackground<K extends keyof NonNullable<ProjectTheme['background']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['background']>[K],
+  ) {
+    setTheme({ background: { [field]: value }, preset: undefined });
+  }
+
+  /** 把默认背景批量应用到所有页面。 */
+  function applyBackgroundToAllPages() {
+    const bg = theme.background;
+    if (!bg || bg.type === 'none') return;
+    const store = useEditorStore.getState();
+    for (const page of store.pages) {
+      store.updatePage(page.id, {
+        bgColor: bg.type === 'color' ? bg.color : undefined,
+        bgGradient: bg.type === 'gradient' ? bg.gradient : undefined,
+        bgImage: bg.type === 'image' ? bg.image : undefined,
+      });
+    }
+    setToast(`已应用到 ${store.pages.length} 个页面`);
+    setTimeout(() => setToast(null), 2500);
   }
 
   /** 解析参考图占位：弹 toast（为后续 vision 接入预留入口）。 */
@@ -323,7 +357,137 @@ export function ReportSettingsOverlay({ onClose }: Props) {
             </div>
           </section>
 
-          {/* ⑦ 解析参考图（占位） */}
+          {/* ⑦ 品牌：Logo + 标题 + 副标题 */}
+          <section className="space-y-3 border-t border-border-subtle pt-4">
+            <div className="text-xs font-semibold text-foreground-secondary">品牌</div>
+
+            {/* Logo */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] text-foreground-muted">Logo</div>
+              <ImageInput
+                value={theme.branding?.logo ?? ''}
+                onChange={(url) => updateBranding('logo', url || undefined)}
+              />
+              {(theme.branding?.logo) && (
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
+                    高度
+                    <input
+                      type="number"
+                      min={8}
+                      max={200}
+                      value={theme.branding?.logoHeight ?? 32}
+                      onChange={(e) => updateBranding('logoHeight', Math.max(8, Math.min(200, Number(e.target.value) || 32)))}
+                      className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+                    />
+                    px
+                  </label>
+                  <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
+                    圆角
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={theme.branding?.logoRadius ?? 0}
+                      onChange={(e) => updateBranding('logoRadius', Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                      className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+                    />
+                    px
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* 品牌标题 */}
+            <div>
+              <label className="mb-1 block text-[11px] text-foreground-muted">品牌标题（留空=跟随项目广告主名）</label>
+              <input
+                value={theme.branding?.title ?? ''}
+                onChange={(e) => updateBranding('title', e.target.value || undefined)}
+                placeholder="如 GlowLab"
+                className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+              />
+            </div>
+
+            {/* 品牌副标题 */}
+            <div>
+              <label className="mb-1 block text-[11px] text-foreground-muted">品牌副标题</label>
+              <input
+                value={theme.branding?.subtitle ?? ''}
+                onChange={(e) => updateBranding('subtitle', e.target.value || undefined)}
+                placeholder="如 Q4 Campaign Report 2026"
+                className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+              />
+            </div>
+          </section>
+
+          {/* ⑧ 默认页面背景 */}
+          <section className="space-y-3 border-t border-border-subtle pt-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-foreground-secondary">默认页面背景</div>
+              {theme.background && theme.background.type !== 'none' && (
+                <button
+                  onClick={applyBackgroundToAllPages}
+                  className="text-[11px] text-accent-primary hover:underline"
+                >
+                  应用到全部页面
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-1">
+              {(['none', 'color', 'gradient', 'image'] as const).map((t) => {
+                const labels: Record<string, string> = { none: '无', color: '纯色', gradient: '渐变', image: '图片' };
+                const active = (theme.background?.type ?? 'none') === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => updateBackground('type', t)}
+                    className={`rounded border px-2 py-1 text-xs ${
+                      active
+                        ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                        : 'border-border-default text-foreground-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    {labels[t]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {theme.background?.type === 'color' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={theme.background.color ?? '#ffffff'}
+                  onChange={(e) => updateBackground('color', e.target.value)}
+                  className="h-8 w-10 rounded border border-border-default p-1"
+                />
+                <input
+                  value={theme.background.color ?? ''}
+                  placeholder="#FFFFFF"
+                  onChange={(e) => updateBackground('color', e.target.value)}
+                  className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+                />
+              </div>
+            )}
+
+            {theme.background?.type === 'image' && (
+              <ImageInput
+                value={theme.background.image ?? ''}
+                onChange={(url) => updateBackground('image', url || undefined)}
+              />
+            )}
+
+            {theme.background?.type === 'gradient' && (
+              <BackgroundGradientFields
+                gradient={theme.background.gradient}
+                onChange={(g) => updateBackground('gradient', g)}
+              />
+            )}
+          </section>
+
+          {/* ⑨ 解析参考图（占位） */}
           <section className="border-t border-border-subtle pt-4">
             <button
               onClick={handleParseReference}
@@ -461,5 +625,118 @@ function Chip({
     >
       {children}
     </button>
+  );
+}
+
+/** 默认背景的渐变编辑器：简化版（类型 + 角度 + 色标增删）。 */
+function BackgroundGradientFields({
+  gradient,
+  onChange,
+}: {
+  gradient: PageGradient | undefined;
+  onChange: (g: PageGradient) => void;
+}) {
+  const grad: PageGradient = gradient ?? {
+    type: 'linear',
+    angle: 180,
+    stops: [
+      { color: '#FFFFFF', position: 0 },
+      { color: '#F3F4F6', position: 100 },
+    ],
+  };
+
+  const setType = (type: 'linear' | 'radial') => onChange({ ...grad, type });
+  const setAngle = (angle: number) => onChange({ ...grad, angle: Math.max(0, Math.min(360, angle)) });
+  const setStopColor = (i: number, color: string) =>
+    onChange({ ...grad, stops: grad.stops.map((s, idx) => (idx === i ? { ...s, color } : s)) });
+  const setStopPos = (i: number, position: number) =>
+    onChange({ ...grad, stops: grad.stops.map((s, idx) => (idx === i ? { ...s, position: Math.max(0, Math.min(100, position)) } : s)) });
+  const addStop = () => {
+    if (grad.stops.length >= 6) return;
+    const last = grad.stops[grad.stops.length - 1];
+    const pos = Math.min(100, Math.round((last?.position ?? 0) + (100 - (last?.position ?? 0)) / 2));
+    onChange({ ...grad, stops: [...grad.stops, { color: last?.color ?? '#FFFFFF', position: pos }] });
+  };
+  const removeStop = (i: number) => {
+    if (grad.stops.length <= 2) return;
+    onChange({ ...grad, stops: grad.stops.filter((_, idx) => idx !== i) });
+  };
+
+  const angle = grad.angle ?? 180;
+  const stopStr = grad.stops.slice().sort((a, b) => a.position - b.position).map((s) => `${s.color} ${s.position}%`).join(', ');
+  const preview = grad.type === 'radial'
+    ? `radial-gradient(circle at center, ${stopStr})`
+    : `linear-gradient(${angle}deg, ${stopStr})`;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1">
+        {(['linear', 'radial'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setType(t)}
+            className={`rounded border px-2 py-1 text-xs ${
+              grad.type === t
+                ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                : 'border-border-default text-foreground-secondary hover:bg-surface-hover'
+            }`}
+          >
+            {t === 'linear' ? '线性' : '径向'}
+          </button>
+        ))}
+      </div>
+
+      <div className="h-6 w-full rounded border border-border-default" style={{ background: preview }} />
+
+      {grad.type === 'linear' && (
+        <label className="flex items-center gap-2 text-xs text-foreground-secondary">
+          <span>角度</span>
+          <input
+            type="number"
+            min={0}
+            max={360}
+            value={angle}
+            onChange={(e) => setAngle(Number(e.target.value))}
+            className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+          />
+        </label>
+      )}
+
+      <div className="space-y-1">
+        {grad.stops.map((s, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <input
+              type="color"
+              value={s.color}
+              onChange={(e) => setStopColor(i, e.target.value)}
+              className="h-6 w-6 rounded border border-border-default"
+            />
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={s.position}
+              onChange={(e) => setStopPos(i, Number(e.target.value))}
+              className="w-14 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+            />
+            <button
+              onClick={() => removeStop(i)}
+              disabled={grad.stops.length <= 2}
+              className="text-foreground-muted hover:text-red disabled:opacity-30"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={addStop}
+        disabled={grad.stops.length >= 6}
+        className="text-xs text-accent-primary hover:underline disabled:opacity-30"
+      >
+        + 添加色标
+      </button>
+    </div>
   );
 }

@@ -2,6 +2,7 @@
  * 主题 / 字体 / 风格预设类型定义（仅类型；运行时常量见 ../theme/presets.ts）。
  */
 import type { Scenario, ScenarioSub, CampaignInfo, ReportDataContext } from './campaign';
+import type { PageGradient } from './page';
 
 /**
  * 字体选项：预置字体清单，前后端共享。
@@ -51,6 +52,37 @@ export interface ProjectTheme {
     gridSize: number; // 网格大小 px；驱动可见网格 + 移动/拖拽/键盘/缩放吸附
     showGrid?: boolean; // 显示可见网格叠加；缺省 true
     showSafeArea?: boolean; // 显示安全区虚线；缺省 true
+  };
+  /**
+   * 品牌配置：Logo + 默认标题/副标题，用于报告封面与页眉。
+   * 可选字段，未配置时不渲染对应元素。
+   */
+  branding?: {
+    /** Logo 图片 URL（建议透明背景 PNG/SVG）。 */
+    logo?: string;
+    /** 品牌标题文案（如广告主名）。留空=跟随项目 advertiser。 */
+    title?: string;
+    /** 品牌副标题文案（如 "Q4 Campaign Report"）。 */
+    subtitle?: string;
+    /** Logo 显示高度 px；缺省 32。 */
+    logoHeight?: number;
+    /** Logo 圆角 px；缺省 0。 */
+    logoRadius?: number;
+  };
+  /**
+   * 默认页面背景：新建页面时的初始背景配置。
+   * 不直接驱动渲染（页面自身 bgColor/bgGradient/bgImage 控制各自渲染），
+   * 但"应用默认背景到全部页面"操作会把它写入所有页面。
+   */
+  background?: {
+    /** 默认背景类型。 */
+    type: 'none' | 'color' | 'gradient' | 'image';
+    /** 纯色背景色。 */
+    color?: string;
+    /** 渐变背景。 */
+    gradient?: PageGradient;
+    /** 图片背景 URL。 */
+    image?: string;
   };
   preset?: string; // 当前命中的预设 key，仅用于 UI 高亮；手改字段后置空
 }
