@@ -1,9 +1,9 @@
 /**
  * 上游达人（Creator / Influencer）接口（demo 中 mock）。
  * 真实环境对接达人库/CRM；这里返回固定 mock 列表，带模拟延迟。
- * metrics 为跨该达人参与的所有 campaign 的汇总（见 creatorPerformance.rollupCreatorTotals）。
+ * metrics 为达人自身频道 KPI（Avg Reach/Impressions/Follower Growth/CPM，见 mock/creators.buildChannelMetrics）。
  *
- * mock 数据与 rollup 逻辑已抽离至 ./mock/creators。
+ * mock 数据与频道指标生成逻辑已抽离至 ./mock/creators。
  */
 import type { CampaignMetric } from '@mediakit/shared';
 import { MOCK_CREATORS } from './mock/creators';
@@ -18,7 +18,7 @@ export interface Creator {
   engagement: string;
   category: string;
   region: string;
-  /** 跨该达人参与的所有 campaign 的汇总指标（GMV/ROAS/转化/佣金）。 */
+  /** 达人自身频道 KPI 指标（Avg Reach/Impressions/Follower Growth/CPM）。 */
   metrics: CampaignMetric[];
 }
 
