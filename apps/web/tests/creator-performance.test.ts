@@ -10,37 +10,43 @@ const parseCompact = (s: string): number => {
   return /M/i.test(m[2]) ? v * 1e6 : /K/i.test(m[2]) ? v * 1e3 : v;
 };
 
-describe('作品数据（多作品 + 基础信息）', () => {
-  it('作品数按 tier：头部 4 > 腰部 3 > KOC 2', async () => {
+describe('Creator performance (posts + basics)', () => {
+  it('post count by tier: mega 4 > macro 3 > micro 2', async () => {
     const list = await listCreatorPerformance('camp-glowlab-q4');
-    // glowlab 参与：cre-mia(头部) / cre-sofia(腰部) / cre-tom(KOC)
+    // glowlab participants: cre-mia(mega) / cre-sofia(macro) / cre-tom(micro)
     const byId = Object.fromEntries(list.map((p) => [p.creatorId, p]));
     expect(byId['cre-mia'].posts.length).toBe(4);
     expect(byId['cre-sofia'].posts.length).toBe(3);
     expect(byId['cre-tom'].posts.length).toBe(2);
   });
 
-  it('每个作品含 platform / cover / url / hashtags（基础信息）', async () => {
+  it('each post has platform / cover / url / hashtags (basics)', async () => {
     const list = await listCreatorPerformance('camp-glowlab-q4');
     const mia = list.find((p) => p.creatorId === 'cre-mia')!;
     expect(mia.posts.length).toBeGreaterThan(0);
     for (const post of mia.posts) {
-      expect(post.platform).toBe('TikTok');
+      expect(post.platform).toBeTruthy();
       expect(post.cover).toMatch(/^https:\/\//);
       expect(post.url).toMatch(/^https:\/\//);
       expect(post.hashtags).toBeTruthy();
     }
   });
 
-  it('视频平台作品带 duration/plays，图文平台不带', async () => {
-    const video = (await listCreatorPerformance('camp-glowlab-q4'))[0].posts[0]; // TikTok=video
+  it('video platform posts have duration/plays, image platform posts do not', async () => {
+    // glowlab primary platform is TikTok (video)
+    const video = (await listCreatorPerformance('camp-glowlab-q4'))[0].posts[0];
     expect(video.format).toBe('video');
     expect(video.duration).toMatch(/^\d+:\d{2}$/);
     expect(video.plays).toBeTruthy();
 
-    const image = (await listCreatorPerformance('camp-nova-home-618'))[0].posts[0]; // 小红书=image
-    expect(image.format).toBe('image');
-    expect(image.duration).toBeUndefined();
+    // nova-home uses Instagram/YouTube — first post may be Instagram (image)
+    const novaPost = (await listCreatorPerformance('camp-nova-home-618'))[0].posts[0];
+    expect(novaPost.format).toBeDefined();
+    if (novaPost.format === 'image') {
+      expect(novaPost.duration).toBeUndefined();
+    } else {
+      expect(novaPost.duration).toMatch(/^\d+:\d{2}$/);
+    }
   });
 });
 

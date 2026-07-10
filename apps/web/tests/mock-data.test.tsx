@@ -23,14 +23,14 @@ describe('MockData page', () => {
     listCampaignsMock.mockResolvedValue([
       {
         id: 'c1',
-        name: 'GlowLab Q4 上市',
+        name: 'GlowLab Q4 Launch',
         advertiser: 'GlowLab',
         businessLine: 'FT',
         platform: 'TikTok',
         startDate: '2026-10-12',
         endDate: '2026-11-10',
         budget: '¥300K',
-        status: '投放中',
+        status: 'Active',
         owner: 'alex',
       },
     ]);
@@ -40,7 +40,7 @@ describe('MockData page', () => {
         name: 'Mia Chen',
         handle: '@miaglowup',
         platform: 'TikTok',
-        tier: '头部',
+        tier: 'mega',
         followers: '1.28M',
         engagement: '8.7%',
         category: 'Beauty',
@@ -58,8 +58,8 @@ describe('MockData page', () => {
     await waitFor(() => expect(screen.getByText('达人数据 · 1')).toBeInTheDocument());
 
     // campaign 数据（名称现出现在表格 + Campaign 选择器两处）
-    expect(screen.getAllByText('GlowLab Q4 上市').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('投放中')).toBeInTheDocument();
+    expect(screen.getAllByText('GlowLab Q4 Launch').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Active')).toBeInTheDocument();
     // 达人数据
     expect(screen.getByText('Mia Chen')).toBeInTheDocument();
     expect(screen.getByText('1.28M')).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe('MockData page', () => {
         creatorName: 'Mia Chen',
         handle: '@miaglowup',
         platform: 'TikTok',
-        tier: '头部',
+        tier: 'mega',
         summary: {
           posts: 2,
           totalImpressions: '1.46M',
@@ -90,14 +90,14 @@ describe('MockData page', () => {
         posts: [
           {
             id: 'c1-cr1-p1',
-            title: '敏感肌7天急救 vlog',
+            title: '7-Day Sensitive Skin Rescue Vlog',
             cover: 'https://picsum.photos/seed/c1-cr1-p1/640/360',
             url: 'https://www.tiktok.com/@miaglowup/video/c1cr1p1',
             publishedAt: '2026-10-14',
             platform: 'TikTok',
             format: 'video',
             duration: '0:45',
-            hashtags: '#护肤 #敏感肌',
+            hashtags: '#skincare #sensitiveskin',
             impressions: '850K',
             plays: '697K',
             likes: '40,000',
@@ -158,7 +158,7 @@ describe('MockData page', () => {
 
     render(<MockData />);
     // 帖子标题（仅 perf 卡渲染后出现）
-    await waitFor(() => expect(screen.getByText('敏感肌7天急救 vlog')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('7-Day Sensitive Skin Rescue Vlog')).toBeInTheDocument());
     // 投放位类型汇总表（campaign 维度）
     expect(screen.getByText('投放位类型汇总（campaign 维度）')).toBeInTheDocument();
     // CPS 数值（GMV 唯一；ROAS 在汇总/投放位/CPS 三处都出现，故取 all）

@@ -22,17 +22,17 @@ import type {
 } from '@mediakit/shared';
 
 const PLATFORM_LABEL: Record<CreatorPlatform, string> = {
-  xiaohongshu: '小红书',
+  xiaohongshu: 'Xiaohongshu',
   tiktok: 'TikTok',
   instagram: 'Instagram',
   youtube: 'YouTube',
-  weibo: '微博',
+  weibo: 'Weibo',
 };
 
 const TIER_LABEL: Record<CreatorTier, string> = {
-  mega: 'Mega 头部',
-  macro: 'Macro 中腰',
-  micro: 'Micro 微',
+  mega: 'Mega',
+  macro: 'Macro',
+  micro: 'Micro',
 };
 
 /* --------------------------- creator avatar card -------------------------- */
@@ -730,12 +730,12 @@ export function CreatorFanInterest({ data }: { data: CreatorFanInterestData }) {
 /* ------------------------------ creator list ------------------------------ */
 
 const PLATFORM_LABEL_SHORT: Record<string, string> = {
-  xiaohongshu: '小红书',
-  douyin: '抖音',
+  xiaohongshu: 'Xiaohongshu',
+  douyin: 'Douyin',
   tiktok: 'TikTok',
   instagram: 'Instagram',
   youtube: 'YouTube',
-  weibo: '微博',
+  weibo: 'Weibo',
 };
 
 /** 达人列表：多达人汇总。 */

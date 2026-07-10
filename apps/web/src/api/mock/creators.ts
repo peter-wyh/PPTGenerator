@@ -1,19 +1,19 @@
 /**
- * Creator（达人）mock 数据（demo）。
- * 从原 api/creators.ts 抽离，保持数据与生成逻辑集中管理。
- * metrics 为跨该达人参与的所有 campaign 的汇总（见 creatorPerformance.rollupCreatorTotals）。
+ * Creator mock data (demo).
+ * Extracted from original api/creators.ts to keep data & generation logic centralized.
+ * metrics are aggregated across all campaigns the creator participated in (see creatorPerformance.rollupCreatorTotals).
  */
 import { rollupCreatorTotals } from './creatorPerformance';
 import type { Creator } from '../creators';
 
-/** 达人元数据（花名册）；metrics 在导出时由 rollupCreatorTotals 注入。 */
+/** Creator metadata (roster); metrics injected at export time by rollupCreatorTotals. */
 export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
   {
     id: 'cre-mia',
     name: 'Mia Chen',
     handle: '@miaglowup',
     platform: 'TikTok',
-    tier: '头部',
+    tier: 'mega',
     followers: '1.28M',
     engagement: '8.7%',
     category: 'Beauty',
@@ -24,7 +24,7 @@ export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
     name: 'Sofia Lane',
     handle: '@sofialane',
     platform: 'TikTok',
-    tier: '腰部',
+    tier: 'macro',
     followers: '684K',
     engagement: '6.2%',
     category: 'Skincare',
@@ -34,8 +34,8 @@ export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
     id: 'cre-ava',
     name: 'Ava Park',
     handle: '@avapark.daily',
-    platform: '小红书',
-    tier: '腰部',
+    platform: 'Instagram',
+    tier: 'macro',
     followers: '312K',
     engagement: '7.8%',
     category: 'Lifestyle',
@@ -45,8 +45,8 @@ export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
     id: 'cre-jamie',
     name: 'Jamie Wu',
     handle: '@jamiewu',
-    platform: '抖音',
-    tier: 'KOC',
+    platform: 'Douyin',
+    tier: 'micro',
     followers: '86K',
     engagement: '11.4%',
     category: 'Beauty',
@@ -57,7 +57,7 @@ export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
     name: 'Leo Sato',
     handle: '@leosato',
     platform: 'YouTube',
-    tier: '头部',
+    tier: 'mega',
     followers: '2.10M',
     engagement: '5.1%',
     category: 'Tech',
@@ -68,7 +68,7 @@ export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
     name: 'Nora Kim',
     handle: '@nora.kim',
     platform: 'Instagram',
-    tier: '腰部',
+    tier: 'macro',
     followers: '458K',
     engagement: '6.9%',
     category: 'Fashion',
@@ -79,7 +79,7 @@ export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
     name: 'Tom Reyes',
     handle: '@tomreyes',
     platform: 'TikTok',
-    tier: 'KOC',
+    tier: 'micro',
     followers: '54K',
     engagement: '12.1%',
     category: 'Food',
@@ -87,7 +87,7 @@ export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
   },
 ];
 
-/** 达人 mock 列表（含由 rollupCreatorTotals 注入的汇总 metrics）。 */
+/** Creator mock list (with aggregated metrics injected by rollupCreatorTotals). */
 export const MOCK_CREATORS: Creator[] = CREATOR_META.map((c) => ({
   ...c,
   metrics: rollupCreatorTotals(c.id),

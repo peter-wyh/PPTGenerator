@@ -13,7 +13,7 @@ export interface Creator {
   name: string;
   handle: string;
   platform: string;
-  tier: string; // 头部 / 腰部 / KOC
+  tier: string; // mega / macro / micro
   followers: string;
   engagement: string;
   category: string;

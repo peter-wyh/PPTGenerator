@@ -4,7 +4,7 @@ import { campaignWorkScreenshots } from '@/api/creatorPerformance';
 describe('campaignWorkScreenshots', () => {
   it('returns deterministic creator-work screenshots for a known campaign', () => {
     const shots = campaignWorkScreenshots('camp-glowlab-q4');
-    // Mia(头部,4) + Sofia(腰部,3) + Tom(KOC,2) = 9
+    // Mia(mega,4) + Sofia(macro,3) + Tom(micro,2) = 9
     expect(shots).toHaveLength(9);
     expect(shots.every((s) => s.src.startsWith('https://picsum.photos/seed/'))).toBe(true);
     expect(shots[0].caption ?? '').toContain('·');

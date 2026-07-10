@@ -25,6 +25,14 @@ export interface CampaignMetric {
   compare: string; // 对比文本，如 "+15%"（kpi-board 渲染器按首字符 +/- 自动着色）
 }
 
+/** 单个平台的合作形式配置。 */
+export interface CampaignPlatform {
+  /** 平台名称，如 'TikTok' / 'Instagram'。 */
+  platform: string;
+  /** 合作形式，如 'Content' / 'Live Stream' / 'Affiliate' / 'Spark Ads'。 */
+  collaborationType: string;
+}
+
 /** 上游 Campaign 实体（接入上游接口；demo 中 mock）。 */
 export interface Campaign {
   id: string;
@@ -32,6 +40,8 @@ export interface Campaign {
   advertiser: string;
   businessLine: string;
   platform: string;
+  /** 多平台多合作形式（可选，向后兼容）。 */
+  platforms?: CampaignPlatform[];
   startDate: string;
   endDate: string;
   budget: string;
@@ -53,6 +63,8 @@ export interface ReportCampaign {
   name: string;
   advertiser?: string;
   platform?: string;
+  /** 多平台多合作形式（可选，向后兼容）。 */
+  platforms?: CampaignPlatform[];
   startDate?: string;
   endDate?: string;
   budget?: string;

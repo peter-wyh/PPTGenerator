@@ -12,17 +12,21 @@ import type {
 } from '@mediakit/shared';
 
 /**
- * 上游「达人执行效果」接口（demo 中 mock）。
- * 返回某 campaign 下各参与达人的执行效果：帖子效果数据 + CPS（带货）数据。
- * 真实环境对接投放系统 / 电商回传（CPS = Cost Per Sale，按销售分成）。
+ * Upstream "Creator Performance" API (mock for demo).
+ * Returns each creator's execution performance under a given campaign:
+ * post metrics + CPS (affiliate sales) data.
  *
- * 数值由「达人层级基线 × campaign 强度」确定性生成，贴近真实量级；
- * 无随机数（同样输入 → 同样输出），便于回归与截图。
+ * Values are deterministically derived from "creator tier baseline × campaign intensity",
+ * approximating real-world magnitudes. No RNG (same input → same output), ideal for regression & screenshots.
+ *
+ * **Multi-platform support**: each campaign profile declares an array of platforms
+ * with their collaboration types. Each creator's posts are spread across platforms
+ * proportionally, enabling realistic multi-platform campaign scenarios.
  */
 
-type Tier = '头部' | '腰部' | 'KOC';
+type Tier = 'mega' | 'macro' | 'micro';
 
-/** 创作者花名册（id / 名称 / handle / 层级），与 creators.ts 对齐。 */
+/** Creator roster (id / name / handle / tier), aligned with creators.ts. */
 interface CreatorRoster {
   id: string;
   name: string;
@@ -31,131 +35,158 @@ interface CreatorRoster {
 }
 
 const ROSTER: Record<string, CreatorRoster> = {
-  'cre-mia': { id: 'cre-mia', name: 'Mia Chen', handle: '@miaglowup', tier: '头部' },
-  'cre-sofia': { id: 'cre-sofia', name: 'Sofia Lane', handle: '@sofialane', tier: '腰部' },
-  'cre-ava': { id: 'cre-ava', name: 'Ava Park', handle: '@avapark.daily', tier: '腰部' },
-  'cre-jamie': { id: 'cre-jamie', name: 'Jamie Wu', handle: '@jamiewu', tier: 'KOC' },
-  'cre-leo': { id: 'cre-leo', name: 'Leo Sato', handle: '@leosato', tier: '头部' },
-  'cre-nora': { id: 'cre-nora', name: 'Nora Kim', handle: '@nora.kim', tier: '腰部' },
-  'cre-tom': { id: 'cre-tom', name: 'Tom Reyes', handle: '@tomreyes', tier: 'KOC' },
+  'cre-mia': { id: 'cre-mia', name: 'Mia Chen', handle: '@miaglowup', tier: 'mega' },
+  'cre-sofia': { id: 'cre-sofia', name: 'Sofia Lane', handle: '@sofialane', tier: 'macro' },
+  'cre-ava': { id: 'cre-ava', name: 'Ava Park', handle: '@avapark.daily', tier: 'macro' },
+  'cre-jamie': { id: 'cre-jamie', name: 'Jamie Wu', handle: '@jamiewu', tier: 'micro' },
+  'cre-leo': { id: 'cre-leo', name: 'Leo Sato', handle: '@leosato', tier: 'mega' },
+  'cre-nora': { id: 'cre-nora', name: 'Nora Kim', handle: '@nora.kim', tier: 'macro' },
+  'cre-tom': { id: 'cre-tom', name: 'Tom Reyes', handle: '@tomreyes', tier: 'micro' },
 };
 
-/** 各层级基线：单帖曝光 / 平均互动率 / 单 campaign 带货潜力 GMV。 */
+/** Tier baseline: single-post impressions / avg engagement rate / per-campaign GMV potential. */
 const TIER_BASE: Record<Tier, { impr: number; er: number; gmv: number }> = {
-  头部: { impr: 850_000, er: 8.4, gmv: 240_000 },
-  腰部: { impr: 360_000, er: 6.8, gmv: 70_000 },
-  KOC: { impr: 90_000, er: 10.5, gmv: 16_000 },
+  mega: { impr: 850_000, er: 8.4, gmv: 240_000 },
+  macro: { impr: 360_000, er: 6.8, gmv: 70_000 },
+  micro: { impr: 90_000, er: 10.5, gmv: 16_000 },
 };
 
-/** 单帖曝光抖动系数（按帖子序号取，确定性，避免每帖数值雷同）。 */
+/** Single-post impression jitter (deterministic, avoids identical per-post values). */
 const POST_JITTER = [1.0, 0.72, 1.28, 0.86];
 
-/** 视频类平台（有播放量；其余按图文计）。 */
-const VIDEO_PLATFORMS = new Set(['TikTok', '抖音', 'B站', 'YouTube']);
+/** Video platforms (have play counts; others treated as image). */
+const VIDEO_PLATFORMS = new Set(['TikTok', 'Douyin', 'Bilibili', 'YouTube']);
+
+/** A single platform entry within a campaign (platform + collaboration type). */
+interface CampaignPlatformEntry {
+  platform: string;
+  collaborationType: string;
+}
 
 interface CampaignProfile {
-  platform: string;
   startDate: string;
-  /** campaign 强度系数（反映预算 / 大盘表现）。 */
+  /** Campaign intensity coefficient (reflects budget / overall performance). */
   intensity: number;
-  /** CPS 佣金比例（小数，0.12 = 12%）。 */
+  /** CPS commission rate (decimal, 0.12 = 12%). */
   commissionPct: number;
-  /** 客单价（元）。 */
+  /** Average order value (in CNY). */
   aov: number;
-  /** 帖子标题池（创作者按序取用）。 */
+  /** Post title pool (creators draw from this in order). */
   titles: string[];
-  /** 参与 creatorId 列表（顺序即取标题顺序）。 */
+  /** Participating creator IDs (order determines title assignment). */
   creators: string[];
+  /** Multi-platform configuration with collaboration types. */
+  platforms: CampaignPlatformEntry[];
 }
 
 const CAMPAIGN_PROFILE: Record<string, CampaignProfile> = {
   'camp-glowlab-q4': {
-    platform: 'TikTok',
     startDate: '2026-10-12',
     intensity: 1.0,
     commissionPct: 0.12,
     aov: 189,
     titles: [
-      '敏感肌7天急救 vlog｜红脸期靠它稳住',
-      '成分党实测｜神经酰胺精华到底有没有用',
-      '换季烂脸自救指南｜3步修护屏障',
-      '素颜也敢出门！养厚角质层的心得',
+      '7-Day Sensitive Skin Rescue Vlog | Calming Redness with Barrier Serum',
+      'Ingredient Deep Dive | Does Ceramide Serum Actually Work?',
+      'Seasonal Skin Crisis Survival Guide | 3-Step Barrier Repair',
+      'Confident Without Makeup! How I Thickened My Skin Barrier',
     ],
     creators: ['cre-mia', 'cre-sofia', 'cre-tom'],
+    platforms: [
+      { platform: 'TikTok', collaborationType: 'Spark Ads' },
+      { platform: 'Instagram', collaborationType: 'Content' },
+      { platform: 'YouTube', collaborationType: 'Long-form Review' },
+    ],
   },
   'camp-lumiere-launch': {
-    platform: '抖音',
     startDate: '2026-09-01',
     intensity: 0.85,
     commissionPct: 0.15,
     aov: 359,
     titles: [
-      '30+ 抗老实录｜用满一罐后的真实变化',
-      '贵妇面霜值不值？28天打卡对比',
-      '法令纹淡化？抗老面霜盲测分享',
-      '熬夜垮脸救星｜提拉紧致实测',
+      '30+ Anti-Aging Diary | Real Results After Using a Full Jar',
+      'Is Luxury Cream Worth It? 28-Day Challenge Comparison',
+      'Fading Smile Lines? Blind Test Anti-Aging Cream Review',
+      'Late-Night Recovery Rescue | Firming & Lifting Real Results',
     ],
     creators: ['cre-jamie', 'cre-mia', 'cre-sofia'],
+    platforms: [
+      { platform: 'TikTok', collaborationType: 'Content' },
+      { platform: 'Instagram', collaborationType: 'Affiliate' },
+    ],
   },
   'camp-nova-home-618': {
-    platform: '小红书',
     startDate: '2026-05-20',
     intensity: 1.25,
     commissionPct: 0.08,
     aov: 129,
     titles: [
-      '租房改造｜百元好物提升幸福感',
-      '618 囤货清单｜家居必买 TOP10',
-      '小户型收纳神器真实测评',
-      '氛围感家装配色分享｜抄作业',
+      'Apartment Makeover | Budget-Friendly Finds That Boost Happiness',
+      '618 Shopping Guide | Home Essentials TOP 10',
+      'Small Apartment Storage Hacks | Honest Review',
+      'Aesthetic Home Decor Color Palette Inspiration',
     ],
     creators: ['cre-ava', 'cre-nora', 'cre-sofia'],
+    platforms: [
+      { platform: 'Instagram', collaborationType: 'Content' },
+      { platform: 'YouTube', collaborationType: 'Long-form Review' },
+    ],
   },
   'camp-motion-spring': {
-    platform: 'B站',
     startDate: '2026-03-01',
     intensity: 0.6,
     commissionPct: 0.1,
     aov: 159,
     titles: [
-      '春日户外 vlog｜一套穿搭搞定跑步+通勤',
-      '健身房 vs 居家训练｜30天实测',
-      '运动防晒不花妆的秘诀',
-      '跑步装备入门指南｜新手避坑',
+      'Spring Outdoor Vlog | One Outfit for Running + Commuting',
+      'Gym vs Home Workout | 30-Day Real Comparison',
+      'Sweatproof Makeup Tips for Sports',
+      'Running Gear Starter Guide | Beginner Pitfalls to Avoid',
     ],
     creators: ['cre-leo', 'cre-mia', 'cre-tom'],
+    platforms: [
+      { platform: 'YouTube', collaborationType: 'Long-form Review' },
+      { platform: 'TikTok', collaborationType: 'Content' },
+    ],
   },
   'camp-everyday-bf': {
-    platform: 'TikTok',
     startDate: '2026-11-20',
     intensity: 1.3,
     commissionPct: 0.1,
     aov: 249,
     titles: [
-      '黑五送礼清单｜男女通用高级感好物',
-      '开箱｜黑五入手的宝藏礼盒',
-      '节日礼物怎么挑？这份清单直接抄',
-      '送闺蜜 / 长辈不出错的礼物合集',
+      'Black Friday Gift Guide | Premium Unisex Finds',
+      'Unboxing | Black Friday Treasure Gift Box Haul',
+      'How to Choose Holiday Gifts? Copy This List Directly',
+      'Gift Ideas for Friends & Family | Foolproof Collection',
     ],
     creators: ['cre-mia', 'cre-sofia', 'cre-tom', 'cre-nora'],
+    platforms: [
+      { platform: 'TikTok', collaborationType: 'Spark Ads' },
+      { platform: 'Instagram', collaborationType: 'Affiliate' },
+      { platform: 'YouTube', collaborationType: 'Content' },
+    ],
   },
   'camp-wander-summer': {
-    platform: '微信',
     startDate: '2026-07-01',
     intensity: 0.7,
     commissionPct: 0.06,
     aov: 899,
     titles: [
-      '暑期避暑路线｜小众海岛攻略',
-      '7天自驾 vlog｜沿途绝美风景',
-      '旅行打包清单｜轻装出行攻略',
-      '亲子游避坑指南｜住宿+行程分享',
+      'Summer Travel Route | Hidden Island Travel Guide',
+      '7-Day Road Trip Vlog | Stunning Scenery Along the Way',
+      'Travel Packing List | Pack Light Travel Guide',
+      'Family Travel Tips | Accommodation + Itinerary Guide',
     ],
     creators: ['cre-leo', 'cre-ava', 'cre-nora'],
+    platforms: [
+      { platform: 'YouTube', collaborationType: 'Long-form Review' },
+      { platform: 'Instagram', collaborationType: 'Content' },
+    ],
   },
 };
 
-/* ------------------------------ 格式化工具 ------------------------------ */
+/* ------------------------------ Formatting utilities ------------------------------ */
 
 const fmt = (n: number): string => Math.round(n).toLocaleString('en-US');
 
@@ -167,25 +198,25 @@ const compact = (n: number): string => {
 };
 
 const money = (n: number): string => `¥${fmt(n)}`;
-/** 小额金额 2 位小数（EPC 等个位数金额）。 */
+/** Small amounts with 2 decimal places (for EPC etc). */
 const money2 = (n: number): string => `¥${n.toFixed(2)}`;
 const pct = (n: number): string => `${n.toFixed(1)}%`;
-/** 百分比 2 位小数（CTR / CVR，对齐看板精度）。 */
+/** Percentage with 2 decimal places (for CTR / CVR, aligned with dashboard precision). */
 const pct2 = (n: number): string => `${n.toFixed(2)}%`;
 
-/** ISO 日期加天数（YYYY-MM-DD）。 */
+/** Add days to an ISO date (YYYY-MM-DD). */
 function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
-/* ------------------------------ 投放位模板 ------------------------------ */
+/* ------------------------------ Placement templates ------------------------------ */
 
 /**
- * 各平台的投放位/渠道模板：revW = 收入归因权重，clkW = 点击归因权重。
- * revW ≠ clkW → 各投放位 EPC/转化效率不同（高意向位如 Bio Link 收入占比高于点击占比）。
- * 每行权重各自求和≈1。
+ * Placement/channel templates per platform: revW = revenue attribution weight, clkW = click attribution weight.
+ * revW ≠ clkW → different EPC/conversion efficiency per placement (high-intent placements like Bio Link
+ * have higher revenue share than click share). Each row's weights sum to ≈1.
  */
 interface PlacementTemplate {
   type: string;
@@ -200,42 +231,42 @@ const PLACEMENT_TEMPLATES: Record<string, PlacementTemplate[]> = {
     { type: 'Story', revW: 0.32, clkW: 0.36, note: 'Impulse convert' },
     { type: 'Live', revW: 0.2, clkW: 0.24, note: 'Repeat buyer heavy' },
   ],
-  抖音: [
-    { type: '主页链接', revW: 0.48, clkW: 0.4, note: '高意向流量' },
-    { type: '短视频挂车', revW: 0.32, clkW: 0.36, note: '冲动转化' },
-    { type: '直播', revW: 0.2, clkW: 0.24, note: '复购占比高' },
+  Douyin: [
+    { type: 'Profile Link', revW: 0.48, clkW: 0.4, note: 'High intent traffic' },
+    { type: 'Short Video Cart', revW: 0.32, clkW: 0.36, note: 'Impulse convert' },
+    { type: 'Live Stream', revW: 0.2, clkW: 0.24, note: 'Repeat buyer heavy' },
   ],
-  小红书: [
-    { type: '笔记带货', revW: 0.5, clkW: 0.42, note: '种草转化强' },
-    { type: '店铺橱窗', revW: 0.3, clkW: 0.34, note: '主动浏览' },
-    { type: '直播', revW: 0.2, clkW: 0.24, note: '复购占比高' },
+  Xiaohongshu: [
+    { type: 'Shoppable Post', revW: 0.5, clkW: 0.42, note: 'Strong conversion' },
+    { type: 'Store Showcase', revW: 0.3, clkW: 0.34, note: 'Active browsing' },
+    { type: 'Live Stream', revW: 0.2, clkW: 0.24, note: 'Repeat buyer heavy' },
   ],
   Instagram: [
     { type: 'Bio Link', revW: 0.48, clkW: 0.4, note: 'High intent traffic' },
     { type: 'Story', revW: 0.32, clkW: 0.36, note: 'Impulse convert' },
     { type: 'Reels', revW: 0.2, clkW: 0.24, note: 'Top funnel reach' },
   ],
-  B站: [
-    { type: '简介链接', revW: 0.46, clkW: 0.4, note: '深度种草' },
-    { type: '置顶评论', revW: 0.32, clkW: 0.36, note: '互动转化' },
-    { type: '片尾卡片', revW: 0.22, clkW: 0.24, note: '新客驱动' },
+  Bilibili: [
+    { type: 'Description Link', revW: 0.46, clkW: 0.4, note: 'Deep consideration' },
+    { type: 'Pinned Comment', revW: 0.32, clkW: 0.36, note: 'Engaged convert' },
+    { type: 'End Card', revW: 0.22, clkW: 0.24, note: 'New customer driver' },
   ],
   YouTube: [
     { type: 'Description Link', revW: 0.46, clkW: 0.4, note: 'Deep consideration' },
     { type: 'Pinned Comment', revW: 0.32, clkW: 0.36, note: 'Engaged convert' },
     { type: 'End Card', revW: 0.22, clkW: 0.24, note: 'New customer driver' },
   ],
-  微信: [
-    { type: '阅读原文', revW: 0.46, clkW: 0.4, note: '高意向流量' },
-    { type: '小程序卡片', revW: 0.32, clkW: 0.36, note: '冲动转化' },
-    { type: '视频号橱窗', revW: 0.22, clkW: 0.24, note: '新客驱动' },
+  WeChat: [
+    { type: 'Read More', revW: 0.46, clkW: 0.4, note: 'High intent traffic' },
+    { type: 'Mini Program Card', revW: 0.32, clkW: 0.36, note: 'Impulse convert' },
+    { type: 'Channels Store', revW: 0.22, clkW: 0.24, note: 'New customer driver' },
   ],
 };
 
-/** 各投放位 CTR 相对均值的系数（高意向位 CTR 更高）。 */
+/** CTR factor relative to mean per placement (high-intent placements have higher CTR). */
 const CTR_FACTOR = [1.15, 0.92, 0.8];
 
-/** 生成 6 周上升趋势数据点（确定性，供迷你趋势图）。 */
+/** Generate 6-week upward trend data points (deterministic, for mini trend chart). */
 function trendPoints(total: number, seed: number): PlacementTrendPoint[] {
   const pts: PlacementTrendPoint[] = [];
   for (let i = 0; i < 6; i++) {
@@ -245,42 +276,42 @@ function trendPoints(total: number, seed: number): PlacementTrendPoint[] {
   return pts;
 }
 
-/* ------------------------------ 作品 / 每日 工具 ------------------------------ */
+/* ------------------------------ Post / Daily utilities ------------------------------ */
 
-/** 内容标签池（确定性轮转）。 */
+/** Content hashtag pools (deterministic rotation). */
 const HASHTAGS = [
-  '#护肤 #敏感肌 #屏障修护',
-  '#成分党 #实测分享',
-  '#好物推荐 #种草',
-  '#开箱 #真实测评',
-  '#日常分享 #生活记录',
-  '#干货 #教程',
+  '#skincare #sensitiveskin #barrierrepair',
+  '#ingredientnerd #honestreview',
+  '#productrec #musthave',
+  '#unboxing #realreview',
+  '#dailyvlog #lifestyle',
+  '#tips #tutorial',
 ];
 
-/** 平台专属作品链接（mock，确定性）。 */
+/** Platform-specific post URL (mock, deterministic). */
 function postUrl(platform: string, handle: string, id: string): string {
   const tail = id.replace(/[^a-z0-9]/gi, '').slice(-8);
   switch (platform) {
     case 'TikTok': return `https://www.tiktok.com/${handle}/video/${tail}`;
-    case '抖音': return `https://www.douyin.com/video/${tail}`;
-    case '小红书': return `https://www.xiaohongshu.com/explore/${tail}`;
-    case 'B站': return `https://www.bilibili.com/video/BV${tail.slice(0, 6)}`;
+    case 'Douyin': return `https://www.douyin.com/video/${tail}`;
+    case 'Xiaohongshu': return `https://www.xiaohongshu.com/explore/${tail}`;
+    case 'Bilibili': return `https://www.bilibili.com/video/BV${tail.slice(0, 6)}`;
     case 'YouTube': return `https://www.youtube.com/watch?v=${tail}`;
     case 'Instagram': return `https://www.instagram.com/p/${tail}`;
-    case '微信': return `https://mp.weixin.qq.com/s/${tail}`;
+    case 'WeChat': return `https://mp.weixin.qq.com/s/${tail}`;
     default: return `https://example.com/${handle.replace('@', '')}/${tail}`;
   }
 }
 
-/** 视频时长（"M:SS"），确定性。 */
+/** Video duration ("M:SS"), deterministic. */
 function videoDuration(seed: number): string {
   const total = 18 + (seed % 7) * 11; // 18~84s
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /**
- * 生成 campaign 周期内每天的效果序列（确定性 S 曲线分布，中期峰值）。
- * 权重之和归一，故 daily 各指标之和 ≈ 传入 totals（与 summary/cps 自洽）。
+ * Generate daily performance over the campaign cycle (deterministic S-curve, mid-cycle peak).
+ * Weights sum to 1, so daily totals ≈ passed-in totals (self-consistent with summary/cps).
  */
 function buildDaily(
   startDate: string,
@@ -302,9 +333,9 @@ function buildDaily(
   }));
 }
 
-/* ------------------------------ 生成单达人效果 ------------------------------ */
+/* ------------------------------ Build single creator performance ------------------------------ */
 
-/** 投放位原始数值（供 campaign 维度 rollup 聚合，避免从格式化字符串反解析）。 */
+/** Placement raw values (for campaign-level rollup, avoids parsing formatted strings). */
 interface RawPlacement {
   type: string;
   revenue: number;
@@ -314,7 +345,7 @@ interface RawPlacement {
   commission: number;
 }
 
-/** 单达人在某 campaign 下的汇总数值（供 campaign / creator 维度 rollup，避免从格式化串反解析）。 */
+/** Single creator's aggregated raw totals (for campaign/creator rollup, avoids parsing formatted strings). */
 interface RawCreatorTotals {
   gmv: number;
   orders: number;
@@ -330,6 +361,14 @@ interface RawPerformance {
   totals: RawCreatorTotals;
 }
 
+/**
+ * Determine the platform for a given post index.
+ * Posts are distributed across platforms proportionally (round-robin with platform weighting).
+ */
+function platformForPost(profile: CampaignProfile, postIdx: number): string {
+  return profile.platforms[postIdx % profile.platforms.length].platform;
+}
+
 function buildPerformance(
   profile: CampaignProfile,
   campaignId: string,
@@ -339,17 +378,18 @@ function buildPerformance(
   const cr = ROSTER[creatorId];
   const base = TIER_BASE[cr.tier];
   const k = profile.intensity;
-  const isVideo = VIDEO_PLATFORMS.has(profile.platform);
-  const format: PostFormat = isVideo ? 'video' : 'image';
-  const numPosts = cr.tier === '头部' ? 4 : cr.tier === '腰部' ? 3 : 2;
+  const numPosts = cr.tier === 'mega' ? 4 : cr.tier === 'macro' ? 3 : 2;
 
   const posts: PostEffect[] = [];
   let totalImpr = 0;
   let totalEng = 0;
 
   for (let p = 0; p < numPosts; p++) {
+    const platform = platformForPost(profile, p);
+    const isVideo = VIDEO_PLATFORMS.has(platform);
+    const format: PostFormat = isVideo ? 'video' : 'image';
     const impr = Math.round(base.impr * k * POST_JITTER[(cIdx + p) % POST_JITTER.length]);
-    const er = base.er * (0.85 + 0.12 * p); // 帖间互动率轻微波动
+    const er = base.er * (0.85 + 0.12 * p); // slight per-post engagement variance
     const eng = impr * (er / 100);
     totalImpr += impr;
     totalEng += eng;
@@ -359,9 +399,9 @@ function buildPerformance(
       id: pid,
       title: profile.titles[(cIdx + p) % profile.titles.length],
       cover: `https://picsum.photos/seed/${pid}/640/360`,
-      url: postUrl(profile.platform, cr.handle, pid),
+      url: postUrl(platform, cr.handle, pid),
       publishedAt: addDays(profile.startDate, 2 + cIdx * 4 + p * 6),
-      platform: profile.platform,
+      platform,
       format,
       ...(isVideo ? { duration: videoDuration(cIdx + p), plays: compact(Math.round(impr * 0.82)) } : {}),
       hashtags: HASHTAGS[(cIdx + p) % HASHTAGS.length],
@@ -374,11 +414,11 @@ function buildPerformance(
     });
   }
 
-  // CPS（带货）：GMV 由层级潜力 × 强度驱动，佣金按 campaign 比例。
+  // CPS (affiliate): GMV driven by tier potential × intensity, commission by campaign rate.
   const gmv = Math.round(base.gmv * k * (0.8 + 0.18 * cIdx));
   const orders = Math.round(gmv / profile.aov);
   const commission = Math.round(gmv * profile.commissionPct);
-  const cpsSpend = Math.round(commission * 1.08); // 佣金 + 8% 平台服务费
+  const cpsSpend = Math.round(commission * 1.08); // commission + 8% platform service fee
   const clicks = Math.round(totalImpr * 0.038);
   const ctrOverall = (clicks / totalImpr) * 100;
   const cvr = (orders / clicks) * 100;
@@ -399,8 +439,10 @@ function buildPerformance(
     refundRate: pct(1.8 + (cIdx % 3) * 0.7),
   };
 
-  // 投放位明细（affiliate 维度）：把达人的 GMV/点击/转化按投放位权重拆分。
-  const templates = PLACEMENT_TEMPLATES[profile.platform] ?? PLACEMENT_TEMPLATES.TikTok;
+  // Placement details (affiliate dimension): split creator's GMV/clicks/conversions by placement weights.
+  // Use the primary platform's placement template.
+  const primaryPlatform = profile.platforms[0].platform;
+  const templates = PLACEMENT_TEMPLATES[primaryPlatform] ?? PLACEMENT_TEMPLATES.TikTok;
   const placements: PlacementPerformance[] = [];
   const rawPlacements: RawPlacement[] = [];
 
@@ -447,7 +489,7 @@ function buildPerformance(
       creatorId,
       creatorName: cr.name,
       handle: cr.handle,
-      platform: profile.platform,
+      platform: primaryPlatform,
       tier: cr.tier,
       summary: {
         posts: numPosts,
@@ -471,9 +513,9 @@ function buildPerformance(
   };
 }
 
-/* ------------------------------ campaign 维度 rollup ------------------------------ */
+/* ------------------------------ Campaign-level rollup ------------------------------ */
 
-/** 把多个达人的投放位原始数据按 type 聚合，输出 placement-type 汇总（对齐看板截图 2）。 */
+/** Aggregate multiple creators' placement raw data by type → placement-type summary (aligned with dashboard). */
 function rollupPlacementTypes(raws: RawPlacement[]): PlacementTypeSummary[] {
   const byType = new Map<
     string,
@@ -506,7 +548,7 @@ function rollupPlacementTypes(raws: RawPlacement[]): PlacementTypeSummary[] {
     }));
 }
 
-/* ------------------------------ mock 数据集 ------------------------------ */
+/* ------------------------------ Mock dataset ------------------------------ */
 
 const { MOCK_PERFORMANCE, MOCK_PLACEMENT_SUMMARY, MOCK_RAW } = (() => {
   const perf: Record<string, CreatorCampaignPerformance[]> = {};
@@ -524,21 +566,22 @@ const { MOCK_PERFORMANCE, MOCK_PLACEMENT_SUMMARY, MOCK_RAW } = (() => {
 })();
 
 /**
- * 确定性「环比」文本：以 campaign intensity 为主信号（强 campaign → 正增长），按指标序号抖动。
- * mock 无真实上期数据，此为模拟值，仅供看板展示。
+ * Deterministic "period-over-period" text: uses campaign intensity as the main signal
+ * (strong campaign → positive growth), with per-metric-index jitter.
+ * Mock has no real prior-period data; this is a simulated value for dashboard display only.
  */
 function mockCompare(campaignId: string, idx: number): string {
   const profile = CAMPAIGN_PROFILE[campaignId];
   const base = ((profile?.intensity ?? 1) - 0.85) * 100; // intensity 1.0→+15, 0.6→-25
-  const delta = base + ((idx % 5) - 2) * 3; // ±6% 抖动，避免各指标同涨同跌
+  const delta = base + ((idx % 5) - 2) * 3; // ±6% jitter, prevents all metrics moving in lockstep
   const sign = delta >= 0 ? '+' : '';
   return `${sign}${delta.toFixed(1)}%`;
 }
 
 /**
- * campaign 维度汇总：其下所有达人 totals 之和 → 9 项合并指标
- * （GMV/Commission/ROAS/Clicks/Conversions/CVR/AOV/Spend/Impressions，默认英文标签）。
- * campaign = Σ creators，保证看板汇总与达人明细自洽。
+ * Campaign-level aggregate: sum of all creators' totals → 9 merged metrics
+ * (GMV/Commission/ROAS/Clicks/Conversions/CVR/AOV/Spend/Impressions, default English labels).
+ * campaign = Σ creators, ensuring dashboard totals are self-consistent with creator details.
  */
 export function rollupCampaignMetrics(campaignId: string): CampaignMetric[] {
   const raws = MOCK_RAW[campaignId] ?? [];
@@ -570,8 +613,8 @@ export function rollupCampaignMetrics(campaignId: string): CampaignMetric[] {
 }
 
 /**
- * 达人维度汇总：跨该达人参与的所有 campaign，sum totals → 主要指标（供达人列表）。
- * compare 留空（跨 campaign 汇总无单期环比语义）。
+ * Creator-level aggregate: across all campaigns the creator participated in, sum totals → key metrics (for creator list).
+ * compare left empty (cross-campaign aggregate has no single-period comparison semantics).
  */
 export function rollupCreatorTotals(creatorId: string): CampaignMetric[] {
   const picked: RawCreatorTotals[] = [];
@@ -600,7 +643,7 @@ export function rollupCreatorTotals(creatorId: string): CampaignMetric[] {
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 
-/** 模拟上游拉取某 campaign 下各达人的执行效果（帖子 + 投放位 + CPS）。带模拟延迟。 */
+/** Simulate upstream fetch of creator performance under a campaign (posts + placements + CPS). With mock latency. */
 export function listCreatorPerformance(
   campaignId: string,
 ): Promise<CreatorCampaignPerformance[]> {
@@ -609,7 +652,7 @@ export function listCreatorPerformance(
   });
 }
 
-/** 模拟上游拉取某 campaign 的投放位类型汇总（对齐看板 placement-type 表）。带模拟延迟。 */
+/** Simulate upstream fetch of placement type summary for a campaign (aligned with dashboard placement-type table). With mock latency. */
 export function listPlacementTypeSummary(
   campaignId: string,
 ): Promise<PlacementTypeSummary[]> {
@@ -618,10 +661,15 @@ export function listPlacementTypeSummary(
   });
 }
 
+/** Export the multi-platform configuration for a campaign (for UI display). */
+export function campaignPlatforms(campaignId: string): CampaignPlatformEntry[] {
+  return CAMPAIGN_PROFILE[campaignId]?.platforms ?? [];
+}
+
 /**
- * 取某 campaign 下各合作达人作品的截图（mock，同步、确定性）。
- * 把 MOCK_PERFORMANCE 中各达人 posts 的 cover 拍平为 { src, caption }，
- * 供 work-screenshot 组件默认种子 / 导入复用。
+ * Fetch screenshots of creator works under a campaign (mock, synchronous, deterministic).
+ * Flattens each creator's posts' covers from MOCK_PERFORMANCE into { src, caption },
+ * for work-screenshot component default seeding / import reuse.
  */
 export function campaignWorkScreenshots(campaignId: string): WorkScreenshotItem[] {
   const perfs = MOCK_PERFORMANCE[campaignId] ?? [];
@@ -635,7 +683,7 @@ export function campaignWorkScreenshots(campaignId: string): WorkScreenshotItem[
 }
 
 /**
- * 某个达人单个作品的截图片段（用于选择导入 UI）。
+ * Single creator's single work post fragment (for the select-to-import UI).
  */
 export interface CreatorWorkPost {
   postId: string;
@@ -648,7 +696,7 @@ export interface CreatorWorkPost {
 }
 
 /**
- * 某达人及其在该 campaign 下的作品列表。
+ * A creator and their work list under a campaign.
  */
 export interface CreatorWithWorks {
   creatorId: string;
@@ -659,8 +707,8 @@ export interface CreatorWithWorks {
 }
 
 /**
- * 取某 campaign 下各合作达人及其作品列表（mock，同步、确定性）。
- * 供 work-screenshot 组件的「选择达人作品」UI 使用。
+ * Fetch each creator and their works under a campaign (mock, synchronous, deterministic).
+ * For work-screenshot component's "select creator works" UI.
  */
 export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
   const perfs = MOCK_PERFORMANCE[campaignId] ?? [];

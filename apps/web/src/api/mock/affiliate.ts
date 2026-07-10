@@ -290,14 +290,14 @@ export function getPlacementWideRows(campaignId: string): PlacementWideRow[] {
 
 /* ------------------------------ Campaign Summary ------------------------------ */
 
-/** Campaign 显示名（用于报告首页标题，与 creatorPerformance 平台命名对齐）。 */
+/** Campaign display name (for report title page, aligned with campaign names). */
 const CAMPAIGN_NAMES: Record<string, string> = {
-  'camp-glowlab-q4': 'GlowLab Q4 敏感肌修护专项',
-  'camp-lumiere-launch': 'LUMIÈRE 抗老新品首发',
-  'camp-nova-home-618': 'NOVA HOME 618 家居焕新',
-  'camp-motion-spring': 'MOTION 春季运动推广',
-  'camp-everyday-bf': 'EVERYDAY 黑五全球大促',
-  'camp-wander-summer': 'WANDER 暑期旅行种草',
+  'camp-glowlab-q4': 'GlowLab Q4 Sensitive Skin Repair Campaign',
+  'camp-lumiere-launch': 'LUMIÈRE Anti-Aging Launch',
+  'camp-nova-home-618': 'NOVA HOME 618 Home Refresh',
+  'camp-motion-spring': 'MOTION Spring Sports Campaign',
+  'camp-everyday-bf': 'EVERYDAY Black Friday Global Sale',
+  'camp-wander-summer': 'WANDER Summer Travel Campaign',
 };
 
 /** Campaign 周期天数（与 creatorPerformance startDate 语义对齐，约 30~45 天）。 */
@@ -414,14 +414,14 @@ export function getDeviceBreakdown(campaignId: string): DeviceBreakdown[] {
 
 /* ------------------------------ Content Topics ------------------------------ */
 
-/** 内容主题池（与 skincare/beauty/home 等 campaign 品类贴近）。 */
+/** Content topic pools (aligned with skincare/beauty/home etc campaign categories). */
 const CONTENT_TOPICS = [
-  { topic: '护肤教程 / Skincare Routine', basePosts: 8, baseImpr: 1_240_000, roasBase: 4.2 },
-  { topic: '成分科普 / Ingredient Science', basePosts: 6, baseImpr: 860_000, roasBase: 5.1 },
-  { topic: '测评对比 / Product Review', basePosts: 7, baseImpr: 1_080_000, roasBase: 3.6 },
-  { topic: '日常 vlog / Lifestyle', basePosts: 5, baseImpr: 720_000, roasBase: 2.4 },
-  { topic: '好物推荐 / Recommendation', basePosts: 6, baseImpr: 540_000, roasBase: 2.9 },
-  { topic: '换季专题 / Seasonal', basePosts: 4, baseImpr: 410_000, roasBase: 2.1 },
+  { topic: 'Skincare Routine', basePosts: 8, baseImpr: 1_240_000, roasBase: 4.2 },
+  { topic: 'Ingredient Science', basePosts: 6, baseImpr: 860_000, roasBase: 5.1 },
+  { topic: 'Product Review', basePosts: 7, baseImpr: 1_080_000, roasBase: 3.6 },
+  { topic: 'Lifestyle Vlog', basePosts: 5, baseImpr: 720_000, roasBase: 2.4 },
+  { topic: 'Recommendation', basePosts: 6, baseImpr: 540_000, roasBase: 2.9 },
+  { topic: 'Seasonal Special', basePosts: 4, baseImpr: 410_000, roasBase: 2.1 },
 ] as const;
 
 /**
