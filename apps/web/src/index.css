@@ -45,9 +45,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* strategy-block 富文本高亮：内联 <mark> 染色（accent-secondary，复刻旧全局高亮观感）。 */
+/* strategy-block 富文本高亮：内联 <mark> 染色（跟随全局品牌辅色）。 */
 mark {
-  color: var(--accent-secondary);
+  color: var(--color-secondary);
   font-weight: 500;
   background: transparent;
 }

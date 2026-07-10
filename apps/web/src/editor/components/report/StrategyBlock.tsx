@@ -25,7 +25,7 @@ function StrategyDefault({ data }: { data: StrategyBlockData }) {
         return (
           <div key={i} className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-secondary" />}
+              {Icon && <Icon size={16} className="text-color-secondary" />}
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
                 {title}
               </span>
@@ -54,8 +54,8 @@ function StrategyLabeled({ data }: { data: StrategyBlockData }) {
         return (
           <div key={i} className={`flex flex-col gap-1 ${i > 0 ? 'mt-3 border-t border-border-subtle pt-3' : ''}`}>
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-secondary" />}
-              <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              {Icon && <Icon size={16} className="text-color-secondary" />}
+              <span className="text-xs font-semibold uppercase tracking-wide text-color-secondary">
                 {title}
               </span>
             </div>
@@ -88,9 +88,12 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
         const content = r[2] ?? '';
         const Icon = findIcon(iconKey)?.Comp;
         return (
-          <div key={i} className="flex flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3 shadow-sm">
+          <div
+            key={i}
+            className="flex flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3 shadow-sm"
+          >
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-secondary" />}
+              {Icon && <Icon size={16} className="text-color-secondary" />}
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
                 {title}
               </span>

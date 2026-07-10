@@ -48,8 +48,9 @@ export default {
         data: ['var(--font-number, "IBM Plex Mono", monospace)'],
       },
       borderRadius: {
-        lg: '8px',
-        xl: '12px',
+        lg: 'var(--radius-card, 8px)',
+        xl: 'var(--radius-card, 12px)',
+        '2xl': 'var(--radius-card, 16px)',
         '3xl': '24px',
       },
       boxShadow: {
