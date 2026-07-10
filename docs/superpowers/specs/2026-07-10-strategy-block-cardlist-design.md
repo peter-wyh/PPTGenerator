@@ -15,6 +15,17 @@
 
 `default` / `labeled` 变体的外观与既有 spec 保持一致，仅把"渲染时按全局高亮词包 span"换成"渲染正文里已持久化的 `<mark>`"。
 
+## 0.1 实现期修正（2026-07-10，plan-writing 阶段深读代码后发现）
+
+上方 §3/§4/§5/§9 中部分文件路径与"删类型字段"的表述以下列为准（权威细节见实现 plan）：
+
+1. **live 文件是 flat 版**（重构未完成，提取版为死代码）：
+   - 编辑器 = `apps/web/src/editor/property-panel/custom-fields.tsx` 的 `StrategyBlockFields`（line 437），**不是** `custom-fields/StrategyBlockFields.tsx`。
+   - 富文本控件 = `apps/web/src/editor/property-panel/fields.tsx` 的 `RichTextField`（line 200），**不是** `fields/RichTextField.tsx`。
+   - live 链路：`Editor.tsx → ./property-panel → property-panel/PropertyPanel.tsx(158 行) → flat custom-fields.tsx`。
+2. **`StrategyBlockData.highlights` 类型字段保留为可选"未用"字段，不删除**：root `editor/PropertyPanel.tsx`（死）与提取版 `custom-fields/StrategyBlockFields.tsx`（死）仍引用它，而 `web/tsconfig` 的 `include:["src"]` 会 typecheck 这些死文件——删字段会让 `pnpm typecheck` 失败。live 代码（编辑器/渲染/默认值）停止读写它即可满足需求。
+3. `renderHtmlWithHighlights` **保留**（§5.1 已修正）：被 live flat `fields.tsx` 的 `RichTextField`(line 218) 使用。
+
 ## 1. 背景与目标
 
 用户反馈两处逻辑问题：
