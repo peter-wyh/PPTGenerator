@@ -75,7 +75,10 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: /导入「GlowLab Q4」/ }));
+
+    // 等待达人列表加载完成，然后点击「一键导入全部作品」
+    const importAllBtn = await screen.findByRole('button', { name: /一键导入全部作品/ });
+    fireEvent.click(importAllBtn);
 
     await waitFor(() => {
       const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;

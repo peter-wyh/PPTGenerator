@@ -7,7 +7,7 @@ import type {
 } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import { listCampaigns } from '@/api/campaigns';
-import { listCreatorPerformance } from '@/api/creatorPerformance';
+import { listCreatorPerformance, type CreatorWithWorks } from '@/api/creatorPerformance';
 import { parseCreatorLink } from '../creatorLink';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
@@ -219,13 +219,22 @@ export function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
   );
 }
 
+/**
+ * work-screenshot：从绑定 Campaign 的合作达人中选择达人 → 勾选作品 → 导入。
+ * 保留「一键全部导入」快捷按钮。
+ */
 export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }) {
   const campaign = useEditorStore((s) => s.reportData.campaign);
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selected, setSelected] = useState('');
+  const [selectedCampaign, setSelectedCampaign] = useState('');
+  const [creators, setCreators] = useState<CreatorWithWorks[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedCreatorIds, setSelectedCreatorIds] = useState<Set<string>>(new Set());
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+
+  const activeCampaignId = campaign?.id ?? selectedCampaign;
 
   // 未绑定 Campaign 时，拉取全部 mock campaign 供下拉兜底。
   useEffect(() => {
@@ -239,39 +248,130 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
     };
   }, [campaign]);
 
-  async function importFrom(campaignId: string) {
-    if (!campaignId || loading) return;
+  // 切换 campaign 时加载达人作品列表。
+  useEffect(() => {
+    if (!activeCampaignId) {
+      setCreators([]);
+      return;
+    }
+    let alive = true;
     setLoading(true);
-    const perfs = await listCreatorPerformance(campaignId);
-    const images: WorkScreenshotItem[] = [];
-    for (const p of perfs) {
-      for (const post of p.posts) {
-        images.push({ src: post.cover ?? '', caption: `${p.creatorName} · ${post.title}` });
-      }
+    listCreatorPerformance(activeCampaignId)
+      .then((perfs) => {
+        if (!alive) return;
+        const mapped: CreatorWithWorks[] = perfs.map((p) => ({
+          creatorId: p.creatorId,
+          creatorName: p.creatorName,
+          platform: p.platform,
+          tier: p.tier,
+          posts: p.posts.map((post) => ({
+            postId: post.id,
+            creatorId: p.creatorId,
+            creatorName: p.creatorName,
+            title: post.title,
+            cover: post.cover ?? '',
+            platform: post.platform,
+            publishedAt: post.publishedAt,
+          })),
+        }));
+        setCreators(mapped);
+        // 默认全选达人
+        setSelectedCreatorIds(new Set(mapped.map((c) => c.creatorId)));
+        // 默认全选作品
+        setSelectedPostIds(new Set(mapped.flatMap((c) => c.posts.map((p) => p.postId))));
+      })
+      .catch(() => {})
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [activeCampaignId]);
+
+  const allPosts = creators.flatMap((c) => c.posts);
+  const selectedPosts = allPosts.filter((p) => selectedPostIds.has(p.postId));
+
+  function toggleCreator(creatorId: string) {
+    const creator = creators.find((c) => c.creatorId === creatorId);
+    if (!creator) return;
+    const next = new Set(selectedCreatorIds);
+    if (next.has(creatorId)) {
+      next.delete(creatorId);
+      // 取消选中该达人的所有作品
+      const postIds = new Set(creator.posts.map((p) => p.postId));
+      setSelectedPostIds((prev) => {
+        const np = new Set(prev);
+        for (const id of postIds) np.delete(id);
+        return np;
+      });
+    } else {
+      next.add(creatorId);
+      // 选中该达人的所有作品
+      setSelectedPostIds((prev) => {
+        const np = new Set(prev);
+        for (const p of creator.posts) np.add(p.postId);
+        return np;
+      });
     }
-    if (images.length) {
-      updateComponentData(comp.id, { images });
-      commit();
-    }
-    setLoading(false);
+    setSelectedCreatorIds(next);
   }
+
+  function togglePost(postId: string) {
+    const next = new Set(selectedPostIds);
+    if (next.has(postId)) next.delete(postId);
+    else next.add(postId);
+    setSelectedPostIds(next);
+  }
+
+  function selectAll() {
+    setSelectedCreatorIds(new Set(creators.map((c) => c.creatorId)));
+    setSelectedPostIds(new Set(allPosts.map((p) => p.postId)));
+  }
+
+  function selectNone() {
+    setSelectedCreatorIds(new Set());
+    setSelectedPostIds(new Set());
+  }
+
+  function importSelected() {
+    if (selectedPosts.length === 0) return;
+    const images: WorkScreenshotItem[] = selectedPosts.map((p) => ({
+      src: p.cover,
+      caption: `${p.creatorName} · ${p.title}`,
+    }));
+    updateComponentData(comp.id, { images });
+    commit();
+  }
+
+  async function importAll() {
+    if (!activeCampaignId || loading) return;
+    setLoading(true);
+    try {
+      const perfs = await listCreatorPerformance(activeCampaignId);
+      const images: WorkScreenshotItem[] = [];
+      for (const p of perfs) {
+        for (const post of p.posts) {
+          images.push({ src: post.cover ?? '', caption: `${p.creatorName} · ${post.title}` });
+        }
+      }
+      if (images.length) {
+        updateComponentData(comp.id, { images });
+        commit();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const noCampaign = !campaign && !selectedCampaign;
 
   return (
     <FieldGroup title="从达人数据导入">
-      {campaign ? (
-        <button
-          onClick={() => importFrom(campaign.id)}
-          disabled={loading}
-          className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-60"
-        >
-          {loading ? '导入中…' : `⚡ 导入「${campaign.name}」作品`}
-        </button>
-      ) : (
+      {noCampaign ? (
         <div className="space-y-1">
-          <div className="text-[11px] text-foreground-muted">未绑定 Campaign，可选一个导入：</div>
+          <div className="text-[11px] text-foreground-muted">未绑定 Campaign，可选一个：</div>
           <select
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
+            value={selectedCampaign}
+            onChange={(e) => setSelectedCampaign(e.target.value)}
             className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
           >
             <option value="">选择 Campaign…</option>
@@ -281,16 +381,103 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
               </option>
             ))}
           </select>
-          {selected && (
+        </div>
+      ) : (
+        <>
+          {/* 快捷：一键全部导入 */}
+          <button
+            onClick={importAll}
+            disabled={loading}
+            className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-60"
+          >
+            {loading ? '加载中…' : `⚡ 一键导入全部作品（${allPosts.length}）`}
+          </button>
+
+          {/* 达人列表 */}
+          {creators.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-foreground-secondary">选择达人</span>
+                <div className="flex gap-2">
+                  <button onClick={selectAll} className="text-[11px] text-accent-primary hover:underline">
+                    全选
+                  </button>
+                  <button onClick={selectNone} className="text-[11px] text-foreground-muted hover:underline">
+                    清空
+                  </button>
+                </div>
+              </div>
+              {creators.map((c) => (
+                <label
+                  key={c.creatorId}
+                  className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface-hover"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedCreatorIds.has(c.creatorId)}
+                    onChange={() => toggleCreator(c.creatorId)}
+                    className="h-3 w-3 accent-accent-primary"
+                  />
+                  <span className="text-xs text-foreground-primary">
+                    {c.creatorName}
+                    <span className="ml-1 text-foreground-muted">
+                      {c.platform} · {c.tier} · {c.posts.length}作品
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {/* 作品缩略图选择 */}
+          {selectedPosts.length > 0 || allPosts.length > 0 ? (
+            <div className="space-y-1">
+              <div className="text-[11px] font-medium text-foreground-secondary">作品预览（勾选要导入的）</div>
+              <div className="grid max-h-48 grid-cols-2 gap-1 overflow-y-auto">
+                {allPosts
+                  .filter((p) => selectedCreatorIds.has(p.creatorId))
+                  .map((p) => (
+                    <label
+                      key={p.postId}
+                      className="group relative cursor-pointer overflow-hidden rounded border border-border-subtle"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPostIds.has(p.postId)}
+                        onChange={() => togglePost(p.postId)}
+                        className="absolute left-1 top-1 z-10 h-3 w-3 accent-accent-primary"
+                      />
+                      {p.cover ? (
+                        <img
+                          src={p.cover}
+                          alt={p.title}
+                          className="h-16 w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-16 items-center justify-center bg-surface-secondary text-[10px] text-foreground-muted">
+                          无封面
+                        </div>
+                      )}
+                      <div className="truncate px-1 py-0.5 text-[10px] text-foreground-secondary">
+                        {p.title}
+                      </div>
+                    </label>
+                  ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* 导入选中作品 */}
+          {selectedPosts.length > 0 && (
             <button
-              onClick={() => importFrom(selected)}
-              disabled={loading}
-              className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-60"
+              onClick={importSelected}
+              className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
             >
-              {loading ? '导入中…' : '⚡ 导入'}
+              ⚡ 导入选中的 {selectedPosts.length} 个作品
             </button>
           )}
-        </div>
+        </>
       )}
     </FieldGroup>
   );

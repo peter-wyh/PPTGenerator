@@ -87,7 +87,7 @@ export interface StrategyBlockData {
 ### 5.1 清洗层 `richText.ts`
 
 - `ALLOWED_TAGS` 增加 `'MARK'`。
-- **删除 `renderHtmlWithHighlights`**（含其私有 `highlightTextNodes`）。高亮 `<mark>` 已持久化在正文里，渲染端不再需要"按词包 span"。
+- **保留 `renderHtmlWithHighlights`**：它仍被 flat `property-panel/fields.tsx` 的内联 `RichTextField`（line 218）与 root `editor/PropertyPanel.tsx`（line 948，重构期路径）使用；本设计**不删除**，避免破坏重构中的代码。strategy-block 链路（提取出的 `fields/RichTextField.tsx` 与 `StrategyBlock.tsx`）改为不再调用它。
 - `sanitizeRichText` 行为不变（对 `<mark>` 同样：保留标签、剥属性、递归清洗子节点）。
 
 ### 5.2 富文本控件 `fields/RichTextField.tsx`
@@ -144,7 +144,7 @@ mark {
 ## 8. 测试策略（遵循 jsdom 约定）
 
 - `sanitizeRichText` 为纯函数，jsdom 可测；新增：`<mark>foo</mark>` 经 sanitize **保留**（标签在、属性被剥）。
-- 删除 `tests/richText.test.ts` 中所有 `renderHtmlWithHighlights` 用例（函数已删）。
+- `renderHtmlWithHighlights` 函数**保留**（供 flat `fields.tsx` / 旧 PropertyPanel 等路径）→ 其既有用例保留不动；`tests/richText.test.ts` 仅**新增**"`<mark>` 经 sanitize 保留"用例。
 - `editor.strategy-block.test.tsx`：
   - 去掉 `data.highlights` 相关断言。
   - `default` / `labeled`：内容渲染断言改为 `sanitizeRichText` 产物；若样例正文带 `<mark>`，断言高亮文本出现。
@@ -157,7 +157,7 @@ mark {
 | 文件 | 改动 |
 |---|---|
 | `packages/shared/src/types/editor.ts` | `StrategyBlockData` 删 `highlights?`；注释说明 content 允许 `mark` |
-| `apps/web/src/editor/richText.ts` | `ALLOWED_TAGS` 加 `MARK`；删 `renderHtmlWithHighlights` 及私有 helper |
+| `apps/web/src/editor/richText.ts` | `ALLOWED_TAGS` 加 `MARK`（`renderHtmlWithHighlights` **保留**供 flat fields.tsx / 旧 PropertyPanel 等路径使用） |
 | `apps/web/src/editor/property-panel/fields/RichTextField.tsx` | 去 `highlights` 入参；加高亮按钮 + `toggleHighlight`；同步改用 `sanitizeRichText` |
 | `apps/web/src/editor/property-panel/custom-fields/StrategyBlockFields.tsx` | 删全局「高亮词」input；不再向 `RichTextField` 传 `highlights` |
 | `apps/web/src/editor/components/report/StrategyBlock.tsx` | 3 变体内容渲染改 `sanitizeRichText`；重写 `StrategyBulleted` 为多卡网格 |

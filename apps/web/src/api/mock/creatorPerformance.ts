@@ -633,3 +633,50 @@ export function campaignWorkScreenshots(campaignId: string): WorkScreenshotItem[
   }
   return out;
 }
+
+/**
+ * 某个达人单个作品的截图片段（用于选择导入 UI）。
+ */
+export interface CreatorWorkPost {
+  postId: string;
+  creatorId: string;
+  creatorName: string;
+  title: string;
+  cover: string;
+  platform: string;
+  publishedAt: string;
+}
+
+/**
+ * 某达人及其在该 campaign 下的作品列表。
+ */
+export interface CreatorWithWorks {
+  creatorId: string;
+  creatorName: string;
+  platform: string;
+  tier: string;
+  posts: CreatorWorkPost[];
+}
+
+/**
+ * 取某 campaign 下各合作达人及其作品列表（mock，同步、确定性）。
+ * 供 work-screenshot 组件的「选择达人作品」UI 使用。
+ */
+export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
+  const perfs = MOCK_PERFORMANCE[campaignId] ?? [];
+  return perfs.map((p) => ({
+    creatorId: p.creatorId,
+    creatorName: p.creatorName,
+    platform: p.platform,
+    tier: p.tier,
+    posts: p.posts.map((post) => ({
+      postId: post.id,
+      creatorId: p.creatorId,
+      creatorName: p.creatorName,
+      title: post.title,
+      cover: post.cover ?? '',
+      platform: post.platform,
+      publishedAt: post.publishedAt,
+    })),
+  }));
+}
