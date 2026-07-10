@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CREATOR_META, buildChannelMetrics } from '@/api/mock/creators';
+import { CREATOR_META, MOCK_CREATORS, buildChannelMetrics } from '@/api/mock/creators';
 import type { Creator } from '@/api/creators';
 
 /** 解析 compact 格式（"2.40M"/"180.0K"/"567"）为数值。 */
@@ -49,5 +49,35 @@ describe('buildChannelMetrics (频道指标生成器)', () => {
   it('CPM 形如 ¥N', () => {
     const c = buildChannelMetrics(mia, 0).find((x) => x.label === 'CPM')!.value;
     expect(c.startsWith('¥')).toBe(true);
+  });
+});
+
+describe('达人库 roster', () => {
+  it('共 12 名达人', () => {
+    expect(MOCK_CREATORS).toHaveLength(12);
+    expect(CREATOR_META).toHaveLength(12);
+  });
+
+  it('原 7 名 campaign 合作达人保留（id 与 tier 不变）', () => {
+    const byId = Object.fromEntries(CREATOR_META.map((c) => [c.id, c]));
+    const must = ['cre-mia', 'cre-sofia', 'cre-ava', 'cre-jamie', 'cre-leo', 'cre-nora', 'cre-tom'];
+    for (const id of must) expect(byId[id], `missing ${id}`).toBeDefined();
+    expect(byId['cre-mia'].tier).toBe('mega');
+    expect(byId['cre-jamie'].tier).toBe('micro');
+    expect(byId['cre-tom'].tier).toBe('micro');
+  });
+
+  it('新增 5 名库专属达人', () => {
+    const byId = Object.fromEntries(CREATOR_META.map((c) => [c.id, c]));
+    for (const id of ['cre-iris', 'cre-kenji', 'cre-priya', 'cre-marcus', 'cre-yuki']) {
+      expect(byId[id], `missing ${id}`).toBeDefined();
+    }
+  });
+
+  it('每个达人 metrics 恰好 4 项且标签固定（频道指标，非 campaign）', () => {
+    const labels = ['Avg Reach', 'Impressions', 'Follower Growth', 'CPM'];
+    for (const c of MOCK_CREATORS) {
+      expect(c.metrics.map((m) => m.label)).toEqual(labels);
+    }
   });
 });
