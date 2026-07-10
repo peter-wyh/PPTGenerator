@@ -76,12 +76,12 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
   if (rows.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-xl border border-border-default bg-surface-primary p-4 shadow-sm text-xs text-foreground-muted">
-        策略块
+        Strategy
       </div>
     );
   }
   return (
-    <div className="grid h-full w-full grid-cols-2 gap-3 overflow-auto">
+    <div className={`grid h-full w-full gap-3 overflow-auto ${rows.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
       {rows.map((r, i) => {
         const iconKey = r[0] ?? '';
         const title = r[1] ?? '';
