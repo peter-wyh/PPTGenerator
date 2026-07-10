@@ -9,6 +9,7 @@ import type {
   ProjectMeta,
   ProjectTheme,
   ReportDataContext,
+  ReportCreator,
   ShapeKind,
   ThemeDensity,
   ThemeRadius,
@@ -246,6 +247,17 @@ function clampSafeFrom(meta: ProjectMeta | null, cw: number, ch: number): SafeRe
   const layout = meta?.theme?.layout;
   if (!layout) return null;
   return safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch);
+}
+
+/**
+ * 合并 reportData 中两类达人（campaignCreators + creators），按 id 去重。
+ * campaignCreators 优先（靠前）。
+ */
+export function allReportCreators(reportData: ReportDataContext): ReportCreator[] {
+  const cc = reportData.campaignCreators ?? [];
+  const lc = reportData.creators ?? [];
+  const seen = new Set(cc.map((c) => c.id));
+  return [...cc, ...lc.filter((c) => !seen.has(c.id))];
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {

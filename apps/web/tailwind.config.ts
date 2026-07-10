@@ -43,9 +43,9 @@ export default {
         purple: 'var(--purple)',
       },
       fontFamily: {
-        headings: ['Funnel Sans', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
-        data: ['IBM Plex Mono', 'monospace'],
+        headings: ['var(--font-heading, "Funnel Sans", sans-serif)'],
+        body: ['var(--font-text, "Inter", sans-serif)'],
+        data: ['var(--font-number, "IBM Plex Mono", monospace)'],
       },
       borderRadius: {
         lg: '8px',

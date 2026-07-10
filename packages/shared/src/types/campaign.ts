@@ -104,7 +104,9 @@ export interface ReportCreator {
 export interface ReportDataContext {
   /** 绑定的 Campaign（可空）。 */
   campaign?: ReportCampaign | null;
-  /** 选中的达人列表（可多个）。 */
+  /** Campaign 下参与合作的达人（来自 campaign performance 数据）。 */
+  campaignCreators?: ReportCreator[];
+  /** 达人库中选中的达人列表（可多个）。 */
   creators?: ReportCreator[];
 }
 

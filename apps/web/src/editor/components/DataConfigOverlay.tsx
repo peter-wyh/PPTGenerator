@@ -8,22 +8,26 @@ import type {
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import { listCampaigns } from '../../api/campaigns';
-import { listCreators, type Creator } from '../../api/creators';
+import { listCreators, listCampaignCreators, type Creator } from '../../api/creators';
 
 interface Props {
   onClose: () => void;
 }
 
 /**
- * 报告数据配置浮层：
- * - 绑定 / 切换 Campaign（含投放表现指标预览）
- * - 选择达人（多选），可编辑粉丝 / 互动率等 KPI
+ * 报告数据配置浮层（两大分类）：
+ *
+ * ① Campaign — 绑定 Campaign + 查看该 campaign 下参与合作的达人
+ * ② Creator Library — 从达人库独立选择达人
+ *
  * 选中的数据存入 store.reportData（随 projectMeta.reportData 持久化），
  * 各业务组件属性面板可一键从 reportData 取数填充。
  */
 export function DataConfigOverlay({ onClose }: Props) {
   const reportData = useEditorStore((s) => s.reportData);
   const setReportData = useEditorStore((s) => s.setReportData);
+
+  const [activeTab, setActiveTab] = useState<'campaign' | 'library'>('campaign');
 
   // ---- Campaign 列表 ----
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
@@ -42,7 +46,30 @@ export function DataConfigOverlay({ onClose }: Props) {
     };
   }, []);
 
-  // ---- Creator 列表 ----
+  // ---- Campaign 达人列表（随 campaign 切换动态加载）----
+  const [campaignCreators, setCampaignCreators] = useState<Creator[] | null>(null);
+  const [ccLoading, setCcLoading] = useState(false);
+  const [ccFailed, setCcFailed] = useState(false);
+
+  useEffect(() => {
+    if (!selectedCampaignId) {
+      setCampaignCreators(null);
+      return;
+    }
+    let alive = true;
+    setCcLoading(true);
+    setCcFailed(false);
+    setCampaignCreators(null);
+    listCampaignCreators(selectedCampaignId)
+      .then((list) => alive && setCampaignCreators(list))
+      .catch(() => alive && setCcFailed(true))
+      .finally(() => alive && setCcLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [selectedCampaignId]);
+
+  // ---- 达人库列表 ----
   const [allCreators, setAllCreators] = useState<Creator[] | null>(null);
   const [creatorFailed, setCreatorFailed] = useState(false);
 
@@ -58,7 +85,8 @@ export function DataConfigOverlay({ onClose }: Props) {
     };
   }, []);
 
-  // ---- Campaign 绑定 ----
+  /* ============ Campaign 绑定 ============ */
+
   function selectCampaign(id: string) {
     const c = campaigns?.find((x) => x.id === id);
     if (!c) return;
@@ -67,20 +95,52 @@ export function DataConfigOverlay({ onClose }: Props) {
       name: c.name,
       advertiser: c.advertiser,
       platform: c.platform,
+      platforms: c.platforms,
       startDate: c.startDate,
       endDate: c.endDate,
       budget: c.budget,
       status: c.status,
       metrics: c.metrics,
     };
-    setReportData({ ...reportData, campaign: rc });
+    // 切换 Campaign 时清空旧的 campaign 达人选择
+    setReportData({ ...reportData, campaign: rc, campaignCreators: [] });
   }
 
   function clearCampaign() {
-    setReportData({ ...reportData, campaign: null });
+    setReportData({ ...reportData, campaign: null, campaignCreators: [] });
   }
 
-  // ---- Creator 增删 ----
+  /* ============ Campaign 达人增删 ============ */
+
+  function toggleCampaignCreator(c: Creator) {
+    const existing = reportData.campaignCreators ?? [];
+    const idx = existing.findIndex((x) => x.id === c.id);
+    let next: ReportCreator[];
+    if (idx >= 0) {
+      next = existing.filter((_, i) => i !== idx);
+    } else {
+      const stats = buildDefaultStats(c);
+      next = [
+        ...existing,
+        {
+          id: c.id,
+          name: c.name,
+          handle: c.handle,
+          platform: c.platform,
+          tier: c.tier,
+          followers: c.followers,
+          engagement: c.engagement,
+          category: c.category,
+          region: c.region,
+          stats,
+        },
+      ];
+    }
+    setReportData({ ...reportData, campaignCreators: next });
+  }
+
+  /* ============ 达人库达人增删 ============ */
+
   function toggleCreator(c: Creator) {
     const existing = reportData.creators ?? [];
     const idx = existing.findIndex((x) => x.id === c.id);
@@ -88,7 +148,6 @@ export function DataConfigOverlay({ onClose }: Props) {
     if (idx >= 0) {
       next = existing.filter((_, i) => i !== idx);
     } else {
-      // 新增达人时，从上游字段自动填充 followers / engagement 等 KPI。
       const stats = buildDefaultStats(c);
       next = [
         ...existing,
@@ -109,48 +168,61 @@ export function DataConfigOverlay({ onClose }: Props) {
     setReportData({ ...reportData, creators: next });
   }
 
-  /** 编辑达人某一项 KPI 值。 */
-  function updateCreatorStat(creatorId: string, statIndex: number, value: string) {
-    const creators = [...(reportData.creators ?? [])];
-    const ci = creators.findIndex((x) => x.id === creatorId);
+  /* ============ 达人 KPI 编辑（两类共用）============ */
+
+  function updateCreatorStat(
+    section: 'campaignCreators' | 'creators',
+    creatorId: string,
+    statIndex: number,
+    value: string,
+  ) {
+    const list = [...(reportData[section] ?? [])];
+    const ci = list.findIndex((x) => x.id === creatorId);
     if (ci < 0) return;
-    const creator = { ...creators[ci] };
+    const creator = { ...list[ci] };
     const stats = [...(creator.stats ?? [])];
     if (stats[statIndex]) {
       stats[statIndex] = { ...stats[statIndex], value };
       creator.stats = stats;
-      creators[ci] = creator;
-      setReportData({ ...reportData, creators });
+      list[ci] = creator;
+      setReportData({ ...reportData, [section]: list });
     }
   }
 
-  /** 删除达人某一项 KPI。 */
-  function removeCreatorStat(creatorId: string, statIndex: number) {
-    const creators = [...(reportData.creators ?? [])];
-    const ci = creators.findIndex((x) => x.id === creatorId);
+  function removeCreatorStat(
+    section: 'campaignCreators' | 'creators',
+    creatorId: string,
+    statIndex: number,
+  ) {
+    const list = [...(reportData[section] ?? [])];
+    const ci = list.findIndex((x) => x.id === creatorId);
     if (ci < 0) return;
-    const creator = { ...creators[ci] };
+    const creator = { ...list[ci] };
     creator.stats = (creator.stats ?? []).filter((_, i) => i !== statIndex);
-    creators[ci] = creator;
-    setReportData({ ...reportData, creators });
+    list[ci] = creator;
+    setReportData({ ...reportData, [section]: list });
   }
 
-  /** 给达人添加一项 KPI（从指标库中选一个未添加的）。 */
-  function addCreatorStat(creatorId: string, metricKey: string) {
+  function addCreatorStat(
+    section: 'campaignCreators' | 'creators',
+    creatorId: string,
+    metricKey: string,
+  ) {
     const metric = CREATOR_METRIC_CATALOG.find((m) => m.key === metricKey);
     if (!metric) return;
-    const creators = [...(reportData.creators ?? [])];
-    const ci = creators.findIndex((x) => x.id === creatorId);
+    const list = [...(reportData[section] ?? [])];
+    const ci = list.findIndex((x) => x.id === creatorId);
     if (ci < 0) return;
-    const creator = { ...creators[ci] };
+    const creator = { ...list[ci] };
     creator.stats = [
       ...(creator.stats ?? []),
       { key: metric.key, label: metric.label, value: '', color: metric.color },
     ];
-    creators[ci] = creator;
-    setReportData({ ...reportData, creators });
+    list[ci] = creator;
+    setReportData({ ...reportData, [section]: list });
   }
 
+  const selectedCampaignCreators = reportData.campaignCreators ?? [];
   const selectedCreators = reportData.creators ?? [];
 
   return (
@@ -164,7 +236,7 @@ export function DataConfigOverlay({ onClose }: Props) {
       >
         <div className="flex items-center justify-between">
           <div className="font-headings text-base font-semibold text-foreground-primary">
-            报告数据配置
+            Report Data
           </div>
           <button
             onClick={onClose}
@@ -174,186 +246,261 @@ export function DataConfigOverlay({ onClose }: Props) {
           </button>
         </div>
 
-        {/* ===== Campaign 区域 ===== */}
-        <section className="rounded-lg border border-border-default p-3">
-          <h3 className="mb-2 text-sm font-semibold text-foreground-primary">投放 Campaign</h3>
+        {/* ===== Tab 切换 ===== */}
+        <div className="flex gap-2">
+          <TabButton
+            active={activeTab === 'campaign'}
+            onClick={() => setActiveTab('campaign')}
+          >
+            Campaign & Creators
+          </TabButton>
+          <TabButton
+            active={activeTab === 'library'}
+            onClick={() => setActiveTab('library')}
+          >
+            Creator Library
+          </TabButton>
+        </div>
 
-          {campaignFailed && (
-            <p className="text-xs text-red">加载 Campaign 失败，请重试。</p>
-          )}
-          {!campaigns && !campaignFailed && (
-            <p className="text-xs text-foreground-muted">加载中…</p>
-          )}
+        {/* ===== Tab 1: Campaign + 合作达人 ===== */}
+        {activeTab === 'campaign' && (
+          <div className="space-y-4">
+            {/* Campaign 选择 */}
+            <section className="rounded-lg border border-border-default p-3">
+              <h3 className="mb-2 text-sm font-semibold text-foreground-primary">Campaign</h3>
 
-          {campaigns && (
-            <>
-              <label className="block text-xs text-foreground-secondary">
-                <span className="mb-1 block">选择 Campaign</span>
-                <select
-                  value={selectedCampaignId}
-                  onChange={(e) =>
-                    e.target.value ? selectCampaign(e.target.value) : clearCampaign()
-                  }
-                  className="w-full rounded border border-border-default bg-surface-primary px-2 py-1"
-                >
-                  <option value="">— 不绑定 —</option>
-                  {campaigns.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}（{c.advertiser}）
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {reportData.campaign && (
-                <div className="mt-2 rounded border border-border-default p-2">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs text-foreground-muted">
-                      投放表现指标（将供 KPI 看板导入）
-                    </span>
-                    <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
-                      {reportData.campaign.status}
-                    </span>
-                  </div>
-                  {(reportData.campaign.metrics ?? []).length > 0 ? (
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-foreground-muted">
-                          <th className="text-left font-normal">指标</th>
-                          <th className="text-right font-normal">数值</th>
-                          <th className="text-right font-normal">对比</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(reportData.campaign.metrics ?? []).map((mm: CampaignMetric) => (
-                          <tr key={mm.label}>
-                            <td className="text-left">{mm.label}</td>
-                            <td className="text-right">{mm.value}</td>
-                            <td
-                              className="text-right"
-                              style={{
-                                color: mm.compare.trim().startsWith('-')
-                                  ? 'var(--color-danger, #dc2626)'
-                                  : 'var(--color-success, #16a34a)',
-                              }}
-                            >
-                              {mm.compare}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="text-xs text-foreground-muted">该 Campaign 无指标数据</p>
-                  )}
-                </div>
+              {campaignFailed && (
+                <p className="text-xs text-red">Failed to load campaigns.</p>
               )}
-            </>
-          )}
-        </section>
+              {!campaigns && !campaignFailed && (
+                <p className="text-xs text-foreground-muted">Loading…</p>
+              )}
 
-        {/* ===== 达人区域 ===== */}
-        <section className="rounded-lg border border-border-default p-3">
-          <h3 className="mb-2 text-sm font-semibold text-foreground-primary">达人列表</h3>
-
-          {creatorFailed && (
-            <p className="text-xs text-red">加载达人失败，请重试。</p>
-          )}
-          {!allCreators && !creatorFailed && (
-            <p className="text-xs text-foreground-muted">加载中…</p>
-          )}
-
-          {allCreators && (
-            <div className="flex flex-wrap gap-1.5">
-              {allCreators.map((c) => {
-                const active = selectedCreators.some((x) => x.id === c.id);
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleCreator(c)}
-                    className={
-                      active
-                        ? 'rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white'
-                        : 'rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover'
+              {campaigns && (
+                <>
+                  <select
+                    value={selectedCampaignId}
+                    onChange={(e) =>
+                      e.target.value ? selectCampaign(e.target.value) : clearCampaign()
                     }
+                    className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-sm"
                   >
-                    {c.name}
-                    <span className="ml-1 text-[10px] opacity-70">
-                      {c.platform} · {c.tier}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* 已选达人详情 + KPI 编辑 */}
-          {selectedCreators.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {selectedCreators.map((cr) => (
-                <div key={cr.id} className="rounded border border-border-default p-2">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground-primary">
-                      {cr.name}
-                      <span className="ml-1 font-normal text-foreground-muted">
-                        {cr.handle} · {cr.platform} · {cr.tier}
-                      </span>
-                    </span>
-                    <button
-                      onClick={() =>
-                        toggleCreator(
-                          allCreators?.find((x) => x.id === cr.id) ?? {
-                            id: cr.id,
-                            name: cr.name,
-                            handle: cr.handle ?? '',
-                            platform: cr.platform ?? '',
-                            tier: cr.tier ?? '',
-                            followers: cr.followers ?? '',
-                            engagement: cr.engagement ?? '',
-                            category: cr.category ?? '',
-                            region: cr.region ?? '',
-                            metrics: [],
-                          },
-                        )
-                      }
-                      className="text-[10px] text-foreground-muted hover:text-red"
-                    >
-                      移除
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    {(cr.stats ?? []).map((stat, si) => (
-                      <div key={si} className="flex items-center gap-2">
-                        <span
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{ backgroundColor: stat.color }}
-                        />
-                        <span className="w-28 text-xs text-foreground-secondary">{stat.label}</span>
-                        <input
-                          value={stat.value}
-                          onChange={(e) => updateCreatorStat(cr.id, si, e.target.value)}
-                          className="flex-1 rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs"
-                        />
-                        <button
-                          onClick={() => removeCreatorStat(cr.id, si)}
-                          className="text-[10px] text-foreground-muted hover:text-red"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                    <option value="">— No campaign —</option>
+                    {campaigns.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}（{c.advertiser}）
+                      </option>
                     ))}
-                    {/* 添加 KPI 行 */}
-                    <AddStatRow
-                      creatorId={cr.id}
-                      existingKeys={(cr.stats ?? []).map((s) => s.key)}
-                      onAdd={addCreatorStat}
-                    />
+                  </select>
+
+                  {reportData.campaign && (
+                    <div className="mt-2 rounded border border-border-default p-2">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-xs text-foreground-muted">
+                          Campaign metrics (for KPI board import)
+                        </span>
+                        <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
+                          {reportData.campaign.status}
+                        </span>
+                      </div>
+                      {(reportData.campaign.metrics ?? []).length > 0 ? (
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-foreground-muted">
+                              <th className="text-left font-normal">Metric</th>
+                              <th className="text-right font-normal">Value</th>
+                              <th className="text-right font-normal">Compare</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(reportData.campaign.metrics ?? []).map((mm: CampaignMetric) => (
+                              <tr key={mm.label}>
+                                <td className="text-left">{mm.label}</td>
+                                <td className="text-right">{mm.value}</td>
+                                <td
+                                  className="text-right"
+                                  style={{
+                                    color: mm.compare.trim().startsWith('-')
+                                      ? 'var(--color-danger, #dc2626)'
+                                      : 'var(--color-success, #16a34a)',
+                                  }}
+                                >
+                                  {mm.compare}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="text-xs text-foreground-muted">No metrics</p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+
+            {/* Campaign 合作达人 */}
+            {selectedCampaignId && (
+              <section className="rounded-lg border border-border-default p-3">
+                <h3 className="mb-2 text-sm font-semibold text-foreground-primary">
+                  Campaign Creators
+                </h3>
+
+                {ccFailed && (
+                  <p className="text-xs text-red">Failed to load creators.</p>
+                )}
+                {ccLoading && (
+                  <p className="text-xs text-foreground-muted">Loading…</p>
+                )}
+
+                {campaignCreators && campaignCreators.length === 0 && (
+                  <p className="text-xs text-foreground-muted">
+                    No creators found in this campaign.
+                  </p>
+                )}
+
+                {campaignCreators && campaignCreators.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {campaignCreators.map((c) => {
+                      const active = selectedCampaignCreators.some((x) => x.id === c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => toggleCampaignCreator(c)}
+                          className={
+                            active
+                              ? 'rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white'
+                              : 'rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover'
+                          }
+                        >
+                          {c.name}
+                          <span className="ml-1 text-[10px] opacity-70">
+                            {c.platform} · {c.tier}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+                )}
+
+                {/* 已选达人详情 + KPI 编辑 */}
+                {selectedCampaignCreators.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {selectedCampaignCreators.map((cr) => (
+                      <CreatorKpiCard
+                        key={cr.id}
+                        cr={cr}
+                        onRemove={() =>
+                          toggleCampaignCreator(
+                            campaignCreators?.find((x) => x.id === cr.id) ?? {
+                              id: cr.id,
+                              name: cr.name,
+                              handle: cr.handle ?? '',
+                              platform: cr.platform ?? '',
+                              tier: cr.tier ?? '',
+                              followers: cr.followers ?? '',
+                              engagement: cr.engagement ?? '',
+                              category: cr.category ?? '',
+                              region: cr.region ?? '',
+                              metrics: [],
+                            },
+                          )
+                        }
+                        onUpdateStat={(si, val) =>
+                          updateCreatorStat('campaignCreators', cr.id, si, val)
+                        }
+                        onRemoveStat={(si) =>
+                          removeCreatorStat('campaignCreators', cr.id, si)
+                        }
+                        onAddStat={(key) =>
+                          addCreatorStat('campaignCreators', cr.id, key)
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+
+        {/* ===== Tab 2: 达人库 ===== */}
+        {activeTab === 'library' && (
+          <section className="rounded-lg border border-border-default p-3">
+            <h3 className="mb-2 text-sm font-semibold text-foreground-primary">
+              Creator Library
+            </h3>
+
+            {creatorFailed && (
+              <p className="text-xs text-red">Failed to load creators.</p>
+            )}
+            {!allCreators && !creatorFailed && (
+              <p className="text-xs text-foreground-muted">Loading…</p>
+            )}
+
+            {allCreators && (
+              <div className="flex flex-wrap gap-1.5">
+                {allCreators.map((c) => {
+                  const active = selectedCreators.some((x) => x.id === c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => toggleCreator(c)}
+                      className={
+                        active
+                          ? 'rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white'
+                          : 'rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover'
+                      }
+                    >
+                      {c.name}
+                      <span className="ml-1 text-[10px] opacity-70">
+                        {c.platform} · {c.tier}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 已选达人详情 + KPI 编辑 */}
+            {selectedCreators.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {selectedCreators.map((cr) => (
+                  <CreatorKpiCard
+                    key={cr.id}
+                    cr={cr}
+                    onRemove={() =>
+                      toggleCreator(
+                        allCreators?.find((x) => x.id === cr.id) ?? {
+                          id: cr.id,
+                          name: cr.name,
+                          handle: cr.handle ?? '',
+                          platform: cr.platform ?? '',
+                          tier: cr.tier ?? '',
+                          followers: cr.followers ?? '',
+                          engagement: cr.engagement ?? '',
+                          category: cr.category ?? '',
+                          region: cr.region ?? '',
+                          metrics: [],
+                        },
+                      )
+                    }
+                    onUpdateStat={(si, val) =>
+                      updateCreatorStat('creators', cr.id, si, val)
+                    }
+                    onRemoveStat={(si) =>
+                      removeCreatorStat('creators', cr.id, si)
+                    }
+                    onAddStat={(key) =>
+                      addCreatorStat('creators', cr.id, key)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* 底部操作栏 */}
         <div className="flex justify-end gap-2">
@@ -361,7 +508,7 @@ export function DataConfigOverlay({ onClose }: Props) {
             onClick={onClose}
             className="rounded bg-accent-primary px-4 py-1.5 text-sm text-white hover:bg-accent-secondary"
           >
-            完成
+            Done
           </button>
         </div>
       </div>
@@ -369,9 +516,92 @@ export function DataConfigOverlay({ onClose }: Props) {
   );
 }
 
-/* ============================ 辅助函数 ============================ */
+/* ============================ 子组件 ============================ */
 
-/** 从上游 Creator 构造默认 KPI 统计条（followers + engagement + reach）。 */
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+        active
+          ? 'bg-accent-primary text-white'
+          : 'text-foreground-secondary hover:bg-surface-hover'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** 达人 KPI 编辑卡：达人信息 + KPI 列表 + 添加/删除 KPI。 */
+function CreatorKpiCard({
+  cr,
+  onRemove,
+  onUpdateStat,
+  onRemoveStat,
+  onAddStat,
+}: {
+  cr: ReportCreator;
+  onRemove: () => void;
+  onUpdateStat: (statIndex: number, value: string) => void;
+  onRemoveStat: (statIndex: number) => void;
+  onAddStat: (metricKey: string) => void;
+}) {
+  return (
+    <div className="rounded border border-border-default p-2">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-semibold text-foreground-primary">
+          {cr.name}
+          <span className="ml-1 font-normal text-foreground-muted">
+            {cr.handle} · {cr.platform} · {cr.tier}
+          </span>
+        </span>
+        <button
+          onClick={onRemove}
+          className="text-[10px] text-foreground-muted hover:text-red"
+        >
+          Remove
+        </button>
+      </div>
+      <div className="space-y-1">
+        {(cr.stats ?? []).map((stat, si) => (
+          <div key={si} className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: stat.color }}
+            />
+            <span className="w-28 text-xs text-foreground-secondary">{stat.label}</span>
+            <input
+              value={stat.value}
+              onChange={(e) => onUpdateStat(si, e.target.value)}
+              className="flex-1 rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs"
+            />
+            <button
+              onClick={() => onRemoveStat(si)}
+              className="text-[10px] text-foreground-muted hover:text-red"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <AddStatRow
+          existingKeys={(cr.stats ?? []).map((s) => s.key)}
+          onAdd={onAddStat}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** 从上游 Creator 构造默认 KPI 统计条（followers + engagement）。 */
 function buildDefaultStats(c: Creator): ReportCreator['stats'] {
   const stats: NonNullable<ReportCreator['stats']> = [];
   const followersMetric = CREATOR_METRIC_CATALOG.find((m) => m.key === 'followers');
@@ -399,31 +629,29 @@ function buildDefaultStats(c: Creator): ReportCreator['stats'] {
 
 /** 添加 KPI 行：下拉选择指标库中未添加的指标。 */
 function AddStatRow({
-  creatorId,
   existingKeys,
   onAdd,
 }: {
-  creatorId: string;
   existingKeys: (string | undefined)[];
-  onAdd: (creatorId: string, metricKey: string) => void;
+  onAdd: (metricKey: string) => void;
 }) {
   const available = CREATOR_METRIC_CATALOG.filter((m) => !existingKeys.includes(m.key));
   const [value, setValue] = useState('');
   if (available.length === 0) return null;
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] text-foreground-muted">+ 添加指标</span>
+      <span className="text-[10px] text-foreground-muted">+ Add metric</span>
       <select
         value={value}
         onChange={(e) => {
           if (e.target.value) {
-            onAdd(creatorId, e.target.value);
+            onAdd(e.target.value);
             setValue('');
           }
         }}
         className="flex-1 rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs"
       >
-        <option value="">选择指标…</option>
+        <option value="">Select metric…</option>
         {available.map((m) => (
           <option key={m.key} value={m.key}>
             {m.label}（{m.placeholder}）

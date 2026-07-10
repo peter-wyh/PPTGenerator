@@ -7,6 +7,7 @@
  */
 import type { CampaignMetric } from '@mediakit/shared';
 import { MOCK_CREATORS } from './mock/creators';
+import { listCreatorPerformance } from './creatorPerformance';
 
 export interface Creator {
   id: string;
@@ -27,4 +28,24 @@ export function listCreators(): Promise<Creator[]> {
   return new Promise((resolve) => {
     setTimeout(() => resolve(MOCK_CREATORS.map((c) => ({ ...c }))), 300);
   });
+}
+
+/**
+ * 获取 Campaign 下参与合作的达人列表（从 campaign performance 数据提取）。
+ * 返回的 Creator 对象仅含基本信息（id/name/platform/tier），不含 channel KPI。
+ */
+export async function listCampaignCreators(campaignId: string): Promise<Creator[]> {
+  const perfs = await listCreatorPerformance(campaignId);
+  return perfs.map((p) => ({
+    id: p.creatorId,
+    name: p.creatorName,
+    handle: p.handle ?? `@${p.creatorName.toLowerCase().replace(/\s+/g, '')}`,
+    platform: p.platform,
+    tier: p.tier,
+    followers: p.summary.totalImpressions,
+    engagement: p.summary.avgEngagementRate,
+    category: '',
+    region: '',
+    metrics: [],
+  }));
 }

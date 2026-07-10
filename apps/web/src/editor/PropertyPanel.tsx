@@ -23,7 +23,7 @@ import type {
   WorkScreenshotItem,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
-import { useEditorStore } from './store';
+import { useEditorStore, allReportCreators } from './store';
 import { backgroundType, buildBackgroundTypePatch, type BackgroundType } from './background';
 import { GEOMETRY_FIELDS, REGISTRY, type PropertyField, type VariantOption } from './registry';
 import type { Alignment } from './store';
@@ -2135,7 +2135,7 @@ export function ShapeFields({ comp }: { comp: EditorComponent }) {
  * creator-avatar-card：从「数据配置」面板已选达人中选一个，一键填充头像卡字段。
  */
 function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent }) {
-  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const creators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selected, setSelected] = useState('');
@@ -2187,7 +2187,7 @@ function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent }) {
  * creator-stats-strip：从「数据配置」面板已选达人中选一个，一键填充达人数据条 KPI。
  */
 function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) {
-  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const creators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selected, setSelected] = useState('');
@@ -2239,7 +2239,7 @@ function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) {
  * 约定列顺序 [Avatar, Name, Platform, Followers, Engagement, Category]。
  */
 function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
-  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const creators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -2322,7 +2322,7 @@ function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
  * 因为 reportData 不含作品列表，这里生成达人基本信息行。
  */
 function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) {
-  const creators = useEditorStore((s) => s.reportData.creators ?? []);
+  const creators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selected, setSelected] = useState('');
