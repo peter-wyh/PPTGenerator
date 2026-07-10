@@ -10,7 +10,7 @@ import type { Creator } from '../creators';
 /** Creator tier（与 creatorPerformance.ts 共享）。 */
 export type Tier = 'mega' | 'macro' | 'micro';
 
-/** Creator metadata (roster); metrics injected at export time by rollupCreatorTotals. */
+/** Creator metadata (roster); channel metrics injected at export time by buildChannelMetrics. */
 export const CREATOR_META: Omit<Creator, 'metrics'>[] = [
   {
     id: 'cre-mia',
