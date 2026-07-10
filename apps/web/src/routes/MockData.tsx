@@ -24,7 +24,7 @@ export function MockData() {
       .finally(() => setLoadingCreators(false));
   }, []);
 
-  /** Returns a creator's cross-campaign metric value (GMV/ROAS/Conversions/Commission). */
+  /** Returns a creator's channel-KPI metric value (by label, e.g. 'Avg Reach'). */
   const metric = (c: Creator, label: string) =>
     c.metrics.find((m) => m.label === label)?.value ?? '—';
 
@@ -63,7 +63,7 @@ export function MockData() {
         </h2>
         <DataTable
           loading={loadingCreators}
-          headers={['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement', 'Category', 'Region', 'GMV', 'ROAS', 'Conversions', 'Commission']}
+          headers={['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement', 'Category', 'Region', 'Avg Reach', 'Impressions', 'Follower Growth', 'CPM']}
           rows={creators.map((c) => [
             c.name,
             c.handle,
@@ -73,10 +73,10 @@ export function MockData() {
             c.engagement,
             c.category,
             c.region,
-            metric(c, 'GMV'),
-            metric(c, 'ROAS'),
-            metric(c, 'Conversions'),
-            metric(c, 'Commission'),
+            metric(c, 'Avg Reach'),
+            metric(c, 'Impressions'),
+            metric(c, 'Follower Growth'),
+            metric(c, 'CPM'),
           ])}
         />
       </section>
