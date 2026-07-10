@@ -260,7 +260,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         variant: 'standard',
         name: '增长加速包',
-        price: '¥80,000',
+        price: '$80,000',
         headers: ['特性'],
         rows: [
           ['40–60 位达人'],
@@ -275,14 +275,14 @@ export function getDefaultData(type: ComponentType): ComponentData {
         variant: 'grid',
         headers: ['指标', '数值', '对比'],
         rows: [
-          ['GMV', '¥1.24M', '+15%'],
-          ['Commission', '¥98K', '+12%'],
+          ['GMV', '$1.24M', '+15%'],
+          ['Commission', '$98K', '+12%'],
           ['ROAS', '3.21', '+12%'],
           ['Clicks', '120K', '-3%'],
           ['Conversions', '4.35K', '+18%'],
           ['CVR', '3.8%', '+0.4%'],
-          ['AOV', '¥72.5', '+1%'],
-          ['Spend', '¥128K', '+8%'],
+          ['AOV', '$72.5', '+1%'],
+          ['Spend', '$128K', '+8%'],
           ['Impressions', '4.2M', '+6%'],
         ],
         icons: ['currency', 'currency', 'target', 'eye', 'cart', 'percent', 'currency', 'currency', 'eye'],
@@ -313,7 +313,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
         variant: 'standard',
         headers: ['指标', '本期', '上期', '状态'],
         rows: [
-          ['Total Sales', '¥1.24M', '¥1.08M', 'Exceeded'],
+          ['Total Sales', '$1.24M', '$1.08M', 'Exceeded'],
           ['Total Reach', '8.1M', '7.0M', 'Exceeded'],
           ['Conversion', '3.8%', '4.0%', 'Stable'],
           ['Engagement', '8.7%', '6.2%', 'Optimized'],

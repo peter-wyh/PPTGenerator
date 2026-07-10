@@ -346,9 +346,9 @@ export const TEMPLATES: Template[] = [
         'Publishers',
       ];
       (table.data as { rows: string[][] }).rows = [
-        ['Influencer', '¥600K', '80K', '4.1%', '20'],
-        ['Content Site', '¥400K', '120K', '2.8%', '18'],
-        ['Reddit', '¥180K', '60K', '3.2%', '8'],
+        ['Influencer', '$600K', '80K', '4.1%', '20'],
+        ['Content Site', '$400K', '120K', '2.8%', '18'],
+        ['Reddit', '$180K', '60K', '3.2%', '8'],
       ];
       return [title, channelKpi, table];
     },
@@ -391,7 +391,7 @@ export const TEMPLATES: Template[] = [
       (stats.data as { stats: { label: string; value: string; color: string }[] }).stats = [
         { label: 'Impressions', value: '2.4M', color: '#FF5C00' },
         { label: 'Engagement Rate', value: '9.1%', color: '#3B82F6' },
-        { label: 'Sales', value: '¥186K', color: '#22C55E' },
+        { label: 'Sales', value: '$186K', color: '#22C55E' },
         { label: 'ROAS', value: '4.2x', color: '#8B5CF6' },
       ];
       const works = t('creator-works-list', 80, 260, 1120, 200);

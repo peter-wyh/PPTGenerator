@@ -5,7 +5,7 @@ import {
   listCreatorPerformance,
 } from '@/api/creatorPerformance';
 
-/** 把 "¥1,234" / "3.21" / "5.2%" 等格式化值解析为可比较的数值。 */
+/** 把 "$1,234" / "3.21" / "5.2%" 等格式化值解析为可比较的数值。 */
 const num = (s: string): number => Number(s.replace(/[^\d.]/g, ''));
 
 describe('rollupCampaignMetrics · campaign = Σ creators', () => {
@@ -66,8 +66,8 @@ describe('rollupCreatorTotals · 达人跨 campaign 汇总', () => {
     expect(miaTotalGmv).toBeGreaterThan(miaGlowlabGmv);
   });
 
-  it('未参与任何 campaign 的达人返回 ¥0', () => {
+  it('未参与任何 campaign 的达人返回 $0', () => {
     const totals = rollupCreatorTotals('cre-ghost');
-    expect(totals.find((m) => m.label === 'GMV')!.value).toBe('¥0');
+    expect(totals.find((m) => m.label === 'GMV')!.value).toBe('$0');
   });
 });

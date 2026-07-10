@@ -10,6 +10,7 @@ import type {
   RevenueTimelinePoint,
   SearchTermPerformance,
 } from '@mediakit/shared';
+import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 
 /**
  * 联盟营销（Affiliate）上游接口（demo 中 mock）。
@@ -119,8 +120,8 @@ const GEO_COUNTRIES = [
 /* ------------------------------ 格式化工具 ------------------------------ */
 
 const fmt = (n: number): string => Math.round(n).toLocaleString('en-US');
-const money = (n: number): string => `¥${fmt(n)}`;
-const money2 = (n: number): string => `¥${n.toFixed(2)}`;
+const money = (n: number): string => formatMoney(n, DEFAULT_FORMAT);
+const money2 = (n: number): string => formatMoney(n, { ...DEFAULT_FORMAT, decimals: 2 });
 const pct2 = (n: number): string => `${n.toFixed(2)}%`;
 
 /** ROAS → 状态色（good / warn / bad）。 */

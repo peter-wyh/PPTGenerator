@@ -15,7 +15,7 @@ export function renderPackage(ctx: RenderCtx): React.ReactNode {
       ['服务周期', '4 周', '6 周', '8 周'],
       ['创作者数量', '20 位', '50 位', '80 位'],
       ['媒体资源位', '—', '2 个', '4 个'],
-      ['套餐价格', '¥30K', '¥80K', '¥150K'],
+      ['套餐价格', '$30K', '$80K', '$150K'],
     ];
     return (
       <Base variant={variant}>
@@ -81,7 +81,7 @@ export function renderPackage(ctx: RenderCtx): React.ReactNode {
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 700 }}>{t}</div>
-              <div style={{ ...mono, fontWeight: 700, fontSize: 18, marginTop: 5 }}>¥{prices[i]}K</div>
+              <div style={{ ...mono, fontWeight: 700, fontSize: 18, marginTop: 5 }}>${prices[i]}K</div>
               <div style={{ fontSize: 9, color: '#777', marginTop: 8, lineHeight: 1.5 }}>{details.slice(0, 2).join(' · ')}</div>
             </div>
           ))}

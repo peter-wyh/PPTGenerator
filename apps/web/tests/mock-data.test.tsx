@@ -29,7 +29,7 @@ describe('MockData page', () => {
         platform: 'TikTok',
         startDate: '2026-10-12',
         endDate: '2026-11-10',
-        budget: '¥300K',
+        budget: '$300K',
         status: '投放中',
         owner: 'alex',
       },
@@ -108,36 +108,36 @@ describe('MockData page', () => {
           },
         ],
         daily: [
-          { date: '2026-10-12', impressions: '52,000', engagement: '4,300', clicks: '1,100', gmv: '¥6,900', orders: '36' },
-          { date: '2026-10-13', impressions: '61,000', engagement: '5,100', clicks: '1,300', gmv: '¥8,200', orders: '43' },
+          { date: '2026-10-12', impressions: '52,000', engagement: '4,300', clicks: '1,100', gmv: '$6,900', orders: '36' },
+          { date: '2026-10-13', impressions: '61,000', engagement: '5,100', clicks: '1,300', gmv: '$8,200', orders: '43' },
         ],
         placements: [
           {
             type: 'Bio Link',
             screenshot: '',
-            revenue: '¥92,160',
+            revenue: '$92,160',
             revenueShare: '48.0%',
             clicks: '12,300',
             ctr: '3.15%',
             conversions: '488',
             cvr: '3.97%',
-            epc: '¥7.50',
-            commission: '¥11,059',
+            epc: '$7.50',
+            commission: '$11,059',
             roas: '7.71',
             notes: 'High intent traffic',
           },
         ],
         cps: {
-          gmv: '¥192,000',
+          gmv: '$192,000',
           orders: '1,016',
-          aov: '¥189',
+          aov: '$189',
           cvr: '1.8%',
-          commission: '¥23,040',
-          cpsSpend: '¥24,883',
+          commission: '$23,040',
+          cpsSpend: '$24,883',
           roas: '7.71',
           clicks: '30,760',
           ctr: '2.7%',
-          epc: '¥6.24',
+          epc: '$6.24',
           refundRate: '1.8%',
         },
       },
@@ -145,13 +145,13 @@ describe('MockData page', () => {
     listPlacementTypeSummaryMock.mockResolvedValue([
       {
         type: 'Bio Link',
-        revenue: '¥92,160',
+        revenue: '$92,160',
         revenueShare: '48.0%',
         clicks: '12,300',
         ctr: '3.15%',
         conversions: '488',
         cvr: '3.97%',
-        epc: '¥7.50',
+        epc: '$7.50',
         roas: '7.71',
       },
     ]);
@@ -162,7 +162,7 @@ describe('MockData page', () => {
     // 投放位类型汇总表（campaign 维度）
     expect(screen.getByText('投放位类型汇总（campaign 维度）')).toBeInTheDocument();
     // CPS 数值（GMV 唯一；ROAS 在汇总/投放位/CPS 三处都出现，故取 all）
-    expect(screen.getByText('¥192,000')).toBeInTheDocument();
+    expect(screen.getByText('$192,000')).toBeInTheDocument();
     expect(screen.getAllByText('7.71').length).toBeGreaterThan(0);
   });
 });

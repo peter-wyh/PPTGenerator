@@ -32,7 +32,7 @@ describe('projects CRUD', () => {
       scenario: 'campaign-report',
       scenarioSub: 'weekly',
       advertiser: 'GlowLab',
-      campaignInfo: { campaignName: 'Q4 上市', platform: 'TikTok', budget: '¥300K' },
+      campaignInfo: { campaignName: 'Q4 上市', platform: 'TikTok', budget: '$300K' },
     };
     const created = await request(app()).post('/api/v1/projects').set(h).send({ name: 'M', meta });
     expect(created.status).toBe(201);

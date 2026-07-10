@@ -9,7 +9,7 @@ import type { Campaign, CampaignMetric } from '@mediakit/shared';
    这里所有用例都注入 fetchCampaigns 为同步 Promise.resolve，避免 setTimeout。 */
 
 const metrics: CampaignMetric[] = [
-  { label: '花费', value: '¥128,000', compare: '+15%' },
+  { label: '花费', value: '$128,000', compare: '+15%' },
   { label: '展示', value: '1,240,000', compare: '+8%' },
 ];
 
@@ -21,7 +21,7 @@ const withMetrics: Campaign = {
   platform: 'TikTok',
   startDate: '2026-01-01',
   endDate: '2026-02-01',
-  budget: '¥100K',
+  budget: '$100K',
   metrics,
 };
 

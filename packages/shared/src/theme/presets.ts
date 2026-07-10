@@ -283,8 +283,8 @@ export const CREATOR_METRIC_CATALOG: {
   { key: 'engagement', label: 'Engagement Rate', color: '#3B82F6', placeholder: '8.7%' },
   { key: 'reach', label: 'Avg. Reach', color: '#22C55E', placeholder: '640K' },
   { key: 'impressions', label: 'Impressions', color: '#8B5CF6', placeholder: '12.6M' },
-  { key: 'cpm', label: 'CPM', color: '#EC4899', placeholder: '¥120' },
-  { key: 'cpe', label: 'CPE', color: '#14B8A6', placeholder: '¥3.2' },
+  { key: 'cpm', label: 'CPM', color: '#EC4899', placeholder: '$120' },
+  { key: 'cpe', label: 'CPE', color: '#14B8A6', placeholder: '$3.2' },
   { key: 'completion', label: 'Completion Rate', color: '#F59E0B', placeholder: '42%' },
   { key: 'growth', label: 'Follower Growth', color: '#6366F1', placeholder: '+38K' },
 ];

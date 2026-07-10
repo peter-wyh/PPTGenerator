@@ -10,6 +10,7 @@ import type {
   PostFormat,
   WorkScreenshotItem,
 } from '@mediakit/shared';
+import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 
 /**
  * 上游「达人执行效果」接口（demo 中 mock）。
@@ -166,9 +167,9 @@ const compact = (n: number): string => {
   return String(v);
 };
 
-const money = (n: number): string => `¥${fmt(n)}`;
+const money = (n: number): string => formatMoney(n, DEFAULT_FORMAT);
 /** 小额金额 2 位小数（EPC 等个位数金额）。 */
-const money2 = (n: number): string => `¥${n.toFixed(2)}`;
+const money2 = (n: number): string => formatMoney(n, { ...DEFAULT_FORMAT, decimals: 2 });
 const pct = (n: number): string => `${n.toFixed(1)}%`;
 /** 百分比 2 位小数（CTR / CVR，对齐看板精度）。 */
 const pct2 = (n: number): string => `${n.toFixed(2)}%`;

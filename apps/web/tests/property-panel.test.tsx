@@ -9,7 +9,7 @@ function setIndicator(variant: string, extra: Record<string, unknown> = {}) {
     id: 'c1',
     type: 'indicator-card',
     x: 0, y: 0, w: 240, h: 100,
-    data: { variant, title: 'GMV', value: '¥1', colorTheme: 'orange', ...extra } as any,
+    data: { variant, title: 'GMV', value: '$1', colorTheme: 'orange', ...extra } as any,
   };
   useEditorStore.setState({
     pages: [{ id: 'p1', name: 'P1', components: [comp] }],

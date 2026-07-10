@@ -4,7 +4,7 @@ import type { CampaignMetric } from '@mediakit/shared';
 
 describe('metricsToRows', () => {
   const metrics: CampaignMetric[] = [
-    { label: '花费', value: '¥128,000', compare: '+15%' },
+    { label: '花费', value: '$128,000', compare: '+15%' },
     { label: '点击', value: '38,500', compare: '-2%' },
   ];
 
@@ -14,7 +14,7 @@ describe('metricsToRows', () => {
 
   it('每条 metric 映射为一行 [label, value, compare]', () => {
     expect(metricsToRows(metrics).rows).toEqual([
-      ['花费', '¥128,000', '+15%'],
+      ['花费', '$128,000', '+15%'],
       ['点击', '38,500', '-2%'],
     ]);
   });
