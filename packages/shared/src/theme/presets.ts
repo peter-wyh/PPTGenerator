@@ -2,7 +2,7 @@
  * 主题运行时常量：预置字体清单、默认图表配色、默认主题、风格预设、达人指标库。
  * 类型来自 ../types/theme。
  */
-import type { FontOption, ProjectTheme, StylePreset } from '../types/theme';
+import type { FontOption, ProjectTheme, StylePreset, ThemeFormat, ThemeShadow } from '../types/theme';
 
 /** 预置字体清单。 */
 export const FONT_OPTIONS: FontOption[] = [
@@ -67,6 +67,23 @@ export const DEFAULT_CHART_PALETTE = [
   '#EC4899',
 ];
 
+/** v2 各维度默认常量（DEFAULT_THEME 与 normalizeTheme 共用）。 */
+export const DEFAULT_LINE_HEIGHT: NonNullable<ProjectTheme['lineHeight']> = { mode: 'ratio', value: 1.5 };
+export const DEFAULT_FORMAT: ThemeFormat = {
+  currencySymbol: '$',
+  currencyPosition: 'before',
+  thousandsSep: true,
+  decimals: 0,
+  compact: 'none',
+};
+export const DEFAULT_CHART_CFG: NonNullable<ProjectTheme['chart']> = {
+  showAxis: true,
+  showGrid: true,
+  legendPosition: 'bottom',
+  barRadius: 4,
+};
+export const DEFAULT_SHADOW: ThemeShadow = 'soft';
+
 /** 默认主题：与原硬编码值对齐（ACCENT=#FF5C00, INK=#1A1A1A, Inter）。 */
 export const DEFAULT_THEME: ProjectTheme = {
   color: {
@@ -83,7 +100,7 @@ export const DEFAULT_THEME: ProjectTheme = {
   },
   density: 'standard',
   radius: 'small',
-  layout: { safeMargin: 48, gridSize: 10, showGrid: true, showSafeArea: true },
+  layout: { safeMargin: 24, gridSize: 10, showGrid: true, showSafeArea: true },
   branding: {
     logo: '',
     title: '',
@@ -92,6 +109,10 @@ export const DEFAULT_THEME: ProjectTheme = {
     logoRadius: 0,
   },
   background: { type: 'none' },
+  lineHeight: { ...DEFAULT_LINE_HEIGHT },
+  format: { ...DEFAULT_FORMAT },
+  chart: { ...DEFAULT_CHART_CFG },
+  shadow: DEFAULT_SHADOW,
   preset: 'business-sober',
 };
 

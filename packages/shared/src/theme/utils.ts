@@ -2,9 +2,9 @@
  * 主题 / 报告 / 渐变 工具函数。
  * 类型来自 ../types/* 与 ../theme/presets。
  */
-import type { ProjectTheme, ThemeDensity, ThemeRadius, ProjectMeta } from '../types/theme';
+import type { ProjectTheme, ThemeDensity, ThemeRadius, ProjectMeta, ThemeShadow, ThemeFormat } from '../types/theme';
 import type { PageGradient, GradientStop } from '../types/page';
-import { FONT_OPTIONS, DEFAULT_THEME } from './presets';
+import { FONT_OPTIONS, DEFAULT_THEME, DEFAULT_FORMAT } from './presets';
 
 /** 按 key 查找 FontOption.stack；找不到时回退到默认 stack。 */
 export function getFontStack(key: string | undefined, fallbackKey: string): string {
@@ -120,6 +120,45 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
       }
     : undefined;
 
+  // ---- 行高 / 格式 / 图表 / 阴影：缺对象补默认；部分缺字段补；非法回退 ----
+  const lhRaw = obj.lineHeight as Record<string, unknown> | undefined;
+  const lineHeight = {
+    mode: lhRaw?.mode === 'fixed' ? ('fixed' as const) : ('ratio' as const),
+    value:
+      typeof lhRaw?.value === 'number' && Number.isFinite(lhRaw.value) && lhRaw.value >= 0
+        ? lhRaw.value
+        : d.lineHeight!.value,
+  };
+
+  const fRaw = obj.format as Record<string, unknown> | undefined;
+  const format = {
+    currencySymbol:
+      typeof fRaw?.currencySymbol === 'string' && fRaw.currencySymbol.length > 0
+        ? fRaw.currencySymbol
+        : d.format!.currencySymbol,
+    currencyPosition: fRaw?.currencyPosition === 'after' ? ('after' as const) : ('before' as const),
+    thousandsSep: typeof fRaw?.thousandsSep === 'boolean' ? fRaw.thousandsSep : d.format!.thousandsSep,
+    decimals: [0, 1, 2].includes(fRaw?.decimals as number) ? (fRaw!.decimals as 0 | 1 | 2) : d.format!.decimals,
+    compact: fRaw?.compact === 'auto' ? ('auto' as const) : ('none' as const),
+  };
+
+  const cRaw = obj.chart as Record<string, unknown> | undefined;
+  const chart = {
+    showAxis: typeof cRaw?.showAxis === 'boolean' ? cRaw.showAxis : d.chart!.showAxis,
+    showGrid: typeof cRaw?.showGrid === 'boolean' ? cRaw.showGrid : d.chart!.showGrid,
+    legendPosition: ['none', 'top', 'bottom', 'right'].includes(cRaw?.legendPosition as string)
+      ? (cRaw!.legendPosition as 'none' | 'top' | 'bottom' | 'right')
+      : d.chart!.legendPosition,
+    barRadius:
+      typeof cRaw?.barRadius === 'number' && Number.isFinite(cRaw.barRadius) && cRaw.barRadius >= 0 && cRaw.barRadius <= 16
+        ? Math.round(cRaw.barRadius)
+        : d.chart!.barRadius,
+  };
+
+  const shadow: ThemeShadow = ['none', 'subtle', 'soft', 'strong'].includes(obj.shadow as string)
+    ? (obj.shadow as ThemeShadow)
+    : d.shadow!;
+
   return {
     color: {
       primary: (colorRaw?.primary as string) || legacyPrimary || d.color.primary,
@@ -139,6 +178,10 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     layout,
     branding,
     background,
+    lineHeight,
+    format,
+    chart,
+    shadow,
   };
 }
 
@@ -219,4 +262,40 @@ export function gradientToCss(g: unknown): string {
   if (type === 'radial') return `radial-gradient(circle at center, ${stopStr})`;
   const angle = clampNum(Math.round(Number(raw.angle ?? 180)), 0, 360);
   return `linear-gradient(${angle}deg, ${stopStr})`;
+}
+
+/**
+ * 按主题数字格式化纯数字。
+ * - compact='auto'：≥1e6→M、≥1e3→K（K/M 固定 1 位小数，覆盖 decimals）；否则按 decimals + thousandsSep。
+ * - NaN/undefined 等非法输入 → ''；负数保留 '-'。
+ */
+export function formatNumber(n: unknown, f?: ThemeFormat): string {
+  if (typeof n !== 'number' || !Number.isFinite(n)) return '';
+  const fmt = f ?? DEFAULT_FORMAT;
+  const neg = n < 0;
+  const abs = Math.abs(n);
+  let body: string;
+  if (fmt.compact === 'auto') {
+    if (abs >= 1e6) body = `${(abs / 1e6).toFixed(1)}M`;
+    else if (abs >= 1e3) body = `${(abs / 1e3).toFixed(1)}K`;
+    else body = abs.toFixed(fmt.decimals);
+  } else {
+    body = abs.toLocaleString('en-US', {
+      minimumFractionDigits: fmt.decimals,
+      maximumFractionDigits: fmt.decimals,
+    });
+    if (!fmt.thousandsSep) body = body.replace(/,/g, '');
+  }
+  return (neg ? '-' : '') + body;
+}
+
+/**
+ * 带币种符号格式化：position='before' → '$1.2M'；'after' → '1.2M$'。
+ * 非法数值（空串）不加符号，返回 ''。
+ */
+export function formatMoney(n: unknown, f?: ThemeFormat): string {
+  const num = formatNumber(n, f);
+  if (num === '') return '';
+  const fmt = f ?? DEFAULT_FORMAT;
+  return fmt.currencyPosition === 'after' ? `${num}${fmt.currencySymbol}` : `${fmt.currencySymbol}${num}`;
 }

@@ -30,6 +30,14 @@ export type ThemeDensity = 'compact' | 'standard' | 'spacious';
 /** 圆角：直角 / 小圆角 / 大圆角。 */
 export type ThemeRadius = 'sharp' | 'small' | 'large';
 
+/** v2 派生类型（供 theme.tsx / 测试 / 格式化器引用）。 */
+export type LineHeightMode = 'ratio' | 'fixed';
+export type CurrencyPosition = 'before' | 'after';
+export type NumberCompact = 'none' | 'auto';
+export type ThemeShadow = 'none' | 'subtle' | 'soft' | 'strong';
+export type ChartLegendPosition = 'none' | 'top' | 'bottom' | 'right';
+export type ThemeFormat = NonNullable<ProjectTheme['format']>;
+
 /** 项目主题（报告维度配置）：结构化 ThemeSpec，驱动编辑器整树换肤。 */
 export interface ProjectTheme {
   color: {
@@ -84,6 +92,28 @@ export interface ProjectTheme {
     /** 图片背景 URL。 */
     image?: string;
   };
+  /** 行高规则：ratio=字号×n；fixed=字号+Npx。仅作用于用户「文本」组件 + 基础 CSS 变量。 */
+  lineHeight?: {
+    mode: 'ratio' | 'fixed';
+    value: number;
+  };
+  /** 币种 + 数字格式（成对）。 */
+  format?: {
+    currencySymbol: string;
+    currencyPosition: 'before' | 'after';
+    thousandsSep: boolean;
+    decimals: 0 | 1 | 2;
+    compact: 'none' | 'auto';
+  };
+  /** 图表统一样式：经 ThemeContext 下发，recharts 组件消费。 */
+  chart?: {
+    showAxis: boolean;
+    showGrid: boolean;
+    legendPosition: 'none' | 'top' | 'bottom' | 'right';
+    barRadius: number;
+  };
+  /** 卡片阴影档位 → --shadow-card。 */
+  shadow?: 'none' | 'subtle' | 'soft' | 'strong';
   preset?: string; // 当前命中的预设 key，仅用于 UI 高亮；手改字段后置空
 }
 
