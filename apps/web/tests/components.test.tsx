@@ -11,6 +11,7 @@ vi.mock('recharts', () => ({
   YAxis: () => null,
   CartesianGrid: () => null,
   Tooltip: () => null,
+  Legend: () => null,
   LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Line: () => null,
   PieChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -36,11 +37,11 @@ describe('basic components render', () => {
   it('indicator card renders title + value', () => {
     render(
       <IndicatorCardComponent
-        data={{ title: 'GMV', value: '¥1,200', colorTheme: 'orange' }}
+        data={{ title: 'GMV', value: '$1,200', colorTheme: 'orange' }}
       />,
     );
     expect(screen.getByText('GMV')).toBeInTheDocument();
-    expect(screen.getByText('¥1,200')).toBeInTheDocument();
+    expect(screen.getByText('$1,200')).toBeInTheDocument();
   });
 
   it('table renders headers and cells', () => {
@@ -92,7 +93,7 @@ describe('basic components render', () => {
 });
 
 describe('IndicatorCardComponent variants', () => {
-  const base = { title: 'GMV', value: '¥1,200', colorTheme: 'orange' as const };
+  const base = { title: 'GMV', value: '$1,200', colorTheme: 'orange' as const };
 
   it('plain renders no icon (backward compatible)', () => {
     const { container } = render(<IndicatorCardComponent data={{ ...base, variant: 'plain' }} />);

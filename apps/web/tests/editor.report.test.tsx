@@ -13,14 +13,14 @@ describe('report components — render', () => {
           variant: 'grid',
           headers: ['指标', '数值', '对比'],
           rows: [
-            ['Sales', '¥1.24M', '+15%'],
+            ['Sales', '$1.24M', '+15%'],
             ['Clicks', '120K', '-3%'],
           ],
         }}
       />,
     );
     expect(screen.getByText('Sales')).toBeInTheDocument();
-    expect(screen.getByText('¥1.24M')).toBeInTheDocument();
+    expect(screen.getByText('$1.24M')).toBeInTheDocument();
     expect(screen.getByText('+15%')).toBeInTheDocument();
     expect(screen.getByText('-3%')).toBeInTheDocument();
   });
@@ -31,12 +31,12 @@ describe('report components — render', () => {
         data={{
           variant: 'standard',
           headers: ['指标', '本期', '上期', '状态'],
-          rows: [['Total Sales', '¥1.24M', '¥1.08M', 'Exceeded']],
+          rows: [['Total Sales', '$1.24M', '$1.08M', 'Exceeded']],
         }}
       />,
     );
     expect(screen.getByText('Total Sales')).toBeInTheDocument();
-    expect(screen.getAllByText('¥1.24M').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('$1.24M').length).toBeGreaterThan(0);
     expect(screen.getByText('Exceeded')).toBeInTheDocument();
   });
 

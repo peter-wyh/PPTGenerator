@@ -26,7 +26,7 @@ describe('brand-wall + package-card — render', () => {
         data={{
           variant: 'standard',
           name: '增长加速包',
-          price: '¥80,000',
+          price: '$80,000',
           headers: ['特性'],
           rows: [['40–60 位达人'], ['Spark Ads 资源位']],
           highlighted: false,
@@ -34,7 +34,7 @@ describe('brand-wall + package-card — render', () => {
       />,
     );
     expect(screen.getByText('增长加速包')).toBeInTheDocument();
-    expect(screen.getByText('¥80,000')).toBeInTheDocument();
+    expect(screen.getByText('$80,000')).toBeInTheDocument();
     expect(screen.getByText('40–60 位达人')).toBeInTheDocument();
   });
 
@@ -44,7 +44,7 @@ describe('brand-wall + package-card — render', () => {
         data={{
           variant: 'featured',
           name: 'P',
-          price: '¥1',
+          price: '$1',
           headers: ['特性'],
           rows: [],
           highlighted: true,
@@ -66,7 +66,7 @@ describe('brand-wall + package-card — render', () => {
     for (const v of ['standard', 'featured', 'compact'] as const) {
       const { unmount } = render(
         <PackageCard
-          data={{ variant: v, name: 'N', price: '¥1', headers: ['特性'], rows: [['f']], highlighted: false }}
+          data={{ variant: v, name: 'N', price: '$1', headers: ['特性'], rows: [['f']], highlighted: false }}
         />,
       );
       expect(screen.getByText('N')).toBeInTheDocument();

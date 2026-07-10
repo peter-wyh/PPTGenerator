@@ -4,6 +4,7 @@ import {
   CartesianGrid,
   Cell,
   Line,
+  Legend,
   LineChart,
   Pie,
   PieChart,
@@ -26,6 +27,7 @@ import type {
   TitleBlockData,
 } from '@mediakit/shared';
 import { IconKit } from '../icons/IconKit';
+import { useChartStyle } from '../theme';
 
 
 /* ---------------------------------- text --------------------------------- */
@@ -40,6 +42,7 @@ export function TextComponent({ data }: { data: TextData }) {
         color: data.color,
         backgroundColor: data.bgColor,
         padding: data.padding,
+        lineHeight: 'var(--line-height)',
       }}
     >
       {data.content}
@@ -212,17 +215,18 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
 
 /* -------------------------------- bar chart ------------------------------ */
 export function BarChartComponent({ data }: { data: BarChartData }) {
+  const cs = useChartStyle();
   return (
     <div className="flex h-full w-full flex-col bg-surface-primary p-3">
       {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data.bars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />}
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
             <Tooltip cursor={{ fill: '#F9FAFB' }} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+            <Bar dataKey="value" radius={[cs.barRadius, cs.barRadius, 0, 0]}>
               {data.bars.map((b, i) => (
                 <Cell key={i} fill={b.color} />
               ))}
@@ -236,6 +240,7 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
 
 /* -------------------------------- line chart ----------------------------- */
 export function LineChartComponent({ data }: { data: LineChartData }) {
+  const cs = useChartStyle();
   // 多系列按 label 对齐成单数据集。
   const labels = data.series[0]?.points.map((p) => p.label) ?? [];
   const dataset = labels.map((label, i) => {
@@ -249,10 +254,11 @@ export function LineChartComponent({ data }: { data: LineChartData }) {
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={dataset} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />}
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
             <Tooltip />
+            {cs.legend && <Legend {...cs.legend} />}
             {data.series.map((s) => (
               <Line key={s.name} type="monotone" dataKey={s.name} stroke={s.color} strokeWidth={2} dot={false} />
             ))}

@@ -123,17 +123,17 @@ const FITS: SelectOption[] = [
 ];
 
 const PLATFORMS: SelectOption[] = [
-  { value: 'xiaohongshu', label: '小红书' },
+  { value: 'xiaohongshu', label: 'Xiaohongshu' },
   { value: 'tiktok', label: 'TikTok' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'youtube', label: 'YouTube' },
-  { value: 'weibo', label: '微博' },
+  { value: 'weibo', label: 'Weibo' },
 ];
 
 const TIERS: SelectOption[] = [
-  { value: 'mega', label: 'Mega 头部' },
-  { value: 'macro', label: 'Macro 中腰' },
-  { value: 'micro', label: 'Micro 微' },
+  { value: 'mega', label: 'Mega' },
+  { value: 'macro', label: 'Macro' },
+  { value: 'micro', label: 'Micro' },
 ];
 
 export const REGISTRY: Record<ComponentType, BlockDef> = {

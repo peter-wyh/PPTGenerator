@@ -10,6 +10,7 @@ import type {
   PostFormat,
   WorkScreenshotItem,
 } from '@mediakit/shared';
+import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 
 /**
  * Upstream "Creator Performance" API (mock for demo).
@@ -197,9 +198,9 @@ const compact = (n: number): string => {
   return String(v);
 };
 
-const money = (n: number): string => `¥${fmt(n)}`;
+const money = (n: number): string => formatMoney(n, DEFAULT_FORMAT);
 /** Small amounts with 2 decimal places (for EPC etc). */
-const money2 = (n: number): string => `¥${n.toFixed(2)}`;
+const money2 = (n: number): string => formatMoney(n, { ...DEFAULT_FORMAT, decimals: 2 });
 const pct = (n: number): string => `${n.toFixed(1)}%`;
 /** Percentage with 2 decimal places (for CTR / CVR, aligned with dashboard precision). */
 const pct2 = (n: number): string => `${n.toFixed(2)}%`;

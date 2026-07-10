@@ -401,3 +401,35 @@ describe('editor store — safe-area hard clamp (move/resize/nudge)', () => {
     expect(useEditorStore.getState().historyIndex).toBe(before); // 不入 history，由调用方 commit
   });
 });
+
+describe('setTheme v2 深合并', () => {
+  beforeEach(() => {
+    useEditorStore.setState({
+      projectMeta: { theme: { ...DEFAULT_THEME } },
+      dirty: false,
+    });
+  });
+
+  it('部分改 chart.barRadius 不清同级字段', () => {
+    useEditorStore.getState().setTheme({ chart: { barRadius: 12 } });
+    const t = useEditorStore.getState().projectMeta!.theme!;
+    expect(t.chart!.barRadius).toBe(12);
+    expect(t.chart!.showGrid).toBe(true);
+    expect(t.chart!.legendPosition).toBe('bottom');
+  });
+
+  it('shadow 标量替换、preset 显式 undefined 清空', () => {
+    useEditorStore.getState().setTheme({ shadow: 'strong', preset: undefined });
+    const t = useEditorStore.getState().projectMeta!.theme!;
+    expect(t.shadow).toBe('strong');
+    expect(t.preset).toBeUndefined();
+    expect(useEditorStore.getState().dirty).toBe(true);
+  });
+
+  it('format 部分更新保留其它 format 字段', () => {
+    useEditorStore.getState().setTheme({ format: { currencySymbol: '€' } });
+    const t = useEditorStore.getState().projectMeta!.theme!;
+    expect(t.format!.currencySymbol).toBe('€');
+    expect(t.format!.currencyPosition).toBe('before');
+  });
+});

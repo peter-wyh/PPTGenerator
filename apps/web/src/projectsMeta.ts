@@ -76,7 +76,7 @@ export function mockCampaignInfo(): CampaignInfo {
     platform: 'TikTok',
     startDate: '2026-10-12',
     endDate: '2026-11-10',
-    budget: '¥300K',
+    budget: '$300K',
   };
 }
 

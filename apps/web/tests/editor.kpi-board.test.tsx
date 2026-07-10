@@ -29,22 +29,22 @@ describe('KpiBoard · card 变体', () => {
     const data: KpiBoardData = {
       variant: 'card',
       headers: ['指标', '数值', '对比'],
-      rows: [['Sales', '¥1.24M', '+15%']],
+      rows: [['Sales', '$1.24M', '+15%']],
       icons: ['currency'],
       valueColors: ['success'],
     };
     const { container } = render(<KpiBoard data={data} />);
     expect(screen.getByText('Sales')).toBeInTheDocument();
-    expect(screen.getByText('¥1.24M')).toBeInTheDocument();
+    expect(screen.getByText('$1.24M')).toBeInTheDocument();
     expect(screen.getByText('+15%')).toBeInTheDocument();
     expect(container.querySelector('svg')).toBeTruthy(); // 图标渲染出 svg
   });
 
   it('无图标时不渲染图标块（无 svg）', () => {
     const { container } = render(
-      <KpiBoard data={{ variant: 'card', headers: ['指标', '数值', '对比'], rows: [['Sales', '¥1.24M', '']] }} />,
+      <KpiBoard data={{ variant: 'card', headers: ['指标', '数值', '对比'], rows: [['Sales', '$1.24M', '']] }} />,
     );
-    expect(screen.getByText('¥1.24M')).toBeInTheDocument();
+    expect(screen.getByText('$1.24M')).toBeInTheDocument();
     expect(container.querySelector('svg')).toBeNull();
   });
 

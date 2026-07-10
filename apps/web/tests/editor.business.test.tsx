@@ -44,7 +44,7 @@ describe('business renderers', () => {
   it('package table renders the comparison rows', () => {
     render(<BusinessBlockRenderer data={dataFor('package', 'table')} />);
     expect(screen.getByText('服务周期')).toBeInTheDocument();
-    expect(screen.getByText('¥80K')).toBeInTheDocument();
+    expect(screen.getByText('$80K')).toBeInTheDocument();
   });
 
   it('case-showcase results renders 138%', () => {

@@ -65,6 +65,27 @@ const projectThemeSchema = z
         showSafeArea: z.boolean().optional(),
       })
       .optional(),
+    lineHeight: z
+      .object({ mode: z.enum(['ratio', 'fixed']), value: z.number().min(0).max(100) })
+      .optional(),
+    format: z
+      .object({
+        currencySymbol: z.string().min(1).max(8),
+        currencyPosition: z.enum(['before', 'after']),
+        thousandsSep: z.boolean(),
+        decimals: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        compact: z.enum(['none', 'auto']),
+      })
+      .optional(),
+    chart: z
+      .object({
+        showAxis: z.boolean(),
+        showGrid: z.boolean(),
+        legendPosition: z.enum(['none', 'top', 'bottom', 'right']),
+        barRadius: z.number().min(0).max(16),
+      })
+      .optional(),
+    shadow: z.enum(['none', 'subtle', 'soft', 'strong']).optional(),
     preset: z.string().max(120).optional(),
   })
   .optional();

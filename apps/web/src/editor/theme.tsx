@@ -13,12 +13,14 @@ import { createContext, useContext } from 'react';
 import type { CSSProperties } from 'react';
 import {
   DEFAULT_CHART_PALETTE,
+  DEFAULT_CHART_CFG,
   DEFAULT_THEME,
   FONT_OPTIONS,
   getFontStack,
   type ProjectTheme,
   type ThemeDensity,
   type ThemeRadius,
+  type ThemeShadow,
 } from '@mediakit/shared';
 
 /* ------------------------------------------------------------------ */
@@ -39,6 +41,14 @@ const RADIUS_MAP: Record<ThemeRadius, { card: number; pill: number }> = {
   large: { card: 16, pill: 9999 },
 };
 
+/** 阴影档位 → box-shadow 值。 */
+const SHADOW_MAP: Record<ThemeShadow, string> = {
+  none: 'none',
+  subtle: '0 1px 2px rgba(0,0,0,.05)',
+  soft: '0 2px 8px rgba(0,0,0,.08)',
+  strong: '0 8px 24px rgba(0,0,0,.12)',
+};
+
 /**
  * 把 ProjectTheme 映射成 CSS 变量键值对。
  * 返回值可直接展开到 React style 属性（key 形如 '--color-primary'）。
@@ -50,6 +60,7 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
   const palette = t.color.chartPalette.length
     ? t.color.chartPalette
     : [...DEFAULT_CHART_PALETTE];
+  const lh = t.lineHeight ?? DEFAULT_THEME.lineHeight!;
 
   const vars: Record<string, string> = {
     // 字体
@@ -73,6 +84,9 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     // 布局
     '--grid-size': `${t.layout?.gridSize ?? DEFAULT_THEME.layout!.gridSize}px`,
     '--safe-margin': `${t.layout?.safeMargin ?? DEFAULT_THEME.layout!.safeMargin}px`,
+    // v2：行高 / 卡片阴影
+    '--line-height': lh.mode === 'fixed' ? `calc(1em + ${lh.value}px)` : String(lh.value),
+    '--shadow-card': SHADOW_MAP[t.shadow ?? DEFAULT_THEME.shadow!],
   };
 
   // 图表配色：--chart-1 … --chart-6
@@ -108,6 +122,40 @@ export const ThemeContext = createContext<ThemeContextValue>(DEFAULT_CONTEXT);
 /** 读取主题 context：chartPalette（数组型）+ theme（完整对象）。 */
 export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext);
+}
+
+/* ------------------------------------------------------------------ */
+/* 图表统一样式（recharts 消费）                                       */
+/* ------------------------------------------------------------------ */
+
+/** recharts 图表可消费的统一样式（由 theme.chart 派生）。 */
+export interface ChartStyle {
+  showGrid: boolean;
+  showAxis: boolean;
+  legend:
+    | false
+    | { verticalAlign: 'top' | 'bottom' | 'middle'; align?: 'center' | 'right'; layout?: 'horizontal' | 'vertical' };
+  barRadius: number;
+}
+
+/** 把 theme.chart 归一为 recharts 可消费的样式（纯函数，便于单测）。 */
+export function resolveChartStyle(chart: ProjectTheme['chart'] | undefined): ChartStyle {
+  const c = chart ?? DEFAULT_CHART_CFG;
+  const legend: ChartStyle['legend'] =
+    c.legendPosition === 'none'
+      ? false
+      : c.legendPosition === 'top'
+        ? { verticalAlign: 'top' }
+        : c.legendPosition === 'right'
+          ? { verticalAlign: 'middle', align: 'right', layout: 'vertical' }
+          : { verticalAlign: 'bottom' };
+  return { showGrid: c.showGrid, showAxis: c.showAxis, legend, barRadius: c.barRadius };
+}
+
+/** 组件内读取图表统一样式（经 ThemeContext 取 theme.chart）。 */
+export function useChartStyle(): ChartStyle {
+  const { theme } = useTheme();
+  return resolveChartStyle(theme.chart);
 }
 
 /* ------------------------------------------------------------------ */

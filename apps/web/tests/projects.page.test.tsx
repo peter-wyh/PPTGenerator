@@ -60,7 +60,7 @@ describe('Projects page', () => {
         platform: 'TikTok',
         startDate: '2026-01-01',
         endDate: '2026-01-31',
-        budget: '¥100K',
+        budget: '$100K',
       },
     ]);
   });
@@ -159,7 +159,7 @@ describe('Projects page', () => {
     // 联动自上游 campaign：
     expect(meta.advertiser).toBe('AdX');
     expect(meta.businessLine).toBe('FT');
-    expect(meta.campaignInfo).toMatchObject({ campaignName: 'Campaign X', platform: 'TikTok', budget: '¥100K' });
+    expect(meta.campaignInfo).toMatchObject({ campaignName: 'Campaign X', platform: 'TikTok', budget: '$100K' });
   });
 
   it('edits a project via the edit dialog', async () => {

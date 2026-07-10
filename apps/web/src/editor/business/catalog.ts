@@ -223,7 +223,7 @@ export const BUSINESS_GROUPS: BusinessGroup[] = [
         desc: '进度摘要',
         title: '第 3 周 Campaign 进度',
         meta: '目标曝光 10M · 当前完成 8.6M · 核心创作者内容已全部上线',
-        details: ['GMV ¥1.24M', '互动率 8.7%', '内容上线 84%', '下周追加 Spark Ads'],
+        details: ['GMV $1.24M', '互动率 8.7%', '内容上线 84%', '下周追加 Spark Ads'],
       },
       {
         id: 'funnel',

@@ -35,6 +35,10 @@ export type ThemePatch = {
   density?: ThemeDensity;
   radius?: ThemeRadius;
   layout?: Partial<NonNullable<ProjectTheme['layout']>>;
+  lineHeight?: Partial<NonNullable<ProjectTheme['lineHeight']>>;
+  format?: Partial<NonNullable<ProjectTheme['format']>>;
+  chart?: Partial<NonNullable<ProjectTheme['chart']>>;
+  shadow?: NonNullable<ProjectTheme['shadow']>;
   branding?: Partial<NonNullable<ProjectTheme['branding']>>;
   background?: Partial<Omit<NonNullable<ProjectTheme['background']>, 'type'>> & {
     type?: NonNullable<ProjectTheme['background']>['type'];
@@ -436,6 +440,19 @@ export const useEditorStore = create<EditorState>((set, get) => {
           layout: { ...(current.layout ?? DEFAULT_THEME.layout), ...patch.layout } as NonNullable<
             ProjectTheme['layout']
           >,
+          lineHeight: {
+            ...(current.lineHeight ?? DEFAULT_THEME.lineHeight),
+            ...patch.lineHeight,
+          } as NonNullable<ProjectTheme['lineHeight']>,
+          format: {
+            ...(current.format ?? DEFAULT_THEME.format),
+            ...patch.format,
+          } as NonNullable<ProjectTheme['format']>,
+          chart: {
+            ...(current.chart ?? DEFAULT_THEME.chart),
+            ...patch.chart,
+          } as NonNullable<ProjectTheme['chart']>,
+          shadow: patch.shadow ?? current.shadow,
           branding:
             patch.branding || current.branding
               ? { ...(current.branding ?? DEFAULT_THEME.branding), ...patch.branding }
