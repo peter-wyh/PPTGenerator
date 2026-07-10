@@ -17,10 +17,12 @@ import {
   YAxis,
 } from 'recharts';
 import { ImgOrPlaceholder } from './shared';
+import { useChartStyle } from '../../theme';
 
 export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
   const { variant = 'cards', insight, rows = [] } = data;
   const items = rows.map((r) => ({ name: r[0] ?? '', img: r[1] ?? '', sold: r[2] ?? '', share: r[3] ?? '', cat: r[4] ?? '' }));
+  const cs = useChartStyle();
 
   if (variant === 'bar') {
     // 条形图：横向 BarChart(layout=vertical) 展示 TOP 商品销量。
@@ -34,10 +36,10 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
         <div className="min-w-0 flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart layout="vertical" data={chartData} margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
-              <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+              <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={70} hide={!cs.showAxis} />
               <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(v: number) => v} />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]} fill="var(--color-primary, #FF5C00)">
+              <Bar dataKey="value" radius={[0, cs.barRadius, cs.barRadius, 0]} fill="var(--color-primary, #FF5C00)">
                 <LabelList dataKey="sold" position="right" style={{ fontSize: 11 }} />
               </Bar>
             </BarChart>

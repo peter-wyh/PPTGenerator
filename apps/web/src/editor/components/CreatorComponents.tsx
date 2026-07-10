@@ -7,6 +7,7 @@
  * "样式变体（选版式）"。风格对齐 BasicComponents.tsx；占位态参考 ImageComponent。
  */
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useChartStyle } from '../theme';
 import type {
   CreatorAvatarCardData,
   CreatorFanAgeData,
@@ -577,7 +578,10 @@ function CreatorChartShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary p-3">
+    <div
+      className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary p-3"
+      style={{ boxShadow: 'var(--shadow-card)' }}
+    >
       {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
       {subtitle && <div className="mt-0.5 text-[11px] text-foreground-secondary">{subtitle}</div>}
       <div className="min-h-0 flex-1">{children}</div>
@@ -645,6 +649,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
 /** 城市分布 Top N（横向条形）；按 value 降序，条尾 LabelList 标百分比。 */
 export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
   const { title, subtitle, bars = [] } = data;
+  const cs = useChartStyle();
   const sorted = [...bars].sort((a, b) => b.value - a.value);
   const sum = sorted.reduce((acc, b) => acc + b.value, 0) || 1;
   const withPct = sorted.map((b) => ({ ...b, pct: Math.round((b.value / sum) * 100) }));
@@ -655,11 +660,11 @@ export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart layout="vertical" data={withPct} margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
-            <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />}
+            <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+            <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={48} hide={!cs.showAxis} />
             <Tooltip cursor={{ fill: '#F9FAFB' }} />
-            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+            <Bar dataKey="value" radius={[0, cs.barRadius, cs.barRadius, 0]}>
               {withPct.map((b, i) => (
                 <Cell key={i} fill={b.color} />
               ))}
@@ -675,6 +680,7 @@ export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
 /** 年龄段分布（竖向柱状）。 */
 export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
   const { title, subtitle, bars = [] } = data;
+  const cs = useChartStyle();
   return (
     <CreatorChartShell title={title} subtitle={subtitle}>
       {bars.length === 0 ? (
@@ -682,11 +688,11 @@ export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={bars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />}
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
             <Tooltip cursor={{ fill: '#F9FAFB' }} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+            <Bar dataKey="value" radius={[cs.barRadius, cs.barRadius, 0, 0]}>
               {bars.map((b, i) => (
                 <Cell key={i} fill={b.color} />
               ))}

@@ -11,6 +11,7 @@ vi.mock('recharts', () => ({
   YAxis: () => null,
   CartesianGrid: () => null,
   Tooltip: () => null,
+  Legend: () => null,
   LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Line: () => null,
   PieChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

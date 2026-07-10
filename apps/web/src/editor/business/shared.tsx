@@ -41,7 +41,7 @@ export function Base({
         border: accent ? `2px solid ${ACCENT}` : '1px solid #F0E7E2',
         borderRadius: 'var(--radius-card)',
         background: light ? 'var(--color-neutral-bg)' : tone,
-        boxShadow: accent ? `0 8px 22px rgba(255,92,0,.16)` : undefined,
+        boxShadow: accent ? `0 8px 22px rgba(255,92,0,.16)` : 'var(--shadow-card)',
         fontFamily: 'var(--font-text)',
         color: INK,
       }}
