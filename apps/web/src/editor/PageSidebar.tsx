@@ -11,6 +11,8 @@ const PAGE_TYPE_ICONS: Record<string, string> = {
   'campaign-report': '📈',
   'creator-case': '🌟',
   'creator-collab': '🤝',
+  'company-intro': '🏢',
+  'strategy': '🎯',
 };
 
 /** 页面栏：缩略图卡片 + 切换/改名/复制/删除 + 拖拽排序 + 模板新建。 */

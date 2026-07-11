@@ -221,6 +221,7 @@ export const TEMPLATES: Template[] = [
     id: 'cover-page',
     name: '封面页',
     description: '大标题 + 副标题',
+    pageType: 'media-report',
     pageTitleIndex: 0,
     components: () => {
       const title = t('text', 120, 240, 1000, 120);
@@ -237,6 +238,7 @@ export const TEMPLATES: Template[] = [
     id: 'agenda-page',
     name: '目录页',
     description: '章节导航表格',
+    pageType: 'media-report',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Agenda';
@@ -257,6 +259,7 @@ export const TEMPLATES: Template[] = [
     id: 'company-page',
     name: '公司介绍页',
     description: '简介 + 品牌墙',
+    pageType: 'company-intro',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'About Us';
@@ -271,8 +274,9 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'package-page',
-    name: '套餐对比页',
-    description: '3 个套餐卡片',
+    name: '套餐方案',
+    description: '标题 + 套餐卡片 + logo 墙',
+    pageType: 'company-intro',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Package Comparison';
@@ -441,6 +445,7 @@ export const TEMPLATES: Template[] = [
     id: 'milestone-page',
     name: '公司里程碑',
     description: '标题 + 里程碑表格 + 简介',
+    pageType: 'company-intro',
     components: () =>
       tablePage(
         'Company Milestones',
@@ -458,6 +463,7 @@ export const TEMPLATES: Template[] = [
     id: 'global-page',
     name: '全球布局',
     description: '标题 + 区域布局表格',
+    pageType: 'company-intro',
     components: () =>
       tablePage('Global Business Network', ['Region', 'Offices', 'Creator Resources'], [
         ['APAC', '3', '420+'],
@@ -470,6 +476,7 @@ export const TEMPLATES: Template[] = [
     id: 'org-page',
     name: '组织架构',
     description: '标题 + 团队构成表格',
+    pageType: 'company-intro',
     components: () =>
       tablePage('Strategy × Creative × Ops × Data', ['Function', 'Share', 'Responsibility'], [
         ['Strategy Consulting', '20%', 'Growth diagnosis & creator strategy'],
@@ -482,6 +489,7 @@ export const TEMPLATES: Template[] = [
     id: 'service-page',
     name: '核心服务矩阵',
     description: '标题 + 服务列表表格',
+    pageType: 'company-intro',
     components: () =>
       tablePage('From Audience Insight to Business Growth', ['Service', 'Description'], [
         ['Creator Strategy & Recruiting', 'Match creators by category'],
@@ -494,6 +502,7 @@ export const TEMPLATES: Template[] = [
     id: 'challenge-page',
     name: '机会与挑战',
     description: '标题 + 机会/挑战表格',
+    pageType: 'strategy',
     components: () =>
       tablePage(
         'Opportunities & Challenges',
@@ -510,6 +519,7 @@ export const TEMPLATES: Template[] = [
     id: 'process-page',
     name: '合作评估流程',
     description: '标题 + 流程步骤表格',
+    pageType: 'strategy',
     components: () =>
       tablePage('4 Weeks from Brief to Launch', ['Step', 'Core Work', 'Goal'], [
         ['1', 'Brand Growth Diagnosis', 'Define KPIs'],
@@ -522,6 +532,7 @@ export const TEMPLATES: Template[] = [
     id: 'calendar-page',
     name: '营销日历',
     description: '标题 + 节点规划表格',
+    pageType: 'strategy',
     components: () =>
       tablePage('2026 Content Marketing Cadence', ['Milestone', 'Theme', 'Action'], [
         ['Spring', 'Refresh & seed', 'Launch new content'],
@@ -534,6 +545,7 @@ export const TEMPLATES: Template[] = [
     id: 'campaign-plan-page',
     name: '投放计划',
     description: '标题 + 阶段路线图表格',
+    pageType: 'strategy',
     components: () =>
       tablePage('30-Day TikTok Growth Path', ['Stage', 'Action', 'Goal'], [
         ['Warm-up', 'Seed-creator seeding', 'Demand pool'],

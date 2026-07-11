@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /** 页面类型（与前端 PageType 对齐）。 */
 const pageTypeSchema = z
-  .enum(['media-report', 'campaign-report', 'creator-case', 'creator-collab'])
+  .enum(['media-report', 'campaign-report', 'creator-case', 'creator-collab', 'company-intro', 'strategy'])
   .optional();
 
 /** 页面 schema：Template 与 Project 共用同一 Page 结构。 */

@@ -22,8 +22,16 @@ export interface PageGradient {
  * - 'campaign-report'  → Campaign 报告页（需选择 Campaign）
  * - 'creator-case'     → 达人案例/介绍页（需选择达人）
  * - 'creator-collab'   → 达人合作详情页（需选择当前 Campaign 下达人）
+ * - 'company-intro'    → 公司/品牌介绍页
+ * - 'strategy'         → 策略规划/流程/日历页
  */
-export type PageType = 'media-report' | 'campaign-report' | 'creator-case' | 'creator-collab';
+export type PageType =
+  | 'media-report'
+  | 'campaign-report'
+  | 'creator-case'
+  | 'creator-collab'
+  | 'company-intro'
+  | 'strategy';
 
 export interface Page {
   id: string;

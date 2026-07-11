@@ -290,6 +290,8 @@ const PAGE_TYPE_OPTIONS: { value: PageType | ''; label: string; icon: string; de
   { value: 'campaign-report', label: 'Campaign 报告', icon: '📈', desc: '需选择 Campaign' },
   { value: 'creator-case', label: '达人案例', icon: '🌟', desc: '需选择达人' },
   { value: 'creator-collab', label: '达人合作详情', icon: '🤝', desc: '绑定 Campaign 下达人' },
+  { value: 'company-intro', label: '公司/品牌介绍', icon: '🏢', desc: '公司、品牌、服务介绍' },
+  { value: 'strategy', label: '策略规划', icon: '🎯', desc: '流程、日历、计划' },
 ];
 
 /** 页面类型选择器 + 按类型显示的业务上下文选择器（Campaign / 达人）。 */
