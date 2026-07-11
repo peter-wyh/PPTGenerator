@@ -55,14 +55,36 @@ function Screenshot({
   );
 }
 
-/** 按图片数量自动算出最佳列数（方正排布）。 */
+/** 按图片数量返回最佳列数，确保尽量无空位。
+ *  1→1列, 2→2列, 3→3列(单行), 4→2列(2×2), 5→3列(3+2,末张跨2列),
+ *  6→3列(3×2), 7→4列(4+3), 8→4列(4×2), 9→3列(3×3), 10→5列, 11→4列, 12→4列(4×3) */
 function autoCols(n: number): number {
-  if (n <= 1) return 1;
-  if (n <= 2) return 2;
-  if (n <= 4) return 2;
-  if (n <= 6) return 3;
-  if (n <= 9) return 3;
-  return 4;
+  const TABLE: Record<number, number> = {
+    1: 1, 2: 2, 3: 3, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 9: 3, 10: 5, 11: 4, 12: 4,
+  };
+  if (TABLE[n]) return TABLE[n];
+  return Math.max(2, Math.min(5, Math.round(Math.sqrt(n))));
+}
+
+/** 计算每个图片的 grid-column span，让最后一行铺满无空位。
+ *  例如 5 张图 3 列：前 3 张各 span 1，第 4 张 span 1，第 5 张 span 2 → 无空位。
+ *  7 张图 4 列：前 4 张各 span 1，后 3 张 → span 分别 2,1,1 也不行…
+ *  更好的策略：最后一行的图片均分剩余列数。 */
+function gridSpans(count: number, cols: number): number[] {
+  const rows = Math.ceil(count / cols);
+  const lastRowCount = count - (rows - 1) * cols;
+  // 最后一行满 → 全部 span 1
+  if (lastRowCount === cols || rows === 1) return new Array(count).fill(1);
+  // 最后一行不满：让最后一行的图片均分 cols
+  const spans = new Array(count).fill(1);
+  const lastRowStart = (rows - 1) * cols;
+  // 把 cols 分配给 lastRowCount 张图：每张 span = ceil(cols/lastRowCount) 或取整分配
+  const base = Math.floor(cols / lastRowCount);
+  const extra = cols % lastRowCount;
+  for (let j = 0; j < lastRowCount; j++) {
+    spans[lastRowStart + j] = base + (j < extra ? 1 : 0);
+  }
+  return spans;
 }
 
 /** 作品截图墙：支持 5 种视觉风格（grid / diagonal / skew / overlap / filmstrip）。 */
@@ -82,6 +104,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
   }
 
   const cols = autoCols(images.length);
+  const spans = gridSpans(images.length, cols);
 
   /* ---- skew: 斜切拼接（交替倾斜 + 按列数排布）---- */
   if (style === 'skew') {
@@ -98,7 +121,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
               <div
                 key={i}
                 className="relative aspect-square overflow-hidden rounded-lg shadow-md"
-                style={{ transform: `rotate(${angle}deg)`, marginTop: mt }}
+                style={{ transform: `rotate(${angle}deg)`, marginTop: mt, gridColumn: `span ${spans[i]}` }}
               >
                 <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
               </div>
@@ -125,7 +148,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
             const rot = (colInRow - mid) * 4;
             const z = Math.round(cols - Math.abs(colInRow - mid));
             return (
-              <div key={i} className="relative flex items-center justify-center">
+              <div key={i} className="relative flex items-center justify-center" style={{ gridColumn: `span ${spans[i]}` }}>
                 <div
                   className="relative h-[70%] w-[80%] overflow-hidden rounded-lg shadow-lg"
                   style={{ transform: `translateX(${offset}px) rotate(${rot}deg)`, zIndex: z }}
@@ -152,7 +175,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
           }}
         >
           {images.map((im, i) => (
-            <div key={i} className="relative h-full overflow-hidden rounded">
+            <div key={i} className="relative h-full overflow-hidden rounded" style={{ gridColumn: `span ${spans[i]}` }}>
               <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
             </div>
           ))}
@@ -164,6 +187,15 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
   /* ---- diagonal: 规整网格 + 行间横向斜切衔接 ---- */
   if (style === 'diagonal') {
     const clipH = 14;
+    // diagonal 需要知道每张图的行号，但最后一行 span 扩展后行号不再线性，
+    // 所以先计算每张图的起始列+跨列
+    let cursor = 0;
+    const cells = spans.map((sp, i) => {
+      const row = Math.floor(cursor / cols);
+      const col = cursor % cols;
+      cursor += sp;
+      return { row, col, span: sp, idx: i };
+    });
     return (
       <Shell title={title}>
         <div
@@ -171,13 +203,17 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
           style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px' }}
         >
           {images.map((im, i) => {
-            const row = Math.floor(i / cols);
+            const c = cells[i];
             const clipEven = `polygon(0 0, 100% 0, 100% calc(100% - ${clipH}px), 0 100%)`;
             const clipOdd = `polygon(0 ${clipH}px, 100% 0, 100% 100%, 0 100%)`;
-            const clipPath = row % 2 === 0 ? clipEven : clipOdd;
-            const marginTop = row > 0 ? -clipH : 0;
+            const clipPath = c.row % 2 === 0 ? clipEven : clipOdd;
+            const marginTop = c.row > 0 ? -clipH : 0;
             return (
-              <div key={i} className="relative overflow-hidden rounded-md" style={{ clipPath, marginTop: `${marginTop}px` }}>
+              <div
+                key={i}
+                className="relative overflow-hidden rounded-md"
+                style={{ clipPath, marginTop: `${marginTop}px`, gridColumn: `span ${spans[i]}` }}
+              >
                 <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
               </div>
             );
