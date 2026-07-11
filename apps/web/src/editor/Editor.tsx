@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react';
-import type { CSSProperties } from 'react';
 import type { ProjectDetail } from '@mediakit/shared';
 import { DEFAULT_THEME } from '@mediakit/shared';
 import { useEditorStore } from './store';
@@ -11,7 +10,7 @@ import { PropertyPanel } from './property-panel';
 import { PreviewOverlay } from './preview/PreviewOverlay';
 import { useAutosave } from './useAutosave';
 import { useEditorKeyboard } from './useEditorKeyboard';
-import { ThemeContext, injectFontLinks, themeToCssVars } from './theme';
+import { ThemeContext, injectFontLinks } from './theme';
 
 interface EditorProps {
   detail: ProjectDetail;
@@ -31,9 +30,6 @@ export function Editor({ detail, mode }: EditorProps) {
   // 报告维度主题（品牌色 / 字体 / 密度 / 圆角）→ CSS 变量 + Context 整树换肤。
   const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
 
-  // 派生 CSS 变量（颜色/字体/圆角/间距），挂在根节点。
-  const themeStyle = useMemo<CSSProperties>(() => themeToCssVars(theme), [theme]);
-
   // 字体 <link> 按需注入 <head>（去重，旧 link 保留）。
   useEffect(() => {
     injectFontLinks(theme);
@@ -47,7 +43,7 @@ export function Editor({ detail, mode }: EditorProps) {
 
   return (
     <ThemeContext.Provider value={ctxValue}>
-      <div className="flex h-full flex-col overflow-hidden" style={themeStyle}>
+      <div className="flex h-full flex-col overflow-hidden">
         <EditorTopbar />
         <div className="flex min-h-0 flex-1">
           <PageSidebar />

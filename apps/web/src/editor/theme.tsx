@@ -89,6 +89,16 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     '--shadow-card': SHADOW_MAP[t.shadow ?? DEFAULT_THEME.shadow!],
   };
 
+  // v3：skinPreset → 覆盖圆角和阴影档位（在 skin 语义类层面生效）
+  const skin = t.skinPreset ?? 'default';
+  if (skin === 'flat') {
+    vars['--radius-card'] = '4px';
+    vars['--shadow-card'] = 'none';
+  } else if (skin === 'elevated') {
+    vars['--radius-card'] = '20px';
+    vars['--shadow-card'] = SHADOW_MAP.strong;
+  }
+
   // 图表配色：--chart-1 … --chart-6
   for (let i = 0; i < 6; i++) {
     vars[`--chart-${i + 1}`] = palette[i % palette.length];

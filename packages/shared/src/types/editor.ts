@@ -53,15 +53,7 @@ export type ComponentType =
   // 业绩·商品域：单达人作品数据指标（拆分子分类）
   | 'creator-work-metrics'
   // 业绩·商品域：达人作品列表（带封面+数据列，mock 数据）
-  | 'creator-works-table'
-  // 联盟营销域：地理分布地图（世界 SVG 底图 + 国家级数据色阶 + Top 列表）
-  | 'geo-map'
-  // 联盟营销域：环形进度仪表（单值 + 环形/半圆 + 同比）
-  | 'gauge-card'
-  // 联盟营销域：状态图例（Performing Well / Needs Improvement / Underperforming）
-  | 'status-legend'
-  // 联盟营销域：宽表横向滚动（Publisher 12 列 / Placement 9 列）
-  | 'wide-table';
+  | 'creator-works-table';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -273,13 +265,17 @@ export type CreatorPlatform = 'xiaohongshu' | 'tiktok' | 'instagram' | 'youtube'
 /** 达人层级。 */
 export type CreatorTier = 'mega' | 'macro' | 'micro';
 
-/** 达人头像卡：头像 + 名称 + 平台 + 层级 + 简介。 */
-export type CreatorAvatarVariant = 'horizontal' | 'vertical' | 'compact' | 'badge' | 'banner';
+/** 达人头像卡：头像 + 名称 + 平台 + 层级 + 简介。
+ *  platform = 主平台（向后兼容）；platforms = 全部平台标识（可多平台）。 */
+export type CreatorAvatarVariant = 'horizontal' | 'vertical' | 'compact' | 'badge' | 'banner' | 'glass' | 'hero' | 'minimal';
 export interface CreatorAvatarCardData {
   variant: CreatorAvatarVariant;
   avatar: string;
   name: string;
+  /** 主平台（向后兼容单平台数据）。 */
   platform: CreatorPlatform;
+  /** 全部平台（多平台账号）；缺省时回退到 platform。 */
+  platforms?: CreatorPlatform[];
   tier: CreatorTier;
   intro: string;
   /** 链接解析产出（可选；向后兼容老数据）。 */
@@ -429,6 +425,8 @@ export type StrategyBlockVariant = 'default' | 'labeled' | 'bulleted';
 export interface StrategyBlockData {
   /** 样式变体；缺省 'default'（平铺）。labeled=卡片标签，bulleted=卡片列表。 */
   variant?: StrategyBlockVariant;
+  /** 大标题（labeled 变体顶部显示）。 */
+  title?: string;
   /** 约定 ['图标', '标题', '内容']。 */
   headers: string[];
   /**
@@ -522,14 +520,22 @@ export interface CreatorFanInterestData {
 
 /* ---- 业务组件（试点：业绩·商品域，作品证据 / 口碑展示）Data ---- */
 
+/** 作品截图视觉风格预设（与版式 variant 正交）。 */
+export type WorkScreenshotStyle = 'grid' | 'skew' | 'overlap' | 'filmstrip';
+
 export interface WorkScreenshotItem {
   src: string;
   caption?: string;
+  /** 是否隐藏说明文字（默认 false=显示）。隐藏后保留数据，仅渲染层不显示。 */
+  captionHidden?: boolean;
 }
 
-/** 作品截图墙。复用组图版式引擎（variant = ImageGroupLayoutId）；缺省 'auto'。 */
+/** 作品截图墙。复用组图版式引擎（variant = ImageGroupLayoutId）；缺省 'auto'。
+ * style 控制视觉风格：'grid'=标准网格（缺省），'skew'=斜切拼接，'overlap'=重叠堆叠，'filmstrip'=胶片条。 */
 export interface WorkScreenshotData {
   variant?: ImageGroupLayoutId;
+  /** 视觉风格预设，与 variant 正交。 */
+  style?: WorkScreenshotStyle;
   title?: string;
   images: WorkScreenshotItem[];
   /** 单元格间距（px）；可选，缺省 8（与组图一致）。 */
@@ -566,91 +572,6 @@ export interface CommentWordcloudData {
   words: CommentWordItem[];
 }
 
-/* ---- Geo Map：地理分布地图 ---- */
-
-export interface GeoMapCountry {
-  /** ISO 3166-1 alpha-2 国家代码，如 'US', 'CN', 'JP'。 */
-  code: string;
-  /** 国家名称，如 'United States'。 */
-  name: string;
-  /** 数值（如 Revenue），用于色阶映射。 */
-  value: number;
-  /** 可选：显示文本（如 '$45.2K'），若缺省用 value 格式化。 */
-  display?: string;
-  /** 可选：占比文本（如 '32.5%'）。 */
-  share?: string;
-}
-
-export type GeoMapColorScheme = 'orange' | 'blue' | 'green' | 'purple' | 'red';
-
-export interface GeoMapData {
-  title: string;
-  subtitle?: string;
-  /** 色阶方案。 */
-  colorScheme?: GeoMapColorScheme;
-  /** 数据值标签（如 'Revenue' / 'GMV'）。 */
-  metricLabel?: string;
-  /** 国家数据列表。 */
-  countries: GeoMapCountry[];
-  /** AI 洞察。 */
-  insight?: string;
-}
-
-/* ---- Gauge Card：环形进度仪表 ---- */
-
-export type GaugeCardShape = 'full' | 'semi';
-export type GaugeCardColor = '#FF5C00' | '#3B82F6' | '#22C55E' | '#8B5CF6' | '#F59E0B' | '#EC4899';
-
-export interface GaugeCardData {
-  title: string;
-  /** 主数值显示文本，如 '34.6%'。 */
-  value: string;
-  /** 进度值（0-100），控制环形填充比例。 */
-  progress: number;
-  /** 环形形状：full=整圆，semi=半圆。 */
-  shape?: GaugeCardShape;
-  /** 环形颜色。 */
-  color?: string;
-  /** 副标题/说明文本。 */
-  subtitle?: string;
-  /** 同比文本，如 '+5.2pp vs 上期'。 */
-  compare?: string;
-  /** 中心标签（如 'New Customer Rate'）。 */
-  centerLabel?: string;
-}
-
-/* ---- Status Legend：状态图例 ---- */
-
-export type LegendStatus = 'good' | 'warn' | 'bad';
-
-export interface StatusLegendItem {
-  /** 状态：good=绿, warn=黄, bad=红。 */
-  status: LegendStatus;
-  /** 标签，如 'Performing Well'。 */
-  label: string;
-}
-
-export interface StatusLegendData {
-  items: StatusLegendItem[];
-  /** 可选标题。 */
-  title?: string;
-}
-
-/* ---- Wide Table：宽表横向滚动 ---- */
-
-export interface WideTableData {
-  title?: string;
-  subtitle?: string;
-  /** 列定义。 */
-  headers: string[];
-  /** 行数据（二维字符串数组）。 */
-  rows: string[][];
-  /** 可选：每行的状态（good/warn/bad），用于行级配色。 */
-  rowStatus?: LegendStatus[];
-  /** 冻结首列（如 Publisher 名称），默认 true。 */
-  freezeFirstCol?: boolean;
-}
-
 export type ComponentData =
   | TextData
   | ImageData
@@ -682,11 +603,7 @@ export type ComponentData =
   | TitleBlockData
   | CampaignAnalysisData
   | CreatorWorkMetricsData
-  | CreatorWorksTableData
-  | GeoMapData
-  | GaugeCardData
-  | StatusLegendData
-  | WideTableData;
+  | CreatorWorksTableData;
 
 export interface EditorComponent {
   id: string;

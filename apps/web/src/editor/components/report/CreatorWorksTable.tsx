@@ -26,7 +26,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
   if (variant === 'compact') {
     // 纯文本紧凑行，无图片。
     return (
-      <div className="flex h-full w-full flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-1 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -35,10 +35,10 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
         )}
         <div className="flex flex-1 flex-col overflow-auto">
           <div className="flex border-b border-border-default pb-1 text-[10px] font-medium text-foreground-muted">
-            <span className="min-w-0 flex-1 truncate">{headers[1] ?? '作品'}</span>
-            <span className="w-14 flex-none text-right">{headers[2] ?? '播放'}</span>
-            <span className="w-14 flex-none text-right">{headers[3] ?? '点赞'}</span>
-            <span className="w-14 flex-none text-right">{headers[6] ?? '完播'}</span>
+            <span className="min-w-0 flex-1 truncate">{headers[1] ?? 'Title'}</span>
+            <span className="w-14 flex-none text-right">{headers[2] ?? 'Impr.'}</span>
+            <span className="w-14 flex-none text-right">{headers[3] ?? 'Likes'}</span>
+            <span className="w-14 flex-none text-right">{headers[6] ?? 'Eng.'}</span>
           </div>
           {items.map((it, i) => (
             <div key={i} className="flex items-center border-b border-border-subtle py-1 last:border-b-0">
@@ -56,7 +56,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
   if (variant === 'cards') {
     // 横向卡片网格：每张卡含封面 + 作品名 + 关键指标。
     return (
-      <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -69,11 +69,11 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
               <ImgOrPlaceholder url={it.cover} label={it.name} cls="h-14 w-full" />
               <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{it.name}</div>
               <div className="flex justify-between text-[10px] text-foreground-secondary">
-                <span>{headers[2] ?? '播放'} {it.play}</span>
-                <span>{headers[3] ?? '点赞'} {it.like}</span>
+                <span>{headers[2] ?? 'Impr.'} {it.play}</span>
+                <span>{headers[3] ?? 'Likes'} {it.like}</span>
               </div>
               <div className="flex justify-between text-[10px] text-foreground-muted">
-                <span>{it.comment} 评论</span>
+                <span>{it.comment} Comments</span>
                 <span>{it.completion}</span>
               </div>
             </div>
@@ -87,7 +87,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
     // 列表 + 每行展开受众画像（性别条 + Top3 城市 + 趋势 sparkline）。
     const numHeaders = headers.slice(2);
     return (
-      <div className="flex h-full w-full flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-1 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -98,7 +98,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
           <div className="flex items-center gap-2 border-b border-border-default pb-1.5">
             <span className="w-10 flex-none" />
             <span className="min-w-0 flex-1 text-[10px] font-medium uppercase tracking-wide text-foreground-muted">
-              {headers[1] ?? '作品'}
+              {headers[1] ?? 'Title'}
             </span>
             {numHeaders.map((h, i) => (
               <span key={i} className="w-14 flex-none text-right text-[10px] font-medium uppercase tracking-wide text-foreground-muted">
@@ -125,7 +125,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
                     {/* 性别 */}
                     {ins.genderSplit && ins.genderSplit.length > 0 && (
                       <div className="flex flex-col gap-1">
-                        <div className="text-[9px] text-foreground-muted">性别</div>
+                        <div className="text-[9px] text-foreground-muted">Gender</div>
                         <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-hover">
                           {ins.genderSplit.map((g, gi) => (
                             <div
@@ -147,14 +147,14 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
                     {/* Top3 城市 */}
                     {ins.topCities && ins.topCities.length > 0 && (
                       <div className="flex flex-col gap-0.5">
-                        <div className="text-[9px] text-foreground-muted">城市 Top</div>
+                        <div className="text-[9px] text-foreground-muted">Top Cities</div>
                         {ins.topCities.slice(0, 3).map((c, ci) => (
                           <div key={ci} className="flex items-center gap-1">
                             <span className="w-10 flex-none truncate text-[9px] text-foreground-secondary">{c.label}</span>
                             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
                               <div
                                 className="h-full rounded-full"
-                                style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color ?? '#FF5C00' }}
+                                style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color ?? 'var(--color-primary)' }}
                               />
                             </div>
                             <span className="w-6 flex-none text-right text-[9px] font-data text-foreground-primary">{c.value}%</span>
@@ -165,14 +165,14 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
                     {/* Sparkline 趋势 */}
                     {ins.trend && ins.trend.length > 1 && (
                       <div className="flex flex-col gap-0.5">
-                        <div className="text-[9px] text-foreground-muted">{ins.trendLabel ?? '趋势'}</div>
+                        <div className="text-[9px] text-foreground-muted">{ins.trendLabel ?? 'Trend'}</div>
                         <div className="h-8">
                           <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={ins.trend} margin={{ top: 1, right: 1, bottom: 1, left: 1 }}>
                               <Line
                                 type="monotone"
                                 dataKey="value"
-                                stroke="var(--color-primary, #FF5C00)"
+                                stroke="var(--color-primary)"
                                 strokeWidth={1.5}
                                 dot={false}
                               />
@@ -198,7 +198,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
   // list（默认）：表头 + 行，含封面缩略图，数字列右对齐。
   const numHeaders = headers.slice(2);
   return (
-    <div className="flex h-full w-full flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full flex-col gap-1 skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
           {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -209,7 +209,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
         <div className="flex items-center gap-2 border-b border-border-default pb-1.5">
           <span className="w-10 flex-none" />
           <span className="min-w-0 flex-1 text-[10px] font-medium uppercase tracking-wide text-foreground-muted">
-            {headers[1] ?? '作品'}
+            {headers[1] ?? 'Title'}
           </span>
           {numHeaders.map((h, i) => (
             <span key={i} className="w-14 flex-none text-right text-[10px] font-medium uppercase tracking-wide text-foreground-muted">

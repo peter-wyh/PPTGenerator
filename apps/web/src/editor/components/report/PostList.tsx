@@ -12,7 +12,7 @@ export function PostList({ data }: { data: PostListData }) {
 
   if (variant === 'compact') {
     return (
-      <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card skin-pad-sm">
         {items.map((it, i) => (
           <div key={i} className="flex items-center gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
             <span className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</span>
@@ -26,7 +26,7 @@ export function PostList({ data }: { data: PostListData }) {
 
   if (variant === 'row') {
     return (
-      <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+      <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card p-2">
         {items.map((it, i) => (
           <div key={i} className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface-hover">
             <ImgOrPlaceholder url={it.img} label={it.title} cls="h-10 w-10 flex-none" />
@@ -41,7 +41,7 @@ export function PostList({ data }: { data: PostListData }) {
 
   // cards
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto skin-card p-2">
       {items.map((it, i) => (
         <div key={i} className="flex flex-col gap-1 rounded-lg border border-border-subtle p-2">
           <ImgOrPlaceholder url={it.img} label={it.title} cls="h-16 w-full" />

@@ -47,7 +47,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
 
   if (variant === 'compact') {
     return (
-      <div className="flex h-full w-full flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-wrap items-center gap-x-6 gap-y-1 skin-card skin-pad-sm">
         {items.map((it, i) => (
           <div key={i} className="flex items-baseline gap-1.5">
             <span className="text-[11px] text-foreground-secondary">{it.label}</span>
@@ -131,7 +131,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
         {items.map((it, i) => (
           <div
             key={i}
-            className="flex flex-1 flex-col justify-center rounded-xl border border-border-subtle bg-surface-primary px-3.5 py-2.5"
+            className="flex flex-1 flex-col justify-center skin-card-flat px-3.5 py-2.5"
           >
             <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{it.label}</div>
             <div
@@ -157,7 +157,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
   if (variant === 'card') {
     return (
       <div
-        className="grid h-full w-full gap-3 overflow-auto p-1"
+        className="grid h-full w-full gap-3 overflow-auto"
         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
       >
         {items.map((it, i) => {

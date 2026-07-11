@@ -12,7 +12,7 @@ export function PlacementDisplay({ data }: { data: PlacementData }) {
   if (variant === 'single') {
     const it = items[0] ?? { name: '', img: '', metric: '' };
     return (
-      <div className="flex h-full w-full gap-3 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full gap-3 skin-card skin-pad-sm">
         <ImgOrPlaceholder url={it.img} label={it.name} cls="h-full w-1/2" />
         <div className="flex flex-1 flex-col justify-center">
           <div className="text-sm font-semibold text-foreground-primary">{it.name}</div>
@@ -23,7 +23,7 @@ export function PlacementDisplay({ data }: { data: PlacementData }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
       <div className="grid flex-1 grid-cols-3 gap-2 overflow-auto">
         {items.map((it, i) => (
           <div key={i} className="flex flex-col gap-1 rounded-lg border border-border-subtle p-2">

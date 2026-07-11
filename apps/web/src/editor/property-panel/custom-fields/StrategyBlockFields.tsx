@@ -17,6 +17,16 @@ export function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
 
   return (
     <FieldGroup title="策略块">
+      {/* 大标题（labeled 变体顶部显示）。 */}
+      <label className="block text-xs text-foreground-secondary">
+        <span className="mb-1 block">大标题</span>
+        <input
+          value={data.title ?? ''}
+          placeholder="大标题（labeled 变体显示）"
+          onChange={(e) => update('title', e.target.value)}
+          className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary outline-none focus:border-foreground-primary"
+        />
+      </label>
       {/* 全局高亮词：渲染时对各行命中词包强调 span；编辑器内未聚焦时即时预览。 */}
       <label className="block text-xs text-foreground-secondary">
         <span className="mb-1 block">高亮词（逗号分隔）</span>

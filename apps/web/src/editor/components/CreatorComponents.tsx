@@ -44,6 +44,9 @@ export function CreatorAvatarCard({ data }: { data: CreatorAvatarCardData }) {
   if (variant === 'compact') return <AvatarCompact data={data} />;
   if (variant === 'badge') return <AvatarBadge data={data} />;
   if (variant === 'banner') return <AvatarBanner data={data} />;
+  if (variant === 'glass') return <AvatarGlass data={data} />;
+  if (variant === 'hero') return <AvatarHero data={data} />;
+  if (variant === 'minimal') return <AvatarMinimal data={data} />;
   return <AvatarHorizontal data={data} />;
 }
 
@@ -79,18 +82,142 @@ function StatsLine({ data }: { data: CreatorAvatarCardData }) {
   return <div className="mt-1 text-[11px] text-foreground-secondary">{parts.join(' · ')}</div>;
 }
 
+/* ---- 平台多标识：把 platform + platforms 合并为去重列表 ---- */
+function resolvePlatforms(data: CreatorAvatarCardData): CreatorPlatform[] {
+  const extra: CreatorPlatform[] = [];
+  const raw: unknown = data.platforms;
+  if (Array.isArray(raw)) {
+    for (const p of raw) extra.push(p as CreatorPlatform);
+  } else if (typeof raw === 'string' && raw.trim()) {
+    // 文本输入兼容："tiktok, instagram" → ['tiktok','instagram']
+    for (const part of raw.split(',')) {
+      const p = part.trim().toLowerCase();
+      if (p) extra.push(p as CreatorPlatform);
+    }
+  }
+  const all = [...new Set([data.platform, ...extra])];
+  return all.filter(Boolean);
+}
+
+/** 平台短标签（用于 badge-style 横排）。 */
+function PlatformBadges({ data, className }: { data: CreatorAvatarCardData; className?: string }) {
+  const platforms = resolvePlatforms(data);
+  return (
+    <>
+      {platforms.map((p) => (
+        <span key={p} className={`flex-none rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary ${className ?? ''}`}>
+          {PLATFORM_LABEL[p] ?? p}
+        </span>
+      ))}
+    </>
+  );
+}
+
+/** 平台小圆点行（用于 vertical / banner 等居中布局）。 */
+function PlatformDots({ data }: { data: CreatorAvatarCardData }) {
+  const platforms = resolvePlatforms(data);
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1">
+      {platforms.map((p) => (
+        <span key={p} className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-foreground-secondary">
+          {PLATFORM_LABEL[p] ?? p}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** glass：毛玻璃风格 — 品牌主色渐变底 + 半透明卡片层 + 大头像 + 多平台标签。 */
+function AvatarGlass({ data }: { data: CreatorAvatarCardData }) {
+  return (
+    <div
+      className="flex h-full w-full items-center gap-3 rounded-2xl p-3"
+      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' }}
+    >
+      <Avatar data={data} size={72} />
+      <div className="min-w-0 flex-1 text-white">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-semibold">{data.name}</span>
+          <span className="flex-none rounded-full bg-white/20 px-1.5 py-0.5 text-[10px]">
+            {TIER_LABEL[data.tier] ?? data.tier}
+          </span>
+        </div>
+        <div className="mt-1 flex flex-wrap gap-1">
+          <PlatformBadges data={data} className="bg-white/20 !text-white" />
+        </div>
+        {data.intro && <div className="mt-1 line-clamp-2 text-xs text-white/80">{data.intro}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** hero：大卡片风格 — 顶部品牌色渐变 banner + 头像叠层 + 名字/平台/tier/统计。 */
+function AvatarHero({ data }: { data: CreatorAvatarCardData }) {
+  return (
+    <div className="flex h-full w-full flex-col overflow-hidden skin-card-lg">
+      <div
+        className="h-16 w-full"
+        style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' }}
+      />
+      <div className="-mt-10 flex flex-col items-center gap-1 px-4 pb-3 text-center">
+        <Avatar data={data} size={80} />
+        <div className="mt-1 flex items-center gap-2">
+          <span className="font-headings text-base font-bold text-foreground-primary">{data.name}</span>
+          <span
+            className="flex-none rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+          >
+            {TIER_LABEL[data.tier] ?? data.tier}
+          </span>
+        </div>
+        <PlatformDots data={data} />
+        <StatsLine data={data} />
+      </div>
+    </div>
+  );
+}
+
+/** minimal：极简风格 — 无边框无背景，品牌色细线分隔 + 头像 + 名字 + 平台点阵。 */
+function AvatarMinimal({ data }: { data: CreatorAvatarCardData }) {
+  const platforms = resolvePlatforms(data);
+  return (
+    <div className="flex h-full w-full items-center gap-3">
+      <div className="flex-none" style={{ borderTop: '2px solid var(--color-primary)' }}>
+        <Avatar data={data} size={56} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="font-headings text-base font-bold text-foreground-primary">{data.name}</div>
+        <div className="mt-0.5 text-[11px] font-medium" style={{ color: 'var(--color-primary)' }}>
+          {TIER_LABEL[data.tier] ?? data.tier}
+        </div>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {platforms.map((p) => (
+            <span key={p} className="rounded-full border border-border-subtle px-2 py-0.5 text-[10px] text-foreground-secondary">
+              {PLATFORM_LABEL[p] ?? p}
+            </span>
+          ))}
+        </div>
+        <StatsLine data={data} />
+      </div>
+    </div>
+  );
+}
+
+/** horizontal：横排 — 头像 + 名称 + 多平台标签。 */
 function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
   return (
-    <div className="flex h-full w-full items-center gap-3 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full items-center gap-3 skin-card skin-pad-sm">
       <Avatar data={data} size={72} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
-          <span className="flex-none rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
-            {PLATFORM_LABEL[data.platform] ?? data.platform}
+          <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+            {TIER_LABEL[data.tier] ?? data.tier}
           </span>
         </div>
-        <div className="mt-0.5 text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
+        <div className="mt-0.5 flex flex-wrap gap-1">
+          <PlatformBadges data={data} />
+        </div>
         {data.intro && <div className="mt-1 line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
         <StatsLine data={data} />
       </div>
@@ -100,15 +227,15 @@ function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
 
 function AvatarVertical({ data }: { data: CreatorAvatarCardData }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-primary p-3 text-center">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 skin-card skin-pad-sm text-center">
       <Avatar data={data} size={80} />
       <div className="flex items-center gap-2">
         <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
-        <span className="flex-none rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
-          {PLATFORM_LABEL[data.platform] ?? data.platform}
+        <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+          {TIER_LABEL[data.tier] ?? data.tier}
         </span>
       </div>
-      <div className="text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
+      <PlatformDots data={data} />
       {data.intro && <div className="line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
       <StatsLine data={data} />
     </div>
@@ -116,16 +243,17 @@ function AvatarVertical({ data }: { data: CreatorAvatarCardData }) {
 }
 
 function AvatarCompact({ data }: { data: CreatorAvatarCardData }) {
+  const platforms = resolvePlatforms(data);
   return (
-    <div className="flex h-full w-full items-center gap-2 rounded-xl border border-border-default bg-surface-primary px-3">
+    <div className="flex h-full w-full items-center gap-2 skin-card px-3">
       <Avatar data={data} size={40} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-semibold text-foreground-primary">{data.name}</span>
-          <span className="truncate text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</span>
+          <span className="truncate text-[11px] font-medium text-primary">{TIER_LABEL[data.tier] ?? data.tier}</span>
         </div>
         <div className="truncate text-[11px] text-foreground-secondary">
-          {PLATFORM_LABEL[data.platform] ?? data.platform}
+          {platforms.map((p) => PLATFORM_LABEL[p] ?? p).join(' · ')}
         </div>
       </div>
     </div>
@@ -134,16 +262,21 @@ function AvatarCompact({ data }: { data: CreatorAvatarCardData }) {
 
 /** badge：圆角胶囊式 — 头像(40px) + 名称 + 平台徽章横排，背景渐变 + 圆角胶囊边框。 */
 function AvatarBadge({ data }: { data: CreatorAvatarCardData }) {
+  const platforms = resolvePlatforms(data);
   return (
     <div
       className="flex h-full w-full items-center gap-2 rounded-full border border-border-default px-2"
-      style={{ background: 'linear-gradient(135deg, var(--color-primary, #FF5C00)14, transparent)' }}
+      style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent)' }}
     >
       <Avatar data={data} size={40} />
       <span className="truncate text-sm font-semibold text-foreground-primary">{data.name}</span>
-      <span className="flex-none rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-foreground-secondary">
-        {PLATFORM_LABEL[data.platform] ?? data.platform}
-      </span>
+      <div className="flex flex-none gap-1">
+        {platforms.map((p) => (
+          <span key={p} className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-foreground-secondary">
+            {PLATFORM_LABEL[p] ?? p}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -151,18 +284,18 @@ function AvatarBadge({ data }: { data: CreatorAvatarCardData }) {
 /** banner：横幅式 — 顶部全宽背景色条 + 头像(64px, 负 margin 叠在 banner 上) + 名称 + 平台 + tier + StatsLine。 */
 function AvatarBanner({ data }: { data: CreatorAvatarCardData }) {
   return (
-    <div className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary pb-3">
+    <div className="flex h-full w-full flex-col skin-card pb-3">
       {/* 顶部全宽背景色条 */}
-      <div className="h-6 w-full rounded-t-xl" style={{ background: 'var(--color-primary, #FF5C00)1A' }} />
+      <div className="h-6 w-full rounded-t-xl" style={{ background: 'color-mix(in srgb, var(--color-primary) 16%, transparent)' }} />
       <div className="-mt-8 flex flex-col items-center gap-1 px-3 text-center">
         <Avatar data={data} size={64} />
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
-          <span className="flex-none rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
-            {PLATFORM_LABEL[data.platform] ?? data.platform}
+          <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+            {TIER_LABEL[data.tier] ?? data.tier}
           </span>
         </div>
-        <div className="text-[11px] text-primary">{TIER_LABEL[data.tier] ?? data.tier}</div>
+        <PlatformDots data={data} />
         <StatsLine data={data} />
       </div>
     </div>
@@ -184,7 +317,7 @@ export function CreatorStatsStrip({ data }: { data: CreatorStatsStripData }) {
 
 function StatsCards({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   return (
-    <div className="flex h-full w-full items-stretch gap-2 rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="flex h-full w-full items-stretch gap-2 skin-card p-2">
       {stats.map((s, i) => (
         <div
           key={i}
@@ -203,7 +336,7 @@ function StatsCards({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 
 function StatsPlain({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   return (
-    <div className="flex h-full w-full items-center divide-x divide-border-subtle rounded-xl border border-border-default bg-surface-primary px-2">
+    <div className="flex h-full w-full items-center divide-x divide-border-subtle skin-card px-2">
       {stats.map((s, i) => (
         <div key={i} className="flex flex-1 flex-col justify-center px-3">
           <div className="text-[11px] text-foreground-secondary">{s.label}</div>
@@ -216,7 +349,7 @@ function StatsPlain({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 
 function StatsMetric({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   return (
-    <div className="flex h-full w-full items-stretch gap-3 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full items-stretch gap-3 skin-card skin-pad-sm">
       {stats.map((s, i) => (
         <div key={i} className="flex flex-1 flex-col justify-center" style={{ borderBottom: `2px solid ${s.color}` }}>
           <div className="font-data text-2xl font-bold" style={{ color: s.color }}>
@@ -238,7 +371,7 @@ function parsePercent(value: string): number {
 /** progress：每个指标用横向进度条展示 — label(上方) + value(右侧) + 进度条(底部)。 */
 function StatsProgress({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   return (
-    <div className="flex h-full w-full flex-col justify-center gap-3 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full flex-col justify-center gap-3 skin-card skin-pad-sm">
       {stats.map((s, i) => {
         const pct = Math.min(100, Math.max(0, parsePercent(s.value)));
         return (
@@ -262,7 +395,7 @@ function StatsProgress({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 /** ring：用 recharts 环形进度图（innerRadius 60% outerRadius 90%），每个指标一个 mini ring(48px) + label + value 横排。 */
 function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   return (
-    <div className="flex h-full w-full flex-wrap items-center gap-4 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full flex-wrap items-center gap-4 skin-card skin-pad-sm">
       {stats.map((s, i) => {
         const pct = Math.min(100, Math.max(0, parsePercent(s.value)));
         const ringData = [
@@ -340,7 +473,7 @@ function WorksCards({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="flex h-full w-full gap-2 overflow-auto skin-card p-2">
       {items.map((it, ri) => (
         <div key={ri} className="flex w-[200px] flex-none flex-col gap-1 rounded-lg border border-border-subtle p-2">
           <Cover url={it.cover} alt={it.title} cls="h-[72px] w-full" />
@@ -367,7 +500,7 @@ function WorksRow({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card p-2">
       {items.map((it, ri) => (
         <div key={ri} className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface-hover">
           <Cover url={it.cover} alt={it.title} cls="h-[44px] w-[44px] flex-none" />
@@ -394,7 +527,7 @@ function WorksCompact({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card skin-pad-sm">
       {items.map((it, ri) => (
         <div key={ri} className="flex items-center gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
           <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</div>
@@ -430,7 +563,7 @@ function MiniBar({ label, value, color }: { label: string; value: number; color?
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
         <div
           className="h-full rounded-full"
-          style={{ width: `${Math.min(100, value)}%`, backgroundColor: color ?? '#FF5C00' }}
+          style={{ width: `${Math.min(100, value)}%`, backgroundColor: color ?? 'var(--color-primary)' }}
         />
       </div>
       <span className="w-7 flex-none text-right text-[10px] font-data text-foreground-primary">{value}%</span>
@@ -450,7 +583,7 @@ function MiniTrend({ data, label }: { data: { label: string; value: number }[]; 
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#FF5C00"
+              stroke="var(--color-primary)"
               strokeWidth={1.5}
               dot={false}
             />
@@ -501,7 +634,7 @@ function WorksDetailed({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full flex-col gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="flex h-full w-full flex-col gap-2 overflow-auto skin-card p-2">
       {items.map((it, ri) => {
         const ins = it.insight;
         const hasInsight = ins && (ins.topCities?.length || ins.genderSplit?.length || ins.ageRange?.length || ins.trend?.length);
@@ -579,7 +712,7 @@ function CreatorChartShell({
 }) {
   return (
     <div
-      className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary p-3"
+      className="flex h-full w-full flex-col skin-card skin-pad-sm"
       style={{ boxShadow: 'var(--shadow-card)' }}
     >
       {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -774,7 +907,7 @@ type CreatorListRow = { avatar: string; name: string; platform: string; follower
 /** 表格变体：标准表格，列 = [头像+名称, 平台, 粉丝数, 互动率, 分类]。 */
 function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers: string[] }) {
   return (
-    <div className="flex h-full w-full flex-col overflow-auto rounded-xl border border-border-default bg-surface-primary">
+    <div className="flex h-full w-full flex-col overflow-auto skin-card">
       {/* 表头 */}
       <div className="flex items-center border-b border-border-default bg-surface-subtle px-3 py-2 text-[11px] font-medium text-foreground-secondary">
         <div className="min-w-0 flex-1">{headers[1] ?? '达人'}</div>
@@ -800,7 +933,7 @@ function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers
 /** 卡片变体：每人一张卡片，网格排列。 */
 function CreatorListCards({ items }: { items: CreatorListRow[] }) {
   return (
-    <div className="flex h-full w-full flex-wrap gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="flex h-full w-full flex-wrap gap-2 overflow-auto skin-card p-2">
       {items.map((it, i) => (
         <div key={i} className="flex w-[140px] flex-none flex-col items-center gap-1 rounded-lg border border-border-subtle p-2 text-center">
           <ListAvatar url={it.avatar} name={it.name} size={48} />
@@ -818,7 +951,7 @@ function CreatorListCards({ items }: { items: CreatorListRow[] }) {
 /** 紧凑变体：纯文字横排列表。 */
 function CreatorListCompact({ items }: { items: CreatorListRow[]; headers: string[] }) {
   return (
-    <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-2">
+    <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card p-2">
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-2 rounded px-1 py-1 hover:bg-surface-hover">
           <span className="w-5 flex-none text-center text-[10px] text-foreground-muted">{i + 1}</span>

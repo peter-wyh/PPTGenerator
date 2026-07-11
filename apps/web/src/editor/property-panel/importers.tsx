@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type {
-  Campaign,
   CreatorAvatarCardData,
   EditorComponent,
   WorkScreenshotItem,
 } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
-import { listCampaigns } from '@/api/campaigns';
-import { listCreatorPerformance, type CreatorWithWorks } from '@/api/creatorPerformance';
+import { campaignCreatorWorks, type CreatorWithWorks } from '@/api/creatorPerformance';
 import { parseCreatorLink } from '../creatorLink';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
@@ -220,71 +218,52 @@ export function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
 }
 
 /**
- * work-screenshot：select creators → their works are auto-included → import.
- * Image count reflects selected creator count in real-time.
+ * work-screenshot：从全局「数据配置」已绑定的 Campaign + 已选达人中选作品截图。
+ * 只能选全局配置范围内的 campaign 和达人，不能超出。
  */
 export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }) {
   const campaign = useEditorStore((s) => s.reportData.campaign);
+  const allCreators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState('');
-  const [creators, setCreators] = useState<CreatorWithWorks[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedCreatorIds, setSelectedCreatorIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [creatorsWithWorks, setCreatorsWithWorks] = useState<{ creatorId: string; creatorName: string; platform: string; tier: string; posts: { id: string; title: string; cover: string; platform: string }[] }[]>([]);
 
-  const activeCampaignId = campaign?.id ?? selectedCampaign;
+  const campaignId = campaign?.id ?? '';
 
-  // Load campaign list when no campaign is bound.
+  // Load works for globally-configured creators only (filtered to this campaign).
   useEffect(() => {
-    if (campaign) return;
-    let alive = true;
-    listCampaigns()
-      .then((list) => alive && setCampaigns(list))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [campaign]);
-
-  // Load creator works when campaign changes.
-  useEffect(() => {
-    if (!activeCampaignId) {
-      setCreators([]);
+    if (!campaignId || allCreators.length === 0) {
+      setCreatorsWithWorks([]);
       return;
     }
     let alive = true;
     setLoading(true);
-    listCreatorPerformance(activeCampaignId)
-      .then((perfs) => {
-        if (!alive) return;
-        const mapped: CreatorWithWorks[] = perfs.map((p) => ({
-          creatorId: p.creatorId,
-          creatorName: p.creatorName,
-          platform: p.platform,
-          tier: p.tier,
-          posts: p.posts.map((post) => ({
-            postId: post.id,
-            creatorId: p.creatorId,
-            creatorName: p.creatorName,
-            title: post.title,
-            cover: post.cover ?? '',
-            platform: post.platform,
-            publishedAt: post.publishedAt,
-          })),
-        }));
-        setCreators(mapped);
-        // Default: select all creators
-        setSelectedCreatorIds(new Set(mapped.map((c) => c.creatorId)));
-      })
-      .catch(() => {})
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [activeCampaignId]);
+    try {
+      const allWorks = campaignCreatorWorks(campaignId);
+      // Only include creators that are in the global data config
+      const allowedIds = new Set(allCreators.map((c) => c.id));
+      const filtered = allWorks.filter((cw) => allowedIds.has(cw.creatorId));
+      if (!alive) return;
+      setCreatorsWithWorks(filtered.map((cw) => ({
+        creatorId: cw.creatorId,
+        creatorName: cw.creatorName,
+        platform: cw.platform,
+        tier: cw.tier,
+        posts: cw.posts.map((p) => ({ id: p.postId, title: p.title, cover: p.cover, platform: p.platform })),
+      })));
+      // Default: select all
+      setSelectedCreatorIds(new Set(filtered.map((c) => c.creatorId)));
+    } catch {
+      // ignore
+    } finally {
+      if (alive) setLoading(false);
+    }
+    return () => { alive = false; };
+  }, [campaignId, allCreators]);
 
-  const selectedCreators = creators.filter((c) => selectedCreatorIds.has(c.creatorId));
+  const selectedCreators = creatorsWithWorks.filter((c) => selectedCreatorIds.has(c.creatorId));
   const selectedPostCount = selectedCreators.reduce((sum, c) => sum + c.posts.length, 0);
 
   function toggleCreator(creatorId: string) {
@@ -292,14 +271,6 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
     if (next.has(creatorId)) next.delete(creatorId);
     else next.add(creatorId);
     setSelectedCreatorIds(next);
-  }
-
-  function selectAll() {
-    setSelectedCreatorIds(new Set(creators.map((c) => c.creatorId)));
-  }
-
-  function selectNone() {
-    setSelectedCreatorIds(new Set());
   }
 
   function importSelected() {
@@ -314,67 +285,67 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
     commit();
   }
 
-  const noCampaign = !campaign && !selectedCampaign;
+  if (!campaignId) {
+    return (
+      <FieldGroup title="Import from Campaign">
+        <p className="text-xs text-foreground-muted">Bind a Campaign in global data settings first.</p>
+      </FieldGroup>
+    );
+  }
+
+  if (allCreators.length === 0) {
+    return (
+      <FieldGroup title="Import from Campaign">
+        <p className="text-xs text-foreground-muted">Select creators in global data settings first.</p>
+      </FieldGroup>
+    );
+  }
 
   return (
     <FieldGroup title="Import from Campaign">
-      {noCampaign ? (
-        <div className="space-y-1">
-          <div className="text-[11px] text-foreground-muted">No campaign linked, select one:</div>
-          <select
-            value={selectedCampaign}
-            onChange={(e) => setSelectedCampaign(e.target.value)}
-            className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
-          >
-            <option value="">Select campaign...</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : (
+      {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
+      {creatorsWithWorks.length > 0 && (
         <>
-          {/* Creator list */}
-          {creators.length > 0 && (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-foreground-secondary">
-                  Creators ({selectedCreators.length}/{creators.length})
-                </span>
-                <div className="flex gap-2">
-                  <button onClick={selectAll} className="text-[11px] text-accent-primary hover:underline">
-                    All
-                  </button>
-                  <button onClick={selectNone} className="text-[11px] text-foreground-muted hover:underline">
-                    None
-                  </button>
-                </div>
-              </div>
-              {creators.map((c) => (
-                <label
-                  key={c.creatorId}
-                  className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface-hover"
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-foreground-secondary">
+                Creators ({selectedCreators.length}/{creatorsWithWorks.length})
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedCreatorIds(new Set(creatorsWithWorks.map((c) => c.creatorId)))}
+                  className="text-[11px] text-accent-primary hover:underline"
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedCreatorIds.has(c.creatorId)}
-                    onChange={() => toggleCreator(c.creatorId)}
-                    className="h-3 w-3 accent-accent-primary"
-                  />
-                  <span className="text-xs text-foreground-primary">
-                    {c.creatorName}
-                    <span className="ml-1 text-foreground-muted">
-                      {c.platform} · {c.tier} · {c.posts.length} posts
-                    </span>
-                  </span>
-                </label>
-              ))}
+                  All
+                </button>
+                <button
+                  onClick={() => setSelectedCreatorIds(new Set())}
+                  className="text-[11px] text-foreground-muted hover:underline"
+                >
+                  None
+                </button>
+              </div>
             </div>
-          )}
-
-          {/* Import button — reflects selected creator / post count */}
+            {creatorsWithWorks.map((c) => (
+              <label
+                key={c.creatorId}
+                className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface-hover"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCreatorIds.has(c.creatorId)}
+                  onChange={() => toggleCreator(c.creatorId)}
+                  className="h-3 w-3 accent-accent-primary"
+                />
+                <span className="text-xs text-foreground-primary">
+                  {c.creatorName}
+                  <span className="ml-1 text-foreground-muted">
+                    {c.platform} · {c.tier} · {c.posts.length} posts
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
           <button
             onClick={importSelected}
             disabled={loading || selectedPostCount === 0}
@@ -385,6 +356,9 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
               : `Import ${selectedPostCount} screenshot${selectedPostCount === 1 ? '' : 's'} from ${selectedCreators.length} creator${selectedCreators.length === 1 ? '' : 's'}`}
           </button>
         </>
+      )}
+      {creatorsWithWorks.length === 0 && !loading && (
+        <p className="text-xs text-foreground-muted">No works found for selected creators in this campaign.</p>
       )}
     </FieldGroup>
   );
@@ -577,53 +551,82 @@ export function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
 }
 
 /**
- * creator-works-list：选一个达人 → 用其 name/platform/followers 等填充作品列表行。
- * 因为 reportData 不含作品列表，这里生成达人基本信息行。
+ * creator-works-list：选一个达人 → 从 campaign performance 导入该达人的作品列表。
+ * 达人选择范围限定在全局「数据配置」中的已选达人，不能超出。
  */
 export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) {
-  const creators = allReportCreators(useEditorStore((s) => s.reportData));
+  const reportData = useEditorStore((s) => s.reportData);
+  const allCreators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
-  const [selected, setSelected] = useState('');
+  const [selectedCreator, setSelectedCreator] = useState('');
+  const [creatorsWithWorks, setCreatorsWithWorks] = useState<CreatorWithWorks[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  if (creators.length === 0) return null;
+  const campaignId = reportData?.campaign?.id ?? '';
+
+  useEffect(() => {
+    if (!campaignId) { setCreatorsWithWorks([]); return; }
+    setLoading(true);
+    const allWorks = campaignCreatorWorks(campaignId);
+    // Only include creators that are in the global data config
+    const allowedIds = new Set(allCreators.map((c) => c.id));
+    setCreatorsWithWorks(allWorks.filter((cw) => allowedIds.has(cw.creatorId)));
+    setLoading(false);
+  }, [campaignId, allCreators]);
+
+  if (!campaignId) {
+    return (
+      <FieldGroup title="Import from Campaign">
+        <p className="text-xs text-foreground-muted">Bind a Campaign in global data settings first.</p>
+      </FieldGroup>
+    );
+  }
 
   function apply() {
-    const cr = creators.find((c) => c.id === selected);
-    if (!cr) return;
-    const data = comp.data as { headers?: string[]; rows?: string[][] };
-    const headers = data.headers?.length
-      ? data.headers
-      : ['Cover', 'Title', 'Shares', 'Likes', 'Comments'];
-    // 在已有 rows 基础上追加一行达人信息
-    const newRow = ['', `${cr.name} · 精选作品`, cr.followers ?? '--', cr.engagement ?? '--', '--'];
-    const rows = [...(data.rows ?? []), newRow];
-    updateComponentData(comp.id, { headers, rows });
+    const cw = creatorsWithWorks.find((c) => c.creatorId === selectedCreator);
+    if (!cw || cw.posts.length === 0) return;
+    const headers = ['Cover', 'Title', 'Impressions', 'Likes', 'Comments', 'Shares', 'Eng. Rate'];
+    const rows = cw.posts.map((post) => [
+      post.cover,
+      post.title,
+      post.impressions,
+      post.likes,
+      post.comments,
+      post.shares,
+      post.engagementRate,
+    ]);
+    updateComponentData(comp.id, { headers, rows, title: `${cw.creatorName} Works` });
     commit();
-    setSelected('');
+    setSelectedCreator('');
   }
 
   return (
-    <FieldGroup title="从项目数据导入">
-      <select
-        value={selected}
-        onChange={(e) => setSelected(e.target.value)}
-        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
-      >
-        <option value="">选择达人追加一行…</option>
-        {creators.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}（{c.platform}）
-          </option>
-        ))}
-      </select>
-      {selected && (
-        <button
-          onClick={apply}
-          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
-        >
-          ⚡ 追加达人信息行
-        </button>
+    <FieldGroup title="Import from Campaign">
+      {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
+      {creatorsWithWorks.length > 0 && (
+        <>
+          <select
+            value={selectedCreator}
+            onChange={(e) => setSelectedCreator(e.target.value)}
+            className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+          >
+            <option value="">Select creator…</option>
+            {creatorsWithWorks.map((c) => (
+              <option key={c.creatorId} value={c.creatorId}>
+                {c.creatorName} ({c.posts.length} posts)
+              </option>
+            ))}
+          </select>
+          {selectedCreator && (
+            <button
+              onClick={apply}
+              className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+            >
+              Import {creatorsWithWorks.find((c) => c.creatorId === selectedCreator)?.posts.length ?? 0} posts
+            </button>
+          )}
+        </>
       )}
     </FieldGroup>
   );

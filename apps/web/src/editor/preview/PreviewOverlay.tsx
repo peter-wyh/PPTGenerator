@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useEditorStore } from '../store';
 import { PageView, fitScale } from './PageView';
+import { themeToCssVars } from '../theme';
+import { DEFAULT_THEME } from '@mediakit/shared';
 
 /**
  * 全屏只读预览 overlay（M6）。
@@ -16,6 +18,9 @@ export function PreviewOverlay() {
   const exitPreview = useEditorStore((s) => s.exitPreview);
   const previewPrev = useEditorStore((s) => s.previewPrev);
   const previewNext = useEditorStore((s) => s.previewNext);
+
+  const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
+  const themeStyle = useMemo(() => themeToCssVars(theme), [theme]);
 
   // 键盘：Esc 关闭 / ← 上一页 / → 下一页（仅 open 时）
   useEffect(() => {
@@ -59,7 +64,7 @@ export function PreviewOverlay() {
       {/* 内容区 */}
       <div className="flex flex-1 items-center justify-center overflow-hidden px-4">
         {page ? (
-          <div className="rounded-lg bg-white shadow-2xl" style={{ width: canvasWidth * scale, height: canvasHeight * scale }}>
+          <div className="rounded-lg bg-white shadow-2xl" style={{ width: canvasWidth * scale, height: canvasHeight * scale, ...themeStyle }}>
             <PageView page={page} canvasWidth={canvasWidth} canvasHeight={canvasHeight} scale={scale} />
           </div>
         ) : (

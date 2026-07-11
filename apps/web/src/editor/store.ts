@@ -44,6 +44,7 @@ export type ThemePatch = {
   background?: Partial<Omit<NonNullable<ProjectTheme['background']>, 'type'>> & {
     type?: NonNullable<ProjectTheme['background']>['type'];
   };
+  skinPreset?: NonNullable<ProjectTheme['skinPreset']>;
   preset?: string;
 };
 
@@ -158,12 +159,12 @@ export interface EditorState {
   // ---- pages ----
   setPage: (id: string) => void;
   addPage: () => void;
-  addPageWithComponents: (name: string, components: EditorComponent[], opts?: { titleComponentIndex?: number }) => void;
-  addPagesBatch: (pages: { name: string; components: EditorComponent[]; titleComponentIndex?: number }[]) => void;
+  addPageWithComponents: (name: string, components: EditorComponent[], opts?: { titleComponentIndex?: number; pageType?: PageType }) => void;
+  addPagesBatch: (pages: { name: string; components: EditorComponent[]; titleComponentIndex?: number; pageType?: PageType }[]) => void;
   copyPage: (id: string) => void;
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
-  updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage'>>) => void;
+  updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage' | 'pageType' | 'titleComponentId' | 'titleOverridden' | 'campaignId' | 'creatorId'>>) => void;
   /** 页面属性的实时预览更新（不落 history）：用于色板拖动/文本输入过程中。
    *  仅改 pages + 标脏，让画布即时反馈；调用方需在交互结束时（onBlur/onChange 提交）
    *  再调 updatePage() 推一次 history，否则无法撤销。 */
@@ -465,6 +466,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
             ...patch.chart,
           } as NonNullable<ProjectTheme['chart']>,
           shadow: patch.shadow ?? current.shadow,
+          skinPreset: 'skinPreset' in patch ? patch.skinPreset : current.skinPreset,
           branding:
             patch.branding || current.branding
               ? { ...(current.branding ?? DEFAULT_THEME.branding), ...patch.branding }
@@ -884,6 +886,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
           page.pageType = 'media-report';
           page.titleComponentId = reid[idx].id;
           page.titleOverridden = false;
+        } else if (opts?.pageType) {
+          page.pageType = opts.pageType;
+          // campaign-report / creator-collab 自动绑定全局 Campaign
+          if ((opts.pageType === 'campaign-report' || opts.pageType === 'creator-collab') && !page.campaignId) {
+            page.campaignId = s.reportData?.campaign?.id ?? '';
+          }
         }
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
       });
@@ -902,6 +910,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
             page.pageType = 'media-report';
             page.titleComponentId = reid[idx].id;
             page.titleOverridden = false;
+          } else if (p.pageType) {
+            page.pageType = p.pageType;
+            if ((p.pageType === 'campaign-report' || p.pageType === 'creator-collab') && !page.campaignId) {
+              page.campaignId = s.reportData?.campaign?.id ?? '';
+            }
           }
           return page;
         });
@@ -988,38 +1001,62 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }),
 
     setPageType: (pageId, pageType) => {
-      mutateAndCommit((s) => ({
-        pages: s.pages.map((p) => {
-          if (p.id !== pageId) return p;
-          if (pageType !== 'media-report') {
-            return { ...p, pageType: undefined, titleComponentId: undefined, titleOverridden: undefined };
-          }
-          const title = buildReportTitle(s.projectMeta ?? {});
-          const titleId = p.titleComponentId;
-          const hasTitleComp = !!titleId && !!p.components.find((c) => c.id === titleId && c.type === 'text');
-          if (!hasTitleComp) {
-            const created = makeTitleComponent(title);
-            return {
-              ...p,
-              pageType: 'media-report',
-              titleComponentId: created.id,
-              titleOverridden: false,
-              components: [created, ...p.components],
-              name: title,
-            };
-          }
+      mutateAndCommit((s) => {
+        // 非 media-report 类型不自动创建/维护标题组件。
+        if (pageType === 'media-report') {
           return {
-            ...p,
-            pageType: 'media-report',
-            titleComponentId: titleId,
-            titleOverridden: false,
-            name: title,
-            components: p.components.map((c) =>
-              c.id === titleId ? { ...c, data: { ...(c.data as object), content: title } as unknown as ComponentData } : c,
+            pages: s.pages.map((p) => {
+              if (p.id !== pageId) return p;
+              const title = buildReportTitle(s.projectMeta ?? {});
+              const titleId = p.titleComponentId;
+              const hasTitleComp = !!titleId && !!p.components.find((c) => c.id === titleId && c.type === 'text');
+              if (!hasTitleComp) {
+                const created = makeTitleComponent(title);
+                return {
+                  ...p,
+                  pageType: 'media-report',
+                  titleComponentId: created.id,
+                  titleOverridden: false,
+                  components: [created, ...p.components],
+                  name: title,
+                };
+              }
+              return {
+                ...p,
+                pageType: 'media-report',
+                titleComponentId: titleId,
+                titleOverridden: false,
+                name: title,
+                components: p.components.map((c) =>
+                  c.id === titleId ? { ...c, data: { ...(c.data as object), content: title } as unknown as ComponentData } : c,
+                ),
+              };
+            }),
+          };
+        }
+        // 新类型（campaign-report / creator-case / creator-collab）：设置类型，不清已有标题。
+        // campaign-report 默认绑定全局 Campaign；creator-collab 同理。
+        if (!pageType) {
+          return {
+            pages: s.pages.map((p) =>
+              p.id === pageId
+                ? { ...p, pageType: undefined, titleComponentId: undefined, titleOverridden: undefined }
+                : p,
             ),
           };
-        }),
-      }));
+        }
+        const patchCampaign = pageType === 'campaign-report' || pageType === 'creator-collab';
+        return {
+          pages: s.pages.map((p) => {
+            if (p.id !== pageId) return p;
+            const next: Page = { ...p, pageType };
+            if (patchCampaign && !p.campaignId) {
+              next.campaignId = s.reportData?.campaign?.id ?? '';
+            }
+            return next;
+          }),
+        };
+      });
     },
 
     restoreReportTitle: (pageId) => {

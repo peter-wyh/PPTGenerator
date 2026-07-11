@@ -74,7 +74,7 @@ export function ImageComponent({ data }: { data: ImageData }) {
 const INDICATOR_THEME: Record<IndicatorCardData['colorTheme'], { bg: string; fg: string }> = {
   blue: { bg: '#EFF6FF', fg: '#3B82F6' },
   green: { bg: '#ECFDF5', fg: '#22C55E' },
-  orange: { bg: '#FFF7F0', fg: '#FF5C00' },
+  orange: { bg: 'color-mix(in srgb, var(--color-primary) 8%, white)', fg: 'var(--color-primary)' },
   purple: { bg: '#F5F3FF', fg: '#8B5CF6' },
   red: { bg: '#FEF2F2', fg: '#EF4444' },
 };
@@ -179,7 +179,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
   if (variant === 'duo') {
     // 双值：主数值 + 副数值（trend 文案充当副值），左图标 + 分割线。
     return (
-      <div className="flex h-full w-full items-center gap-3 rounded-xl border border-border-default bg-surface-primary px-4">
+      <div className="flex h-full w-full items-center gap-3 skin-card px-4">
         <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg" style={{ backgroundColor: `${t.fg}1A`, color: t.fg }}>
           <IconKit name={iconKey} weight={iconWeight} size={22} color={t.fg} />
         </div>
@@ -361,7 +361,7 @@ export function ShapeComponent({ data }: { data: ShapeData }) {
 /* ------------------------------- title block ----------------------------- */
 export function TitleBlock({ data }: { data: TitleBlockData }) {
   const { variant = 'plain', text, subtitle, index, divider } = data;
-  const color = data.color ?? '#FF5C00';
+  const color = data.color ?? 'var(--color-primary)';
 
   // 内层：按变体渲染。divider 由外层统一控制（统一加底部分割线）。
   let inner: React.ReactNode;
@@ -408,7 +408,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
 
     case 'card':
       inner = (
-        <div className="w-full rounded-xl border border-border-default bg-surface-primary px-5 py-4">
+        <div className="w-full skin-card px-5 py-4">
           <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
           {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
         </div>

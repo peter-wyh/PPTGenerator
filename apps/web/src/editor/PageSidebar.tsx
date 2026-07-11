@@ -5,6 +5,14 @@ import { TemplateOverlay } from './components/TemplateOverlay';
 import { ScenarioOverlay } from './components/ScenarioOverlay';
 import type { Template } from './templates';
 
+/** 页面类型 → 侧栏图标映射（无类型不显示）。 */
+const PAGE_TYPE_ICONS: Record<string, string> = {
+  'media-report': '📊',
+  'campaign-report': '📈',
+  'creator-case': '🌟',
+  'creator-collab': '🤝',
+};
+
 /** 页面栏：缩略图卡片 + 切换/改名/复制/删除 + 拖拽排序 + 模板新建。 */
 export function PageSidebar() {
   const pages = useEditorStore((s) => s.pages);
@@ -32,7 +40,10 @@ export function PageSidebar() {
         .addPageWithComponents(
           tpl.name,
           tpl.components(),
-          tpl.pageTitleIndex != null ? { titleComponentIndex: tpl.pageTitleIndex } : undefined,
+          {
+            ...(tpl.pageTitleIndex != null ? { titleComponentIndex: tpl.pageTitleIndex } : {}),
+            ...(tpl.pageType ? { pageType: tpl.pageType } : {}),
+          },
         );
     }
     setShowTemplates(false);
@@ -95,12 +106,12 @@ export function PageSidebar() {
                   }}
                   className="truncate text-xs font-medium text-foreground-primary"
                 >
-                  {i + 1}. {p.name}
+                  {i + 1}. {PAGE_TYPE_ICONS[p.pageType ?? ''] ?? ''} {p.name}
                 </span>
               )}
               <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
                 <button
-                  title={p.pageType === 'media-report' ? '取消投放报告标题' : '设为投放报告标题'}
+                  title="切换页面类型"
                   onClick={(e) => {
                     e.stopPropagation();
                     useEditorStore

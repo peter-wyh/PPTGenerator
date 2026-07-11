@@ -38,10 +38,6 @@ const TYPES: ComponentType[] = [
   'campaign-analysis',
   'creator-work-metrics',
   'creator-works-table',
-  'geo-map',
-  'gauge-card',
-  'status-legend',
-  'wide-table',
 ];
 
 describe('REGISTRY', () => {

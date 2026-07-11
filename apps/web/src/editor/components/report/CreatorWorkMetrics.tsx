@@ -18,7 +18,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
 
   if (variant === 'strip') {
     return (
-      <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -50,7 +50,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
 
   if (variant === 'card') {
     return (
-      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -90,7 +90,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
   if (variant === 'detailed') {
     // 详细：每个指标卡片带彩色左边框强调。
     return (
-      <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -121,7 +121,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     // 受众画像：顶部作品信息 + 性别水平堆叠条 + 年龄段迷你条。
     const ins = data.audience;
     return (
-      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -183,7 +183,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     const ins = data.audience;
     const cities = ins?.topCities ?? [];
     return (
-      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -220,7 +220,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     const trend = ins?.trend ?? [];
     const trendLabel = ins?.trendLabel ?? '数据趋势';
     return (
-      <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -243,7 +243,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="var(--color-primary, #FF5C00)"
+                    stroke="var(--color-primary)"
                     strokeWidth={2}
                     dot={{ r: 2.5 }}
                     activeDot={{ r: 4 }}
@@ -263,7 +263,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
 
   // grid（默认）：3 列指标网格，label 小号灰 / value 大号粗（按 color 染色）/ sub 小号绿红。
   return (
-    <div className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
           {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}

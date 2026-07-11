@@ -13,6 +13,7 @@ function applyScenario(scenario: ScenarioTemplate) {
       name: sp.name,
       components: tpl?.components() ?? [],
       ...(tpl?.pageTitleIndex != null ? { titleComponentIndex: tpl.pageTitleIndex } : {}),
+      ...(tpl?.pageType ? { pageType: tpl.pageType } : {}),
     };
   });
   useEditorStore.getState().addPagesBatch(pages);

@@ -36,10 +36,6 @@ export const LABELS: Record<string, string> = {
   'campaign-analysis': '分析图表',
   'creator-work-metrics': '作品指标',
   'creator-works-table': '作品列表',
-  'geo-map': '地理地图',
-  'gauge-card': '仪表盘',
-  'status-legend': '状态图例',
-  'wide-table': '宽表',
 };
 
 export const GRADIENT_ANGLE_PRESETS: { angle: number; label: string }[] = [

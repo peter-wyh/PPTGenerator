@@ -53,6 +53,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
       density: preset.theme.density,
       radius: preset.theme.radius,
       layout: { ...preset.theme.layout },
+      skinPreset: preset.theme.skinPreset,
       preset: preset.key,
     };
     setTheme(patch);

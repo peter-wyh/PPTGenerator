@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Page, PageGradient, GradientStop } from '@mediakit/shared';
-import { useEditorStore } from '../store';
+import type { Page, PageGradient, GradientStop, PageType } from '@mediakit/shared';
+import { useEditorStore, allReportCreators } from '../store';
 import { backgroundType, buildBackgroundTypePatch, type BackgroundType } from '../background';
 import { ImageInput } from '@/components/ImageInput';
 import { GRADIENT_ANGLE_PRESETS } from './constants';
@@ -9,6 +9,7 @@ import { FieldGroup } from './helpers';
 export function PageProperties() {
   const page = useEditorStore((s) => s.currentPage());
   const updatePage = useEditorStore((s) => s.updatePage);
+  const setPageType = useEditorStore((s) => s.setPageType);
   const patchPageLive = useEditorStore((s) => s.patchPageLive);
 
   // 本地 state 缓冲：色板拖动/文本输入时实时更新视觉，但只在 onBlur 时落 history。
@@ -48,7 +49,7 @@ export function PageProperties() {
   };
   const commitName = () => updatePage(page.id, { name: nameDraft });
 
-  const set = (patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage'>>) =>
+  const set = (patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage' | 'pageType' | 'titleComponentId' | 'titleOverridden' | 'campaignId' | 'creatorId'>>) =>
     updatePage(page.id, patch);
 
   // 类型派生自数据；imagePending 覆盖「图片待选 URL」瞬态。
@@ -78,6 +79,9 @@ export function PageProperties() {
           className="w-full rounded border border-border-default px-2 py-1 text-sm text-foreground-primary"
         />
       </FieldGroup>
+
+      {/* 页面类型 + 业务上下文 */}
+      <PageTypeSection page={page} setPageType={setPageType} set={set} />
 
       <FieldGroup title="背景">
         <div className="flex flex-wrap gap-1">
@@ -277,4 +281,134 @@ export function GradientFields({ page }: { page: Page }) {
 }
 
 /* --------------------------- 通用样式变体 ---------------------------- */
+
+/* ------------------------- 页面类型 + 业务上下文 ------------------------ */
+
+const PAGE_TYPE_OPTIONS: { value: PageType | ''; label: string; icon: string; desc: string }[] = [
+  { value: '', label: '普通页面', icon: '📄', desc: '无业务绑定' },
+  { value: 'media-report', label: '投放报告', icon: '📊', desc: '自动维护标题' },
+  { value: 'campaign-report', label: 'Campaign 报告', icon: '📈', desc: '需选择 Campaign' },
+  { value: 'creator-case', label: '达人案例', icon: '🌟', desc: '需选择达人' },
+  { value: 'creator-collab', label: '达人合作详情', icon: '🤝', desc: '绑定 Campaign 下达人' },
+];
+
+/** 页面类型选择器 + 按类型显示的业务上下文选择器（Campaign / 达人）。 */
+function PageTypeSection({
+  page,
+  setPageType,
+  set,
+}: {
+  page: Page;
+  setPageType: (pageId: string, pageType: PageType | undefined) => void;
+  set: (patch: Partial<Pick<Page, 'campaignId' | 'creatorId' | 'pageType'>>) => void;
+}) {
+  const reportData = useEditorStore((s) => s.reportData);
+  const allCreators = allReportCreators(reportData);
+
+  // Campaign 列表：全局数据配置中绑定的 campaign
+  const boundCampaign = reportData?.campaign;
+  const campaignOptions = boundCampaign ? [{ id: boundCampaign.id, name: boundCampaign.name }] : [];
+
+  // 达人列表：全局数据配置中已选达人
+  const creatorOptions = allCreators;
+
+  // Campaign 下达人列表（creator-collab 用）
+  const campaignCreators = reportData?.campaignCreators ?? [];
+
+  const currentType = page.pageType ?? '';
+
+  return (
+    <FieldGroup title="页面类型">
+      <select
+        value={currentType}
+        onChange={(e) => {
+          const v = e.target.value as PageType | '';
+          setPageType(page.id, v || undefined);
+        }}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary"
+      >
+        {PAGE_TYPE_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.icon} {opt.label}
+          </option>
+        ))}
+      </select>
+
+      {currentType && (
+        <p className="text-[10px] text-foreground-muted">
+          {PAGE_TYPE_OPTIONS.find((o) => o.value === currentType)?.desc}
+        </p>
+      )}
+
+      {/* Campaign 选择器（campaign-report / creator-collab） */}
+      {(currentType === 'campaign-report' || currentType === 'creator-collab') && (
+        <div className="mt-2 space-y-1">
+          <label className="text-xs text-foreground-secondary">绑定 Campaign</label>
+          {campaignOptions.length === 0 ? (
+            <p className="text-[10px] text-foreground-muted">请先在「数据配置」中绑定 Campaign</p>
+          ) : (
+            <select
+              value={page.campaignId ?? ''}
+              onChange={(e) => set({ campaignId: e.target.value || undefined })}
+              className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+            >
+              <option value="">未选择</option>
+              {campaignOptions.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* 达人选择器（creator-case） */}
+      {currentType === 'creator-case' && (
+        <div className="mt-2 space-y-1">
+          <label className="text-xs text-foreground-secondary">选择达人</label>
+          {creatorOptions.length === 0 ? (
+            <p className="text-[10px] text-foreground-muted">请先在「数据配置」中选择达人</p>
+          ) : (
+            <select
+              value={page.creatorId ?? ''}
+              onChange={(e) => set({ creatorId: e.target.value || undefined })}
+              className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+            >
+              <option value="">未选择</option>
+              {creatorOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.handle ? ` @${c.handle}` : ''}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* 达人选择器（creator-collab：Campaign 下达人） */}
+      {currentType === 'creator-collab' && (
+        <div className="mt-2 space-y-1">
+          <label className="text-xs text-foreground-secondary">选择达人（当前 Campaign）</label>
+          {campaignCreators.length === 0 ? (
+            <p className="text-[10px] text-foreground-muted">
+              {boundCampaign ? '该 Campaign 暂无达人数据' : '请先绑定 Campaign'}
+            </p>
+          ) : (
+            <select
+              value={page.creatorId ?? ''}
+              onChange={(e) => set({ creatorId: e.target.value || undefined })}
+              className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+            >
+              <option value="">未选择</option>
+              {campaignCreators.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.handle ? ` @${c.handle}` : ''}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+    </FieldGroup>
+  );
+}
 

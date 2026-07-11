@@ -6,6 +6,7 @@ import { ContextMenu, type MenuItem } from './components/ContextMenu';
 import { PALETTE_MIME, type PalettePayload } from './ComponentPanel';
 import { resolvePageBackground } from './background';
 import { DEFAULT_THEME } from '@mediakit/shared';
+import { themeToCssVars } from './theme';
 import { DEFAULT_GRID_SIZE } from './defaults';
 import { snapMove, clampRect, safeRectFrom } from './snap';
 
@@ -42,6 +43,10 @@ export function Canvas() {
   );
   const showGrid = useEditorStore((s) => s.projectMeta?.theme?.layout?.showGrid ?? true);
   const showSafeArea = useEditorStore((s) => s.projectMeta?.theme?.layout?.showSafeArea ?? true);
+
+  // 全局主题 CSS vars — 只作用于画板内容（不影响编辑器 UI）。
+  const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
+  const themeStyle = useMemo(() => themeToCssVars(theme), [theme]);
   const safeRect = useMemo(
     () => safeRectFrom(safeMargin, canvasWidth, canvasHeight),
     [safeMargin, canvasWidth, canvasHeight],
@@ -296,6 +301,7 @@ export function Canvas() {
             width: canvasWidth,
             height: canvasHeight,
             transform: `scale(${zoom})`,
+            ...themeStyle,
           }}
         >
           {/* 网格叠加：大小 = theme.layout.gridSize */}

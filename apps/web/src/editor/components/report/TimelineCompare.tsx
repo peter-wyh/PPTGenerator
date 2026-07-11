@@ -30,7 +30,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
           const status = row[3] ?? '';
           const chip = statusChip(status);
           return (
-            <div key={ri} className="flex flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+            <div key={ri} className="flex flex-col gap-2 skin-card skin-pad-sm">
               <div className="text-xs font-medium text-foreground-secondary">{label}</div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col">
@@ -59,7 +59,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
   if (variant === 'mini') {
     // 仅指标 + 本期 + 变化方向（两列紧凑）。
     return (
-      <div className="flex h-full w-full flex-col gap-1 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card skin-pad-sm">
         {rows.map((r, ri) => {
           const label = r[0] ?? '';
           const cur = r[1] ?? '';
@@ -83,7 +83,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
 
   // standard / with-bar：标准对比表（指标 / 本期 / 上期 / 状态）
   return (
-    <div className="h-full w-full overflow-auto rounded-xl border border-border-default bg-surface-primary">
+    <div className="h-full w-full overflow-auto skin-card">
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr>

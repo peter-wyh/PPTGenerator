@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+/** 页面类型（与前端 PageType 对齐）。 */
+const pageTypeSchema = z
+  .enum(['media-report', 'campaign-report', 'creator-case', 'creator-collab'])
+  .optional();
+
 /** 页面 schema：Template 与 Project 共用同一 Page 结构。 */
 export const pageSchema = z.object({
   id: z.string(),
@@ -17,8 +22,12 @@ export const pageSchema = z.object({
   /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
   bgImage: z.string().max(2048).optional(),
   components: z.array(z.any()),
-  /** 页面类型；命中 'media-report' 触发标题规则。 */
-  pageType: z.enum(['media-report']).optional(),
+  /** 页面业务类型。 */
+  pageType: pageTypeSchema,
+  /** 绑定的 Campaign ID（campaign-report / creator-collab 类型用）。 */
+  campaignId: z.string().max(120).optional(),
+  /** 绑定的达人 ID（creator-case / creator-collab 类型用）。 */
+  creatorId: z.string().max(120).optional(),
   /** 标题组件 id。 */
   titleComponentId: z.string().max(64).optional(),
   /** 用户手改过标题。 */
@@ -86,11 +95,120 @@ const projectThemeSchema = z
       })
       .optional(),
     shadow: z.enum(['none', 'subtle', 'soft', 'strong']).optional(),
+    skinPreset: z.enum(['default', 'flat', 'elevated']).optional(),
+    branding: z
+      .object({
+        logo: z.string().max(2048).optional(),
+        title: z.string().max(200).optional(),
+        subtitle: z.string().max(200).optional(),
+        logoHeight: z.number().min(8).max(200).optional(),
+        logoRadius: z.number().min(0).max(64).optional(),
+      })
+      .optional(),
+    background: z
+      .object({
+        type: z.enum(['none', 'color', 'gradient', 'image']),
+        color: z.string().max(20).optional(),
+        gradient: z
+          .object({
+            type: z.enum(['linear', 'radial']),
+            angle: z.number().optional(),
+            stops: z
+              .array(z.object({ color: z.string().max(20), position: z.number() }))
+              .min(2)
+              .max(6),
+          })
+          .optional(),
+        image: z.string().max(2048).optional(),
+      })
+      .optional(),
     preset: z.string().max(120).optional(),
   })
   .optional();
 
-/** 项目元数据：业务线/创建人/场景/子类/广告主/campaign 信息/主题。 */
+/** 报告数据上下文 schema（Campaign + 达人列表）。 */
+const reportDataContextSchema = z
+  .object({
+    campaign: z
+      .object({
+        id: z.string(),
+        name: z.string(),
+        advertiser: z.string().max(200).optional(),
+        platform: z.string().max(100).optional(),
+        startDate: z.string().max(40).optional(),
+        endDate: z.string().max(40).optional(),
+        budget: z.string().max(100).optional(),
+        status: z.string().max(40).optional(),
+        metrics: z
+          .array(
+            z.object({
+              label: z.string(),
+              value: z.string(),
+              compare: z.string(),
+            }),
+          )
+          .optional(),
+      })
+      .nullable()
+      .optional(),
+    campaignCreators: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          handle: z.string().optional(),
+          platform: z.string().optional(),
+          tier: z.string().optional(),
+          followers: z.string().optional(),
+          engagement: z.string().optional(),
+          category: z.string().optional(),
+          region: z.string().optional(),
+          avatar: z.string().max(2048).optional(),
+          stats: z
+            .array(
+              z.object({
+                key: z.string().optional(),
+                label: z.string(),
+                value: z.string(),
+                color: z.string(),
+                selected: z.boolean().optional(),
+              }),
+            )
+            .optional(),
+        }),
+      )
+      .optional(),
+    creators: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          handle: z.string().optional(),
+          platform: z.string().optional(),
+          tier: z.string().optional(),
+          followers: z.string().optional(),
+          engagement: z.string().optional(),
+          category: z.string().optional(),
+          region: z.string().optional(),
+          avatar: z.string().max(2048).optional(),
+          stats: z
+            .array(
+              z.object({
+                key: z.string().optional(),
+                label: z.string(),
+                value: z.string(),
+                color: z.string(),
+                selected: z.boolean().optional(),
+              }),
+            )
+            .optional(),
+        }),
+      )
+      .optional(),
+  })
+  .optional();
+
+/** 项目元数据：业务线/创建人/场景/子类/广告主/campaign 信息/主题/数据上下文。 */
 export const projectMetaSchema = z
   .object({
     businessLine: z.string().max(40).optional(),
@@ -101,6 +219,7 @@ export const projectMetaSchema = z
     campaignId: z.string().max(120).optional(),
     campaignInfo: campaignInfoSchema,
     theme: projectThemeSchema,
+    reportData: reportDataContextSchema,
   })
   .optional();
 

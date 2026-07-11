@@ -2,7 +2,7 @@
  * 组件默认尺寸 / 默认数据。供 editor store（addComponent）与 REGISTRY 共用，
  * 避免循环依赖（REGISTRY 含 React 组件）。忠实 demo.html。
  */
-import type { ComponentType, ComponentData, MetaStripData, ShapeKind, ShapeData } from '@mediakit/shared';
+import type { ComponentType, ComponentData, CreatorAvatarCardData, MetaStripData, ShapeKind, ShapeData } from '@mediakit/shared';
 import { campaignWorkScreenshots } from '@/api/creatorPerformance';
 
 export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
@@ -40,10 +40,6 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'campaign-analysis': { w: 520, h: 360 },
   'creator-work-metrics': { w: 560, h: 280 },
   'creator-works-table': { w: 700, h: 320 },
-  'geo-map': { w: 720, h: 440 },
-  'gauge-card': { w: 280, h: 280 },
-  'status-legend': { w: 480, h: 60 },
-  'wide-table': { w: 900, h: 360 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -128,9 +124,10 @@ export function getDefaultData(type: ComponentType): ComponentData {
         avatar: '',
         name: 'Mia Chen',
         platform: 'tiktok',
+        platforms: ['tiktok', 'instagram'],
         tier: 'macro',
         intro: 'Beauty & Skincare Creator · @miaglowup',
-      };
+      } as CreatorAvatarCardData;
     case 'creator-stats-strip':
       return {
         variant: 'cards',
@@ -153,14 +150,14 @@ export function getDefaultData(type: ComponentType): ComponentData {
         insights: [
           {
             topCities: [
-              { label: '上海', value: 23, color: '#FF5C00' },
-              { label: '北京', value: 18, color: '#FF8C42' },
-              { label: '广州', value: 12, color: '#FFB380' },
-              { label: '深圳', value: 9, color: '#FFD4B3' },
+              { label: 'New York', value: 23, color: '#FF5C00' },
+              { label: 'Los Angeles', value: 18, color: '#FF8C42' },
+              { label: 'Chicago', value: 12, color: '#FFB380' },
+              { label: 'Houston', value: 9, color: '#FFD4B3' },
             ],
             genderSplit: [
-              { label: '女', value: 72, color: '#EC4899' },
-              { label: '男', value: 28, color: '#3B82F6' },
+              { label: 'F', value: 72, color: '#EC4899' },
+              { label: 'M', value: 28, color: '#3B82F6' },
             ],
             ageRange: [
               { label: '18-24', value: 35, color: '#8B5CF6' },
@@ -177,17 +174,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 78000 },
               { label: 'D7', value: 86000 },
             ],
-            trendLabel: '播放趋势',
+            trendLabel: 'Views',
           },
           {
             topCities: [
-              { label: '杭州', value: 21, color: '#FF5C00' },
-              { label: '成都', value: 16, color: '#FF8C42' },
-              { label: '武汉', value: 11, color: '#FFB380' },
+              { label: 'Houston', value: 21, color: '#FF5C00' },
+              { label: 'Miami', value: 16, color: '#FF8C42' },
+              { label: 'Seattle', value: 11, color: '#FFB380' },
             ],
             genderSplit: [
-              { label: '女', value: 85, color: '#EC4899' },
-              { label: '男', value: 15, color: '#3B82F6' },
+              { label: 'F', value: 85, color: '#EC4899' },
+              { label: 'M', value: 15, color: '#3B82F6' },
             ],
             ageRange: [
               { label: '18-24', value: 48, color: '#8B5CF6' },
@@ -203,16 +200,16 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 51000 },
               { label: 'D7', value: 54000 },
             ],
-            trendLabel: '互动趋势',
+            trendLabel: 'Engagement',
           },
           {
             topCities: [
-              { label: '南京', value: 19, color: '#FF5C00' },
-              { label: '苏州', value: 14, color: '#FF8C42' },
+              { label: 'Austin', value: 19, color: '#FF5C00' },
+              { label: 'Denver', value: 14, color: '#FF8C42' },
             ],
             genderSplit: [
-              { label: '女', value: 68, color: '#EC4899' },
-              { label: '男', value: 32, color: '#3B82F6' },
+              { label: 'F', value: 68, color: '#EC4899' },
+              { label: 'M', value: 32, color: '#3B82F6' },
             ],
             ageRange: [
               { label: '18-24', value: 29, color: '#8B5CF6' },
@@ -227,7 +224,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 38000 },
               { label: 'D7', value: 42000 },
             ],
-            trendLabel: '播放趋势',
+            trendLabel: 'Views',
           },
         ],
       };
@@ -350,8 +347,8 @@ export function getDefaultData(type: ComponentType): ComponentData {
         headers: ['截图URL', '标题', 'ID', '链接', '数据'],
         rows: [
           ['', 'Content Site 深度测评', 'CS-001', 'https://example.com/1', '阅读 24K'],
-          ['', 'Reddit 热议帖', 'RD-104', 'https://example.com/2', '互动 3.2K'],
-          ['', 'FB 种草贴', 'FB-220', 'https://example.com/3', '互动 1.8K'],
+          ['', 'Reddit Discussion', 'RD-104', 'https://example.com/2', '3.2K engagement'],
+          ['', 'FB Recommendation', 'FB-220', 'https://example.com/3', '1.8K engagement'],
         ],
       };
     case 'creator-fan-gender':
@@ -412,32 +409,32 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'work-metrics':
       return {
-        title: '单作品数据',
-        subtitle: '近 7 天',
+        title: 'Work Metrics',
+        subtitle: 'Last 7 days',
         workName: '7-Day Skin Diary · Day 1',
         cover: '',
         metrics: [
-          { label: '播放', value: '1.2M', color: '#FF5C00' },
-          { label: '点赞', value: '86K', color: '#3B82F6' },
-          { label: '评论', value: '2.4K', color: '#22C55E' },
-          { label: '转发', value: '1.2K', color: '#8B5CF6' },
-          { label: '完播率', value: '42%', color: '#F59E0B' },
-          { label: '收藏', value: '5.6K', color: '#EC4899' },
+          { label: 'Views', value: '1.2M', color: '#FF5C00' },
+          { label: 'Likes', value: '86K', color: '#3B82F6' },
+          { label: 'Comments', value: '2.4K', color: '#22C55E' },
+          { label: 'Shares', value: '1.2K', color: '#8B5CF6' },
+          { label: 'Completion Rate', value: '42%', color: '#F59E0B' },
+          { label: 'Saves', value: '5.6K', color: '#EC4899' },
         ],
       };
     case 'comment-wordcloud':
       return {
-        title: '评论词云',
-        subtitle: '正面口碑为主，集中在功效与质地',
+        title: 'Comment Word Cloud',
+        subtitle: 'Positive sentiment dominates, focused on efficacy and texture',
         words: [
-          { text: '种草', weight: 90, sentiment: 'pos' },
-          { text: '好用', weight: 80, sentiment: 'pos' },
-          { text: '回购', weight: 70, sentiment: 'pos' },
-          { text: '性价比', weight: 60, sentiment: 'pos' },
-          { text: '质地', weight: 55, sentiment: 'neutral' },
-          { text: '香味', weight: 45, sentiment: 'neutral' },
-          { text: '刺激', weight: 35, sentiment: 'neg' },
-          { text: '拔草', weight: 30, sentiment: 'neg' },
+          { text: 'must-have', weight: 90, sentiment: 'pos' },
+          { text: 'love it', weight: 80, sentiment: 'pos' },
+          { text: 'repurchase', weight: 70, sentiment: 'pos' },
+          { text: 'great value', weight: 60, sentiment: 'pos' },
+          { text: 'texture', weight: 55, sentiment: 'neutral' },
+          { text: 'scent', weight: 45, sentiment: 'neutral' },
+          { text: 'irritating', weight: 35, sentiment: 'neg' },
+          { text: 'overhyped', weight: 30, sentiment: 'neg' },
         ],
       };
     case 'shape':
@@ -475,34 +472,34 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { label: 'Checkout', value: 3120 },
           { label: 'Purchase', value: 1846 },
         ],
-        insight: '该达人在曝光和互动维度表现突出，但转化率有提升空间。',
+        insight: 'This creator excels in reach and engagement, but conversion rate has room for improvement.',
       };
     case 'creator-work-metrics':
       return {
         variant: 'grid',
-        title: '单作品核心指标',
-        subtitle: '近 7 天',
+        title: 'Key Metrics',
+        subtitle: 'Last 7 days',
         workName: '7-Day Skin Diary · Day 1',
         cover: '',
         metrics: [
-          { label: '播放', value: '1.2M', sub: '+15%', color: '#FF5C00' },
-          { label: '点赞', value: '86K', sub: '+8%', color: '#3B82F6' },
-          { label: '评论', value: '2.4K', sub: '+22%', color: '#22C55E' },
-          { label: '转发', value: '1.2K', sub: '+5%', color: '#8B5CF6' },
-          { label: '完播率', value: '42%', sub: '+3pt', color: '#F59E0B' },
-          { label: '收藏', value: '5.6K', sub: '+12%', color: '#EC4899' },
+          { label: 'Views', value: '1.2M', sub: '+15%', color: '#FF5C00' },
+          { label: 'Likes', value: '86K', sub: '+8%', color: '#3B82F6' },
+          { label: 'Comments', value: '2.4K', sub: '+22%', color: '#22C55E' },
+          { label: 'Shares', value: '1.2K', sub: '+5%', color: '#8B5CF6' },
+          { label: 'Completion', value: '42%', sub: '+3pt', color: '#F59E0B' },
+          { label: 'Saves', value: '5.6K', sub: '+12%', color: '#EC4899' },
         ],
         audience: {
           topCities: [
-            { label: '上海', value: 23, color: '#FF5C00' },
-            { label: '北京', value: 18, color: '#3B82F6' },
-            { label: '广州', value: 14, color: '#22C55E' },
-            { label: '深圳', value: 11, color: '#8B5CF6' },
-            { label: '杭州', value: 8, color: '#F59E0B' },
+            { label: 'New York', value: 23, color: '#FF5C00' },
+            { label: 'Los Angeles', value: 18, color: '#3B82F6' },
+            { label: 'Chicago', value: 14, color: '#22C55E' },
+            { label: 'Houston', value: 11, color: '#8B5CF6' },
+            { label: 'Miami', value: 8, color: '#F59E0B' },
           ],
           genderSplit: [
-            { label: '女', value: 72, color: '#EC4899' },
-            { label: '男', value: 28, color: '#3B82F6' },
+            { label: 'F', value: 72, color: '#EC4899' },
+            { label: 'M', value: 28, color: '#3B82F6' },
           ],
           ageRange: [
             { label: '18-24', value: 35, color: '#8B5CF6' },
@@ -519,33 +516,33 @@ export function getDefaultData(type: ComponentType): ComponentData {
             { label: 'D6', value: 78000 },
             { label: 'D7', value: 86000 },
           ],
-          trendLabel: '播放趋势',
+          trendLabel: 'Views',
         },
       };
     case 'creator-works-table':
       return {
         variant: 'list',
-        title: '达人作品列表',
-        subtitle: '近期发布作品',
-        headers: ['作品', '播放', '点赞', '评论', '转发', '完播率'],
+        title: 'Creator Works',
+        subtitle: 'Recent posts',
+        headers: ['Cover', 'Title', 'Impr.', 'Likes', 'Comments', 'Shares', 'Eng. Rate'],
         rows: [
-          ['', '夏季护肤分享', '1.2M', '86K', '2.4K', '1.2K', '42%'],
-          ['', '开箱测评', '856K', '52K', '1.8K', '890', '38%'],
-          ['', '日常 vlog', '432K', '28K', '960', '420', '35%'],
-          ['', '好物推荐', '678K', '41K', '1.5K', '670', '40%'],
-          ['', '成分科普干货', '1.05M', '73K', '3.1K', '1.4K', '46%'],
-          ['', '秋冬换季护肤', '389K', '24K', '820', '510', '33%'],
+          ['', 'Summer Skincare Routine', '1.2M', '86K', '2.4K', '1.2K', '42%'],
+          ['', 'Product Unboxing Review', '856K', '52K', '1.8K', '890', '38%'],
+          ['', 'Daily Vlog', '432K', '28K', '960', '420', '35%'],
+          ['', 'Top Picks Recommendation', '678K', '41K', '1.5K', '670', '40%'],
+          ['', 'Ingredient Science Explained', '1.05M', '73K', '3.1K', '1.4K', '46%'],
+          ['', 'Seasonal Transition Skincare', '389K', '24K', '820', '510', '33%'],
         ],
         insights: [
           {
             topCities: [
-              { label: '上海', value: 23, color: '#FF5C00' },
-              { label: '北京', value: 18, color: '#FF8C42' },
-              { label: '广州', value: 12, color: '#FFB380' },
+              { label: 'New York', value: 23, color: '#FF5C00' },
+              { label: 'Los Angeles', value: 18, color: '#FF8C42' },
+              { label: 'Chicago', value: 12, color: '#FFB380' },
             ],
             genderSplit: [
-              { label: '女', value: 72, color: '#EC4899' },
-              { label: '男', value: 28, color: '#3B82F6' },
+              { label: 'F', value: 72, color: '#EC4899' },
+              { label: 'M', value: 28, color: '#3B82F6' },
             ],
             trend: [
               { label: 'D1', value: 12000 },
@@ -556,17 +553,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 78000 },
               { label: 'D7', value: 86000 },
             ],
-            trendLabel: '播放趋势',
+            trendLabel: 'Views',
           },
           {
             topCities: [
-              { label: '杭州', value: 21, color: '#FF5C00' },
-              { label: '成都', value: 16, color: '#FF8C42' },
-              { label: '武汉', value: 11, color: '#FFB380' },
+              { label: 'Houston', value: 21, color: '#FF5C00' },
+              { label: 'Miami', value: 16, color: '#FF8C42' },
+              { label: 'Seattle', value: 11, color: '#FFB380' },
             ],
             genderSplit: [
-              { label: '女', value: 85, color: '#EC4899' },
-              { label: '男', value: 15, color: '#3B82F6' },
+              { label: 'F', value: 85, color: '#EC4899' },
+              { label: 'M', value: 15, color: '#3B82F6' },
             ],
             trend: [
               { label: 'D1', value: 8000 },
@@ -577,17 +574,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 51000 },
               { label: 'D7', value: 54000 },
             ],
-            trendLabel: '互动趋势',
+            trendLabel: 'Engagement',
           },
           {
             topCities: [
-              { label: '深圳', value: 19, color: '#FF5C00' },
-              { label: '苏州', value: 14, color: '#FF8C42' },
-              { label: '南京', value: 10, color: '#FFB380' },
+              { label: 'Austin', value: 19, color: '#FF5C00' },
+              { label: 'Denver', value: 14, color: '#FF8C42' },
+              { label: 'Boston', value: 10, color: '#FFB380' },
             ],
             genderSplit: [
-              { label: '女', value: 68, color: '#EC4899' },
-              { label: '男', value: 32, color: '#3B82F6' },
+              { label: 'F', value: 68, color: '#EC4899' },
+              { label: 'M', value: 32, color: '#3B82F6' },
             ],
             trend: [
               { label: 'D1', value: 5000 },
@@ -598,17 +595,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 38000 },
               { label: 'D7', value: 42000 },
             ],
-            trendLabel: '播放趋势',
+            trendLabel: 'Views',
           },
           {
             topCities: [
-              { label: '北京', value: 20, color: '#FF5C00' },
-              { label: '上海', value: 15, color: '#FF8C42' },
-              { label: '西安', value: 9, color: '#FFB380' },
+              { label: 'San Francisco', value: 20, color: '#FF5C00' },
+              { label: 'Portland', value: 15, color: '#FF8C42' },
+              { label: 'Phoenix', value: 9, color: '#FFB380' },
             ],
             genderSplit: [
-              { label: '女', value: 76, color: '#EC4899' },
-              { label: '男', value: 24, color: '#3B82F6' },
+              { label: 'F', value: 76, color: '#EC4899' },
+              { label: 'M', value: 24, color: '#3B82F6' },
             ],
             trend: [
               { label: 'D1', value: 10000 },
@@ -619,17 +616,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 58000 },
               { label: 'D7', value: 64000 },
             ],
-            trendLabel: '播放趋势',
+            trendLabel: 'Views',
           },
           {
             topCities: [
-              { label: '广州', value: 22, color: '#FF5C00' },
-              { label: '深圳', value: 17, color: '#FF8C42' },
-              { label: '佛山', value: 8, color: '#FFB380' },
+              { label: 'Dallas', value: 22, color: '#FF5C00' },
+              { label: 'Atlanta', value: 17, color: '#FF8C42' },
+              { label: 'Orlando', value: 8, color: '#FFB380' },
             ],
             genderSplit: [
-              { label: '女', value: 91, color: '#EC4899' },
-              { label: '男', value: 9, color: '#3B82F6' },
+              { label: 'F', value: 91, color: '#EC4899' },
+              { label: 'M', value: 9, color: '#3B82F6' },
             ],
             trend: [
               { label: 'D1', value: 15000 },
@@ -640,17 +637,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 95000 },
               { label: 'D7', value: 105000 },
             ],
-            trendLabel: '互动趋势',
+            trendLabel: 'Engagement',
           },
           {
             topCities: [
-              { label: '成都', value: 18, color: '#FF5C00' },
-              { label: '重庆', value: 13, color: '#FF8C42' },
-              { label: '昆明', value: 7, color: '#FFB380' },
+              { label: 'Nashville', value: 18, color: '#FF5C00' },
+              { label: 'Charlotte', value: 13, color: '#FF8C42' },
+              { label: 'Las Vegas', value: 7, color: '#FFB380' },
             ],
             genderSplit: [
-              { label: '女', value: 70, color: '#EC4899' },
-              { label: '男', value: 30, color: '#3B82F6' },
+              { label: 'F', value: 70, color: '#EC4899' },
+              { label: 'M', value: 30, color: '#3B82F6' },
             ],
             trend: [
               { label: 'D1', value: 4000 },
@@ -661,74 +658,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
               { label: 'D6', value: 31000 },
               { label: 'D7', value: 35000 },
             ],
-            trendLabel: '播放趋势',
+            trendLabel: 'Views',
           },
         ],
-      };
-    case 'geo-map':
-      return {
-        title: 'Top Markets by Revenue',
-        subtitle: '按国家收入分布',
-        colorScheme: 'orange',
-        metricLabel: 'Revenue',
-        countries: [
-          { code: 'US', name: 'United States', value: 45200, display: '$45.2K', share: '32.5%' },
-          { code: 'GB', name: 'United Kingdom', value: 18900, display: '$18.9K', share: '13.6%' },
-          { code: 'DE', name: 'Germany', value: 14200, display: '$14.2K', share: '10.2%' },
-          { code: 'CA', name: 'Canada', value: 11600, display: '$11.6K', share: '8.3%' },
-          { code: 'AU', name: 'Australia', value: 9800, display: '$9.8K', share: '7.1%' },
-          { code: 'FR', name: 'France', value: 7400, display: '$7.4K', share: '5.3%' },
-          { code: 'JP', name: 'Japan', value: 6100, display: '$6.1K', share: '4.4%' },
-          { code: 'BR', name: 'Brazil', value: 4200, display: '$4.2K', share: '3.0%' },
-          { code: 'CN', name: 'China', value: 3850, display: '$3.85K', share: '2.8%' },
-          { code: 'IN', name: 'India', value: 3360, display: '$3.36K', share: '2.4%' },
-          { code: 'KR', name: 'South Korea', value: 2940, display: '$2.94K', share: '2.1%' },
-          { code: 'IT', name: 'Italy', value: 2520, display: '$2.52K', share: '1.8%' },
-          { code: 'ES', name: 'Spain', value: 2100, display: '$2.1K', share: '1.5%' },
-          { code: 'MX', name: 'Mexico', value: 1820, display: '$1.82K', share: '1.3%' },
-          { code: 'NL', name: 'Netherlands', value: 1540, display: '$1.54K', share: '1.1%' },
-        ],
-        insight: '北美市场贡献 40.8% 的收入，UK+EU 合计 23.8%。建议加大 DE/FR 本地化素材投入。亚太市场（CN/IN/JP/KR）合计 11.7%，增长潜力显著。',
-      };
-    case 'gauge-card':
-      return {
-        title: 'New Customer Rate',
-        value: '34.6%',
-        progress: 34.6,
-        shape: 'full',
-        color: '#8B5CF6',
-        centerLabel: 'New Customer',
-        compare: '+5.2pp vs 上期',
-        subtitle: '近 30 天新客占比',
-      };
-    case 'status-legend':
-      return {
-        title: '',
-        items: [
-          { status: 'good', label: 'Performing Well' },
-          { status: 'warn', label: 'Needs Improvement' },
-          { status: 'bad', label: 'Underperforming' },
-        ],
-      };
-    case 'wide-table':
-      return {
-        title: 'Top Publishers by Revenue',
-        subtitle: '联盟营销 Publisher 排行',
-        freezeFirstCol: true,
-        headers: ['Publisher', 'Clicks', 'Impressions', 'CTR', 'Conversions', 'CVR', 'Revenue', 'Commission', 'EPC', 'ROAS', 'AOV', 'Status'],
-        rows: [
-          ['GlamourBlog', '12.4K', '1.2M', '1.03%', '386', '3.11%', '$72.9K', '$8.7K', '$5.88', '4.2x', '$189', 'good'],
-          ['BeautyHub', '8.9K', '890K', '1.00%', '241', '2.71%', '$45.6K', '$5.5K', '$5.12', '3.8x', '$189', 'good'],
-          ['TrendyDaily', '6.2K', '620K', '1.00%', '142', '2.29%', '$26.8K', '$3.2K', '$4.32', '2.9x', '$189', 'warn'],
-          ['StyleMaven', '4.1K', '410K', '1.00%', '78', '1.90%', '$14.7K', '$1.8K', '$3.59', '2.1x', '$189', 'warn'],
-          ['ViralVogue', '2.8K', '280K', '1.00%', '34', '1.21%', '$6.4K', '$770', '$2.29', '1.3x', '$189', 'bad'],
-          ['ChicWeekly', '9.6K', '960K', '1.00%', '258', '2.69%', '$48.8K', '$5.9K', '$5.08', '3.6x', '$189', 'good'],
-          ['GlowGuide', '7.4K', '740K', '1.00%', '176', '2.38%', '$33.3K', '$4.0K', '$4.50', '3.1x', '$189', 'good'],
-          ['FashionPulse', '5.3K', '530K', '1.00%', '108', '2.04%', '$20.4K', '$2.4K', '$3.85', '2.6x', '$189', 'warn'],
-          ['UrbanMirror', '3.6K', '360K', '1.00%', '61', '1.69%', '$11.5K', '$1.4K', '$3.19', '1.9x', '$189', 'warn'],
-          ['TrendFlow', '2.1K', '210K', '1.00%', '22', '1.05%', '$4.2K', '$500', '$2.00', '1.1x', '$189', 'bad'],
-        ],
-        rowStatus: ['good', 'good', 'warn', 'warn', 'bad', 'good', 'good', 'warn', 'warn', 'bad'],
       };
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };

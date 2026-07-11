@@ -51,3 +51,63 @@ mark {
   font-weight: 500;
   background: transparent;
 }
+
+/* ============================================================
+ * Skin 语义类 —— 组件统一消费，不自己拼 Tailwind class。
+ * 所有值引用 CSS 变量 → 切换 ProjectTheme 即全局换肤。
+ * ============================================================ */
+
+/* 卡片容器：圆角 + 边框 + 背景 + 阴影。 */
+.skin-card {
+  border-radius: var(--radius-card, 12px);
+  border: 1px solid var(--border-default);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-card, 0 1px 2px rgba(0,0,0,.05));
+}
+
+/* 大卡片容器：更圆 + 更深阴影（hero / glass 等强调卡）。 */
+.skin-card-lg {
+  border-radius: calc(var(--radius-card, 12px) * 1.33);
+  border: 1px solid var(--border-default);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-card, 0 1px 2px rgba(0,0,0,.05));
+}
+
+/* 无边框卡片（仅背景 + 圆角，无 border 无 shadow）。 */
+.skin-card-flat {
+  border-radius: var(--radius-card, 12px);
+  background: var(--surface-primary);
+}
+
+/* 胶囊 / 药丸形状（平台标签、tier 徽章等）。 */
+.skin-pill {
+  border-radius: var(--radius-pill, 9999px);
+  background: var(--surface-hover);
+  color: var(--foreground-secondary);
+}
+
+/* 品牌色胶囊（tier 徽章等需要品牌色强调的场景）。 */
+.skin-pill-brand {
+  border-radius: var(--radius-pill, 9999px);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+}
+
+/* 发丝分隔线（块间分隔）。 */
+.skin-divider {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* 内部间距（响应 density token）。 */
+.skin-pad-sm { padding: var(--space-pad-sm, 10px); }
+.skin-pad-md { padding: var(--space-pad-md, 16px); }
+.skin-pad-lg { padding: var(--space-pad-lg, 22px); }
+
+/* 品牌色文字（图标、标签强调色）。 */
+.skin-text-brand { color: var(--color-primary); }
+.skin-text-brand-2 { color: var(--color-secondary); }
+
+/* 品牌渐变背景（glass / hero banner）。 */
+.skin-gradient-brand {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+}

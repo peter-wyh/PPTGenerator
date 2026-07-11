@@ -3,6 +3,7 @@
  * 列顺序 [商品, 图URL, 销量, 占比, 品类]。
  */
 import type { ProductPerformanceData } from '@mediakit/shared';
+import { useChartColors } from './shared';
 import {
   Bar,
   BarChart,
@@ -23,6 +24,8 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
   const { variant = 'cards', insight, rows = [] } = data;
   const items = rows.map((r) => ({ name: r[0] ?? '', img: r[1] ?? '', sold: r[2] ?? '', share: r[3] ?? '', cat: r[4] ?? '' }));
   const cs = useChartStyle();
+  const chartColors = useChartColors();
+  const PIE_COLORS = [...chartColors, '#14B8A6', '#6B7280'];
 
   if (variant === 'bar') {
     // 条形图：横向 BarChart(layout=vertical) 展示 TOP 商品销量。
@@ -32,14 +35,14 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
       return { name: it.name || `#${i + 1}`, value: m ? parseFloat(m[0]) : items.length - i, sold: it.sold };
     });
     return (
-      <div className="flex h-full w-full gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full gap-2 skin-card skin-pad-sm">
         <div className="min-w-0 flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart layout="vertical" data={chartData} margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
               <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={70} hide={!cs.showAxis} />
               <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(v: number) => v} />
-              <Bar dataKey="value" radius={[0, cs.barRadius, cs.barRadius, 0]} fill="var(--color-primary, #FF5C00)">
+              <Bar dataKey="value" radius={[0, cs.barRadius, cs.barRadius, 0]} fill="var(--color-primary)">
                 <LabelList dataKey="sold" position="right" style={{ fontSize: 11 }} />
               </Bar>
             </BarChart>
@@ -57,7 +60,6 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
 
   if (variant === 'pie') {
     // 品类饼图：按品类聚合商品，左侧 PieChart 展示品类分布，右侧 TOP 商品列表。
-    const PIE_COLORS = ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899', '#14B8A6', '#6B7280'];
     const catMap = new Map<string, number>();
     items.forEach((it) => {
       const cat = it.cat || '未分类';
@@ -67,7 +69,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
     });
     const pieData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
     return (
-      <div className="flex h-full w-full gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full gap-2 skin-card skin-pad-sm">
         <div className="flex min-w-0 flex-1 items-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -137,7 +139,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
   );
 
   return (
-    <div className="flex h-full w-full gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full gap-2 skin-card skin-pad-sm">
       <div className={insight ? 'min-w-0 flex-1' : 'min-w-0 flex-1'}>
         {variant === 'rank' ? (
           <div className="flex flex-col">{items.map((it, i) => <Row key={i} it={it} rank={i + 1} />)}</div>

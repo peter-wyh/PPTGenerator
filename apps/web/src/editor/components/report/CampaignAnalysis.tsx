@@ -23,7 +23,7 @@ export function CampaignAnalysis({ data }: { data: CampaignAnalysisData }) {
   const { variant = 'radar', title, subtitle, dimensions = [], series = [], funnelSteps = [], insight } = data;
 
   return (
-    <div className="flex h-full w-full flex-col gap-2 rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
           {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -56,7 +56,7 @@ function CampaignRadar({ dimensions }: { dimensions: CampaignAnalysisData['dimen
         <PolarGrid stroke="var(--color-border-default, #E5E7EB)" />
         <PolarAngleAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-foreground-secondary, #6B7280)' }} />
         <PolarRadiusAxis angle={90} domain={[0, 'auto']} tick={{ fontSize: 9, fill: 'var(--color-foreground-muted, #9CA3AF)' }} />
-        <Radar dataKey="value" stroke="#FF5C00" fill="#FF5C00" fillOpacity={0.35} />
+        <Radar dataKey="value" stroke="var(--color-primary)" fill="var(--color-primary)" fillOpacity={0.35} />
         <Tooltip formatter={(v: number) => v} />
       </RadarChart>
     </ResponsiveContainer>
@@ -76,7 +76,7 @@ function CampaignCombo({ series }: { series: CampaignAnalysisData['series'] }) {
         <YAxis yAxisId="left" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <Tooltip />
-        <Bar yAxisId="left" dataKey="barValue" radius={[4, 4, 0, 0]} fill="#FF5C00" barSize="40%" />
+        <Bar yAxisId="left" dataKey="barValue" radius={[4, 4, 0, 0]} fill="var(--color-primary)" barSize="40%" />
         <Line yAxisId="right" dataKey="lineValue" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
       </ComposedChart>
     </ResponsiveContainer>

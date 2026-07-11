@@ -37,7 +37,6 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'creator-avatar-card', label: '头像卡', icon: '◒' },
       { type: 'creator-stats-strip', label: '数据条', icon: '▤' },
       { type: 'creator-works-list', label: '作品列表', icon: '▦' },
-      { type: 'creator-list', label: '达人列表', icon: '◳' },
       { type: 'creator-fan-gender', label: '性别占比', icon: '◑' },
       { type: 'creator-fan-city', label: '城市分布', icon: '≣' },
       { type: 'creator-fan-age', label: '年龄段', icon: '▤' },
@@ -53,6 +52,7 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'timeline-compare', label: '周期对比', icon: '↔' },
       { type: 'product-performance', label: '商品表现', icon: '▣' },
       { type: 'campaign-analysis', label: '分析图表', icon: '◈' },
+      { type: 'creator-list', label: '达人列表', icon: '◳' },
       { type: 'creator-work-metrics', label: '作品指标', icon: '▣' },
       { type: 'creator-works-table', label: '作品列表', icon: '▦' },
       { type: 'work-screenshot', label: '作品截图', icon: '▦' },
@@ -65,15 +65,6 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
     items: [
       { type: 'placement-display', label: '广告位', icon: '▤' },
       { type: 'post-list', label: 'Post 列表', icon: '☲' },
-    ],
-  },
-  {
-    group: '联盟营销',
-    items: [
-      { type: 'geo-map', label: '地理地图', icon: '◴' },
-      { type: 'gauge-card', label: '仪表盘', icon: '◍' },
-      { type: 'wide-table', label: '宽表', icon: '▦' },
-      { type: 'status-legend', label: '状态图例', icon: '●' },
     ],
   },
   {

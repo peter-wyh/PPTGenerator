@@ -1,4 +1,5 @@
 import type { ComponentType, EditorComponent } from '@mediakit/shared';
+import type { PageType } from '@mediakit/shared';
 import { getDefaultData } from './defaults';
 
 /**
@@ -13,6 +14,8 @@ export interface Template {
   components: () => EditorComponent[];
   /** 标题组件在 components() 返回数组中的下标；命中则应用时该页为投放报告页（media-report）。 */
   pageTitleIndex?: number;
+  /** 创建页面时自动设置的页面业务类型（与 pageTitleIndex 互斥时优先 pageTitleIndex）。 */
+  pageType?: PageType;
 }
 
 /** Get a page template by id. */
@@ -200,6 +203,7 @@ export const TEMPLATES: Template[] = [
     id: 'creator-page',
     name: '达人介绍页',
     description: '头像卡片 + 数据条 + 作品列表（试点）',
+    pageType: 'creator-case',
     components: () => {
       // Top title
       const title = t('text', 80, 60, 900, 60);
@@ -294,6 +298,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-weekly-overview',
     name: '周报 · 业绩概览',
     description: 'KPI 看板 + 下周计划',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Weekly Status Update', 80, 50);
       const kpi = t('kpi-board', 80, 130, 1120, 200);
@@ -308,6 +313,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-monthly-overview',
     name: '月报 · 业绩概览',
     description: 'KPI + 趋势图 + 周期对比 + 洞察',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Performance Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
@@ -324,6 +330,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-channel',
     name: '月报 · 渠道表现',
     description: '渠道核心数据 + 对比表格',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Performance by Channels', 80, 40);
       // Channel big numbers: reuse kpi-board (compact) to carry Engaged Publishers / Est Impression etc.
@@ -357,6 +364,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-wrapup-review',
     name: '总结 · 业绩复盘',
     description: 'KPI + 周期对比 + 亮点策略',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Campaign Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
@@ -372,6 +380,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-product',
     name: '月报 · 商品表现',
     description: '热门商品 + AI 洞察',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Top Products', 80, 40);
       const products = t('product-performance', 80, 110, 1120, 360);
@@ -382,6 +391,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-creator-collab',
     name: '月报 · 达人合作详情',
     description: '头像 + 合作数据 + 作品 + 变化说明',
+    pageType: 'creator-collab',
     components: () => {
       const title = titleAt('Top Influencer Collaboration', 80, 40);
       // Orchestrate the existing creator trio (validates cross-page reuse of business components).
@@ -405,6 +415,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-placement',
     name: '月报 · DM 广告位',
     description: '广告位截图 + 亮点/经验',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Placement Display', 80, 40);
       const placement = t('placement-display', 80, 110, 1120, 320);
@@ -416,6 +427,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-posts',
     name: '月报 · 渠道贴文',
     description: '内容站 / Reddit / FB 贴文列表',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Channel Posts', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
@@ -534,6 +546,7 @@ export const TEMPLATES: Template[] = [
     id: 'case-page',
     name: '案例展示',
     description: '标题 + 成果卡片 + 案例作品 + 文案',
+    pageType: 'creator-case',
     components: () => {
       const title = titleAt('Case Study', 80, 50);
       const cards = [0, 1, 2, 3].map((i) => {
@@ -553,6 +566,7 @@ export const TEMPLATES: Template[] = [
     id: 'content-analysis-page',
     name: '内容分析',
     description: '标题 + 内容类型分布柱状图 + 明细表格',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Content Performance & Conversion Analysis', 80, 50);
       const chart = t('bar-chart', 80, 130, 560, 260);
@@ -575,6 +589,7 @@ export const TEMPLATES: Template[] = [
     id: 'funnel-page',
     name: '增长漏斗',
     description: '标题 + 漏斗阶段柱状图',
+    pageType: 'campaign-report',
     components: () => {
       const title = titleAt('Content-Driven Conversion Funnel', 80, 50);
       const chart = t('bar-chart', 80, 130, 1120, 360);

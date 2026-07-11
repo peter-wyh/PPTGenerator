@@ -114,6 +114,12 @@ export interface ProjectTheme {
   };
   /** 卡片阴影档位 → --shadow-card。 */
   shadow?: 'none' | 'subtle' | 'soft' | 'strong';
+  /**
+   * 皮肤风格预设：控制组件整体视觉"感觉"（圆角幅度、卡片密度、品牌色用法等）。
+   * 与 color/font/density 正交——可在任意主题色上叠加不同 skinPreset。
+   * 'default' = 标准卡片；'flat' = 无边框扁平；'elevated' = 大圆角深阴影。
+   */
+  skinPreset?: 'default' | 'flat' | 'elevated';
   preset?: string; // 当前命中的预设 key，仅用于 UI 高亮；手改字段后置空
 }
 

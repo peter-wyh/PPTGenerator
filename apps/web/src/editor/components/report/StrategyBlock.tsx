@@ -1,5 +1,6 @@
 /**
  * StrategyBlockComponent — 策略块：default / labeled / bulleted。
+ * 品牌色、高亮色、图标颜色全部取全局配色（--color-primary / --color-secondary）。
  */
 import type { StrategyBlockData } from '@mediakit/shared';
 import { findIcon } from '../../icons/catalog';
@@ -25,7 +26,7 @@ function StrategyDefault({ data }: { data: StrategyBlockData }) {
         return (
           <div key={i} className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-color-secondary" />}
+              {Icon && <Icon size={16} className="text-primary" />}
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
                 {title}
               </span>
@@ -41,31 +42,46 @@ function StrategyDefault({ data }: { data: StrategyBlockData }) {
   );
 }
 
-/** labeled（参考#4）：卡片 + 主题色大写标签标题 + 正文 + 块间发丝分隔。 */
+/** labeled（卡片标签）：大标题 + 主题色标签 + 块间发丝分隔。
+ *  标题用品牌主色装饰条 + 大字，标签用品牌辅色。 */
 function StrategyLabeled({ data }: { data: StrategyBlockData }) {
   const rows = data.rows ?? [];
+  const title = data.title?.trim();
   return (
-    <div className="flex h-full w-full flex-col rounded-xl border border-border-default bg-surface-primary p-4 shadow-sm">
-      {rows.map((r, i) => {
-        const iconKey = r[0] ?? '';
-        const title = r[1] ?? '';
-        const content = r[2] ?? '';
-        const Icon = findIcon(iconKey)?.Comp;
-        return (
-          <div key={i} className={`flex flex-col gap-1 ${i > 0 ? 'mt-3 border-t border-border-subtle pt-3' : ''}`}>
-            <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-color-secondary" />}
-              <span className="text-xs font-semibold uppercase tracking-wide text-color-secondary">
-                {title}
-              </span>
+    <div className="flex h-full w-full flex-col skin-card skin-pad-md">
+      {title && (
+        <div className="mb-4 flex items-center gap-2.5">
+          <span className="h-8 w-1.5 flex-none rounded-full bg-primary" />
+          <span
+            className="font-headings text-2xl font-extrabold leading-tight text-foreground-primary"
+            style={{ letterSpacing: '-0.01em' }}
+          >
+            {title}
+          </span>
+        </div>
+      )}
+      <div className="flex flex-1 flex-col">
+        {rows.map((r, i) => {
+          const iconKey = r[0] ?? '';
+          const rowTitle = r[1] ?? '';
+          const content = r[2] ?? '';
+          const Icon = findIcon(iconKey)?.Comp;
+          return (
+            <div key={i} className={`flex flex-col gap-1 ${i > 0 ? 'mt-3 border-t border-border-subtle pt-3' : ''}`}>
+              <div className="flex items-center gap-1.5">
+                {Icon && <Icon size={16} className="text-primary" />}
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">
+                  {rowTitle}
+                </span>
+              </div>
+              <div
+                className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(content) }}
+              />
             </div>
-            <div
-              className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(content) }}
-            />
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -75,7 +91,7 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
   const rows = data.rows ?? [];
   if (rows.length === 0) {
     return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl border border-border-default bg-surface-primary p-4 shadow-sm text-xs text-foreground-muted">
+      <div className="flex h-full w-full items-center justify-center skin-card skin-pad-md text-xs text-foreground-muted">
         Strategy
       </div>
     );
@@ -90,10 +106,10 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
         return (
           <div
             key={i}
-            className="flex flex-col gap-1 rounded-xl border border-border-default bg-surface-primary p-3 shadow-sm"
+            className="flex flex-col gap-1 skin-card skin-pad-sm"
           >
             <div className="flex items-center gap-1.5">
-              {Icon && <Icon size={16} className="text-color-secondary" />}
+              {Icon && <Icon size={16} className="text-primary" />}
               <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
                 {title}
               </span>

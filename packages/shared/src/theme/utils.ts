@@ -159,6 +159,13 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     ? (obj.shadow as ThemeShadow)
     : d.shadow!;
 
+  const skinPresetRaw = typeof obj.skinPreset === 'string' ? obj.skinPreset : undefined;
+  const validSkins = ['default', 'flat', 'elevated'] as const;
+  const skinPreset: 'default' | 'flat' | 'elevated' | undefined =
+    validSkins.includes(skinPresetRaw as (typeof validSkins)[number])
+      ? (skinPresetRaw as 'default' | 'flat' | 'elevated')
+      : (d.skinPreset ?? 'default');
+
   return {
     color: {
       primary: (colorRaw?.primary as string) || legacyPrimary || d.color.primary,
@@ -174,6 +181,7 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     },
     density: ['compact', 'standard', 'spacious'].includes(density) ? density : d.density,
     radius: ['sharp', 'small', 'large'].includes(radius) ? radius : d.radius,
+    skinPreset,
     preset,
     layout,
     branding,

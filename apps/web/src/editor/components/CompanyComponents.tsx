@@ -14,7 +14,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
   const logos = rows.map((r) => ({ name: r[0] ?? '', src: r[1] ?? '' }));
 
   const Tile = ({ name, src }: { name: string; src: string }) => (
-    <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface-primary px-2 py-3">
+    <div className="flex flex-col items-center justify-center gap-1 skin-card-flat px-2 py-3">
       {src ? (
         <img src={src} alt={name} className="h-8 max-w-[80%] object-contain" draggable={false} />
       ) : (
@@ -28,7 +28,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
 
   if (variant === 'row') {
     return (
-      <div className="flex h-full w-full items-center gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full items-center gap-2 overflow-auto skin-card skin-pad-sm">
         {logos.map((l, i) => (
           <div key={i} className="w-[120px] flex-none">
             <Tile {...l} />
@@ -41,7 +41,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
   if (variant === 'marquee') {
     // 紧凑横排：仅 logo，无外框，适合页眉条带。
     return (
-      <div className="flex h-full w-full flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full flex-wrap items-center gap-x-5 gap-y-2 skin-card skin-pad-sm">
         {logos.map((l, i) =>
           l.src ? (
             <img key={i} src={l.src} alt={l.name} className="h-7 object-contain" draggable={false} />
@@ -59,7 +59,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
     // 圆形头像式：Logo 以圆形(56px)展示，名称在下方，网格排列 4-6 列。
     return (
       <div
-        className="grid h-full w-full gap-3 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3"
+        className="grid h-full w-full gap-3 overflow-auto skin-card skin-pad-sm"
         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}
       >
         {logos.map((l, i) => (
@@ -81,7 +81,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
   if (variant === 'fade') {
     // 渐入：单行横排，第一个 opacity 100%，之后每项递减 5%。
     return (
-      <div className="flex h-full w-full items-center justify-start gap-5 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+      <div className="flex h-full w-full items-center justify-start gap-5 overflow-auto skin-card skin-pad-sm">
         {logos.map((l, i) => (
           <div key={i} className="flex w-[110px] flex-none flex-col items-center gap-1" style={{ opacity: Math.max(0.3, 1 - i * 0.05) }}>
             {l.src ? (
@@ -100,7 +100,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
 
   // grid（默认）
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto rounded-xl border border-border-default bg-surface-primary p-3">
+    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto skin-card skin-pad-sm">
       {logos.map((l, i) => (
         <Tile key={i} {...l} />
       ))}
@@ -116,10 +116,10 @@ export function PackageCard({ data }: { data: PackageCardData }) {
 
   const wrap =
     variant === 'compact'
-      ? 'rounded-xl border bg-surface-primary p-3 ' +
-        (highlighted ? 'border-primary ring-1 ring-primary/40' : 'border-border-default')
-      : 'flex h-full w-full flex-col rounded-xl border bg-surface-primary p-4 ' +
-        (highlighted ? 'border-primary ring-1 ring-primary/40' : 'border-border-default');
+      ? 'skin-card skin-pad-sm ' +
+        (highlighted ? 'border-primary ring-1 ring-primary/40' : '')
+      : 'flex h-full w-full flex-col skin-card skin-pad-md ' +
+        (highlighted ? 'border-primary ring-1 ring-primary/40' : '');
 
   if (variant === 'compact') {
     return (

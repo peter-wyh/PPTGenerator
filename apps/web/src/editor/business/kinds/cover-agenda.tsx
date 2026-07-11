@@ -42,7 +42,7 @@ export function renderCover(ctx: RenderCtx): React.ReactNode {
           display: 'flex',
           flexDirection: 'column',
           color: '#FFF',
-          background: 'linear-gradient(125deg,#1A1A1A 0%,#352116 58%,#FF5C00 150%)',
+          background: 'linear-gradient(125deg, var(--color-neutral-text, #1A1A1A) 0%, color-mix(in srgb, var(--color-neutral-text, #1A1A1A) 70%, var(--color-primary, #FF5C00)) 58%, var(--color-primary, #FF5C00) 150%)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: 1 }}>

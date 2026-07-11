@@ -64,11 +64,11 @@ function MetaList({ items }: { items: MetaItem[] }) {
 
 function MetaCards({ items }: { items: MetaItem[] }) {
   return (
-    <div className="grid h-full w-full grid-cols-3 content-start gap-2 overflow-auto">
+    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto">
       {items.map((it, i) => {
         const Icon = findIcon(it.iconKey)?.Comp;
         return (
-          <div key={i} className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-surface-primary p-2">
+          <div key={i} className="flex flex-col justify-center gap-1 skin-card-flat skin-pad-sm">
             <span className="flex items-center gap-1.5">
               {Icon && <Icon size={14} className="text-foreground-secondary" />}
               <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{it.label}</span>

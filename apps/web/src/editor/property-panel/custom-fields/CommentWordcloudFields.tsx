@@ -3,9 +3,9 @@ import { useEditorStore } from '../../store';
 import { FieldGroup } from '../helpers';
 
 const WORDCLOUD_SENTIMENT_OPTIONS: { value: Sentiment; label: string }[] = [
-  { value: 'pos', label: '正面' },
-  { value: 'neg', label: '负面' },
-  { value: 'neutral', label: '中性' },
+  { value: 'pos', label: 'Positive' },
+  { value: 'neg', label: 'Negative' },
+  { value: 'neutral', label: 'Neutral' },
 ];
 
 /** 评论词云：每个词 text + weight + 情感 + 删除，底部添加。 */
@@ -21,17 +21,17 @@ export function CommentWordcloudFields({ comp }: { comp: EditorComponent }) {
   };
   const setItem = (i: number, patch: Partial<{ text: string; weight: number; sentiment: Sentiment }>) =>
     write(words.map((w, idx) => (idx === i ? { ...w, ...patch } : w)));
-  const add = () => write([...words, { text: '新词', weight: 50, sentiment: 'neutral' }]);
+  const add = () => write([...words, { text: 'new word', weight: 50, sentiment: 'neutral' }]);
   const remove = (i: number) => write(words.filter((_, idx) => idx !== i));
 
   return (
-    <FieldGroup title="评论词">
+    <FieldGroup title="Words">
       <div className="space-y-1">
         {words.map((w, i) => (
           <div key={i} className="flex items-center gap-1">
             <input
               value={w.text}
-              placeholder="词"
+              placeholder="Word"
               onChange={(e) => setItem(i, { text: e.target.value })}
               className="w-16 rounded border border-border-default px-1.5 py-0.5 text-xs text-foreground-primary"
             />
@@ -59,7 +59,7 @@ export function CommentWordcloudFields({ comp }: { comp: EditorComponent }) {
         ))}
       </div>
       <button onClick={add} className="text-xs text-accent-primary hover:underline">
-        + 添加词
+        + Add word
       </button>
     </FieldGroup>
   );

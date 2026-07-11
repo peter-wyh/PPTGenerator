@@ -738,6 +738,11 @@ export interface CreatorWorkPost {
   cover: string;
   platform: string;
   publishedAt: string;
+  impressions: string;
+  likes: string;
+  comments: string;
+  shares: string;
+  engagementRate: string;
 }
 
 /**
@@ -770,6 +775,11 @@ export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
       cover: post.cover ?? '',
       platform: post.platform,
       publishedAt: post.publishedAt,
+      impressions: post.impressions,
+      likes: post.likes,
+      comments: post.comments,
+      shares: post.shares,
+      engagementRate: post.engagementRate,
     })),
   }));
 }

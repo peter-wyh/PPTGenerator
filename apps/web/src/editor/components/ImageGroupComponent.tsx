@@ -114,7 +114,7 @@ export function ImageGroupComponent({ data }: { data: ImageGroupData }) {
   // 无图 → 整块占位。
   if (!images || images.length === 0) {
     return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl border border-border-default bg-surface-hover text-xs text-foreground-muted">
+      <div className="flex h-full w-full items-center justify-center skin-card-flat bg-surface-hover text-xs text-foreground-muted">
         组图
       </div>
     );
