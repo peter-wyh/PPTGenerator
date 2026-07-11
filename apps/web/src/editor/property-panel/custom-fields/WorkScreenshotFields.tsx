@@ -10,6 +10,7 @@ import { ReportWorkScreenshotImporter } from '../importers';
 
 const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string; hint: string }[] = [
   { value: 'grid', label: '网格', hint: '标准马赛克' },
+  { value: 'mosaic', label: '拼图', hint: '1大2小等不规则组合' },
   { value: 'diagonal', label: '斜切网格', hint: '规整网格 + 行间斜切' },
   { value: 'skew', label: '斜切拼接', hint: '自由交错倾斜' },
   { value: 'overlap', label: '重叠堆叠', hint: '扇形展开' },

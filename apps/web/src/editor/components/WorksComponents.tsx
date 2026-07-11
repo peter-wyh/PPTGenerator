@@ -87,7 +87,100 @@ function gridSpans(count: number, cols: number): number[] {
   return spans;
 }
 
-/** 作品截图墙：支持 5 种视觉风格（grid / diagonal / skew / overlap / filmstrip）。 */
+/** 非对称拼图模板：按图片数量定义 grid 单元格排列。
+ *  每个 template 定义一个 grid 的列数、行数、以及每张图的单元格坐标。 */
+interface MosaicCell { col: number; row: number; colSpan: number; rowSpan: number }
+interface MosaicTemplate { gridCols: number; gridRows: number; cells: MosaicCell[] }
+
+const MOSAIC_TEMPLATES: MosaicTemplate[] = [
+  // [0]: 1 张 → 全幅
+  { gridCols: 1, gridRows: 1, cells: [{ col: 0, row: 0, colSpan: 1, rowSpan: 1 }] },
+  // [1]: 2 张 → 1:1 对半
+  { gridCols: 2, gridRows: 1, cells: [
+    { col: 0, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 0, colSpan: 1, rowSpan: 1 },
+  ]},
+  // [2]: 3 张 → 1大2小（左大右叠）
+  { gridCols: 2, gridRows: 2, cells: [
+    { col: 0, row: 0, colSpan: 1, rowSpan: 2 }, // 左侧大图
+    { col: 1, row: 0, colSpan: 1, rowSpan: 1 }, // 右上
+    { col: 1, row: 1, colSpan: 1, rowSpan: 1 }, // 右下
+  ]},
+  // [3]: 4 张 → L型（左大+右上+右下+底部宽条）
+  { gridCols: 3, gridRows: 2, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 1 }, // 左上大
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 }, // 右上
+    { col: 2, row: 1, colSpan: 1, rowSpan: 1 }, // 右下
+    { col: 0, row: 1, colSpan: 2, rowSpan: 1 }, // 左下宽条
+  ]},
+  // [4]: 5 张 → 1大2中2小
+  { gridCols: 3, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 }, // 左侧大
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 }, // 右上
+    { col: 2, row: 1, colSpan: 1, rowSpan: 1 }, // 右中
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 }, // 左下
+    { col: 1, row: 2, colSpan: 2, rowSpan: 1 }, // 右下宽
+  ]},
+  // [5]: 6 张 → 2大4小（品字型）
+  { gridCols: 3, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 }, // 左大
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 }, // 右上小
+    { col: 2, row: 1, colSpan: 1, rowSpan: 1 }, // 右中小
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 }, // 左下小
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 }, // 中下小
+    { col: 2, row: 2, colSpan: 1, rowSpan: 1 }, // 右下小
+  ]},
+  // [6]: 7 张 → 阶梯式
+  { gridCols: 4, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 }, // 左大
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 }, // 右上1
+    { col: 3, row: 0, colSpan: 1, rowSpan: 1 }, // 右上2
+    { col: 2, row: 1, colSpan: 2, rowSpan: 1 }, // 右中宽
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 }, // 左下
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 }, // 中下
+    { col: 2, row: 2, colSpan: 2, rowSpan: 1 }, // 右下宽
+  ]},
+  // [7]: 8 张 → 1大7小
+  { gridCols: 4, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 }, // 左大
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 2, colSpan: 2, rowSpan: 1 }, // 底部宽
+  ]},
+  // [8]: 9 张 → 1大8小（经典杂志封面）
+  { gridCols: 4, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 }, // 左大
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 2, colSpan: 1, rowSpan: 1 },
+  ]},
+  // [9+]: 10~12 张 → 1大+N小（更密网格）
+  { gridCols: 4, gridRows: 4, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 }, // 左大
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 3, colSpan: 2, rowSpan: 1 }, // 底部宽
+    { col: 2, row: 3, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 3, colSpan: 1, rowSpan: 1 },
+  ]},
+];
+
+/** 作品截图墙：支持 6 种视觉风格（grid / mosaic / skew / overlap / filmstrip / diagonal）。 */
 export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
   const { variant, style = 'grid', displayCount, title, images: allImages = [], gap = 8 } = data;
 
@@ -215,6 +308,37 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
                 style={{ clipPath, marginTop: `${marginTop}px`, gridColumn: `span ${spans[i]}` }}
               >
                 <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
+              </div>
+            );
+          })}
+        </div>
+      </Shell>
+    );
+  }
+
+  /* ---- mosaic: 非对称拼图（1大2小 / L型 / 阶梯等不规则组合）---- */
+  if (style === 'mosaic') {
+    const tpl = MOSAIC_TEMPLATES[Math.min(images.length, MOSAIC_TEMPLATES.length - 1)];
+    const { gridCols, gridRows, cells } = tpl;
+    return (
+      <Shell title={title}>
+        <div
+          className="grid h-full w-full overflow-hidden"
+          style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gridTemplateRows: `repeat(${gridRows}, 1fr)`, gap: '4px' }}
+        >
+          {cells.map((cell, i) => {
+            const im = images[i];
+            if (!im) return null;
+            return (
+              <div
+                key={i}
+                className="relative overflow-hidden rounded-lg"
+                style={{
+                  gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
+                  gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
+                }}
+              >
+                <Screenshot src={im.src} caption={im.caption} captionHidden={im.captionHidden} />
               </div>
             );
           })}
