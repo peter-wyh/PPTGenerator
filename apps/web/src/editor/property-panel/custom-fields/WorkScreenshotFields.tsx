@@ -9,6 +9,7 @@ const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string }[] = [
   { value: 'skew', label: '斜切拼接' },
   { value: 'overlap', label: '重叠堆叠' },
   { value: 'filmstrip', label: '胶片条' },
+  { value: 'diagonal', label: '斜切网格' },
 ];
 
 /** 作品截图：每张图 ImageInput + 说明 + 显隐 + 删除，底部添加；视觉样式选择器。 */

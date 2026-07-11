@@ -140,6 +140,61 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     );
   }
 
+  /* ---- diagonal: 规整网格 + 行间横向斜切衔接 ---- */
+  if (style === 'diagonal') {
+    // 按图片数自适应列数，尽量让网格平整
+    const cols = images.length <= 3 ? images.length : images.length <= 6 ? 3 : 4;
+    const rows = Math.ceil(images.length / cols);
+    const cellGap = 2; // 斜切效果需要小间距
+    return (
+      <Shell title={title}>
+        <div
+          className="grid h-full w-full overflow-hidden"
+          style={{
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
+            gap: `${cellGap}px`,
+            // 每行用 clip-path 斜切：让行与行的衔接处形成锯齿状横向斜线
+          }}
+        >
+          {images.map((im, i) => {
+            const row = Math.floor(i / cols);
+            // 偶数行 clip 上左下右，奇数行反方向，形成行间斜切衔接
+            const clipEven =
+              'polygon(0 0, 100% 0, 100% calc(100% - 14px), 0 100%)';
+            const clipOdd =
+              'polygon(0 14px, 100% 0, 100% 100%, 0 100%)';
+            const clipPath = row % 2 === 0 ? clipEven : clipOdd;
+            // 斜切行向上偏移 14px 以补偿 clip 空白，让图片紧密衔接
+            const marginTop = row > 0 ? -14 : 0;
+            return (
+              <div
+                key={i}
+                className="relative overflow-hidden rounded-md"
+                style={{ clipPath, marginTop: `${marginTop}px` }}
+              >
+                <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
+              </div>
+            );
+          })}
+          {/* 如果最后一行不满，补满网格占位 */}
+          {Array.from({ length: rows * cols - images.length }).map((_, i) => (
+            <div
+              key={`pad-${i}`}
+              className="relative overflow-hidden rounded-md bg-surface-hover"
+              style={{
+                clipPath:
+                  (rows - 1) % 2 === 0
+                    ? 'polygon(0 0, 100% 0, 100% calc(100% - 14px), 0 100%)'
+                    : 'polygon(0 14px, 100% 0, 100% 100%, 0 100%)',
+                marginTop: rows > 1 ? -14 : 0,
+              }}
+            />
+          ))}
+        </div>
+      </Shell>
+    );
+  }
+
   /* ---- grid (default): 标准网格马赛克 ---- */
   const layout = resolveLayout(variant, images.length);
   return (

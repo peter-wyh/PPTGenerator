@@ -521,7 +521,7 @@ export interface CreatorFanInterestData {
 /* ---- 业务组件（试点：业绩·商品域，作品证据 / 口碑展示）Data ---- */
 
 /** 作品截图视觉风格预设（与版式 variant 正交）。 */
-export type WorkScreenshotStyle = 'grid' | 'skew' | 'overlap' | 'filmstrip';
+export type WorkScreenshotStyle = 'grid' | 'skew' | 'overlap' | 'filmstrip' | 'diagonal';
 
 export interface WorkScreenshotItem {
   src: string;
