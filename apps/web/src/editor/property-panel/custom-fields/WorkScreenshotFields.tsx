@@ -17,10 +17,10 @@ const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string; hint: string }
 ];
 
 /** 样式 → 是否使用网格版式选择器（variant），否则用列数选择器。 */
-const USES_VARIANT: WorkScreenshotStyle[] = ['grid', 'diagonal'];
+const USES_VARIANT: WorkScreenshotStyle[] = ['grid'];
 
-/** 胶片/斜切/重叠样式下的可选列数。 */
-const COLS_OPTIONS = [2, 3, 4, 5];
+/** 非网格样式下的可选列数。 */
+const COLS_OPTIONS = [2, 3, 4, 5, 6];
 
 const VARIANT_LIST = [
   { id: 'auto', label: '自适应' },
