@@ -310,7 +310,7 @@ export function Canvas() {
               className="pointer-events-none absolute inset-0"
               style={{
                 backgroundImage:
-                  'linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px)',
+                  'linear-gradient(to right, var(--grid-line, rgba(0,0,0,0.03)) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-line, rgba(0,0,0,0.03)) 1px, transparent 1px)',
                 backgroundSize: `${gridSize}px ${gridSize}px`,
               }}
             />
@@ -324,7 +324,7 @@ export function Canvas() {
                 top: safeRect.top,
                 width: safeRect.right - safeRect.left,
                 height: safeRect.bottom - safeRect.top,
-                border: '1px dashed rgba(0,0,0,0.25)',
+                border: '1px dashed var(--safe-area-border, rgba(0,0,0,0.25))',
               }}
             />
           )}

@@ -92,7 +92,7 @@ export function ExportMenu() {
           {feedback && (
             <div
               className={`mx-2 mt-1 break-all rounded px-2 py-1 text-xs ${
-                feedback.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                feedback.ok ? 'bg-[color-mix(in_srgb,var(--green)_12%,transparent)] text-[var(--green)]' : 'bg-[color-mix(in_srgb,var(--red)_12%,transparent)] text-[var(--red)]'
               }`}
             >
               {feedback.text}

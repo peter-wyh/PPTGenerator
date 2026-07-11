@@ -43,7 +43,7 @@ export function renderCaseShowcase(ctx: RenderCtx): React.ReactNode {
         <div
           style={{
             position: 'relative',
-            background: `linear-gradient(145deg,rgba(124,45,18,.15),rgba(255,92,0,.52)),url(${CASE_BG}) center/cover`,
+            background: `linear-gradient(145deg,color-mix(in srgb, var(--color-primary) 15%, transparent),color-mix(in srgb, var(--color-primary) 52%, transparent)),url(${CASE_BG}) center/cover`,
             borderRadius: 8,
             padding: 13,
             overflow: 'hidden',

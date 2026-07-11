@@ -55,7 +55,7 @@ export function renderCover(ctx: RenderCtx): React.ReactNode {
           style={{
             marginTop: 'auto',
             paddingTop: 12,
-            borderTop: '1px solid rgba(255,255,255,.25)',
+            borderTop: '1px solid color-mix(in srgb, var(--foreground-inverse) 25%, transparent)',
             display: 'flex',
             justifyContent: 'space-between',
             fontSize: 10,

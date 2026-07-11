@@ -41,12 +41,12 @@ const RADIUS_MAP: Record<ThemeRadius, { card: number; pill: number }> = {
   large: { card: 16, pill: 9999 },
 };
 
-/** 阴影档位 → box-shadow 值。 */
+/** 阴影档位 → box-shadow 值。rgba 黑色用 var(--shadow-color)，暗色主题可覆盖。 */
 const SHADOW_MAP: Record<ThemeShadow, string> = {
   none: 'none',
-  subtle: '0 1px 2px rgba(0,0,0,.05)',
-  soft: '0 2px 8px rgba(0,0,0,.08)',
-  strong: '0 8px 24px rgba(0,0,0,.12)',
+  subtle: '0 1px 2px var(--shadow-color, rgba(0,0,0,.05))',
+  soft: '0 2px 8px var(--shadow-color, rgba(0,0,0,.08))',
+  strong: '0 8px 24px var(--shadow-color, rgba(0,0,0,.12))',
 };
 
 /**
@@ -87,6 +87,8 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     // v2：行高 / 卡片阴影
     '--line-height': lh.mode === 'fixed' ? `calc(1em + ${lh.value}px)` : String(lh.value),
     '--shadow-card': SHADOW_MAP[t.shadow ?? DEFAULT_THEME.shadow!],
+    // 阴影色：亮色主题用黑色低透明，暗色主题可覆盖为黑色更高透明
+    '--shadow-color': 'rgba(0,0,0,.08)',
   };
 
   // v3：skinPreset → 覆盖圆角和阴影档位（在 skin 语义类层面生效）

@@ -44,7 +44,7 @@ export function PageThumbnail({ page, canvasWidth, canvasHeight, width = 184, he
                 width: Math.max(1, c.w * scale),
                 height: Math.max(1, c.h * scale),
                 background: TYPE_COLOR[c.type] ?? 'var(--border-subtle)',
-                border: '1px solid rgba(0,0,0,0.04)',
+                border: '1px solid var(--border-subtle, rgba(0,0,0,0.04))',
               }}
             />
           ))
