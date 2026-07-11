@@ -18,6 +18,7 @@ export interface PageGradient {
 
 /**
  * 页面业务类型：
+ * - 'general'          → 通用页面（空白/标题/数据概览/表格）
  * - 'media-report'     → 投放报告页（自动维护标题）
  * - 'campaign-report'  → Campaign 报告页（需选择 Campaign）
  * - 'creator-case'     → 达人案例/介绍页（需选择达人）
@@ -26,6 +27,7 @@ export interface PageGradient {
  * - 'strategy'         → 策略规划/流程/日历页
  */
 export type PageType =
+  | 'general'
   | 'media-report'
   | 'campaign-report'
   | 'creator-case'

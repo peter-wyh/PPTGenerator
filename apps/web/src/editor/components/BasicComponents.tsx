@@ -448,3 +448,115 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
     </div>
   );
 }
+
+/* ------------------------------- content card ----------------------------- */
+
+import type { ContentCardData } from '@mediakit/shared';
+
+export function ContentCard({ data }: { data: ContentCardData }) {
+  const { variant = 'standard', title, body, image, tag, footer } = data;
+  const accent = data.accentColor ?? 'var(--color-primary)';
+
+  const tagEl = tag && (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium"
+      style={{ backgroundColor: `color-mix(in srgb, ${accent} 12%, white)`, color: accent }}
+    >
+      {tag}
+    </span>
+  );
+
+  const titleEl = (
+    <div className="text-lg font-bold leading-snug text-foreground-primary">{title}</div>
+  );
+
+  const bodyEl = body && (
+    <p className="text-xs leading-relaxed text-foreground-secondary">{body}</p>
+  );
+
+  const footerEl = footer && (
+    <div className="mt-auto border-t border-border-default pt-1.5 text-[10px] text-foreground-muted">
+      {footer}
+    </div>
+  );
+
+  switch (variant) {
+    case 'image-top':
+      return (
+        <div className="skin-card-lg flex h-full w-full flex-col overflow-hidden p-0">
+          {image && (
+            <div className="h-2/5 w-full flex-none overflow-hidden">
+              <img src={image} alt="" className="h-full w-full object-cover" />
+            </div>
+          )}
+          <div className="flex flex-1 flex-col gap-1.5 p-4">
+            <div className="flex items-center gap-2">
+              {tagEl}
+            </div>
+            {titleEl}
+            {bodyEl}
+            {footerEl}
+          </div>
+        </div>
+      );
+
+    case 'image-left':
+      return (
+        <div className="skin-card-lg flex h-full w-full overflow-hidden p-0">
+          {image && (
+            <div className="h-full w-2/5 flex-none overflow-hidden">
+              <img src={image} alt="" className="h-full w-full object-cover" />
+            </div>
+          )}
+          <div className="flex flex-1 flex-col gap-1.5 p-4">
+            <div className="flex items-center gap-2">
+              {tagEl}
+            </div>
+            {titleEl}
+            {bodyEl}
+            {footerEl}
+          </div>
+        </div>
+      );
+
+    case 'compact':
+      return (
+        <div className="skin-card flex h-full w-full flex-col gap-1 p-3">
+          <div className="flex items-center justify-between">
+            {titleEl}
+            {tagEl}
+          </div>
+          {bodyEl}
+        </div>
+      );
+
+    case 'quote':
+      return (
+        <div
+          className="flex h-full w-full flex-col justify-center gap-2 rounded-xl p-5"
+          style={{ background: `color-mix(in srgb, ${accent} 6%, var(--surface-secondary, #f8f8f8))` }}
+        >
+          <span className="text-3xl leading-none" style={{ color: accent }}>❝</span>
+          {bodyEl}
+          <div className="flex items-center gap-2">
+            <span className="h-0.5 w-6 rounded-full" style={{ backgroundColor: accent }} />
+            <span className="text-sm font-bold text-foreground-primary">{title}</span>
+          </div>
+          {footerEl}
+        </div>
+      );
+
+    default: // standard
+      return (
+        <div className="skin-card-lg flex h-full w-full flex-col gap-2 p-4">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-0.5 rounded-full" style={{ backgroundColor: accent }} />
+            {tagEl}
+          </div>
+          {titleEl}
+          {bodyEl}
+          {footerEl}
+        </div>
+      );
+  }
+}

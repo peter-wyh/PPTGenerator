@@ -286,6 +286,7 @@ export function GradientFields({ page }: { page: Page }) {
 
 const PAGE_TYPE_OPTIONS: { value: PageType | ''; label: string; icon: string; desc: string }[] = [
   { value: '', label: '普通页面', icon: '📄', desc: '无业务绑定' },
+  { value: 'general', label: '通用', icon: '📋', desc: '空白/标题/数据/表格' },
   { value: 'media-report', label: '投放报告', icon: '📊', desc: '自动维护标题' },
   { value: 'campaign-report', label: 'Campaign 报告', icon: '📈', desc: '需选择 Campaign' },
   { value: 'creator-case', label: '达人案例', icon: '🌟', desc: '需选择达人' },

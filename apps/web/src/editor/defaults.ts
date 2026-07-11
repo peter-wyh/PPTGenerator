@@ -40,6 +40,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'campaign-analysis': { w: 520, h: 360 },
   'creator-work-metrics': { w: 560, h: 280 },
   'creator-works-table': { w: 700, h: 320 },
+  'content-card': { w: 360, h: 240 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -661,6 +662,14 @@ export function getDefaultData(type: ComponentType): ComponentData {
             trendLabel: 'Views',
           },
         ],
+      };
+    case 'content-card':
+      return {
+        variant: 'standard' as const,
+        title: '卡片标题',
+        body: '在此输入正文内容。可用于重点说明、摘要介绍或关键结论的展示。',
+        tag: '标签',
+        footer: '',
       };
     default:
       return { content: '', fontSize: 14, color: '#1A1A1A' };

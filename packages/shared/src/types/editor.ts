@@ -53,7 +53,9 @@ export type ComponentType =
   // 业绩·商品域：单达人作品数据指标（拆分子分类）
   | 'creator-work-metrics'
   // 业绩·商品域：达人作品列表（带封面+数据列，mock 数据）
-  | 'creator-works-table';
+  | 'creator-works-table'
+  // 基础组件：内容卡片（带标题 + 正文 + 可选图片/标签），可自由填充
+  | 'content-card';
 
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
@@ -132,6 +134,21 @@ export interface TitleBlockData {
   color?: string;
   /** 是否显示底部分割线 */
   divider?: boolean;
+}
+
+/* ---- 内容卡片（带标题 + 正文 + 可选图片/标签）---- */
+
+export type ContentCardVariant = 'standard' | 'image-top' | 'image-left' | 'compact' | 'quote';
+
+export interface ContentCardData {
+  variant?: ContentCardVariant;
+  title: string;
+  body?: string;
+  image?: string;
+  tag?: string;
+  footer?: string;
+  /** 标题色（空时跟全局品牌色） */
+  accentColor?: string;
 }
 
 /* ---- Campaign 单达人维度分析图表 ---- */
@@ -607,7 +624,8 @@ export type ComponentData =
   | TitleBlockData
   | CampaignAnalysisData
   | CreatorWorkMetricsData
-  | CreatorWorksTableData;
+  | CreatorWorksTableData
+  | ContentCardData;
 
 export interface EditorComponent {
   id: string;

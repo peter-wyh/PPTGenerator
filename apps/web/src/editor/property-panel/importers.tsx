@@ -10,6 +10,22 @@ import { parseCreatorLink } from '../creatorLink';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
 import { metricsToRows } from '../campaignMetrics';
+
+/**
+ * 从当前页面的 creatorId 绑定中自动获取达人。
+ * - creator-case 页面：page.creatorId 直接绑定
+ * - creator-collab 页面：page.creatorId 直接绑定
+ * 返回 { creator, creatorId }，无绑定时 creator=null。
+ */
+function usePageCreator() {
+  const pageCreatorId = useEditorStore((s) => {
+    const p = s.pages.find((pg) => pg.id === s.currentPageId);
+    return p?.creatorId;
+  });
+  const creators = allReportCreators(useEditorStore((s) => s.reportData));
+  const creator = pageCreatorId ? creators.find((c) => c.id === pageCreatorId) ?? null : null;
+  return { creator, creatorId: pageCreatorId ?? '', creators };
+}
 import type { ChartData } from '../datasource/resolve';
 import { parseFile } from '../datasource/parse';
 import { FieldGroup } from './helpers';
@@ -222,8 +238,8 @@ export function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
  * 只能选全局配置范围内的 campaign 和达人，不能超出。
  */
 export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }) {
+  const { creator: pageCreator, creatorId: pageCreatorId, creators: allCreators } = usePageCreator();
   const campaign = useEditorStore((s) => s.reportData.campaign);
-  const allCreators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selectedCreatorIds, setSelectedCreatorIds] = useState<Set<string>>(new Set());
@@ -233,6 +249,7 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
   const campaignId = campaign?.id ?? '';
 
   // Load works for globally-configured creators only (filtered to this campaign).
+  const creatorsKey = allCreators.map((c) => c.id).join(',');
   useEffect(() => {
     if (!campaignId || allCreators.length === 0) {
       setCreatorsWithWorks([]);
@@ -253,15 +270,22 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
         tier: cw.tier,
         posts: cw.posts.map((p) => ({ id: p.postId, title: p.title, cover: p.cover, platform: p.platform })),
       })));
-      // Default: select all
-      setSelectedCreatorIds(new Set(filtered.map((c) => c.creatorId)));
+      // Default: select page-bound creator only, or all if no page binding (first load only)
+      setSelectedCreatorIds((prev) => {
+        if (prev.size > 0) return prev; // keep user's choice
+        if (pageCreatorId && filtered.some((c) => c.creatorId === pageCreatorId)) {
+          return new Set([pageCreatorId]); // 只选页面绑定的达人
+        }
+        return new Set(filtered.map((c) => c.creatorId)); // 无页面绑定则全选
+      });
     } catch {
       // ignore
     } finally {
       if (alive) setLoading(false);
     }
     return () => { alive = false; };
-  }, [campaignId, allCreators]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId, creatorsKey, pageCreatorId]);
 
   const selectedCreators = creatorsWithWorks.filter((c) => selectedCreatorIds.has(c.creatorId));
   const selectedPostCount = selectedCreators.reduce((sum, c) => sum + c.posts.length, 0);
@@ -304,6 +328,11 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
   return (
     <FieldGroup title="Import from Campaign">
       {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 页面达人：{pageCreator.name}
+        </p>
+      )}
       {creatorsWithWorks.length > 0 && (
         <>
           <div className="space-y-1">
@@ -368,15 +397,20 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
  * creator-avatar-card：从「数据配置」面板已选达人中选一个，一键填充头像卡字段。
  */
 export function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent }) {
-  const creators = allReportCreators(useEditorStore((s) => s.reportData));
+  const { creator: pageCreator, creators } = usePageCreator();
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selected, setSelected] = useState('');
 
+  // 自动预选页面绑定的达人
+  useEffect(() => {
+    if (pageCreator && !selected) setSelected(pageCreator.id);
+  }, [pageCreator, selected]);
+
   if (creators.length === 0) return null;
 
   function apply() {
-    const cr = creators.find((c) => c.id === selected);
+    const cr = creators.find((c) => c.id === selected) ?? pageCreator;
     if (!cr) return;
     updateComponentData(comp.id, {
       name: cr.name,
@@ -392,6 +426,11 @@ export function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent })
 
   return (
     <FieldGroup title="从项目数据导入">
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 页面达人：{pageCreator.name}
+        </p>
+      )}
       <select
         value={selected}
         onChange={(e) => setSelected(e.target.value)}
@@ -420,26 +459,36 @@ export function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent })
  * creator-stats-strip：从「数据配置」面板已选达人中选一个，一键填充达人数据条 KPI。
  */
 export function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) {
-  const creators = allReportCreators(useEditorStore((s) => s.reportData));
+  const { creator: pageCreator, creators } = usePageCreator();
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selected, setSelected] = useState('');
 
+  // 自动预选页面绑定的达人
+  useEffect(() => {
+    if (pageCreator && !selected) setSelected(pageCreator.id);
+  }, [pageCreator, selected]);
+
   if (creators.length === 0) return null;
 
   function apply() {
-    const cr = creators.find((c) => c.id === selected);
+    const cr = creators.find((c) => c.id === selected) ?? pageCreator;
     if (!cr || !cr.stats?.length) return;
     updateComponentData(comp.id, { stats: cr.stats.map((s) => ({ ...s })) });
     commit();
     setSelected('');
   }
 
-  const selectedCreator = creators.find((c) => c.id === selected);
+  const selectedCreator = creators.find((c) => c.id === selected) ?? pageCreator;
   const hasStats = (selectedCreator?.stats?.length ?? 0) > 0;
 
   return (
     <FieldGroup title="从项目数据导入">
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 页面达人：{pageCreator.name}
+        </p>
+      )}
       <select
         value={selected}
         onChange={(e) => setSelected(e.target.value)}
@@ -472,10 +521,15 @@ export function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) 
  * 约定列顺序 [Avatar, Name, Platform, Followers, Engagement, Category]。
  */
 export function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
-  const creators = allReportCreators(useEditorStore((s) => s.reportData));
+  const { creator: pageCreator, creatorId: pageCreatorId, creators } = usePageCreator();
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // 自动预选页面绑定的达人
+  useEffect(() => {
+    if (pageCreatorId && selectedIds.length === 0) setSelectedIds([pageCreatorId]);
+  }, [pageCreatorId, selectedIds]);
 
   if (creators.length === 0) return null;
 
@@ -516,6 +570,11 @@ export function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
 
   return (
     <FieldGroup title="从项目数据导入">
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 页面达人：{pageCreator.name}
+        </p>
+      )}
       <div className="space-y-1">
         {creators.map((c) => (
           <label key={c.id} className="flex items-center gap-2 text-xs">
@@ -555,8 +614,8 @@ export function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
  * 达人选择范围限定在全局「数据配置」中的已选达人，不能超出。
  */
 export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) {
+  const { creator: pageCreator, creatorId: pageCreatorId, creators } = usePageCreator();
   const reportData = useEditorStore((s) => s.reportData);
-  const allCreators = allReportCreators(useEditorStore((s) => s.reportData));
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const [selectedCreator, setSelectedCreator] = useState('');
@@ -570,10 +629,16 @@ export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) 
     setLoading(true);
     const allWorks = campaignCreatorWorks(campaignId);
     // Only include creators that are in the global data config
-    const allowedIds = new Set(allCreators.map((c) => c.id));
+    const allowedIds = new Set(creators.map((c) => c.id));
     setCreatorsWithWorks(allWorks.filter((cw) => allowedIds.has(cw.creatorId)));
     setLoading(false);
-  }, [campaignId, allCreators]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId, creators.map((c) => c.id).join(',')]);
+
+  // 自动预选页面绑定的达人
+  useEffect(() => {
+    if (pageCreatorId && !selectedCreator) setSelectedCreator(pageCreatorId);
+  }, [pageCreatorId, selectedCreator]);
 
   if (!campaignId) {
     return (
@@ -606,6 +671,11 @@ export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) 
       {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
       {creatorsWithWorks.length > 0 && (
         <>
+          {pageCreator && (
+            <p className="mb-1 text-[10px] text-accent-primary">
+              🔗 页面达人：{pageCreator.name}
+            </p>
+          )}
           <select
             value={selectedCreator}
             onChange={(e) => setSelectedCreator(e.target.value)}

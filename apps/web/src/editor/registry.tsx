@@ -10,6 +10,7 @@ import {
   ShapeComponent,
   TableComponent,
   TextComponent,
+  ContentCard,
 } from './components/BasicComponents';
 import { BusinessBlockRenderer } from './business/render';
 import {
@@ -586,6 +587,26 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'subtitle', label: '副标题', kind: 'text' },
       { key: '', label: '作品列表', kind: 'table' },
+    ],
+  },
+  'content-card': {
+    Component: ContentCard,
+    defaultSize: DEFAULT_SIZES['content-card'],
+    defaultData: () => getDefaultData('content-card'),
+    variants: [
+      { id: 'standard', label: '标准' },
+      { id: 'image-top', label: '上图下文' },
+      { id: 'image-left', label: '左图右文' },
+      { id: 'compact', label: '紧凑' },
+      { id: 'quote', label: '引用' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'body', label: '正文', kind: 'textarea' },
+      { key: 'image', label: '图片', kind: 'image-url' },
+      { key: 'tag', label: '标签', kind: 'text' },
+      { key: 'footer', label: '底部文字', kind: 'text' },
+      { key: 'accentColor', label: '强调色', kind: 'color' },
     ],
   },
 };

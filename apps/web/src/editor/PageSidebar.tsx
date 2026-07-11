@@ -7,6 +7,7 @@ import type { Template } from './templates';
 
 /** 页面类型 → 侧栏图标映射（无类型不显示）。 */
 const PAGE_TYPE_ICONS: Record<string, string> = {
+  'general': '📋',
   'media-report': '📊',
   'campaign-report': '📈',
   'creator-case': '🌟',

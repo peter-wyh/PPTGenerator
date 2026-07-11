@@ -158,12 +158,14 @@ export const TEMPLATES: Template[] = [
     id: 'blank',
     name: '空白页',
     description: '从零开始',
+    pageType: 'general',
     components: () => [],
   },
   {
     id: 'title',
     name: '标题页',
     description: '大标题 + 副标题',
+    pageType: 'general',
     components: () => {
       const title = t('text', 120, 200, 900, 120);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Report Title';
@@ -179,6 +181,7 @@ export const TEMPLATES: Template[] = [
     id: 'overview',
     name: '数据概览',
     description: '指标卡片 + 柱状图',
+    pageType: 'general',
     components: () => {
       const cards = [0, 1, 2].map((i) => {
         const c = t('indicator-card', 80 + i * 300, 80, 260, 110);
@@ -194,6 +197,7 @@ export const TEMPLATES: Template[] = [
     id: 'table',
     name: '表格页',
     description: '数据表格',
+    pageType: 'general',
     components: () => {
       const tbl = t('table', 80, 100, 1120, 520);
       return [tbl];

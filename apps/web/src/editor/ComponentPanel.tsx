@@ -29,6 +29,7 @@ const GROUPS: { group: string; items: { type: ComponentType; label: string; icon
       { type: 'shape', shape: 'circle', label: '圆形', icon: '◯' },
       { type: 'shape', shape: 'line', label: '直线', icon: '─' },
       { type: 'title-block', label: '标题块', icon: 'H' },
+      { type: 'content-card', label: '卡片', icon: '▢' },
     ],
   },
   {
