@@ -26,6 +26,7 @@ import {
 } from './defaults';
 import { snapMove, snapResize, clampRect, clampResize, safeRectFrom, type SafeRect } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
+import { getTemplateByPageType } from './templates';
 import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
 
@@ -1010,6 +1011,35 @@ export const useEditorStore = create<EditorState>((set, get) => {
               const title = buildReportTitle(s.projectMeta ?? {});
               const titleId = p.titleComponentId;
               const hasTitleComp = !!titleId && !!p.components.find((c) => c.id === titleId && c.type === 'text');
+              // 空页时从模板填充默认内容（保留标题组件逻辑）
+              if (p.components.length === 0) {
+                const tpl = getTemplateByPageType(pageType!);
+                if (tpl) {
+                  const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
+                  // 确保 title 组件存在
+                  const titleIdx = tpl.pageTitleIndex;
+                  let titleCompId: string | undefined;
+                  let components = comps;
+                  if (titleIdx != null && comps[titleIdx]) {
+                    titleCompId = comps[titleIdx].id;
+                    // 覆盖标题文案为项目报告标题
+                    (comps[titleIdx].data as { content?: string }).content = title;
+                  } else {
+                    // 模板没有 pageTitleIndex，手动在前面插入标题组件
+                    const created = makeTitleComponent(title);
+                    titleCompId = created.id;
+                    components = [created, ...comps];
+                  }
+                  return {
+                    ...p,
+                    pageType: pageType ?? p.pageType,
+                    titleComponentId: titleCompId,
+                    titleOverridden: false,
+                    components,
+                    name: title,
+                  };
+                }
+              }
               if (!hasTitleComp) {
                 const created = makeTitleComponent(title);
                 return {
@@ -1052,6 +1082,21 @@ export const useEditorStore = create<EditorState>((set, get) => {
             const next: Page = { ...p, pageType };
             if (patchCampaign && !p.campaignId) {
               next.campaignId = s.reportData?.campaign?.id ?? '';
+            }
+            // 页面组件为空时，从对应模板填充默认内容
+            if (p.components.length === 0) {
+              const tpl = getTemplateByPageType(pageType);
+              if (tpl) {
+                const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
+                next.components = comps;
+                // 如果模板有 pageTitleIndex，设置标题组件
+                if (tpl.pageTitleIndex != null && comps[tpl.pageTitleIndex]) {
+                  next.titleComponentId = comps[tpl.pageTitleIndex].id;
+                  next.titleOverridden = false;
+                }
+                // 用模板名称作为页面名
+                if (tpl.name) next.name = tpl.name;
+              }
             }
             return next;
           }),

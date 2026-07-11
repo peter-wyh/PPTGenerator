@@ -23,6 +23,11 @@ export function getTemplate(id: string): Template | undefined {
   return TEMPLATES.find((t) => t.id === id);
 }
 
+/** Get a page template by PageType — returns the first template matching the given pageType. */
+export function getTemplateByPageType(pageType: PageType): Template | undefined {
+  return TEMPLATES.find((t) => t.pageType === pageType);
+}
+
 /** Page template categories (grouped in the "New Page" dialog). Order = display order. */
 export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
   { category: '基础', ids: ['blank', 'title', 'overview', 'table'] },
