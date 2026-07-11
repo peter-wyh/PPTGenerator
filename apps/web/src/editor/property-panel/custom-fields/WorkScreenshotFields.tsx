@@ -5,7 +5,7 @@ import type {
 } from '@mediakit/shared';
 import { useEditorStore } from '../../store';
 import { ImageInput } from '@/components/ImageInput';
-import { FieldGroup, VariantSelector } from '../helpers';
+import { FieldGroup } from '../helpers';
 import { ReportWorkScreenshotImporter } from '../importers';
 
 const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string; hint: string }[] = [
@@ -16,32 +16,18 @@ const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string; hint: string }
   { value: 'filmstrip', label: '胶片条', hint: '横向条带' },
 ];
 
-/** 样式 → 是否使用网格版式选择器（variant），否则用列数选择器。 */
-const USES_VARIANT: WorkScreenshotStyle[] = ['grid'];
+const DISPLAY_OPTIONS = [1, 2, 3, 4, 6, 8, 9, 12];
 
-/** 非网格样式下的可选列数。 */
-const COLS_OPTIONS = [2, 3, 4, 5, 6];
-
-const VARIANT_LIST = [
-  { id: 'auto', label: '自适应' },
-  { id: 'duo', label: '2 张' },
-  { id: 'trio', label: '3 张' },
-  { id: 'quad', label: '4 张' },
-  { id: 'mosaic-5', label: '5 张' },
-  { id: 'hex', label: '6 张' },
-  { id: 'septet', label: '7 张' },
-  { id: 'nona', label: '9 张' },
-  { id: 'duoza', label: '12 张' },
-] as const;
-
-/** 作品截图：样式 + 数量联动 + 每张图编辑。 */
+/** 作品截图：样式 + 显示数量联动 + 每张图编辑。 */
 export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
   const data = comp.data as WorkScreenshotData;
   const images = data.images ?? [];
   const style = data.style ?? 'grid';
-  const cols = data.cols ?? 3;
+  const total = images.length;
+  // displayCount 未设或 > total 时显示全部
+  const displayCount = data.displayCount ?? total;
 
   const write = (next: Partial<WorkScreenshotData>) => {
     updateComponentData(comp.id, next);
@@ -52,8 +38,6 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
     writeImages(images.map((im, idx) => (idx === i ? { ...im, ...patch } : im)));
   const add = () => writeImages([...images, { src: '', caption: '' }]);
   const remove = (i: number) => writeImages(images.filter((_, idx) => idx !== i));
-
-  const usesVariant = USES_VARIANT.includes(style);
 
   return (
     <>
@@ -81,35 +65,41 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
         </p>
       </FieldGroup>
 
-      {/* 数量/列数联动：grid & diagonal → variant 版式选择器；其余 → 列数选择器 */}
-      {usesVariant ? (
-        <FieldGroup title="版式（张数）">
-          <VariantSelector
-            comp={comp}
-            variants={VARIANT_LIST.map((v) => ({ id: v.id as string, label: v.label }))}
-          />
-        </FieldGroup>
-      ) : (
-        <FieldGroup title="列数">
-          <div className="flex gap-1.5">
-            {COLS_OPTIONS.map((c) => (
-              <button
-                key={c}
-                onClick={() => write({ cols: c })}
-                className={`rounded border px-2.5 py-1 text-xs transition ${
-                  cols === c
-                    ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                    : 'border-border-default text-foreground-secondary hover:border-foreground-muted'
-                }`}
-              >
-                {c} 列
-              </button>
-            ))}
-          </div>
-        </FieldGroup>
-      )}
+      {/* 显示数量 */}
+      <FieldGroup title="显示数量">
+        <div className="flex flex-wrap gap-1.5">
+          {DISPLAY_OPTIONS.filter((n) => n <= total || n === total).map((n) => (
+            <button
+              key={n}
+              onClick={() => write({ displayCount: n })}
+              className={`rounded border px-2.5 py-1 text-xs transition ${
+                displayCount === n
+                  ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                  : 'border-border-default text-foreground-secondary hover:border-foreground-muted'
+              }`}
+            >
+              {n} 张
+            </button>
+          ))}
+          {total > 0 && !DISPLAY_OPTIONS.includes(total) && (
+            <button
+              onClick={() => write({ displayCount: undefined })}
+              className={`rounded border px-2.5 py-1 text-xs transition ${
+                displayCount === total
+                  ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                  : 'border-border-default text-foreground-secondary hover:border-foreground-muted'
+              }`}
+            >
+              全部 {total} 张
+            </button>
+          )}
+        </div>
+        <p className="mt-1 text-[10px] text-foreground-muted">
+          当前显示 {displayCount} 张 / 共 {total} 张，布局自动适配
+        </p>
+      </FieldGroup>
 
-      <FieldGroup title={`作品截图（${images.length} 张）`}>
+      <FieldGroup title={`作品截图（${total} 张）`}>
         <div className="space-y-2">
           {images.map((im, i) => (
             <div key={i} className="space-y-1 rounded border border-border-subtle p-1.5">

@@ -55,9 +55,21 @@ function Screenshot({
   );
 }
 
+/** 按图片数量自动算出最佳列数（方正排布）。 */
+function autoCols(n: number): number {
+  if (n <= 1) return 1;
+  if (n <= 2) return 2;
+  if (n <= 4) return 2;
+  if (n <= 6) return 3;
+  if (n <= 9) return 3;
+  return 4;
+}
+
 /** 作品截图墙：支持 5 种视觉风格（grid / diagonal / skew / overlap / filmstrip）。 */
 export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
-  const { variant, style = 'grid', cols = 3, title, images = [], gap = 8 } = data;
+  const { variant, style = 'grid', displayCount, title, images: allImages = [], gap = 8 } = data;
+
+  const images = displayCount ? allImages.slice(0, displayCount) : allImages;
 
   if (images.length === 0) {
     return (
@@ -68,6 +80,8 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
       </Shell>
     );
   }
+
+  const cols = autoCols(images.length);
 
   /* ---- skew: 斜切拼接（交替倾斜 + 按列数排布）---- */
   if (style === 'skew') {
@@ -111,16 +125,10 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
             const rot = (colInRow - mid) * 4;
             const z = Math.round(cols - Math.abs(colInRow - mid));
             return (
-              <div
-                key={i}
-                className="relative flex items-center justify-center"
-              >
+              <div key={i} className="relative flex items-center justify-center">
                 <div
                   className="relative h-[70%] w-[80%] overflow-hidden rounded-lg shadow-lg"
-                  style={{
-                    transform: `translateX(${offset}px) rotate(${rot}deg)`,
-                    zIndex: z,
-                  }}
+                  style={{ transform: `translateX(${offset}px) rotate(${rot}deg)`, zIndex: z }}
                 >
                   <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
                 </div>
@@ -155,7 +163,6 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
 
   /* ---- diagonal: 规整网格 + 行间横向斜切衔接 ---- */
   if (style === 'diagonal') {
-    const rows = Math.ceil(images.length / cols);
     const clipH = 14;
     return (
       <Shell title={title}>
@@ -170,28 +177,11 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
             const clipPath = row % 2 === 0 ? clipEven : clipOdd;
             const marginTop = row > 0 ? -clipH : 0;
             return (
-              <div
-                key={i}
-                className="relative overflow-hidden rounded-md"
-                style={{ clipPath, marginTop: `${marginTop}px` }}
-              >
+              <div key={i} className="relative overflow-hidden rounded-md" style={{ clipPath, marginTop: `${marginTop}px` }}>
                 <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
               </div>
             );
           })}
-          {Array.from({ length: rows * cols - images.length }).map((_, i) => (
-            <div
-              key={`pad-${i}`}
-              className="relative overflow-hidden rounded-md bg-surface-hover"
-              style={{
-                clipPath:
-                  (rows - 1) % 2 === 0
-                    ? `polygon(0 0, 100% 0, 100% calc(100% - ${clipH}px), 0 100%)`
-                    : `polygon(0 ${clipH}px, 100% 0, 100% 100%, 0 100%)`,
-                marginTop: rows > 1 ? -clipH : 0,
-              }}
-            />
-          ))}
         </div>
       </Shell>
     );

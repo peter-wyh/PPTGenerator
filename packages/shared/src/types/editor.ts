@@ -538,8 +538,8 @@ export interface WorkScreenshotData {
   variant?: ImageGroupLayoutId;
   /** 视觉风格预设，与 variant 正交。 */
   style?: WorkScreenshotStyle;
-  /** 列数（仅 skew/overlap/filmstrip 使用；缺省 3）。 */
-  cols?: number;
+  /** 显示数量（控制渲染几张图，实际 images 数组可以更多）。缺省=全部显示。 */
+  displayCount?: number;
   title?: string;
   images: WorkScreenshotItem[];
   /** 单元格间距（px）；可选，缺省 8（与组图一致）。 */
