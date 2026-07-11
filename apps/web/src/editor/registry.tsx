@@ -35,6 +35,7 @@ import {
   CampaignAnalysis,
   CreatorWorkMetrics,
   CreatorWorksTable,
+  SwotMatrix,
 } from './components/report';
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
@@ -214,6 +215,11 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: BarChartComponent,
     defaultSize: DEFAULT_SIZES['bar-chart'],
     defaultData: () => getDefaultData('bar-chart'),
+    variants: [
+      { id: 'vertical', label: '竖向柱状' },
+      { id: 'horizontal', label: '横向条形' },
+      { id: 'stacked', label: '堆叠柱状' },
+    ],
     dataSource: {
       modes: ['manual', 'project'],
       projectImporter: ChartImportButton,
@@ -675,6 +681,19 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'tag', label: '标签', kind: 'text' },
       { key: 'footer', label: '底部文字', kind: 'text' },
       { key: 'accentColor', label: '强调色', kind: 'color' },
+    ],
+  },
+  'swot-matrix': {
+    Component: SwotMatrix,
+    defaultSize: { w: 560, h: 400 },
+    defaultData: () => getDefaultData('swot-matrix'),
+    variants: [
+      { id: 'grid', label: '四象限' },
+      { id: 'list', label: '列表' },
+      { id: 'cards', label: '卡片' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
     ],
   },
 };

@@ -41,6 +41,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'creator-work-metrics': { w: 560, h: 280 },
   'creator-works-table': { w: 700, h: 320 },
   'content-card': { w: 360, h: 240 },
+  'swot-matrix': { w: 560, h: 400 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -69,6 +70,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'bar-chart':
       return {
         title: 'Bar Chart',
+        variant: 'vertical' as const,
         bars: [
           { label: 'A', value: 80, color: 'auto' },
           { label: 'B', value: 60, color: 'auto' },
@@ -670,6 +672,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
         body: '在此输入正文内容。可用于重点说明、摘要介绍或关键结论的展示。',
         tag: '标签',
         footer: '',
+      };
+    case 'swot-matrix':
+      return {
+        variant: 'grid' as const,
+        title: 'Opportunities & Challenges',
+        quadrants: [
+          { title: 'Opportunities', items: ['18–24 高潜受众', 'UGC 口碑背书', '敏感肌蓝海品类'] },
+          { title: 'Strengths', items: ['300+ 品牌服务经验', 'AI 数据归因能力', '跨平台达人资源'] },
+          { title: 'Challenges', items: ['心智占位不足', '内容同质化严重', '品类教育成本高'] },
+          { title: 'Threats', items: ['竞品投放加码', '平台算法波动', '用户注意力碎片化'] },
+        ],
       };
     default:
       return { content: '', fontSize: 14, color: 'var(--foreground-primary)' };

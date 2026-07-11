@@ -224,17 +224,58 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
 export function BarChartComponent({ data }: { data: BarChartData }) {
   const cs = useChartStyle();
   const palette = useChartColors();
+  const variant = data.variant ?? 'vertical';
+
+  /* 堆叠模式 */
+  if (variant === 'stacked' && data.stackBars && data.stackBars.length > 0) {
+    const keys = data.stackKeys ?? Object.keys(data.stackBars[0]?.values ?? {});
+    return (
+      <div className="flex h-full w-full flex-col bg-surface-primary p-3">
+        {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
+        <div className="flex-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.stackBars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+              {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle, #F3F4F6)" />}
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
+              <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
+              {cs.legend && <Legend {...cs.legend} />}
+              {keys.map((k, i) => (
+                <Bar key={k} dataKey={`values.${k}`} name={k} stackId="a" radius={i === keys.length - 1 ? [cs.barRadius, cs.barRadius, 0, 0] : [0, 0, 0, 0]} fill={resolveColor(undefined, i, palette)} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
+
+  /* 横向条形 */
+  const isHorizontal = variant === 'horizontal';
+  const chartProps = isHorizontal
+    ? { layout: 'vertical' as const, data: data.bars, margin: { top: 4, right: 16, bottom: 4, left: 8 } }
+    : { layout: 'horizontal' as const, data: data.bars, margin: { top: 4, right: 8, bottom: 4, left: 0 } };
+
   return (
     <div className="flex h-full w-full flex-col bg-surface-primary p-3">
       {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.bars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle, #F3F4F6)" />}
-            <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
-            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
+          <BarChart {...chartProps}>
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #F3F4F6)" {...(isHorizontal ? { horizontal: false } : { vertical: false })} />}
+            {isHorizontal ? (
+              <>
+                <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+                <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={48} hide={!cs.showAxis} />
+              </>
+            ) : (
+              <>
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
+              </>
+            )}
             <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
-            <Bar dataKey="value" radius={[cs.barRadius, cs.barRadius, 0, 0]}>
+            <Bar dataKey="value" radius={isHorizontal ? [0, cs.barRadius, cs.barRadius, 0] : [cs.barRadius, cs.barRadius, 0, 0]}>
               {data.bars.map((b, i) => (
                 <Cell key={i} fill={resolveColor(b.color, i, palette)} />
               ))}

@@ -55,7 +55,8 @@ export type ComponentType =
   // 业绩·商品域：达人作品列表（带封面+数据列，mock 数据）
   | 'creator-works-table'
   // 基础组件：内容卡片（带标题 + 正文 + 可选图片/标签），可自由填充
-  | 'content-card';
+  | 'content-card'
+  | 'swot-matrix';
 
 /* ---- 数据来源标记（所有组件 data 通用元字段） ---- */
 
@@ -161,6 +162,25 @@ export interface ContentCardData {
   accentColor?: string;
 }
 
+/* ---- SWOT / 机会挑战矩阵 ---- */
+
+export type SwotMatrixVariant = 'grid' | 'list' | 'cards';
+
+export interface SwotQuadrant {
+  /** 象限标题，如 "Opportunities"、"Challenges" */
+  title: string;
+  /** 要点列表（每条一行） */
+  items: string[];
+}
+
+export interface SwotMatrixData {
+  variant?: SwotMatrixVariant;
+  /** 大标题 */
+  title?: string;
+  /** 四个象限：按 [左上, 右上, 左下, 右下] 顺序 */
+  quadrants: SwotQuadrant[];
+}
+
 /* ---- Campaign 单达人维度分析图表 ---- */
 
 export type CampaignAnalysisVariant = 'radar' | 'combo' | 'funnel';
@@ -233,9 +253,16 @@ export interface BarChartDatum {
   value: number;
   color: string;
 }
+export type BarChartVariant = 'vertical' | 'horizontal' | 'stacked';
+
 export interface BarChartData {
   title?: string;
+  variant?: BarChartVariant;
   bars: BarChartDatum[];
+  /** 堆叠模式（variant='stacked'）时的系列名列表；bars 的 label 作为 X 轴分类 */
+  stackKeys?: string[];
+  /** 堆叠数据：每个分类下各系列的值 { label, values: { key: number } } */
+  stackBars?: { label: string; values: Record<string, number> }[];
 }
 
 export interface LineChartDatum {
@@ -635,7 +662,8 @@ export type ComponentData =
   | CampaignAnalysisData
   | CreatorWorkMetricsData
   | CreatorWorksTableData
-  | ContentCardData;
+  | ContentCardData
+  | SwotMatrixData;
 
 export interface EditorComponent {
   id: string;

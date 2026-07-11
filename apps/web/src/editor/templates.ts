@@ -417,11 +417,31 @@ export const TEMPLATES: Template[] = [
         { label: 'Sales', value: '$186K', color: 'auto' },
         { label: 'ROAS', value: '4.2x', color: 'auto' },
       ];
-      const works = t('creator-works-list', 80, 260, 1120, 200);
-      const note = t('text', 80, 480, 1120, 80);
+      const works = t('creator-works-list', 80, 250, 1120, 170);
+      // 粉丝画像：性别占比 + 年龄段分布
+      const fanGender = t('creator-fan-gender', 80, 440, 540, 220);
+      (fanGender.data as { title: string; subtitle: string; center: string; slices: { label: string; value: number; color: string }[] }).title = 'Audience Gender';
+      (fanGender.data as { subtitle: string }).subtitle = 'Fan gender split';
+      (fanGender.data as { center: string }).center = '100%';
+      (fanGender.data as { slices: { label: string; value: number; color: string }[] }).slices = [
+        { label: 'Female', value: 68, color: 'auto' },
+        { label: 'Male', value: 28, color: 'auto' },
+        { label: 'Other', value: 4, color: 'auto' },
+      ];
+      const fanAge = t('creator-fan-age', 660, 440, 540, 220);
+      (fanAge.data as { title: string; subtitle: string; bars: { label: string; value: number; color: string }[] }).title = 'Age Distribution';
+      (fanAge.data as { subtitle: string }).subtitle = 'Fan age range';
+      (fanAge.data as { bars: { label: string; value: number; color: string }[] }).bars = [
+        { label: '13-17', value: 5, color: 'auto' },
+        { label: '18-24', value: 38, color: 'auto' },
+        { label: '25-34', value: 34, color: 'auto' },
+        { label: '35-44', value: 16, color: 'auto' },
+        { label: '45+', value: 7, color: 'auto' },
+      ];
+      const note = t('text', 80, 680, 1120, 70);
       (note.data as { content: string }).content =
         "Change Note: This creator's promo volume rose 18% this period, mainly driven by repeat purchases from the 7-day diary content line; recommend continuing this mechanic next period and adding 2 hero-post replicas.";
-      return [title, avatar, stats, works, note];
+      return [title, avatar, stats, works, fanGender, fanAge, note];
     },
   },
   {
@@ -510,19 +530,21 @@ export const TEMPLATES: Template[] = [
   {
     id: 'challenge-page',
     name: '机会与挑战',
-    description: '标题 + 机会/挑战表格',
+    description: 'SWOT 四象限矩阵',
     pageType: 'challenge',
-    components: () =>
-      tablePage(
-        'Opportunities & Challenges',
-        ['Dimension', 'Opportunity', 'Challenge'],
-        [
-          ['Audience', '18–24 high-potential', 'Weak mind-share'],
-          ['Content', 'Credible UGC endorsement', 'Heavy homogenization'],
-          ['Segment', 'Sensitive-skin blue ocean', 'High category-education cost'],
-        ],
-        'Seize the efficacy-visualization content window; amplify mid-tier creator conversion.',
-      ),
+    components: () => {
+      const title = titleAt('Opportunities & Challenges', 80, 50);
+      const swot = t('swot-matrix', 80, 130, 1120, 420);
+      (swot.data as { variant: string; title: string; quadrants: { title: string; items: string[] }[] }).variant = 'grid';
+      (swot.data as { title: string }).title = '';
+      (swot.data as { quadrants: { title: string; items: string[] }[] }).quadrants = [
+        { title: 'Opportunities', items: ['18–24 high-potential', 'Credible UGC endorsement', 'Sensitive-skin blue ocean'] },
+        { title: 'Strengths', items: ['300+ brand experience', 'AI data attribution', 'Cross-platform creators'] },
+        { title: 'Challenges', items: ['Weak mind-share', 'Heavy homogenization', 'High category-education cost'] },
+        { title: 'Threats', items: ['Competitor ad spend up', 'Platform algo volatility', 'Fragmented attention'] },
+      ];
+      return [title, swot];
+    },
   },
   {
     id: 'process-page',
