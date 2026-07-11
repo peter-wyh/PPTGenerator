@@ -7,11 +7,11 @@ import type { KpiColorToken } from '@mediakit/shared';
  * primary 走深色近似设计 token；后续可接 CSS 变量做主题联动。
  */
 export const KPI_COLOR_TOKENS: Record<KpiColorToken, { fg: string; softBg: string }> = {
-  primary: { fg: '#111827', softBg: '#9CA3AF1F' },
-  success: { fg: '#22C55E', softBg: '#22C55E1F' },
-  warning: { fg: '#F59E0B', softBg: '#F59E0B1F' },
-  danger: { fg: '#EF4444', softBg: '#EF44441F' },
-  info: { fg: '#3B82F6', softBg: '#3B82F61F' },
+  primary: { fg: 'var(--foreground-primary)', softBg: 'color-mix(in srgb, var(--foreground-muted) 12%, transparent)' },
+  success: { fg: 'var(--green)', softBg: 'color-mix(in srgb, var(--green) 12%, transparent)' },
+  warning: { fg: 'var(--yellow)', softBg: 'color-mix(in srgb, var(--yellow) 12%, transparent)' },
+  danger: { fg: 'var(--red)', softBg: 'color-mix(in srgb, var(--red) 12%, transparent)' },
+  info: { fg: 'var(--blue)', softBg: 'color-mix(in srgb, var(--blue) 12%, transparent)' },
 };
 
 export const KPI_COLOR_OPTIONS: { token: KpiColorToken; label: string }[] = [

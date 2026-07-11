@@ -77,7 +77,7 @@ function CampaignCombo({ series }: { series: CampaignAnalysisData['series'] }) {
         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <Tooltip />
         <Bar yAxisId="left" dataKey="barValue" radius={[4, 4, 0, 0]} fill="var(--color-primary)" barSize="40%" />
-        <Line yAxisId="right" dataKey="lineValue" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
+        <Line yAxisId="right" dataKey="lineValue" stroke="var(--blue)" strokeWidth={2} dot={{ r: 3 }} />
       </ComposedChart>
     </ResponsiveContainer>
   );

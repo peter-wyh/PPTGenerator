@@ -39,7 +39,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                 {m.value}
               </div>
               {m.sub && (
-                <div className="text-[10px] font-medium" style={{ color: m.color ?? '#22C55E' }}>{m.sub}</div>
+                <div className="text-[10px] font-medium" style={{ color: m.color ?? 'var(--green)' }}>{m.sub}</div>
               )}
             </div>
           ))}
@@ -77,7 +77,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                   {m.value}
                 </div>
                 {m.sub && (
-                  <div className="text-[10px] font-medium" style={{ color: m.color ?? '#22C55E' }}>{m.sub}</div>
+                  <div className="text-[10px] font-medium" style={{ color: m.color ?? 'var(--green)' }}>{m.sub}</div>
                 )}
               </div>
             ))}
@@ -108,7 +108,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
               >
                 <div className="text-[10px] text-foreground-muted">{m.label}</div>
                 <div className="font-data text-lg font-bold" style={{ color }}>{m.value}</div>
-                {m.sub && <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? '#EF4444' : '#22C55E' }}>{m.sub}</div>}
+                {m.sub && <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? 'var(--red)' : 'var(--green)' }}>{m.sub}</div>}
               </div>
             );
           })}
@@ -141,7 +141,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                       className="flex items-center justify-center text-[10px] font-medium text-white"
                       style={{
                         width: `${Math.max(g.value, 4)}%`,
-                        backgroundColor: g.color ?? (g.label.includes('女') ? '#EC4899' : '#3B82F6'),
+                        backgroundColor: g.color ?? (g.label.includes('女') ? 'var(--purple)' : 'var(--blue)'),
                       }}
                     >
                       {g.value >= 12 ? `${g.label} ${g.value}%` : ''}
@@ -160,7 +160,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-hover">
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${Math.min(100, a.value)}%`, backgroundColor: a.color ?? '#8B5CF6' }}
+                        style={{ width: `${Math.min(100, a.value)}%`, backgroundColor: a.color ?? 'auto' }}
                       />
                     </div>
                     <span className="w-8 flex-none text-right text-[10px] font-data text-foreground-primary">{a.value}%</span>
@@ -281,7 +281,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
               {m.value}
             </div>
             {m.sub && (
-              <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? '#EF4444' : '#22C55E' }}>
+              <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? 'var(--red)' : 'var(--green)' }}>
                 {m.sub}
               </div>
             )}

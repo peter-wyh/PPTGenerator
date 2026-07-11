@@ -62,7 +62,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
         fontSize: 14,
         fontFamily: '',
         fontWeight: 400,
-        color: '#1A1A1A',
+        color: 'var(--foreground-primary)',
       };
     case 'indicator-card':
       return { variant: 'plain', title: '指标名称', value: '---', colorTheme: 'blue' };
@@ -70,9 +70,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         title: 'Bar Chart',
         bars: [
-          { label: 'A', value: 80, color: '#FF5C00' },
-          { label: 'B', value: 60, color: '#3B82F6' },
-          { label: 'C', value: 40, color: '#22C55E' },
+          { label: 'A', value: 80, color: 'auto' },
+          { label: 'B', value: 60, color: 'auto' },
+          { label: 'C', value: 40, color: 'auto' },
         ],
       };
     case 'line-chart':
@@ -81,7 +81,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
         series: [
           {
             name: 'Series 1',
-            color: '#FF5C00',
+            color: 'auto',
             points: [
               { label: 'Mon', value: 30 },
               { label: 'Tue', value: 60 },
@@ -96,9 +96,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         title: 'Pie Chart',
         slices: [
-          { label: 'A', value: 40, color: '#FF5C00' },
-          { label: 'B', value: 30, color: '#3B82F6' },
-          { label: 'C', value: 30, color: '#22C55E' },
+          { label: 'A', value: 40, color: 'auto' },
+          { label: 'B', value: 30, color: 'auto' },
+          { label: 'C', value: 30, color: 'auto' },
         ],
       };
     case 'table':
@@ -133,10 +133,10 @@ export function getDefaultData(type: ComponentType): ComponentData {
       return {
         variant: 'cards',
         stats: [
-          { key: 'followers', label: 'Followers', value: '1.28M', color: '#FF5C00', selected: true },
-          { key: 'engagement', label: 'Engagement Rate', value: '8.7%', color: '#3B82F6', selected: true },
-          { key: 'reach', label: 'Avg. Reach', value: '640K', color: '#22C55E', selected: true },
-          { key: 'impressions', label: 'Impressions', value: '12.6M', color: '#8B5CF6', selected: true },
+          { key: 'followers', label: 'Followers', value: '1.28M', color: 'auto', selected: true },
+          { key: 'engagement', label: 'Engagement Rate', value: '8.7%', color: 'auto', selected: true },
+          { key: 'reach', label: 'Avg. Reach', value: '640K', color: 'auto', selected: true },
+          { key: 'impressions', label: 'Impressions', value: '12.6M', color: 'auto', selected: true },
         ],
       };
     case 'creator-works-list':
@@ -151,20 +151,20 @@ export function getDefaultData(type: ComponentType): ComponentData {
         insights: [
           {
             topCities: [
-              { label: 'New York', value: 23, color: '#FF5C00' },
-              { label: 'Los Angeles', value: 18, color: '#FF8C42' },
-              { label: 'Chicago', value: 12, color: '#FFB380' },
-              { label: 'Houston', value: 9, color: '#FFD4B3' },
+              { label: 'New York', value: 23, color: 'auto' },
+              { label: 'Los Angeles', value: 18, color: 'auto' },
+              { label: 'Chicago', value: 12, color: 'auto' },
+              { label: 'Houston', value: 9, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 72, color: '#EC4899' },
-              { label: 'M', value: 28, color: '#3B82F6' },
+              { label: 'F', value: 72, color: 'auto' },
+              { label: 'M', value: 28, color: 'auto' },
             ],
             ageRange: [
-              { label: '18-24', value: 35, color: '#8B5CF6' },
-              { label: '25-34', value: 42, color: '#A78BFA' },
-              { label: '35-44', value: 15, color: '#C4B5FD' },
-              { label: '45+', value: 8, color: '#DDD6FE' },
+              { label: '18-24', value: 35, color: 'auto' },
+              { label: '25-34', value: 42, color: 'auto' },
+              { label: '35-44', value: 15, color: 'auto' },
+              { label: '45+', value: 8, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 12000 },
@@ -179,18 +179,18 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Houston', value: 21, color: '#FF5C00' },
-              { label: 'Miami', value: 16, color: '#FF8C42' },
-              { label: 'Seattle', value: 11, color: '#FFB380' },
+              { label: 'Houston', value: 21, color: 'auto' },
+              { label: 'Miami', value: 16, color: 'auto' },
+              { label: 'Seattle', value: 11, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 85, color: '#EC4899' },
-              { label: 'M', value: 15, color: '#3B82F6' },
+              { label: 'F', value: 85, color: 'auto' },
+              { label: 'M', value: 15, color: 'auto' },
             ],
             ageRange: [
-              { label: '18-24', value: 48, color: '#8B5CF6' },
-              { label: '25-34', value: 32, color: '#A78BFA' },
-              { label: '35-44', value: 14, color: '#C4B5FD' },
+              { label: '18-24', value: 48, color: 'auto' },
+              { label: '25-34', value: 32, color: 'auto' },
+              { label: '35-44', value: 14, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 8000 },
@@ -205,16 +205,16 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Austin', value: 19, color: '#FF5C00' },
-              { label: 'Denver', value: 14, color: '#FF8C42' },
+              { label: 'Austin', value: 19, color: 'auto' },
+              { label: 'Denver', value: 14, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 68, color: '#EC4899' },
-              { label: 'M', value: 32, color: '#3B82F6' },
+              { label: 'F', value: 68, color: 'auto' },
+              { label: 'M', value: 32, color: 'auto' },
             ],
             ageRange: [
-              { label: '18-24', value: 29, color: '#8B5CF6' },
-              { label: '25-34', value: 47, color: '#A78BFA' },
+              { label: '18-24', value: 29, color: 'auto' },
+              { label: '25-34', value: 47, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 5000 },
@@ -358,9 +358,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
         subtitle: 'Female-led',
         center: 'Female 62%',
         slices: [
-          { label: 'Female', value: 62, color: '#FF5C00' },
-          { label: 'Male', value: 36, color: '#3B82F6' },
-          { label: 'Other', value: 2, color: '#8B5CF6' },
+          { label: 'Female', value: 62, color: 'auto' },
+          { label: 'Male', value: 36, color: 'auto' },
+          { label: 'Other', value: 2, color: 'auto' },
         ],
       };
     case 'creator-fan-city':
@@ -368,14 +368,14 @@ export function getDefaultData(type: ComponentType): ComponentData {
         title: 'Top 8 Fan Cities',
         subtitle: 'Tier-1 & new tier-1 cities make up 73%',
         bars: [
-          { label: 'Shanghai', value: 22, color: '#FF5C00' },
-          { label: 'Guangzhou', value: 16, color: '#3B82F6' },
-          { label: 'Beijing', value: 14, color: '#22C55E' },
-          { label: 'Shenzhen', value: 12, color: '#8B5CF6' },
-          { label: 'Hangzhou', value: 9, color: '#F59E0B' },
-          { label: 'Chengdu', value: 7, color: '#EC4899' },
-          { label: 'Wuhan', value: 5, color: '#3B82F6' },
-          { label: "Xi'an", value: 4, color: '#22C55E' },
+          { label: 'Shanghai', value: 22, color: 'auto' },
+          { label: 'Guangzhou', value: 16, color: 'auto' },
+          { label: 'Beijing', value: 14, color: 'auto' },
+          { label: 'Shenzhen', value: 12, color: 'auto' },
+          { label: 'Hangzhou', value: 9, color: 'auto' },
+          { label: 'Chengdu', value: 7, color: 'auto' },
+          { label: 'Wuhan', value: 5, color: 'auto' },
+          { label: "Xi'an", value: 4, color: 'auto' },
         ],
       };
     case 'creator-fan-age':
@@ -383,11 +383,11 @@ export function getDefaultData(type: ComponentType): ComponentData {
         title: 'Fan Age Groups',
         subtitle: '25–34 is the core group',
         bars: [
-          { label: '<18', value: 8, color: '#3B82F6' },
-          { label: '18-24', value: 28, color: '#FF5C00' },
-          { label: '25-34', value: 38, color: '#22C55E' },
-          { label: '35-44', value: 18, color: '#8B5CF6' },
-          { label: '45+', value: 8, color: '#F59E0B' },
+          { label: '<18', value: 8, color: 'auto' },
+          { label: '18-24', value: 28, color: 'auto' },
+          { label: '25-34', value: 38, color: 'auto' },
+          { label: '35-44', value: 18, color: 'auto' },
+          { label: '45+', value: 8, color: 'auto' },
         ],
       };
     case 'creator-fan-interest':
@@ -396,10 +396,10 @@ export function getDefaultData(type: ComponentType): ComponentData {
         subtitle: 'Beauty & Food are the top two interests',
         showPercent: true,
         tags: [
-          { label: 'Beauty', value: 35, color: '#FF5C00' },
-          { label: 'Food', value: 28, color: '#3B82F6' },
-          { label: 'Fashion', value: 22, color: '#22C55E' },
-          { label: 'Travel', value: 15, color: '#8B5CF6' },
+          { label: 'Beauty', value: 35, color: 'auto' },
+          { label: 'Food', value: 28, color: 'auto' },
+          { label: 'Fashion', value: 22, color: 'auto' },
+          { label: 'Travel', value: 15, color: 'auto' },
         ],
       };
     case 'work-screenshot':
@@ -415,12 +415,12 @@ export function getDefaultData(type: ComponentType): ComponentData {
         workName: '7-Day Skin Diary · Day 1',
         cover: '',
         metrics: [
-          { label: 'Views', value: '1.2M', color: '#FF5C00' },
-          { label: 'Likes', value: '86K', color: '#3B82F6' },
-          { label: 'Comments', value: '2.4K', color: '#22C55E' },
-          { label: 'Shares', value: '1.2K', color: '#8B5CF6' },
-          { label: 'Completion Rate', value: '42%', color: '#F59E0B' },
-          { label: 'Saves', value: '5.6K', color: '#EC4899' },
+          { label: 'Views', value: '1.2M', color: 'auto' },
+          { label: 'Likes', value: '86K', color: 'auto' },
+          { label: 'Comments', value: '2.4K', color: 'auto' },
+          { label: 'Shares', value: '1.2K', color: 'auto' },
+          { label: 'Completion Rate', value: '42%', color: 'auto' },
+          { label: 'Saves', value: '5.6K', color: 'auto' },
         ],
       };
     case 'comment-wordcloud':
@@ -450,7 +450,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
         variant: 'bar-left',
         text: '章节标题',
         subtitle: '副标题（可选）',
-        color: '#FF5C00',
+        color: 'auto',
         divider: true,
       };
     case 'campaign-analysis':
@@ -483,30 +483,30 @@ export function getDefaultData(type: ComponentType): ComponentData {
         workName: '7-Day Skin Diary · Day 1',
         cover: '',
         metrics: [
-          { label: 'Views', value: '1.2M', sub: '+15%', color: '#FF5C00' },
-          { label: 'Likes', value: '86K', sub: '+8%', color: '#3B82F6' },
-          { label: 'Comments', value: '2.4K', sub: '+22%', color: '#22C55E' },
-          { label: 'Shares', value: '1.2K', sub: '+5%', color: '#8B5CF6' },
-          { label: 'Completion', value: '42%', sub: '+3pt', color: '#F59E0B' },
-          { label: 'Saves', value: '5.6K', sub: '+12%', color: '#EC4899' },
+          { label: 'Views', value: '1.2M', sub: '+15%', color: 'auto' },
+          { label: 'Likes', value: '86K', sub: '+8%', color: 'auto' },
+          { label: 'Comments', value: '2.4K', sub: '+22%', color: 'auto' },
+          { label: 'Shares', value: '1.2K', sub: '+5%', color: 'auto' },
+          { label: 'Completion', value: '42%', sub: '+3pt', color: 'auto' },
+          { label: 'Saves', value: '5.6K', sub: '+12%', color: 'auto' },
         ],
         audience: {
           topCities: [
-            { label: 'New York', value: 23, color: '#FF5C00' },
-            { label: 'Los Angeles', value: 18, color: '#3B82F6' },
-            { label: 'Chicago', value: 14, color: '#22C55E' },
-            { label: 'Houston', value: 11, color: '#8B5CF6' },
-            { label: 'Miami', value: 8, color: '#F59E0B' },
+            { label: 'New York', value: 23, color: 'auto' },
+            { label: 'Los Angeles', value: 18, color: 'auto' },
+            { label: 'Chicago', value: 14, color: 'auto' },
+            { label: 'Houston', value: 11, color: 'auto' },
+            { label: 'Miami', value: 8, color: 'auto' },
           ],
           genderSplit: [
-            { label: 'F', value: 72, color: '#EC4899' },
-            { label: 'M', value: 28, color: '#3B82F6' },
+            { label: 'F', value: 72, color: 'auto' },
+            { label: 'M', value: 28, color: 'auto' },
           ],
           ageRange: [
-            { label: '18-24', value: 35, color: '#8B5CF6' },
-            { label: '25-34', value: 42, color: '#A78BFA' },
-            { label: '35-44', value: 15, color: '#C4B5FD' },
-            { label: '45+', value: 8, color: '#DDD6FE' },
+            { label: '18-24', value: 35, color: 'auto' },
+            { label: '25-34', value: 42, color: 'auto' },
+            { label: '35-44', value: 15, color: 'auto' },
+            { label: '45+', value: 8, color: 'auto' },
           ],
           trend: [
             { label: 'D1', value: 12000 },
@@ -537,13 +537,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
         insights: [
           {
             topCities: [
-              { label: 'New York', value: 23, color: '#FF5C00' },
-              { label: 'Los Angeles', value: 18, color: '#FF8C42' },
-              { label: 'Chicago', value: 12, color: '#FFB380' },
+              { label: 'New York', value: 23, color: 'auto' },
+              { label: 'Los Angeles', value: 18, color: 'auto' },
+              { label: 'Chicago', value: 12, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 72, color: '#EC4899' },
-              { label: 'M', value: 28, color: '#3B82F6' },
+              { label: 'F', value: 72, color: 'auto' },
+              { label: 'M', value: 28, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 12000 },
@@ -558,13 +558,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Houston', value: 21, color: '#FF5C00' },
-              { label: 'Miami', value: 16, color: '#FF8C42' },
-              { label: 'Seattle', value: 11, color: '#FFB380' },
+              { label: 'Houston', value: 21, color: 'auto' },
+              { label: 'Miami', value: 16, color: 'auto' },
+              { label: 'Seattle', value: 11, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 85, color: '#EC4899' },
-              { label: 'M', value: 15, color: '#3B82F6' },
+              { label: 'F', value: 85, color: 'auto' },
+              { label: 'M', value: 15, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 8000 },
@@ -579,13 +579,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Austin', value: 19, color: '#FF5C00' },
-              { label: 'Denver', value: 14, color: '#FF8C42' },
-              { label: 'Boston', value: 10, color: '#FFB380' },
+              { label: 'Austin', value: 19, color: 'auto' },
+              { label: 'Denver', value: 14, color: 'auto' },
+              { label: 'Boston', value: 10, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 68, color: '#EC4899' },
-              { label: 'M', value: 32, color: '#3B82F6' },
+              { label: 'F', value: 68, color: 'auto' },
+              { label: 'M', value: 32, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 5000 },
@@ -600,13 +600,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'San Francisco', value: 20, color: '#FF5C00' },
-              { label: 'Portland', value: 15, color: '#FF8C42' },
-              { label: 'Phoenix', value: 9, color: '#FFB380' },
+              { label: 'San Francisco', value: 20, color: 'auto' },
+              { label: 'Portland', value: 15, color: 'auto' },
+              { label: 'Phoenix', value: 9, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 76, color: '#EC4899' },
-              { label: 'M', value: 24, color: '#3B82F6' },
+              { label: 'F', value: 76, color: 'auto' },
+              { label: 'M', value: 24, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 10000 },
@@ -621,13 +621,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Dallas', value: 22, color: '#FF5C00' },
-              { label: 'Atlanta', value: 17, color: '#FF8C42' },
-              { label: 'Orlando', value: 8, color: '#FFB380' },
+              { label: 'Dallas', value: 22, color: 'auto' },
+              { label: 'Atlanta', value: 17, color: 'auto' },
+              { label: 'Orlando', value: 8, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 91, color: '#EC4899' },
-              { label: 'M', value: 9, color: '#3B82F6' },
+              { label: 'F', value: 91, color: 'auto' },
+              { label: 'M', value: 9, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 15000 },
@@ -642,13 +642,13 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Nashville', value: 18, color: '#FF5C00' },
-              { label: 'Charlotte', value: 13, color: '#FF8C42' },
-              { label: 'Las Vegas', value: 7, color: '#FFB380' },
+              { label: 'Nashville', value: 18, color: 'auto' },
+              { label: 'Charlotte', value: 13, color: 'auto' },
+              { label: 'Las Vegas', value: 7, color: 'auto' },
             ],
             genderSplit: [
-              { label: 'F', value: 70, color: '#EC4899' },
-              { label: 'M', value: 30, color: '#3B82F6' },
+              { label: 'F', value: 70, color: 'auto' },
+              { label: 'M', value: 30, color: 'auto' },
             ],
             trend: [
               { label: 'D1', value: 4000 },
@@ -672,18 +672,18 @@ export function getDefaultData(type: ComponentType): ComponentData {
         footer: '',
       };
     default:
-      return { content: '', fontSize: 14, color: '#1A1A1A' };
+      return { content: '', fontSize: 14, color: 'var(--foreground-primary)' };
   }
 }
 
 export function getDefaultShapeData(shape: ShapeKind): ShapeData {
   if (shape === 'line') {
-    return { shape: 'line', stroke: '#E5E7EB', strokeWidth: 1, opacity: 1, rotation: 0, dash: false };
+    return { shape: 'line', stroke: 'var(--border-default)', strokeWidth: 1, opacity: 1, rotation: 0, dash: false };
   }
   const base: ShapeData = {
     shape,
-    fill: '#FF5C00',
-    stroke: '#E5E7EB',
+    fill: 'var(--color-primary)',
+    stroke: 'var(--border-default)',
     strokeWidth: 0,
     opacity: 1,
     rotation: 0,

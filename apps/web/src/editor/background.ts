@@ -5,9 +5,9 @@ export type BackgroundType = 'color' | 'gradient' | 'image' | 'none';
 
 /** 页面背景 CSS：bgImage > bgGradient > bgColor > #fff。 */
 export function resolvePageBackground(page: Pick<Page, 'bgColor' | 'bgGradient' | 'bgImage'>): string {
-  if (page.bgImage) return `#fff url(${page.bgImage}) center/cover no-repeat`;
+  if (page.bgImage) return `var(--surface-primary) url(${page.bgImage}) center/cover no-repeat`;
   if (page.bgGradient) return gradientToCss(page.bgGradient);
-  return page.bgColor ?? '#fff';
+  return page.bgColor ?? 'var(--surface-primary)';
 }
 
 /** 由数据推导当前背景类型。 */
@@ -28,15 +28,15 @@ export function buildBackgroundTypePatch(
 ): Partial<Pick<Page, 'bgColor' | 'bgGradient' | 'bgImage'>> {
   switch (type) {
     case 'color':
-      return { bgColor: page.bgColor ?? '#FFFFFF', bgGradient: undefined, bgImage: undefined };
+      return { bgColor: page.bgColor ?? 'var(--surface-primary)', bgGradient: undefined, bgImage: undefined };
     case 'gradient': {
-      const first = page.bgColor ?? '#FFFFFF';
+      const first = page.bgColor ?? 'var(--surface-primary)';
       const grad: PageGradient = {
         type: 'linear',
         angle: 180,
         stops: [
           { color: first, position: 0 },
-          { color: '#E5E7EB', position: 100 },
+          { color: 'var(--border-default)', position: 100 },
         ],
       };
       return { bgColor: undefined, bgGradient: grad, bgImage: undefined };

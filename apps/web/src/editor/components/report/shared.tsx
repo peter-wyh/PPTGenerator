@@ -10,7 +10,7 @@ export function useChartColors(): string[] {
 }
 
 /** 向后兼容：静态导出（仅给非 React 上下文使用；React 组件优先用 useChartColors）。 */
-export const CAMPAIGN_COLORS = ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899'];
+export const CAMPAIGN_COLORS = ['var(--color-primary)', 'var(--blue)', 'var(--green)', 'var(--purple)', 'var(--yellow)', 'var(--purple)'];
 
 /** Renders an <img> if url present, else a placeholder with the first character of label. */
 export function ImgOrPlaceholder({ url, label, cls }: { url: string; label: string; cls?: string }) {

@@ -4,16 +4,43 @@ import { PageThumbnail } from './components/PageThumbnail';
 import { TemplateOverlay } from './components/TemplateOverlay';
 import { ScenarioOverlay } from './components/ScenarioOverlay';
 import type { Template } from './templates';
+import { pageCategory } from '@mediakit/shared';
 
-/** 页面类型 → 侧栏图标映射（无类型不显示）。 */
+/** 页面类型 → 侧栏图标映射（27 种，与模板 1:1）。 */
 const PAGE_TYPE_ICONS: Record<string, string> = {
-  'general': '📋',
-  'media-report': '📊',
-  'campaign-report': '📈',
-  'creator-case': '🌟',
-  'creator-collab': '🤝',
-  'company-intro': '🏢',
-  'strategy': '🎯',
+  // 基础
+  blank: '📄',
+  title: '🏷️',
+  overview: '📊',
+  table: '📋',
+  // 投放报告
+  'report-weekly-overview': '📈',
+  'report-monthly-overview': '📈',
+  'report-channel': '📡',
+  'report-product': '🛍️',
+  'report-creator-collab': '🤝',
+  'report-placement': '🖼️',
+  'report-posts': '📝',
+  'report-wrapup-review': '🔎',
+  'content-analysis': '📊',
+  funnel: '🔻',
+  // 公司 · 品牌
+  cover: '🎨',
+  agenda: '📑',
+  company: '🏢',
+  package: '📦',
+  milestone: '🏗️',
+  global: '🌐',
+  org: '👥',
+  service: '⚙️',
+  // 达人 · 案例
+  creator: '🌟',
+  case: '📋',
+  // 策略 · 内容
+  challenge: '⚖️',
+  process: '🔄',
+  calendar: '📅',
+  'campaign-plan': '🗺️',
 };
 
 /** 页面栏：缩略图卡片 + 切换/改名/复制/删除 + 拖拽排序 + 模板新建。 */
@@ -119,11 +146,11 @@ export function PageSidebar() {
                     e.stopPropagation();
                     useEditorStore
                       .getState()
-                      .setPageType(p.id, p.pageType === 'media-report' ? undefined : 'media-report');
+                      .setPageType(p.id, pageCategory(p.pageType) === 'media-report' ? undefined : 'cover');
                   }}
                   className="rounded px-1 py-0.5 text-xs hover:bg-surface-hover"
                 >
-                  {p.pageType === 'media-report' ? '🔹' : '⚪'}
+                  {pageCategory(p.pageType) === 'media-report' ? '🔹' : '⚪'}
                 </button>
                 <button
                   title="复制页面"

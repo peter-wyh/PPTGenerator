@@ -14,17 +14,17 @@ export function renderCover(ctx: RenderCtx): React.ReactNode {
   if (variant === 'light') {
     return (
       <Base variant={variant}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', padding: 30, gap: 16, height: '100%', background: '#FFF' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', padding: 30, gap: 16, height: '100%', background: 'var(--foreground-inverse)' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: ACCENT }}>
               {details[0] || 'MEDIATEK'}
             </div>
             <Title text={title} size={33} style={{ marginTop: 'auto', maxWidth: '88%' }} />
-            <div style={{ fontSize: 12, color: '#666', marginTop: 14, maxWidth: '76%', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12, color: 'var(--foreground-secondary)', marginTop: 14, maxWidth: '76%', lineHeight: 1.5 }}>
               {details[1] || meta}
             </div>
           </div>
-          <div style={{ background: ACCENT, color: '#FFF', borderRadius: 9, padding: 14, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ background: ACCENT, color: 'var(--foreground-inverse)', borderRadius: 9, padding: 14, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 10, fontWeight: 700 }}>2026<br />Q4</span>
             <span style={{ fontSize: 10, lineHeight: 1.4 }}>TikTok<br />Growth Plan</span>
           </div>
@@ -41,15 +41,15 @@ export function renderCover(ctx: RenderCtx): React.ReactNode {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          color: '#FFF',
-          background: 'linear-gradient(125deg, var(--color-neutral-text, #1A1A1A) 0%, color-mix(in srgb, var(--color-neutral-text, #1A1A1A) 70%, var(--color-primary, #FF5C00)) 58%, var(--color-primary, #FF5C00) 150%)',
+          color: 'var(--foreground-inverse)',
+          background: 'linear-gradient(125deg, var(--color-neutral-text, var(--foreground-primary)) 0%, color-mix(in srgb, var(--color-neutral-text, var(--foreground-primary)) 70%, var(--color-primary, var(--color-primary))) 58%, var(--color-primary, var(--color-primary)) 150%)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: 1 }}>
           <span>MEDIATEK / BUSINESS</span>
           <span>2026 Q4</span>
         </div>
-        <Title text={title} size={31} color="#FFF" style={{ marginTop: 'auto', maxWidth: '75%', lineHeight: 1.04, fontWeight: 800 }} />
+        <Title text={title} size={31} color="var(--foreground-inverse)" style={{ marginTop: 'auto', maxWidth: '75%', lineHeight: 1.04, fontWeight: 800 }} />
         <div style={{ fontSize: 12, opacity: 0.78, marginTop: 12 }}>{details[1] || meta}</div>
         <div
           style={{
@@ -76,19 +76,19 @@ export function renderAgenda(ctx: RenderCtx): React.ReactNode {
   return (
     <Base variant={variant}>
       <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20, height: '100%' }}>
-        <div style={{ borderRight: '1px solid #F0E7E2', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ borderRight: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <Label item={item} />
             <Title text={title} style={{ marginTop: 7 }} />
           </div>
-          <div style={{ fontSize: 10, color: '#888' }}>MediaKit Presentation</div>
+          <div style={{ fontSize: 10, color: 'var(--foreground-muted)' }}>MediaKit Presentation</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
           {chapters.map((c, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 24px', alignItems: 'center', fontSize: 12 }}>
               <span style={{ color: ACCENT, ...mono }}>{'0' + (i + 1)}</span>
               <span style={{ fontWeight: 600 }}>{c}</span>
-              <span style={{ color: '#999', textAlign: 'right' }}>{'0' + (i + 2)}</span>
+              <span style={{ color: 'var(--foreground-muted)', textAlign: 'right' }}>{'0' + (i + 2)}</span>
             </div>
           ))}
         </div>
@@ -110,7 +110,7 @@ export function renderMilestone(ctx: RenderCtx): React.ReactNode {
           style={{
             marginTop: 'auto',
             paddingTop: 20,
-            borderTop: '2px solid #FFDAC5',
+            borderTop: '2px solid color-mix(in srgb, var(--color-primary) 20%, white)',
             display: 'grid',
             gridTemplateColumns: 'repeat(4,1fr)',
             gap: 8,
@@ -130,7 +130,7 @@ export function renderMilestone(ctx: RenderCtx): React.ReactNode {
                 }}
               />
               <div style={{ ...mono, fontWeight: 700, fontSize: 14 }}>{years[i] || ''}</div>
-              <div style={{ fontSize: 10, color: '#666', marginTop: 3 }}>{x}</div>
+              <div style={{ fontSize: 10, color: 'var(--foreground-secondary)', marginTop: 3 }}>{x}</div>
             </div>
           ))}
         </div>

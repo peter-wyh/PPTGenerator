@@ -158,14 +158,14 @@ export const TEMPLATES: Template[] = [
     id: 'blank',
     name: '空白页',
     description: '从零开始',
-    pageType: 'general',
+    pageType: 'blank',
     components: () => [],
   },
   {
     id: 'title',
     name: '标题页',
     description: '大标题 + 副标题',
-    pageType: 'general',
+    pageType: 'title',
     components: () => {
       const title = t('text', 120, 200, 900, 120);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Report Title';
@@ -181,7 +181,7 @@ export const TEMPLATES: Template[] = [
     id: 'overview',
     name: '数据概览',
     description: '指标卡片 + 柱状图',
-    pageType: 'general',
+    pageType: 'overview',
     components: () => {
       const cards = [0, 1, 2].map((i) => {
         const c = t('indicator-card', 80 + i * 300, 80, 260, 110);
@@ -197,7 +197,7 @@ export const TEMPLATES: Template[] = [
     id: 'table',
     name: '表格页',
     description: '数据表格',
-    pageType: 'general',
+    pageType: 'table',
     components: () => {
       const tbl = t('table', 80, 100, 1120, 520);
       return [tbl];
@@ -207,7 +207,7 @@ export const TEMPLATES: Template[] = [
     id: 'creator-page',
     name: '达人介绍页',
     description: '头像卡片 + 数据条 + 作品列表（试点）',
-    pageType: 'creator-case',
+    pageType: 'creator',
     components: () => {
       // Top title
       const title = t('text', 80, 60, 900, 60);
@@ -225,7 +225,7 @@ export const TEMPLATES: Template[] = [
     id: 'cover-page',
     name: '封面页',
     description: '大标题 + 副标题',
-    pageType: 'media-report',
+    pageType: 'cover',
     pageTitleIndex: 0,
     components: () => {
       const title = t('text', 120, 240, 1000, 120);
@@ -242,7 +242,7 @@ export const TEMPLATES: Template[] = [
     id: 'agenda-page',
     name: '目录页',
     description: '章节导航表格',
-    pageType: 'media-report',
+    pageType: 'agenda',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Agenda';
@@ -263,7 +263,7 @@ export const TEMPLATES: Template[] = [
     id: 'company-page',
     name: '公司介绍页',
     description: '简介 + 品牌墙',
-    pageType: 'company-intro',
+    pageType: 'company',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'About Us';
@@ -280,7 +280,7 @@ export const TEMPLATES: Template[] = [
     id: 'package-page',
     name: '套餐方案',
     description: '标题 + 套餐卡片 + logo 墙',
-    pageType: 'company-intro',
+    pageType: 'package',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Package Comparison';
@@ -306,7 +306,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-weekly-overview',
     name: '周报 · 业绩概览',
     description: 'KPI 看板 + 下周计划',
-    pageType: 'campaign-report',
+    pageType: 'report-weekly-overview',
     components: () => {
       const title = titleAt('Weekly Status Update', 80, 50);
       const kpi = t('kpi-board', 80, 130, 1120, 200);
@@ -321,7 +321,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-monthly-overview',
     name: '月报 · 业绩概览',
     description: 'KPI + 趋势图 + 周期对比 + 洞察',
-    pageType: 'campaign-report',
+    pageType: 'report-monthly-overview',
     components: () => {
       const title = titleAt('Performance Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
@@ -338,7 +338,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-channel',
     name: '月报 · 渠道表现',
     description: '渠道核心数据 + 对比表格',
-    pageType: 'campaign-report',
+    pageType: 'report-channel',
     components: () => {
       const title = titleAt('Performance by Channels', 80, 40);
       // Channel big numbers: reuse kpi-board (compact) to carry Engaged Publishers / Est Impression etc.
@@ -372,7 +372,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-wrapup-review',
     name: '总结 · 业绩复盘',
     description: 'KPI + 周期对比 + 亮点策略',
-    pageType: 'campaign-report',
+    pageType: 'report-wrapup-review',
     components: () => {
       const title = titleAt('Campaign Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
@@ -388,7 +388,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-product',
     name: '月报 · 商品表现',
     description: '热门商品 + AI 洞察',
-    pageType: 'campaign-report',
+    pageType: 'report-product',
     components: () => {
       const title = titleAt('Top Products', 80, 40);
       const products = t('product-performance', 80, 110, 1120, 360);
@@ -399,7 +399,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-creator-collab',
     name: '月报 · 达人合作详情',
     description: '头像 + 合作数据 + 作品 + 变化说明',
-    pageType: 'creator-collab',
+    pageType: 'report-creator-collab',
     components: () => {
       const title = titleAt('Top Influencer Collaboration', 80, 40);
       // Orchestrate the existing creator trio (validates cross-page reuse of business components).
@@ -407,10 +407,10 @@ export const TEMPLATES: Template[] = [
       const stats = t('creator-stats-strip', 560, 110, 640, 120);
       // Partnership metrics override default follower data.
       (stats.data as { stats: { label: string; value: string; color: string }[] }).stats = [
-        { label: 'Impressions', value: '2.4M', color: '#FF5C00' },
-        { label: 'Engagement Rate', value: '9.1%', color: '#3B82F6' },
-        { label: 'Sales', value: '$186K', color: '#22C55E' },
-        { label: 'ROAS', value: '4.2x', color: '#8B5CF6' },
+        { label: 'Impressions', value: '2.4M', color: 'auto' },
+        { label: 'Engagement Rate', value: '9.1%', color: 'auto' },
+        { label: 'Sales', value: '$186K', color: 'auto' },
+        { label: 'ROAS', value: '4.2x', color: 'auto' },
       ];
       const works = t('creator-works-list', 80, 260, 1120, 200);
       const note = t('text', 80, 480, 1120, 80);
@@ -423,7 +423,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-placement',
     name: '月报 · DM 广告位',
     description: '广告位截图 + 亮点/经验',
-    pageType: 'campaign-report',
+    pageType: 'report-placement',
     components: () => {
       const title = titleAt('Placement Display', 80, 40);
       const placement = t('placement-display', 80, 110, 1120, 320);
@@ -435,7 +435,7 @@ export const TEMPLATES: Template[] = [
     id: 'report-posts',
     name: '月报 · 渠道贴文',
     description: '内容站 / Reddit / FB 贴文列表',
-    pageType: 'campaign-report',
+    pageType: 'report-posts',
     components: () => {
       const title = titleAt('Channel Posts', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
@@ -449,7 +449,7 @@ export const TEMPLATES: Template[] = [
     id: 'milestone-page',
     name: '公司里程碑',
     description: '标题 + 里程碑表格 + 简介',
-    pageType: 'company-intro',
+    pageType: 'milestone',
     components: () =>
       tablePage(
         'Company Milestones',
@@ -467,7 +467,7 @@ export const TEMPLATES: Template[] = [
     id: 'global-page',
     name: '全球布局',
     description: '标题 + 区域布局表格',
-    pageType: 'company-intro',
+    pageType: 'global',
     components: () =>
       tablePage('Global Business Network', ['Region', 'Offices', 'Creator Resources'], [
         ['APAC', '3', '420+'],
@@ -480,7 +480,7 @@ export const TEMPLATES: Template[] = [
     id: 'org-page',
     name: '组织架构',
     description: '标题 + 团队构成表格',
-    pageType: 'company-intro',
+    pageType: 'org',
     components: () =>
       tablePage('Strategy × Creative × Ops × Data', ['Function', 'Share', 'Responsibility'], [
         ['Strategy Consulting', '20%', 'Growth diagnosis & creator strategy'],
@@ -493,7 +493,7 @@ export const TEMPLATES: Template[] = [
     id: 'service-page',
     name: '核心服务矩阵',
     description: '标题 + 服务列表表格',
-    pageType: 'company-intro',
+    pageType: 'service',
     components: () =>
       tablePage('From Audience Insight to Business Growth', ['Service', 'Description'], [
         ['Creator Strategy & Recruiting', 'Match creators by category'],
@@ -506,7 +506,7 @@ export const TEMPLATES: Template[] = [
     id: 'challenge-page',
     name: '机会与挑战',
     description: '标题 + 机会/挑战表格',
-    pageType: 'strategy',
+    pageType: 'challenge',
     components: () =>
       tablePage(
         'Opportunities & Challenges',
@@ -523,7 +523,7 @@ export const TEMPLATES: Template[] = [
     id: 'process-page',
     name: '合作评估流程',
     description: '标题 + 流程步骤表格',
-    pageType: 'strategy',
+    pageType: 'process',
     components: () =>
       tablePage('4 Weeks from Brief to Launch', ['Step', 'Core Work', 'Goal'], [
         ['1', 'Brand Growth Diagnosis', 'Define KPIs'],
@@ -536,7 +536,7 @@ export const TEMPLATES: Template[] = [
     id: 'calendar-page',
     name: '营销日历',
     description: '标题 + 节点规划表格',
-    pageType: 'strategy',
+    pageType: 'calendar',
     components: () =>
       tablePage('2026 Content Marketing Cadence', ['Milestone', 'Theme', 'Action'], [
         ['Spring', 'Refresh & seed', 'Launch new content'],
@@ -549,7 +549,7 @@ export const TEMPLATES: Template[] = [
     id: 'campaign-plan-page',
     name: '投放计划',
     description: '标题 + 阶段路线图表格',
-    pageType: 'strategy',
+    pageType: 'campaign-plan',
     components: () =>
       tablePage('30-Day TikTok Growth Path', ['Stage', 'Action', 'Goal'], [
         ['Warm-up', 'Seed-creator seeding', 'Demand pool'],
@@ -562,7 +562,7 @@ export const TEMPLATES: Template[] = [
     id: 'case-page',
     name: '案例展示',
     description: '标题 + 成果卡片 + 案例作品 + 文案',
-    pageType: 'creator-case',
+    pageType: 'case',
     components: () => {
       const title = titleAt('Case Study', 80, 50);
       const cards = [0, 1, 2, 3].map((i) => {
@@ -582,16 +582,16 @@ export const TEMPLATES: Template[] = [
     id: 'content-analysis-page',
     name: '内容分析',
     description: '标题 + 内容类型分布柱状图 + 明细表格',
-    pageType: 'campaign-report',
+    pageType: 'content-analysis',
     components: () => {
       const title = titleAt('Content Performance & Conversion Analysis', 80, 50);
       const chart = t('bar-chart', 80, 130, 560, 260);
       (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = 'Content Type Distribution';
       (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
-        { label: 'UGC Review', value: 46, color: '#FF5C00' },
-        { label: 'Creator Demo', value: 31, color: '#3B82F6' },
-        { label: 'Ingredient Education', value: 15, color: '#22C55E' },
-        { label: 'Gifting', value: 8, color: '#8B5CF6' },
+        { label: 'UGC Review', value: 46, color: 'auto' },
+        { label: 'Creator Demo', value: 31, color: 'auto' },
+        { label: 'Ingredient Education', value: 15, color: 'auto' },
+        { label: 'Gifting', value: 8, color: 'auto' },
       ];
       const tbl = tableAt(680, 130, 520, 260, ['Type', 'View Share', 'Top Keywords'], [
         ['UGC Review', '46%', 'gentle / glow'],
@@ -605,16 +605,16 @@ export const TEMPLATES: Template[] = [
     id: 'funnel-page',
     name: '增长漏斗',
     description: '标题 + 漏斗阶段柱状图',
-    pageType: 'campaign-report',
+    pageType: 'funnel',
     components: () => {
       const title = titleAt('Content-Driven Conversion Funnel', 80, 50);
       const chart = t('bar-chart', 80, 130, 1120, 360);
       (chart.data as { title: string; bars: { label: string; value: number; color: string }[] }).title = 'From Impressions to Orders';
       (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
-        { label: 'Impressions', value: 1260, color: '#FF5C00' },
-        { label: 'Reach', value: 810, color: '#F97316' },
-        { label: 'Interactions', value: 110, color: '#3B82F6' },
-        { label: 'Orders', value: 84, color: '#22C55E' },
+        { label: 'Impressions', value: 1260, color: 'auto' },
+        { label: 'Reach', value: 810, color: 'auto' },
+        { label: 'Interactions', value: 110, color: 'auto' },
+        { label: 'Orders', value: 84, color: 'auto' },
       ];
       return [title, chart];
     },

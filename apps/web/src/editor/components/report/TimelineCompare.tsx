@@ -4,9 +4,9 @@
 import type { TimelineCompareData } from '@mediakit/shared';
 
 const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
-  Exceeded: { bg: '#22C55E14', fg: '#22C55E' },
-  Optimized: { bg: '#3B82F614', fg: '#3B82F6' },
-  Stable: { bg: '#9CA3AF14', fg: '#6B7280' },
+  Exceeded: { bg: 'color-mix(in srgb, var(--green) 8%, transparent)', fg: 'var(--green)' },
+  Optimized: { bg: 'color-mix(in srgb, var(--blue) 8%, transparent)', fg: 'var(--blue)' },
+  Stable: { bg: 'color-mix(in srgb, var(--foreground-muted) 8%, transparent)', fg: 'var(--foreground-muted)' },
 };
 
 function statusChip(status: string) {
@@ -70,7 +70,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
               <span className="text-sm text-foreground-primary">{label}</span>
               <span className="flex items-center gap-2">
                 <span className="font-data text-sm font-semibold text-foreground-primary">{cur}</span>
-                <span className="text-[11px]" style={{ color: up ? '#22C55E' : '#EF4444' }}>
+                <span className="text-[11px]" style={{ color: up ? 'var(--green)' : 'var(--red)' }}>
                   {up ? '▲' : '▼'}
                 </span>
               </span>
@@ -119,7 +119,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
                           className="h-full"
                           style={{
                             width: `${Math.min(Math.abs(pct), 100)}%`,
-                            backgroundColor: pct >= 0 ? '#22C55E' : '#EF4444',
+                            backgroundColor: pct >= 0 ? 'var(--green)' : 'var(--red)',
                           }}
                         />
                       </div>

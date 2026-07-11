@@ -57,6 +57,16 @@ export type ComponentType =
   // 基础组件：内容卡片（带标题 + 正文 + 可选图片/标签），可自由填充
   | 'content-card';
 
+/* ---- 数据来源标记（所有组件 data 通用元字段） ---- */
+
+/**
+ * 组件数据来源模式（互斥）。
+ * - 'manual'  → 手动填写，属性面板直接编辑字段
+ * - 'url'     → URL 解析导入，属性面板显示 URL 输入框
+ * - 'project' → 项目数据导入，属性面板显示导入选择器
+ */
+export type DataSourceMode = 'manual' | 'url' | 'project';
+
 /* ---- 各组件 Data（取自 demo.html + G2/G4 spec） ---- */
 
 export type ShapeKind = 'rectangle' | 'rounded' | 'circle' | 'line';

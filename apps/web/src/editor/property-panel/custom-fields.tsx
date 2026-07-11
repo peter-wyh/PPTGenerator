@@ -246,7 +246,7 @@ export function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
               onClick={() => setDirection(i, direction === 'inverse' ? null : 'inverse')}
               className={`rounded border px-1.5 text-[10px] font-medium ${
                 direction === 'inverse'
-                  ? 'border-[#22C55E] text-[#22C55E]'
+                  ? 'border-[var(--green)] text-[var(--green)]'
                   : 'border-border-default text-foreground-muted'
               }`}
             >
@@ -487,7 +487,7 @@ export function WorkMetricsFields({ comp }: { comp: EditorComponent }) {
   };
   const setItem = (i: number, patch: Partial<{ label: string; value: string; color: string }>) =>
     write(metrics.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
-  const add = () => write([...metrics, { label: '新指标', value: '--', color: '#FF5C00' }]);
+  const add = () => write([...metrics, { label: '新指标', value: '--', color: 'auto' }]);
   const remove = (i: number) => write(metrics.filter((_, idx) => idx !== i));
 
   return (
@@ -509,7 +509,7 @@ export function WorkMetricsFields({ comp }: { comp: EditorComponent }) {
             />
             <input
               type="color"
-              value={m.color ?? '#FF5C00'}
+              value={m.color ?? 'auto'}
               onChange={(e) => setItem(i, { color: e.target.value })}
               className="h-6 w-6 rounded border border-border-default"
             />

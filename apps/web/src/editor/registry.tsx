@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { ComponentType, EditorComponent, IconWeight } from '@mediakit/shared';
+import type { ComponentType, EditorComponent, IconWeight, DataSourceMode } from '@mediakit/shared';
 import { DEFAULT_SIZES, getDefaultData } from './defaults';
 import {
   BarChartComponent,
@@ -39,6 +39,16 @@ import {
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
 import { TitleBlock } from './components/BasicComponents';
+import { parseCreatorLink } from './creatorLink';
+import {
+  ReportCreatorAvatarImporter,
+  ReportCreatorStatsImporter,
+  ReportCreatorListImporter,
+  ReportCreatorWorksImporter,
+  ReportWorkScreenshotImporter,
+  ChartImportButton,
+  KpiBoardImporter,
+} from './property-panel/importers';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -91,6 +101,27 @@ export interface BlockDef {
   propertySchema: PropertyField[];
   /** 可选：该组件支持的样式变体。出现时属性面板渲染 chip 选择器。 */
   variants?: VariantOption[];
+  /** 可选：数据源配置。出现时属性面板渲染模式切换器（手动/URL/项目导入互斥）。 */
+  dataSource?: DataSourceConfig;
+}
+
+/**
+ * 数据源配置：声明组件支持哪些数据获取模式，以及各模式的实现。
+ * PropertyPanel 根据此配置渲染对应 UI。
+ */
+export interface DataSourceConfig {
+  /** 支持的模式列表（顺序决定 UI 展示顺序）。至少含 'manual'。 */
+  modes: DataSourceMode[];
+  /**
+   * URL 解析器。async 函数，接收 URL 返回 data patch。
+   * 仅 modes 含 'url' 时需要。
+   */
+  urlResolver?: (url: string) => Promise<Record<string, unknown>>;
+  /**
+   * 项目导入组件。仅 modes 含 'project' 时需要。
+   * 接收当前 comp，内部自行处理导入逻辑。
+   */
+  projectImporter?: FC<{ comp: EditorComponent }>;
 }
 
 /** 通用几何字段（x/y/w/h），始终展示。 */
@@ -183,6 +214,10 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: BarChartComponent,
     defaultSize: DEFAULT_SIZES['bar-chart'],
     defaultData: () => getDefaultData('bar-chart'),
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ChartImportButton,
+    },
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'bars', label: '数据', kind: 'list' },
@@ -192,12 +227,20 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: LineChartComponent,
     defaultSize: DEFAULT_SIZES['line-chart'],
     defaultData: () => getDefaultData('line-chart'),
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ChartImportButton,
+    },
     propertySchema: [{ key: 'title', label: '标题', kind: 'text' }],
   },
   'pie-chart': {
     Component: PieChartComponent,
     defaultSize: DEFAULT_SIZES['pie-chart'],
     defaultData: () => getDefaultData('pie-chart'),
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ChartImportButton,
+    },
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'slices', label: '数据', kind: 'list' },
@@ -239,6 +282,11 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'hero', label: 'Hero' },
       { id: 'minimal', label: '极简' },
     ],
+    dataSource: {
+      modes: ['manual', 'url', 'project'],
+      urlResolver: parseCreatorLink,
+      projectImporter: ReportCreatorAvatarImporter,
+    },
     propertySchema: [
       { key: 'avatar', label: '头像 URL', kind: 'image-url' },
       { key: 'name', label: '名称', kind: 'text' },
@@ -263,6 +311,10 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'progress', label: '进度条' },
       { id: 'ring', label: '环形' },
     ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ReportCreatorStatsImporter,
+    },
     // stats 由 PropertyPanel 的自定义区块 CreatorStatsFields 负责（指标库勾选 + 文案编辑）。
     propertySchema: [],
   },
@@ -276,6 +328,10 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'compact', label: '紧凑' },
       { id: 'detailed', label: '详细+受众' },
     ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ReportCreatorWorksImporter,
+    },
     propertySchema: [{ key: '', label: '作品内容', kind: 'table' }],
   },
   'creator-list': {
@@ -287,6 +343,10 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'cards', label: '卡片' },
       { id: 'compact', label: '紧凑' },
     ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ReportCreatorListImporter,
+    },
     propertySchema: [{ key: '', label: '达人列表', kind: 'table' }],
   },
   'brand-wall': {
@@ -340,6 +400,10 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'minimal', label: '极简线框' },
       { id: 'flat', label: '平铺指标条' },
     ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: KpiBoardImporter,
+    },
     propertySchema: [{ key: '', label: 'KPI 列表', kind: 'table' }],
   },
   'meta-strip': {
@@ -477,6 +541,10 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'nona', label: '9 张' },
       { id: 'duoza', label: '12 张' },
     ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ReportWorkScreenshotImporter,
+    },
     propertySchema: [{ key: 'title', label: '标题', kind: 'text' }],
   },
   'work-metrics': {

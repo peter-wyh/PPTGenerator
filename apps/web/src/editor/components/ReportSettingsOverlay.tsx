@@ -624,13 +624,13 @@ export function ReportSettingsOverlay({ onClose }: Props) {
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  value={theme.background.color ?? '#ffffff'}
+                  value={theme.background.color ?? 'var(--surface-primary)'}
                   onChange={(e) => updateBackground('color', e.target.value)}
                   className="h-8 w-10 rounded border border-border-default p-1"
                 />
                 <input
                   value={theme.background.color ?? ''}
-                  placeholder="#FFFFFF"
+                  placeholder="var(--surface-primary)"
                   onChange={(e) => updateBackground('color', e.target.value)}
                   className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
                 />
@@ -805,8 +805,8 @@ function BackgroundGradientFields({
     type: 'linear',
     angle: 180,
     stops: [
-      { color: '#FFFFFF', position: 0 },
-      { color: '#F3F4F6', position: 100 },
+      { color: 'var(--surface-primary)', position: 0 },
+      { color: 'var(--border-subtle)', position: 100 },
     ],
   };
 
@@ -820,7 +820,7 @@ function BackgroundGradientFields({
     if (grad.stops.length >= 6) return;
     const last = grad.stops[grad.stops.length - 1];
     const pos = Math.min(100, Math.round((last?.position ?? 0) + (100 - (last?.position ?? 0)) / 2));
-    onChange({ ...grad, stops: [...grad.stops, { color: last?.color ?? '#FFFFFF', position: pos }] });
+    onChange({ ...grad, stops: [...grad.stops, { color: last?.color ?? 'var(--surface-primary)', position: pos }] });
   };
   const removeStop = (i: number) => {
     if (grad.stops.length <= 2) return;

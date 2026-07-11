@@ -292,7 +292,7 @@ export function Canvas() {
           width: canvasWidth * zoom,
           height: canvasHeight * zoom,
           transform: `translate(${panX}px, ${panY}px)`,
-          background: currentPage ? resolvePageBackground(currentPage) : '#fff',
+          background: currentPage ? resolvePageBackground(currentPage) : 'var(--surface-primary)',
         }}
       >
         <div

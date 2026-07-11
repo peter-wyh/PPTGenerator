@@ -108,7 +108,7 @@ export function CanvasComponent({
               position: 'absolute',
               width: 8,
               height: 8,
-              background: '#fff',
+              background: 'var(--surface-primary)',
               border: '2px solid var(--accent-primary)',
               borderRadius: 2,
               cursor: h.cursor,

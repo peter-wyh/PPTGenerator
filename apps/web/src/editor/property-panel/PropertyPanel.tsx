@@ -1,14 +1,16 @@
 import { useEditorStore } from '../store';
 import { GEOMETRY_FIELDS, REGISTRY, type PropertyField } from '../registry';
 import { Button } from '@/components/Button';
+import { pageCategory } from '@mediakit/shared';
 import { LABELS } from './constants';
 import { FieldGroup, VariantSelector } from './helpers';
 import { PageProperties } from './PageProperties';
 import { MultiSelectPanel } from './MultiSelectPanel';
+import { DataSourceSection } from './DataSourceSection';
 import {
-  NumberField,
   FieldEditor,
   KpiCompareLabelField,
+  NumberField,
 } from './fields';
 import {
   BusinessFields,
@@ -22,16 +24,6 @@ import {
   CommentWordcloudFields,
   ShapeFields,
 } from './custom-fields';
-import {
-  CreatorLinkImporter,
-  ChartImportButton,
-  KpiImportButton,
-  ImportCampaignButton,
-  ReportCreatorAvatarImporter,
-  ReportCreatorStatsImporter,
-  ReportCreatorListImporter,
-  ReportCreatorWorksImporter,
-} from './importers';
 
 export function PropertyPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
@@ -78,9 +70,9 @@ export function PropertyPanel() {
         {LABELS[comp.type] ?? comp.type}
       </div>
 
-      {currentPage?.pageType === 'media-report' &&
-        currentPage.titleComponentId === comp.id &&
-        currentPage.titleOverridden && (
+      {pageCategory(currentPage?.pageType ?? 'blank') === 'media-report' &&
+        currentPage?.titleComponentId === comp.id &&
+        currentPage?.titleOverridden && (
           <button
             onClick={() => restoreReportTitle(currentPage.id)}
             className="rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
@@ -89,23 +81,8 @@ export function PropertyPanel() {
           </button>
         )}
 
-      {(comp.type === 'bar-chart' ||
-        comp.type === 'line-chart' ||
-        comp.type === 'pie-chart') && <ChartImportButton comp={comp} />}
-
-      {comp.type === 'kpi-board' && (
-        <>
-          <KpiImportButton comp={comp} />
-          <ImportCampaignButton comp={comp} />
-        </>
-      )}
-
-      {comp.type === 'creator-avatar-card' && <ReportCreatorAvatarImporter comp={comp} />}
-      {comp.type === 'creator-avatar-card' && <CreatorLinkImporter comp={comp} />}
-      {comp.type === 'creator-list' && <ReportCreatorListImporter comp={comp} />}
-      {comp.type === 'creator-works-list' && <ReportCreatorWorksImporter comp={comp} />}
-
-      <FieldGroup title="位置与尺寸">
+      {/* ── ① 位置与尺寸 ── */}
+      <FieldGroup title="📐 位置与尺寸">
         <div className="grid grid-cols-2 gap-2">
           {GEOMETRY_FIELDS.map((f) => (
             <NumberField key={f.key} comp={comp} field={f} />
@@ -113,10 +90,20 @@ export function PropertyPanel() {
         </div>
       </FieldGroup>
 
-      <FieldGroup title="属性">
-        {def.variants && def.variants.length > 0 && comp.type !== 'work-screenshot' && (
+      {/* ── ② 数据来源（有 dataSource 配置时显示）── */}
+      {def.dataSource && (
+        <DataSourceSection comp={comp} config={def.dataSource} />
+      )}
+
+      {/* ── ③ 样式（变体 + 图标）── */}
+      {def.variants && def.variants.length > 0 && comp.type !== 'work-screenshot' && (
+        <FieldGroup title="🎨 样式">
           <VariantSelector comp={comp} variants={def.variants} />
-        )}
+        </FieldGroup>
+      )}
+
+      {/* ── ④ 内容（字段编辑 + 自定义字段）── */}
+      <FieldGroup title="✏️ 内容">
         {fields.map((f) => (
           <FieldEditor key={f.key + f.kind} comp={comp} field={f} />
         ))}
@@ -126,14 +113,10 @@ export function PropertyPanel() {
       </FieldGroup>
 
       {comp.type === 'business-block' && <BusinessFields comp={comp} />}
-
-      {comp.type === 'creator-stats-strip' && <ReportCreatorStatsImporter comp={comp} />}
       {comp.type === 'creator-stats-strip' && <CreatorStatsFields comp={comp} />}
-
       {comp.type === 'kpi-board' && <KpiCompareLabelField comp={comp} />}
       {comp.type === 'kpi-board' && <KpiRowStyleField comp={comp} />}
       {comp.type === 'kpi-board' && <KpiBoardFields comp={comp} />}
-
       {comp.type === 'work-screenshot' && <WorkScreenshotFields comp={comp} />}
       {comp.type === 'work-metrics' && <WorkMetricsFields comp={comp} />}
       {comp.type === 'comment-wordcloud' && <CommentWordcloudFields comp={comp} />}

@@ -22,7 +22,7 @@ import type {
   WorkScreenshotData,
   WorkScreenshotItem,
 } from '@mediakit/shared';
-import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
+import { CREATOR_METRIC_CATALOG, pageCategory } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from './store';
 import { backgroundType, buildBackgroundTypePatch, type BackgroundType } from './background';
 import { GEOMETRY_FIELDS, REGISTRY, type PropertyField, type VariantOption } from './registry';
@@ -98,7 +98,7 @@ export function PropertyPanel() {
         {LABELS[comp.type] ?? comp.type}
       </div>
 
-      {currentPage?.pageType === 'media-report' &&
+      {currentPage && pageCategory(currentPage.pageType) === 'media-report' &&
         currentPage.titleComponentId === comp.id &&
         currentPage.titleOverridden && (
           <button
@@ -1060,7 +1060,7 @@ function ListField({ comp, field }: { comp: EditorComponent; field: PropertyFiel
     const next = items.map((it, idx) => (idx === i ? { ...it, ...patch } : it));
     update(key, next);
   };
-  const add = () => update(key, [...items, { label: '新', value: 50, color: '#FF5C00' }]);
+  const add = () => update(key, [...items, { label: '新', value: 50, color: 'auto' }]);
   const remove = (i: number) => update(key, items.filter((_, idx) => idx !== i));
 
   return (
@@ -1554,7 +1554,7 @@ function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
               onClick={() => setDirection(i, direction === 'inverse' ? null : 'inverse')}
               className={`rounded border px-1.5 text-[10px] font-medium ${
                 direction === 'inverse'
-                  ? 'border-[#22C55E] text-[#22C55E]'
+                  ? 'border-[var(--green)] text-[var(--green)]'
                   : 'border-border-default text-foreground-muted'
               }`}
             >
@@ -1935,7 +1935,7 @@ function WorkMetricsFields({ comp }: { comp: EditorComponent }) {
   };
   const setItem = (i: number, patch: Partial<{ label: string; value: string; color: string }>) =>
     write(metrics.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
-  const add = () => write([...metrics, { label: '新指标', value: '--', color: '#FF5C00' }]);
+  const add = () => write([...metrics, { label: '新指标', value: '--', color: 'auto' }]);
   const remove = (i: number) => write(metrics.filter((_, idx) => idx !== i));
 
   return (
@@ -1957,7 +1957,7 @@ function WorkMetricsFields({ comp }: { comp: EditorComponent }) {
             />
             <input
               type="color"
-              value={m.color ?? '#FF5C00'}
+              value={m.color ?? 'auto'}
               onChange={(e) => setItem(i, { color: e.target.value })}
               className="h-6 w-6 rounded border border-border-default"
             />

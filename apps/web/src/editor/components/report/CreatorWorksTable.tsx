@@ -132,7 +132,7 @@ export function CreatorWorksTable({ data }: { data: CreatorWorksTableData }) {
                               key={gi}
                               style={{
                                 width: `${Math.max(g.value, 4)}%`,
-                                backgroundColor: g.color ?? (g.label.includes('女') ? '#EC4899' : '#3B82F6'),
+                                backgroundColor: g.color ?? (g.label.includes('女') ? 'var(--purple)' : 'var(--blue)'),
                               }}
                             />
                           ))}

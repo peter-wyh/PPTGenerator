@@ -79,7 +79,7 @@ export function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
               onClick={() => setDirection(i, direction === 'inverse' ? null : 'inverse')}
               className={`rounded border px-1.5 text-[10px] font-medium ${
                 direction === 'inverse'
-                  ? 'border-[#22C55E] text-[#22C55E]'
+                  ? 'border-[var(--green)] text-[var(--green)]'
                   : 'border-border-default text-foreground-muted'
               }`}
             >

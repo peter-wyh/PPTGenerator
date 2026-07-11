@@ -701,3 +701,16 @@ export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) 
     </FieldGroup>
   );
 }
+
+/**
+ * KPI Board 复合导入器：文件导入 + Campaign 导入。
+ * 用于 dataSource.projectImporter。
+ */
+export function KpiBoardImporter({ comp }: { comp: EditorComponent }) {
+  return (
+    <>
+      <KpiImportButton comp={comp} />
+      <ImportCampaignButton comp={comp} />
+    </>
+  );
+}

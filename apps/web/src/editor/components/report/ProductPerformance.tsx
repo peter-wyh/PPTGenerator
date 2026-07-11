@@ -25,7 +25,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
   const items = rows.map((r) => ({ name: r[0] ?? '', img: r[1] ?? '', sold: r[2] ?? '', share: r[3] ?? '', cat: r[4] ?? '' }));
   const cs = useChartStyle();
   const chartColors = useChartColors();
-  const PIE_COLORS = [...chartColors, '#14B8A6', '#6B7280'];
+  const PIE_COLORS = [...chartColors, 'color-mix(in srgb, var(--green) 40%, white)', 'var(--foreground-muted)'];
 
   if (variant === 'bar') {
     // 条形图：横向 BarChart(layout=vertical) 展示 TOP 商品销量。
@@ -41,7 +41,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
             <BarChart layout="vertical" data={chartData} margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
               <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={70} hide={!cs.showAxis} />
-              <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(v: number) => v} />
+              <Tooltip cursor={{ fill: 'var(--surface-hover)' }} formatter={(v: number) => v} />
               <Bar dataKey="value" radius={[0, cs.barRadius, cs.barRadius, 0]} fill="var(--color-primary)">
                 <LabelList dataKey="sold" position="right" style={{ fontSize: 11 }} />
               </Bar>

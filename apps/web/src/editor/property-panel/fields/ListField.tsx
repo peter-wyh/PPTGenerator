@@ -12,7 +12,7 @@ export function ListField({ comp, field }: { comp: EditorComponent; field: Prope
     const next = items.map((it, idx) => (idx === i ? { ...it, ...patch } : it));
     update(key, next);
   };
-  const add = () => update(key, [...items, { label: '新', value: 50, color: '#FF5C00' }]);
+  const add = () => update(key, [...items, { label: '新', value: 50, color: 'auto' }]);
   const remove = (i: number) => update(key, items.filter((_, idx) => idx !== i));
 
   return (

@@ -18,7 +18,7 @@ export function renderCaseShowcase(ctx: RenderCtx): React.ReactNode {
     return (
       <Base variant={variant}>
         <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '1fr 1.1fr' }}>
-          <div style={{ padding: 22, background: ACCENT, color: '#FFF', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: 22, background: ACCENT, color: 'var(--foreground-inverse)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.8px', opacity: 0.75 }}>CASE RESULT</div>
             <div style={{ marginTop: 'auto', ...mono, fontWeight: 800, fontSize: 43 }}>138%</div>
             <div style={{ fontSize: 13, marginTop: 5 }}>GMV target achieved</div>
@@ -27,7 +27,7 @@ export function renderCaseShowcase(ctx: RenderCtx): React.ReactNode {
           <div style={{ padding: 18, display: 'flex', flexDirection: 'column' }}>
             <Label item={item} />
             <Title text={title} style={{ marginTop: 5 }} />
-            <div style={{ fontSize: 10, color: '#777', lineHeight: 1.4, marginTop: 6 }}>{meta}</div>
+            <div style={{ fontSize: 10, color: 'var(--foreground-muted)', lineHeight: 1.4, marginTop: 6 }}>{meta}</div>
             <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
               <Chips list={details} />
             </div>
@@ -49,13 +49,13 @@ export function renderCaseShowcase(ctx: RenderCtx): React.ReactNode {
             overflow: 'hidden',
           }}
         >
-          <div style={{ position: 'relative', color: '#FFF', fontSize: 10, fontWeight: 700, letterSpacing: '.7px' }}>CASE STUDY · BEAUTY</div>
-          <Title text={title} size={20} color="#FFF" style={{ position: 'relative', marginTop: 8, maxWidth: '78%', textShadow: '0 1px 12px rgba(0,0,0,.24)' }} />
-          <div style={{ position: 'absolute', left: 12, bottom: 13, color: '#FFF', fontSize: 10 }}>品牌 × 内容 × 增长</div>
+          <div style={{ position: 'relative', color: 'var(--foreground-inverse)', fontSize: 10, fontWeight: 700, letterSpacing: '.7px' }}>CASE STUDY · BEAUTY</div>
+          <Title text={title} size={20} color="var(--foreground-inverse)" style={{ position: 'relative', marginTop: 8, maxWidth: '78%', textShadow: '0 1px 12px rgba(0,0,0,.24)' }} />
+          <div style={{ position: 'absolute', left: 12, bottom: 13, color: 'var(--foreground-inverse)', fontSize: 10 }}>品牌 × 内容 × 增长</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <Label item={item} />
-          <div style={{ fontSize: 10, color: '#777', lineHeight: 1.45, marginTop: 4 }}>{meta}</div>
+          <div style={{ fontSize: 10, color: 'var(--foreground-muted)', lineHeight: 1.45, marginTop: 4 }}>{meta}</div>
           <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
             <Chips list={details} />
           </div>
@@ -75,7 +75,7 @@ export function renderRetrospective(ctx: RenderCtx): React.ReactNode {
         <div>
           <Label item={item} />
           <Title text={title} style={{ marginTop: 5 }} />
-          <div style={{ fontSize: 10, color: '#777', lineHeight: 1.5, marginTop: 8 }}>{meta}</div>
+          <div style={{ fontSize: 10, color: 'var(--foreground-muted)', lineHeight: 1.5, marginTop: 8 }}>{meta}</div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, alignContent: 'center' }}>
           {details.map((x, i) => (
@@ -83,8 +83,8 @@ export function renderRetrospective(ctx: RenderCtx): React.ReactNode {
               key={i}
               style={{
                 padding: 10,
-                background: i === 0 ? INK : '#FAFAFA',
-                color: i === 0 ? '#FFF' : '#333',
+                background: i === 0 ? INK : 'var(--surface-subtle)',
+                color: i === 0 ? 'var(--foreground-inverse)' : 'var(--foreground-primary)',
                 borderRadius: 7,
                 minHeight: 48,
               }}

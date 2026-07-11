@@ -608,7 +608,7 @@ function MiniGenderDonut({ data }: { data: { label: string; value: number; color
           <PieChart>
             <Pie data={data} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius="60%" outerRadius="90%">
               {data.map((d, i) => (
-                <Cell key={i} fill={d.color ?? (d.label.includes('女') ? '#EC4899' : '#3B82F6')} />
+                <Cell key={i} fill={d.color ?? (d.label.includes('女') ? 'var(--purple, #EC4899)' : 'var(--blue, #3B82F6)')} />
               ))}
             </Pie>
           </PieChart>
@@ -617,7 +617,7 @@ function MiniGenderDonut({ data }: { data: { label: string; value: number; color
       <div className="flex flex-col gap-0.5">
         {data.map((d, i) => (
           <span key={i} className="flex items-center gap-1 text-[10px] text-foreground-secondary">
-            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: d.color ?? (d.label.includes('女') ? '#EC4899' : '#3B82F6') }} />
+            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: d.color ?? (d.label.includes('女') ? 'var(--purple, #EC4899)' : 'var(--blue, #3B82F6)') }} />
             {d.label} {d.value}%
           </span>
         ))}
@@ -672,7 +672,7 @@ function WorksDetailed({
                   <div className="flex flex-col gap-1">
                     <div className="text-[10px] font-medium text-foreground-secondary">年龄分布</div>
                     {ins.ageRange.slice(0, 4).map((a, ci) => (
-                      <MiniBar key={ci} label={a.label} value={a.value} color={a.color ?? '#8B5CF6'} />
+                      <MiniBar key={ci} label={a.label} value={a.value} color={a.color ?? 'auto'} />
                     ))}
                   </div>
                 )}
@@ -793,10 +793,10 @@ export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart layout="vertical" data={withPct} margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
-            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />}
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-subtle, #F3F4F6)" />}
             <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
             <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={48} hide={!cs.showAxis} />
-            <Tooltip cursor={{ fill: '#F9FAFB' }} />
+            <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
             <Bar dataKey="value" radius={[0, cs.barRadius, cs.barRadius, 0]}>
               {withPct.map((b, i) => (
                 <Cell key={i} fill={b.color} />
@@ -821,10 +821,10 @@ export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={bars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />}
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle, #F3F4F6)" />}
             <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
             <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
-            <Tooltip cursor={{ fill: '#F9FAFB' }} />
+            <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
             <Bar dataKey="value" radius={[cs.barRadius, cs.barRadius, 0, 0]}>
               {bars.map((b, i) => (
                 <Cell key={i} fill={b.color} />

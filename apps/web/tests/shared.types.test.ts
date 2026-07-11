@@ -42,14 +42,14 @@ describe('Page 页面类型字段', () => {
       id: 'p1',
       name: 'n',
       components: [],
-      pageType: 'media-report',
+      pageType: 'cover',
       titleComponentId: 'c1',
       titleOverridden: false,
     };
-    expect(p.pageType).toBe('media-report');
+    expect(p.pageType).toBe('cover');
     expect(p.titleComponentId).toBe('c1');
     expect(p.titleOverridden).toBe(false);
-    const t: PageType = 'media-report';
-    expect(t).toBe('media-report');
+    const t: PageType = 'cover';
+    expect(t).toBe('cover');
   });
 });

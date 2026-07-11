@@ -3,10 +3,10 @@ import { resolvePageBackground } from '../background';
 
 /** demo 的缩略图配色：按组件类型映射。 */
 const TYPE_COLOR: Partial<Record<ComponentType, string>> = {
-  'indicator-card': '#FFF7F0',
-  text: '#F9FAFB',
-  'bar-chart': '#E8F0FE',
-  table: '#F0FDF4',
+  'indicator-card': 'color-mix(in srgb, var(--color-primary) 8%, white)',
+  text: 'var(--surface-hover)',
+  'bar-chart': 'color-mix(in srgb, var(--blue) 10%, white)',
+  table: 'color-mix(in srgb, var(--green) 10%, white)',
 };
 
 interface Props {
@@ -43,7 +43,7 @@ export function PageThumbnail({ page, canvasWidth, canvasHeight, width = 184, he
                 top: c.y * scale,
                 width: Math.max(1, c.w * scale),
                 height: Math.max(1, c.h * scale),
-                background: TYPE_COLOR[c.type] ?? '#F3F4F6',
+                background: TYPE_COLOR[c.type] ?? 'var(--border-subtle)',
                 border: '1px solid rgba(0,0,0,0.04)',
               }}
             />

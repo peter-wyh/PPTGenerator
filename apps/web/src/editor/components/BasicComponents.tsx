@@ -28,6 +28,13 @@ import type {
 } from '@mediakit/shared';
 import { IconKit } from '../icons/IconKit';
 import { useChartStyle } from '../theme';
+import { useChartColors } from './report/shared';
+
+/** 解析数据项颜色：'auto' 或空值 → 从全局 chartPalette 按索引取色。 */
+function resolveColor(color: string | undefined, index: number, palette: string[]): string {
+  if (!color || color === 'auto') return palette[index % palette.length];
+  return color;
+}
 
 
 /* ---------------------------------- text --------------------------------- */
@@ -72,11 +79,11 @@ export function ImageComponent({ data }: { data: ImageData }) {
 
 /* ----------------------------- indicator card ---------------------------- */
 const INDICATOR_THEME: Record<IndicatorCardData['colorTheme'], { bg: string; fg: string }> = {
-  blue: { bg: '#EFF6FF', fg: '#3B82F6' },
-  green: { bg: '#ECFDF5', fg: '#22C55E' },
+  blue: { bg: 'color-mix(in srgb, var(--blue, #3B82F6) 8%, white)', fg: 'var(--blue, #3B82F6)' },
+  green: { bg: 'color-mix(in srgb, var(--green, #22C55E) 8%, white)', fg: 'var(--green, #22C55E)' },
   orange: { bg: 'color-mix(in srgb, var(--color-primary) 8%, white)', fg: 'var(--color-primary)' },
-  purple: { bg: '#F5F3FF', fg: '#8B5CF6' },
-  red: { bg: '#FEF2F2', fg: '#EF4444' },
+  purple: { bg: 'color-mix(in srgb, var(--purple, #8B5CF6) 8%, white)', fg: 'var(--purple, #8B5CF6)' },
+  red: { bg: 'color-mix(in srgb, var(--red, #EF4444) 8%, white)', fg: 'var(--red, #EF4444)' },
 };
 
 /** 每个启用图标的变体的默认图标配置（与 REGISTRY 声明保持一致）。 */
@@ -110,7 +117,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
           <div className="text-xs text-foreground-secondary">{data.title}</div>
           <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
           {data.trend && (
-            <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+            <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
               {data.trendUp ? '▲' : '▼'} {data.trend}
             </div>
           )}
@@ -129,7 +136,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
           <div className="text-xs text-foreground-secondary">{data.title}</div>
           <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
           {data.trend && (
-            <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+            <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
               {data.trendUp ? '▲' : '▼'} {data.trend}
             </div>
           )}
@@ -145,7 +152,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
         <div className="mt-1 text-xs text-foreground-secondary">{data.title}</div>
         <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
         {data.trend && (
-          <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+          <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
             {data.trendUp ? '▲' : '▼'} {data.trend}
           </div>
         )}
@@ -160,8 +167,8 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
         className="relative h-full w-full overflow-hidden rounded-xl px-4"
         style={{ background: `linear-gradient(135deg, ${t.fg}, ${t.fg}CC)` }}
       >
-        <div className="absolute right-3 top-3 opacity-90" style={{ color: '#fff' }}>
-          <IconKit name={iconKey} weight={iconWeight} size={20} color="#fff" />
+        <div className="absolute right-3 top-3 opacity-90" style={{ color: 'var(--foreground-inverse, #fff)' }}>
+          <IconKit name={iconKey} weight={iconWeight} size={20} color="var(--foreground-inverse, #fff)" />
         </div>
         <div className="flex h-full w-full flex-col justify-center">
           <div className="text-xs text-white/70">{data.title}</div>
@@ -190,7 +197,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
         {data.trend && (
           <div className="flex-none border-l border-border-subtle pl-3 text-right">
             <div className="text-[10px] text-foreground-muted">变化</div>
-            <div className="font-data text-sm font-semibold" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+            <div className="font-data text-sm font-semibold" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
               {data.trendUp ? '▲' : '▼'} {data.trend}
             </div>
           </div>
@@ -205,7 +212,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
       <div className="text-xs text-foreground-secondary">{data.title}</div>
       <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
       {data.trend && (
-        <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? '#22C55E' : '#EF4444' }}>
+        <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
           {data.trendUp ? '▲' : '▼'} {data.trend}
         </div>
       )}
@@ -216,19 +223,20 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
 /* -------------------------------- bar chart ------------------------------ */
 export function BarChartComponent({ data }: { data: BarChartData }) {
   const cs = useChartStyle();
+  const palette = useChartColors();
   return (
     <div className="flex h-full w-full flex-col bg-surface-primary p-3">
       {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data.bars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />}
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle, #F3F4F6)" />}
             <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
             <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
-            <Tooltip cursor={{ fill: '#F9FAFB' }} />
+            <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
             <Bar dataKey="value" radius={[cs.barRadius, cs.barRadius, 0, 0]}>
               {data.bars.map((b, i) => (
-                <Cell key={i} fill={b.color} />
+                <Cell key={i} fill={resolveColor(b.color, i, palette)} />
               ))}
             </Bar>
           </BarChart>
@@ -241,6 +249,7 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
 /* -------------------------------- line chart ----------------------------- */
 export function LineChartComponent({ data }: { data: LineChartData }) {
   const cs = useChartStyle();
+  const palette = useChartColors();
   // 多系列按 label 对齐成单数据集。
   const labels = data.series[0]?.points.map((p) => p.label) ?? [];
   const dataset = labels.map((label, i) => {
@@ -254,13 +263,13 @@ export function LineChartComponent({ data }: { data: LineChartData }) {
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={dataset} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />}
+            {cs.showGrid && <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #F3F4F6)" />}
             <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
             <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
             <Tooltip />
             {cs.legend && <Legend {...cs.legend} />}
-            {data.series.map((s) => (
-              <Line key={s.name} type="monotone" dataKey={s.name} stroke={s.color} strokeWidth={2} dot={false} />
+            {data.series.map((s, i) => (
+              <Line key={s.name} type="monotone" dataKey={s.name} stroke={resolveColor(s.color, i, palette)} strokeWidth={2} dot={false} />
             ))}
           </LineChart>
         </ResponsiveContainer>
@@ -271,6 +280,7 @@ export function LineChartComponent({ data }: { data: LineChartData }) {
 
 /* -------------------------------- pie chart ------------------------------ */
 export function PieChartComponent({ data }: { data: PieChartData }) {
+  const palette = useChartColors();
   return (
     <div className="flex h-full w-full flex-col bg-surface-primary p-3">
       {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
@@ -287,7 +297,7 @@ export function PieChartComponent({ data }: { data: PieChartData }) {
               label={(e) => e.label}
             >
               {data.slices.map((s, i) => (
-                <Cell key={i} fill={s.color} />
+                <Cell key={i} fill={resolveColor(s.color, i, palette)} />
               ))}
             </Pie>
             <Tooltip />
@@ -346,7 +356,7 @@ export function ShapeComponent({ data }: { data: ShapeData }) {
   const inner =
     shape === 'line' ? (
       <svg className="h-full w-full" preserveAspectRatio="none">
-        <line x1="0" y1="50%" x2="100%" y2="50%" stroke={stroke ?? '#E5E7EB'} strokeWidth={strokeWidth ?? 1} strokeDasharray={dash ? '8 4' : undefined} />
+        <line x1="0" y1="50%" x2="100%" y2="50%" stroke={stroke ?? 'var(--border-default, #E5E7EB)'} strokeWidth={strokeWidth ?? 1} strokeDasharray={dash ? '8 4' : undefined} />
       </svg>
     ) : (
       <div className="h-full w-full" style={{ backgroundColor: fill, border, borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? borderRadius ?? 12 : undefined }} />

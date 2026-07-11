@@ -37,12 +37,12 @@ function isDedicated(kind: string, variant: VariantId): boolean {
 function GenericCards(ctx: RenderCtx) {
   const { item, title, meta, details, variant } = ctx;
   return (
-    <Base variant={variant} tone="#FFFFFF">
+    <Base variant={variant} tone="var(--surface-primary)">
       <div style={{ padding: 18, display: 'grid', gridTemplateColumns: '185px 1fr', gap: 16, height: '100%' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <Label item={item} />
           <Title text={title} style={{ marginTop: 6 }} />
-          <div style={{ marginTop: 'auto', fontSize: 10, color: '#777', lineHeight: 1.5 }}>{meta}</div>
+          <div style={{ marginTop: 'auto', fontSize: 10, color: 'var(--foreground-muted)', lineHeight: 1.5 }}>{meta}</div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, alignContent: 'center' }}>
           {details.map((x, i) => (
@@ -51,8 +51,8 @@ function GenericCards(ctx: RenderCtx) {
               style={{
                 minHeight: 52,
                 padding: 10,
-                background: ['#1A1A1A', '#FFF0E8', '#FFF7F0', '#FAFAFA'][i % 4],
-                color: i === 0 ? '#FFF' : '#333',
+                background: ['var(--foreground-primary)', 'color-mix(in srgb, var(--color-primary) 8%, white)', 'color-mix(in srgb, var(--color-primary) 8%, white)', 'var(--surface-subtle)'][i % 4],
+                color: i === 0 ? 'var(--foreground-inverse)' : 'var(--foreground-primary)',
                 borderRadius: 7,
               }}
             >
@@ -76,11 +76,11 @@ function GenericLight(ctx: RenderCtx) {
             {item.id.slice(0, 2).toUpperCase()}
           </div>
           <Title text={title} style={{ marginTop: 12, maxWidth: '85%' }} />
-          <div style={{ fontSize: 10, color: '#777', marginTop: 9, maxWidth: '82%', lineHeight: 1.55 }}>{meta}</div>
+          <div style={{ fontSize: 10, color: 'var(--foreground-muted)', marginTop: 9, maxWidth: '82%', lineHeight: 1.55 }}>{meta}</div>
         </div>
         <div
           style={{
-            borderLeft: '1px solid #F0E7E2',
+            borderLeft: '1px solid var(--border-default)',
             paddingLeft: 12,
             display: 'flex',
             flexDirection: 'column',
@@ -89,7 +89,7 @@ function GenericLight(ctx: RenderCtx) {
           }}
         >
           {details.slice(0, 4).map((x, i) => (
-            <div key={i} style={{ fontSize: 10, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? ACCENT : '#555' }}>
+            <div key={i} style={{ fontSize: 10, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? ACCENT : 'var(--foreground-secondary)' }}>
               {x}
             </div>
           ))}
@@ -103,7 +103,7 @@ function GenericAccent(ctx: RenderCtx) {
   const { item, title, meta, details } = ctx;
   return (
     <Base variant="accent" tone={INK}>
-      <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '150px 1fr', background: INK, color: '#FFF' }}>
+      <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '150px 1fr', background: INK, color: 'var(--foreground-inverse)' }}>
         <div
           style={{
             padding: 18,
@@ -124,17 +124,17 @@ function GenericAccent(ctx: RenderCtx) {
           </div>
         </div>
         <div style={{ padding: 18, display: 'flex', flexDirection: 'column' }}>
-          <Title text={title} size={22} color="#FFF" style={{ lineHeight: 1.1 }} />
-          <div style={{ fontSize: 10, color: '#D1D5DB', lineHeight: 1.5, marginTop: 8 }}>{meta}</div>
+          <Title text={title} size={22} color="var(--foreground-inverse)" style={{ lineHeight: 1.1 }} />
+          <div style={{ fontSize: 10, color: 'var(--border-default)', lineHeight: 1.5, marginTop: 8 }}>{meta}</div>
           <div style={{ marginTop: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {details.map((x, i) => (
               <div
                 key={i}
                 style={{
                   padding: '6px 8px',
-                  border: `1px solid ${i === 0 ? ACCENT : '#4B5563'}`,
+                  border: `1px solid ${i === 0 ? ACCENT : 'var(--foreground-secondary)'}`,
                   borderRadius: 20,
-                  color: i === 0 ? '#FFB27D' : '#E5E7EB',
+                  color: i === 0 ? 'color-mix(in srgb, var(--color-secondary) 50%, white)' : 'var(--border-default)',
                   fontSize: 9,
                 }}
               >
@@ -158,11 +158,11 @@ function DefaultRender(ctx: RenderCtx) {
         <div>
           <Label item={item} />
           <Title text={title} style={{ marginTop: 5 }} />
-          <div style={{ fontSize: 10, lineHeight: 1.55, color: '#777', marginTop: 10 }}>{meta}</div>
+          <div style={{ fontSize: 10, lineHeight: 1.55, color: 'var(--foreground-muted)', marginTop: 10 }}>{meta}</div>
           <div style={{ height: 6, width: '45%', background: ACCENT, marginTop: 16 }} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, alignContent: 'center' }}>
-          <Chips list={details} color="#FAFAFA" />
+          <Chips list={details} color="var(--surface-subtle)" />
         </div>
       </div>
     </Base>

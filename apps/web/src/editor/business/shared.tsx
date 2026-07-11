@@ -15,10 +15,10 @@ export const ACCENT = 'var(--color-primary)';
 export const INK = 'var(--color-neutral-text)';
 /** 业务块状态色：主品牌色 + 语义色（黄/蓝/紫），随主题切换。 */
 export const STAT_COLORS = ['var(--color-primary)', 'var(--yellow)', 'var(--blue)', 'var(--purple)'];
-/** 渐变柱色：主/次品牌色 + 两个浅色 tint。 */
-export const BAR_FADE = ['var(--color-primary)', 'var(--color-secondary)', '#FDBA74', '#FED7AA'];
-export const AVATAR_DOTS = ['#FFDAC5', '#FDE68A', '#BFDBFE', '#DDD6FE'];
-export const CAL_BANDS = ['#FFF0E8', '#FEF3C7', '#DBEAFE', '#EDE9FE'];
+/** 渐变柱色：主/次品牌色 + 两个浅色 tint（跟随主题）。 */
+export const BAR_FADE = ['var(--color-primary)', 'var(--color-secondary)', 'color-mix(in srgb, var(--color-secondary) 40%, white)', 'color-mix(in srgb, var(--color-secondary) 20%, white)'];
+export const AVATAR_DOTS = ['color-mix(in srgb, var(--color-primary) 30%, white)', 'color-mix(in srgb, var(--yellow) 35%, white)', 'color-mix(in srgb, var(--blue) 35%, white)', 'color-mix(in srgb, var(--purple) 35%, white)'];
+export const CAL_BANDS = ['color-mix(in srgb, var(--color-primary) 10%, white)', 'color-mix(in srgb, var(--yellow) 12%, white)', 'color-mix(in srgb, var(--blue) 12%, white)', 'color-mix(in srgb, var(--purple) 12%, white)'];
 
 /** 外层包裹（忠实 demo base()：accent=橙边+阴影，light=白底，其余=发丝边）。 */
 export function Base({
@@ -38,10 +38,10 @@ export function Base({
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        border: accent ? `2px solid ${ACCENT}` : '1px solid #F0E7E2',
+        border: accent ? `2px solid ${ACCENT}` : '1px solid var(--border-default)',
         borderRadius: 'var(--radius-card)',
         background: light ? 'var(--color-neutral-bg)' : tone,
-        boxShadow: accent ? `0 8px 22px rgba(255,92,0,.16)` : 'var(--shadow-card)',
+        boxShadow: accent ? `0 8px 22px color-mix(in srgb, var(--color-primary) 16%, transparent)` : 'var(--shadow-card)',
         fontFamily: 'var(--font-text)',
         color: INK,
       }}

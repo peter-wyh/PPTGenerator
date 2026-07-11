@@ -10,7 +10,7 @@ import {
 /* --------------------------- brand-wall ------------------------- */
 export function renderBrandWall(ctx: RenderCtx): React.ReactNode {
   const { item, title, meta, details, variant } = ctx;
-  const colors = ['#1A1A1A', ACCENT, '#6B7280', '#1A1A1A', '#9CA3AF'];
+  const colors = ['var(--foreground-primary)', ACCENT, 'var(--foreground-muted)', 'var(--foreground-primary)', 'var(--foreground-muted)'];
   return (
     <Base variant={variant}>
       <div style={{ padding: 18, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -19,7 +19,7 @@ export function renderBrandWall(ctx: RenderCtx): React.ReactNode {
             <Label item={item} />
             <Title text={title} style={{ marginTop: 5 }} />
           </div>
-          <div style={{ fontSize: 11, color: '#777' }}>{meta}</div>
+          <div style={{ fontSize: 11, color: 'var(--foreground-muted)' }}>{meta}</div>
         </div>
         <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 8 }}>
           {details.map((x, i) => (
@@ -27,7 +27,7 @@ export function renderBrandWall(ctx: RenderCtx): React.ReactNode {
               key={i}
               style={{
                 height: 42,
-                border: '1px solid #EEE',
+                border: '1px solid var(--border-default)',
                 borderRadius: 6,
                 display: 'flex',
                 alignItems: 'center',
@@ -57,12 +57,12 @@ export function renderOrgService(ctx: RenderCtx): React.ReactNode {
       <div style={{ padding: 18, height: '100%' }}>
         <Label item={item} />
         <Title text={title} style={{ marginTop: 5 }} />
-        <div style={{ fontSize: 10, color: '#777', marginTop: 4 }}>{meta}</div>
+        <div style={{ fontSize: 10, color: 'var(--foreground-muted)', marginTop: 4 }}>{meta}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginTop: 18 }}>
           {details.map((x, i) => (
-            <div key={i} style={{ padding: '13px 10px', borderTop: `3px solid ${STAT_COLORS[i % 4]}`, background: '#FAFAFA' }}>
+            <div key={i} style={{ padding: '13px 10px', borderTop: `3px solid ${STAT_COLORS[i % 4]}`, background: 'var(--surface-subtle)' }}>
               <div style={{ fontSize: 11, fontWeight: 700 }}>{x}</div>
-              <div style={{ fontSize: 9, color: '#888', marginTop: 6 }}>{subs[i] || ''}</div>
+              <div style={{ fontSize: 9, color: 'var(--foreground-muted)', marginTop: 6 }}>{subs[i] || ''}</div>
             </div>
           ))}
         </div>

@@ -1,8 +1,21 @@
 import { z } from 'zod';
 
-/** 页面类型（与前端 PageType 对齐）。 */
+/** 页面类型（27 种，与前端 PageType 对齐；与模板 1:1）。 */
 const pageTypeSchema = z
-  .enum(['general', 'media-report', 'campaign-report', 'creator-case', 'creator-collab', 'company-intro', 'strategy'])
+  .enum([
+    // 基础
+    'blank', 'title', 'overview', 'table',
+    // 投放报告
+    'report-weekly-overview', 'report-monthly-overview', 'report-channel',
+    'report-product', 'report-creator-collab', 'report-placement',
+    'report-posts', 'report-wrapup-review', 'content-analysis', 'funnel',
+    // 公司 · 品牌
+    'cover', 'agenda', 'company', 'package', 'milestone', 'global', 'org', 'service',
+    // 达人 · 案例
+    'creator', 'case',
+    // 策略 · 内容
+    'challenge', 'process', 'calendar', 'campaign-plan',
+  ])
   .optional();
 
 /** 页面 schema：Template 与 Project 共用同一 Page 结构。 */

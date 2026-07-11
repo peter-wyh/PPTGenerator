@@ -421,16 +421,16 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
 
 /** 情感 → 基础色。 */
 const SENTIMENT_COLOR: Record<Sentiment, string> = {
-  pos: '#22C55E',
-  neg: '#EF4444',
-  neutral: '#9CA3AF',
+  pos: 'var(--green, #22C55E)',
+  neg: 'var(--red, #EF4444)',
+  neutral: 'var(--foreground-muted, #9CA3AF)',
 };
 
 /** 情感 → 辅助色（较低权重用浅色调）。 */
 const SENTIMENT_LIGHT: Record<Sentiment, string> = {
-  pos: '#86EFAC',
-  neg: '#FCA5A5',
-  neutral: '#D1D5DB',
+  pos: 'color-mix(in srgb, var(--green, #22C55E) 40%, white)',
+  neg: 'color-mix(in srgb, var(--red, #EF4444) 40%, white)',
+  neutral: 'var(--border-default, #D1D5DB)',
 };
 
 const WC_MIN_PX = 11;

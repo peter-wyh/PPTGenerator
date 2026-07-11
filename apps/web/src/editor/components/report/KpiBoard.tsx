@@ -11,7 +11,7 @@ function compareColor(compare: string, direction: KpiTrendDirection = 'positive'
   if (!compare) return 'transparent';
   const isDown = compare.trim().startsWith('-');
   const good = direction === 'inverse' ? isDown : !isDown;
-  return good ? '#22C55E' : '#EF4444';
+  return good ? 'var(--green)' : 'var(--red)';
 }
 
 export function KpiBoard({ data }: { data: KpiBoardData }) {
@@ -86,7 +86,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
             <div
               key={i}
               className="flex flex-col justify-center rounded-2xl p-5"
-              style={{ background: `linear-gradient(135deg, ${c.fg}, ${c.fg}CC)`, color: '#fff' }}
+              style={{ background: `linear-gradient(135deg, ${c.fg}, ${c.fg}CC)`, color: 'var(--foreground-inverse)' }}
             >
               <div className="text-xs text-white/70">{it.label}</div>
               <div className="font-data text-2xl font-bold text-white">{it.value}</div>
@@ -106,7 +106,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
       <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto">
         {items.map((it, i) => {
           const token = data.valueColors?.[i] ?? null;
-          const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : '#9CA3AF';
+          const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : 'var(--foreground-muted)';
           return (
             <div key={i} className="flex flex-col justify-center" style={{ borderTop: `2px solid ${color}` }}>
               <div className="mt-2 text-[11px] text-foreground-secondary">{it.label}</div>

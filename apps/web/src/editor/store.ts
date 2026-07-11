@@ -14,7 +14,7 @@ import type {
   ThemeDensity,
   ThemeRadius,
 } from '@mediakit/shared';
-import { buildReportTitle, DEFAULT_THEME, normalizeTheme } from '@mediakit/shared';
+import { buildReportTitle, DEFAULT_THEME, normalizeTheme, pageCategory } from '@mediakit/shared';
 import {
   DEFAULT_SIZES,
   getDefaultData,
@@ -288,7 +288,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       y: 240,
       w: 1000,
       h: 120,
-      data: { content, fontSize: 56, fontWeight: 700, fontFamily: '', color: '#1A1A1A' },
+      data: { content, fontSize: 56, fontWeight: 700, fontFamily: '', color: 'var(--foreground-primary)' },
     };
   }
 
@@ -296,7 +296,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
   function refreshReportTitle(pageId: string) {
     const s = get();
     const p = s.pages.find((pg) => pg.id === pageId);
-    if (!p || p.pageType !== 'media-report' || p.titleOverridden) return;
+    if (!p || pageCategory(p.pageType) !== 'media-report' || p.titleOverridden) return;
     const title = buildReportTitle(s.projectMeta ?? {});
     const titleId = p.titleComponentId;
     const titleComp = titleId ? p.components.find((c) => c.id === titleId && c.type === 'text') : undefined;
@@ -324,7 +324,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
   /** 遍历所有未 overridden 的投放报告页，重算标题。 */
   function refreshAllReportTitles() {
     get().pages.forEach((p) => {
-      if (p.pageType === 'media-report' && !p.titleOverridden) refreshReportTitle(p.id);
+      if (pageCategory(p.pageType) === 'media-report' && !p.titleOverridden) refreshReportTitle(p.id);
     });
   }
 
@@ -642,7 +642,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     updateComponent: (id, patch) =>
       set((s) => {
         const cur = s.pages.find((p) => p.id === s.currentPageId);
-        const isTitleComp = cur?.pageType === 'media-report' && cur?.titleComponentId === id;
+        const isTitleComp = pageCategory(cur?.pageType) === 'media-report' && cur?.titleComponentId === id;
         const pages = withCurrentComponents(s.pages, s.currentPageId, (cs) =>
           cs.map((c) => (c.id === id ? { ...c, ...patch } : c)),
         );
@@ -883,13 +883,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
         pageId = page.id;
         const idx = opts?.titleComponentIndex;
         if (idx != null && reid[idx]) {
-          page.pageType = 'media-report';
+          page.pageType = 'cover';
           page.titleComponentId = reid[idx].id;
           page.titleOverridden = false;
         } else if (opts?.pageType) {
           page.pageType = opts.pageType;
           // campaign-report / creator-collab 自动绑定全局 Campaign
-          if ((opts.pageType === 'campaign-report' || opts.pageType === 'creator-collab') && !page.campaignId) {
+          if ((pageCategory(opts.pageType) === 'campaign-report' || pageCategory(opts.pageType) === 'creator-collab') && !page.campaignId) {
             page.campaignId = s.reportData?.campaign?.id ?? '';
           }
         }
@@ -907,12 +907,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
           newIds.push(page.id);
           const idx = p.titleComponentIndex;
           if (idx != null && reid[idx]) {
-            page.pageType = 'media-report';
+            page.pageType = p.pageType ?? 'cover';
             page.titleComponentId = reid[idx].id;
             page.titleOverridden = false;
           } else if (p.pageType) {
             page.pageType = p.pageType;
-            if ((p.pageType === 'campaign-report' || p.pageType === 'creator-collab') && !page.campaignId) {
+            if ((pageCategory(p.pageType) === 'campaign-report' || pageCategory(p.pageType) === 'creator-collab') && !page.campaignId) {
               page.campaignId = s.reportData?.campaign?.id ?? '';
             }
           }
@@ -967,7 +967,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           if (p.id !== id) return p;
           const next = name.trim() || p.name;
           if (next === p.name) return p; // 无变化不改状态
-          if (p.pageType !== 'media-report' || !p.titleComponentId) return { ...p, name: next };
+          if (pageCategory(p.pageType) !== 'media-report' || !p.titleComponentId) return { ...p, name: next };
           return {
             ...p,
             name: next,
@@ -1003,7 +1003,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setPageType: (pageId, pageType) => {
       mutateAndCommit((s) => {
         // 非 media-report 类型不自动创建/维护标题组件。
-        if (pageType === 'media-report') {
+        if (pageCategory(pageType) === 'media-report') {
           return {
             pages: s.pages.map((p) => {
               if (p.id !== pageId) return p;
@@ -1014,7 +1014,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
                 const created = makeTitleComponent(title);
                 return {
                   ...p,
-                  pageType: 'media-report',
+                  pageType: pageType ?? p.pageType,
                   titleComponentId: created.id,
                   titleOverridden: false,
                   components: [created, ...p.components],
@@ -1023,7 +1023,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
               }
               return {
                 ...p,
-                pageType: 'media-report',
+                pageType: pageType ?? p.pageType,
                 titleComponentId: titleId,
                 titleOverridden: false,
                 name: title,
@@ -1045,7 +1045,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
             ),
           };
         }
-        const patchCampaign = pageType === 'campaign-report' || pageType === 'creator-collab';
+        const patchCampaign = pageCategory(pageType) === 'campaign-report' || pageCategory(pageType) === 'creator-collab';
         return {
           pages: s.pages.map((p) => {
             if (p.id !== pageId) return p;
@@ -1062,7 +1062,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     restoreReportTitle: (pageId) => {
       mutateAndCommit((s) => {
         const p = s.pages.find((pg) => pg.id === pageId);
-        if (!p || p.pageType !== 'media-report') return {};
+        if (!p || pageCategory(p.pageType) !== 'media-report') return {};
         const title = buildReportTitle(s.projectMeta ?? {});
         const titleId = p.titleComponentId;
         const titleComp = titleId ? p.components.find((c) => c.id === titleId && c.type === 'text') : undefined;

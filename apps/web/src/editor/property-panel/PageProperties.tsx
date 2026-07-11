@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Page, PageGradient, GradientStop, PageType } from '@mediakit/shared';
+import { pageCategory } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
 import { backgroundType, buildBackgroundTypePatch, type BackgroundType } from '../background';
 import { ImageInput } from '@/components/ImageInput';
@@ -284,15 +285,60 @@ export function GradientFields({ page }: { page: Page }) {
 
 /* ------------------------- 页面类型 + 业务上下文 ------------------------ */
 
-const PAGE_TYPE_OPTIONS: { value: PageType | ''; label: string; icon: string; desc: string }[] = [
-  { value: '', label: '普通页面', icon: '📄', desc: '无业务绑定' },
-  { value: 'general', label: '通用', icon: '📋', desc: '空白/标题/数据/表格' },
-  { value: 'media-report', label: '投放报告', icon: '📊', desc: '自动维护标题' },
-  { value: 'campaign-report', label: 'Campaign 报告', icon: '📈', desc: '需选择 Campaign' },
-  { value: 'creator-case', label: '达人案例', icon: '🌟', desc: '需选择达人' },
-  { value: 'creator-collab', label: '达人合作详情', icon: '🤝', desc: '绑定 Campaign 下达人' },
-  { value: 'company-intro', label: '公司/品牌介绍', icon: '🏢', desc: '公司、品牌、服务介绍' },
-  { value: 'strategy', label: '策略规划', icon: '🎯', desc: '流程、日历、计划' },
+const PAGE_TYPE_GROUPS: { label: string; options: { value: PageType; label: string; icon: string; desc: string }[] }[] = [
+  {
+    label: '基础',
+    options: [
+      { value: 'blank', label: '空白页', icon: '📄', desc: '从零开始' },
+      { value: 'title', label: '标题页', icon: '🏷️', desc: '大标题 + 副标题' },
+      { value: 'overview', label: '数据概览', icon: '📊', desc: '指标卡片 + 柱状图' },
+      { value: 'table', label: '表格页', icon: '📋', desc: '数据表格' },
+    ],
+  },
+  {
+    label: '投放报告',
+    options: [
+      { value: 'report-weekly-overview', label: '周报 · 业绩概览', icon: '📈', desc: 'KPI 看板 + 下周计划' },
+      { value: 'report-monthly-overview', label: '月报 · 业绩概览', icon: '📈', desc: 'KPI + 趋势图 + 洞察' },
+      { value: 'report-channel', label: '月报 · 渠道表现', icon: '📡', desc: '渠道核心数据 + 对比' },
+      { value: 'report-product', label: '月报 · 商品表现', icon: '🛍️', desc: '热门商品 + AI 洞察' },
+      { value: 'report-creator-collab', label: '月报 · 达人合作详情', icon: '🤝', desc: '头像 + 合作数据 + 作品' },
+      { value: 'report-placement', label: '月报 · DM 广告位', icon: '🖼️', desc: '广告位截图 + 亮点' },
+      { value: 'report-posts', label: '月报 · 渠道贴文', icon: '📝', desc: '内容站 / Reddit / FB 贴文' },
+      { value: 'report-wrapup-review', label: '总结 · 业绩复盘', icon: '🔎', desc: 'KPI + 周期对比 + 策略' },
+      { value: 'content-analysis', label: '内容分析', icon: '📊', desc: '内容类型分布 + 明细' },
+      { value: 'funnel', label: '增长漏斗', icon: '🔻', desc: '漏斗阶段柱状图' },
+    ],
+  },
+  {
+    label: '公司 · 品牌',
+    options: [
+      { value: 'cover', label: '封面页', icon: '🎨', desc: '大标题 + 副标题' },
+      { value: 'agenda', label: '目录页', icon: '📑', desc: '章节导航表格' },
+      { value: 'company', label: '公司介绍页', icon: '🏢', desc: '简介 + 品牌墙' },
+      { value: 'package', label: '套餐方案', icon: '📦', desc: '套餐卡片 + logo 墙' },
+      { value: 'milestone', label: '公司里程碑', icon: '🏗️', desc: '里程碑表格 + 简介' },
+      { value: 'global', label: '全球布局', icon: '🌐', desc: '区域布局表格' },
+      { value: 'org', label: '组织架构', icon: '👥', desc: '团队构成表格' },
+      { value: 'service', label: '核心服务矩阵', icon: '⚙️', desc: '服务列表表格' },
+    ],
+  },
+  {
+    label: '达人 · 案例',
+    options: [
+      { value: 'creator', label: '达人介绍页', icon: '🌟', desc: '头像卡片 + 数据条 + 作品' },
+      { value: 'case', label: '案例展示', icon: '📋', desc: '标题 + 成果卡片 + 案例' },
+    ],
+  },
+  {
+    label: '策略 · 内容',
+    options: [
+      { value: 'challenge', label: '机会与挑战', icon: '⚖️', desc: '机会/挑战表格' },
+      { value: 'process', label: '合作评估流程', icon: '🔄', desc: '流程步骤表格' },
+      { value: 'calendar', label: '营销日历', icon: '📅', desc: '节点规划表格' },
+      { value: 'campaign-plan', label: '投放计划', icon: '🗺️', desc: '阶段路线图表格' },
+    ],
+  },
 ];
 
 /** 页面类型选择器 + 按类型显示的业务上下文选择器（Campaign / 达人）。 */
@@ -319,6 +365,7 @@ function PageTypeSection({
   const campaignCreators = reportData?.campaignCreators ?? [];
 
   const currentType = page.pageType ?? '';
+  const currentCat = pageCategory(page.pageType);
 
   return (
     <FieldGroup title="页面类型">
@@ -330,21 +377,26 @@ function PageTypeSection({
         }}
         className="w-full rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary"
       >
-        {PAGE_TYPE_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.icon} {opt.label}
-          </option>
+        <option value="">📄 普通页面</option>
+        {PAGE_TYPE_GROUPS.map((grp) => (
+          <optgroup key={grp.label} label={grp.label}>
+            {grp.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.icon} {opt.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
 
       {currentType && (
         <p className="text-[10px] text-foreground-muted">
-          {PAGE_TYPE_OPTIONS.find((o) => o.value === currentType)?.desc}
+          {PAGE_TYPE_GROUPS.flatMap((g) => g.options).find((o) => o.value === currentType)?.desc}
         </p>
       )}
 
       {/* Campaign 选择器（campaign-report / creator-collab） */}
-      {(currentType === 'campaign-report' || currentType === 'creator-collab') && (
+      {(currentCat === 'campaign-report' || currentCat === 'creator-collab') && (
         <div className="mt-2 space-y-1">
           <label className="text-xs text-foreground-secondary">绑定 Campaign</label>
           {campaignOptions.length === 0 ? (
@@ -365,7 +417,7 @@ function PageTypeSection({
       )}
 
       {/* 达人选择器（creator-case） */}
-      {currentType === 'creator-case' && (
+      {currentCat === 'creator-case' && (
         <div className="mt-2 space-y-1">
           <label className="text-xs text-foreground-secondary">选择达人</label>
           {creatorOptions.length === 0 ? (
@@ -388,7 +440,7 @@ function PageTypeSection({
       )}
 
       {/* 达人选择器（creator-collab：Campaign 下达人） */}
-      {currentType === 'creator-collab' && (
+      {currentCat === 'creator-collab' && (
         <div className="mt-2 space-y-1">
           <label className="text-xs text-foreground-secondary">选择达人（当前 Campaign）</label>
           {campaignCreators.length === 0 ? (
