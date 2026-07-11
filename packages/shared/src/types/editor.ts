@@ -531,11 +531,15 @@ export interface WorkScreenshotItem {
 }
 
 /** 作品截图墙。复用组图版式引擎（variant = ImageGroupLayoutId）；缺省 'auto'。
- * style 控制视觉风格：'grid'=标准网格（缺省），'skew'=斜切拼接，'overlap'=重叠堆叠，'filmstrip'=胶片条。 */
+ * style 控制视觉风格：'grid'=标准网格（缺省），'diagonal'=斜切网格，'skew'=斜切拼接，
+ * 'overlap'=重叠堆叠，'filmstrip'=胶片条。
+ * grid/diagonal 使用 variant 控制张数版式；skew/overlap/filmstrip 使用 cols 控制列数。 */
 export interface WorkScreenshotData {
   variant?: ImageGroupLayoutId;
   /** 视觉风格预设，与 variant 正交。 */
   style?: WorkScreenshotStyle;
+  /** 列数（仅 skew/overlap/filmstrip 使用；缺省 3）。 */
+  cols?: number;
   title?: string;
   images: WorkScreenshotItem[];
   /** 单元格间距（px）；可选，缺省 8（与组图一致）。 */

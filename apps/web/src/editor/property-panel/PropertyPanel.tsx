@@ -114,7 +114,7 @@ export function PropertyPanel() {
       </FieldGroup>
 
       <FieldGroup title="属性">
-        {def.variants && def.variants.length > 0 && (
+        {def.variants && def.variants.length > 0 && comp.type !== 'work-screenshot' && (
           <VariantSelector comp={comp} variants={def.variants} />
         )}
         {fields.map((f) => (

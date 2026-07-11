@@ -55,9 +55,9 @@ function Screenshot({
   );
 }
 
-/** 作品截图墙：支持 4 种视觉风格（grid / skew / overlap / filmstrip）。 */
+/** 作品截图墙：支持 5 种视觉风格（grid / diagonal / skew / overlap / filmstrip）。 */
 export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
-  const { variant, style = 'grid', title, images = [], gap = 8 } = data;
+  const { variant, style = 'grid', cols = 3, title, images = [], gap = 8 } = data;
 
   if (images.length === 0) {
     return (
@@ -69,18 +69,21 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     );
   }
 
-  /* ---- skew: 斜切拼接（交替倾斜 + 重叠）---- */
+  /* ---- skew: 斜切拼接（交替倾斜 + 按列数排布）---- */
   if (style === 'skew') {
     return (
       <Shell title={title}>
-        <div className="flex h-full w-full flex-wrap items-center justify-center gap-1 overflow-hidden">
+        <div
+          className="grid h-full w-full content-center gap-1 overflow-hidden"
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+        >
           {images.map((im, i) => {
-            const angle = i % 2 === 0 ? -6 : 6;
-            const mt = i % 2 === 0 ? 0 : 8;
+            const angle = i % 2 === 0 ? -5 : 5;
+            const mt = i % 2 === 0 ? 0 : 6;
             return (
               <div
                 key={i}
-                className="relative h-[42%] w-[46%] shrink-0 overflow-hidden rounded-lg shadow-md"
+                className="relative aspect-square overflow-hidden rounded-lg shadow-md"
                 style={{ transform: `rotate(${angle}deg)`, marginTop: mt }}
               >
                 <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
@@ -92,26 +95,35 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     );
   }
 
-  /* ---- overlap: 重叠堆叠（扇形展开）---- */
+  /* ---- overlap: 重叠堆叠（扇形展开，按列数分行排列）---- */
   if (style === 'overlap') {
-    const count = images.length;
+    const rows = Math.ceil(images.length / cols);
     return (
       <Shell title={title}>
-        <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+        <div
+          className="grid h-full w-full content-center overflow-hidden"
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}
+        >
           {images.map((im, i) => {
-            const offset = (i - (count - 1) / 2) * 28;
-            const rot = (i - (count - 1) / 2) * 5;
-            const z = count - Math.abs(i - (count - 1) / 2);
+            const colInRow = i % cols;
+            const mid = (cols - 1) / 2;
+            const offset = (colInRow - mid) * 16;
+            const rot = (colInRow - mid) * 4;
+            const z = Math.round(cols - Math.abs(colInRow - mid));
             return (
               <div
                 key={i}
-                className="absolute h-[60%] w-[44%] overflow-hidden rounded-lg shadow-lg"
-                style={{
-                  transform: `translateX(${offset}px) rotate(${rot}deg)`,
-                  zIndex: z,
-                }}
+                className="relative flex items-center justify-center"
               >
-                <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
+                <div
+                  className="relative h-[70%] w-[80%] overflow-hidden rounded-lg shadow-lg"
+                  style={{
+                    transform: `translateX(${offset}px) rotate(${rot}deg)`,
+                    zIndex: z,
+                  }}
+                >
+                  <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
+                </div>
               </div>
             );
           })}
@@ -120,18 +132,19 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     );
   }
 
-  /* ---- filmstrip: 胶片条（横向滚动 + 胶片穿孔装饰）---- */
+  /* ---- filmstrip: 胶片条（按列数横向排列 + 深色背景）---- */
   if (style === 'filmstrip') {
     return (
       <Shell title={title}>
         <div
-          className="flex h-full w-full gap-2 overflow-hidden rounded-lg p-2"
+          className="grid h-full w-full gap-2 overflow-hidden rounded-lg p-2"
           style={{
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
             background: 'color-mix(in srgb, var(--color-neutral-bg, #f5f5f5) 60%, #000 8%)',
           }}
         >
           {images.map((im, i) => (
-            <div key={i} className="relative h-full w-[38%] shrink-0 overflow-hidden rounded">
+            <div key={i} className="relative h-full overflow-hidden rounded">
               <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
             </div>
           ))}
@@ -142,30 +155,20 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
 
   /* ---- diagonal: 规整网格 + 行间横向斜切衔接 ---- */
   if (style === 'diagonal') {
-    // 按图片数自适应列数，尽量让网格平整
-    const cols = images.length <= 3 ? images.length : images.length <= 6 ? 3 : 4;
     const rows = Math.ceil(images.length / cols);
-    const cellGap = 2; // 斜切效果需要小间距
+    const clipH = 14;
     return (
       <Shell title={title}>
         <div
           className="grid h-full w-full overflow-hidden"
-          style={{
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            gap: `${cellGap}px`,
-            // 每行用 clip-path 斜切：让行与行的衔接处形成锯齿状横向斜线
-          }}
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px' }}
         >
           {images.map((im, i) => {
             const row = Math.floor(i / cols);
-            // 偶数行 clip 上左下右，奇数行反方向，形成行间斜切衔接
-            const clipEven =
-              'polygon(0 0, 100% 0, 100% calc(100% - 14px), 0 100%)';
-            const clipOdd =
-              'polygon(0 14px, 100% 0, 100% 100%, 0 100%)';
+            const clipEven = `polygon(0 0, 100% 0, 100% calc(100% - ${clipH}px), 0 100%)`;
+            const clipOdd = `polygon(0 ${clipH}px, 100% 0, 100% 100%, 0 100%)`;
             const clipPath = row % 2 === 0 ? clipEven : clipOdd;
-            // 斜切行向上偏移 14px 以补偿 clip 空白，让图片紧密衔接
-            const marginTop = row > 0 ? -14 : 0;
+            const marginTop = row > 0 ? -clipH : 0;
             return (
               <div
                 key={i}
@@ -176,7 +179,6 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
               </div>
             );
           })}
-          {/* 如果最后一行不满，补满网格占位 */}
           {Array.from({ length: rows * cols - images.length }).map((_, i) => (
             <div
               key={`pad-${i}`}
@@ -184,9 +186,9 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
               style={{
                 clipPath:
                   (rows - 1) % 2 === 0
-                    ? 'polygon(0 0, 100% 0, 100% calc(100% - 14px), 0 100%)'
-                    : 'polygon(0 14px, 100% 0, 100% 100%, 0 100%)',
-                marginTop: rows > 1 ? -14 : 0,
+                    ? `polygon(0 0, 100% 0, 100% calc(100% - ${clipH}px), 0 100%)`
+                    : `polygon(0 ${clipH}px, 100% 0, 100% 100%, 0 100%)`,
+                marginTop: rows > 1 ? -clipH : 0,
               }}
             />
           ))}
