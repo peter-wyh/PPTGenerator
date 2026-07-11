@@ -15,7 +15,6 @@ import type {
   ShapeKind,
   StrategyBlockData,
   WorkMetricsData,
-  WorkScreenshotData,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from '../store';
@@ -27,7 +26,6 @@ import { FieldGroup } from './helpers';
 import { TableCellIconPicker, RichTextField } from './fields';
 import { SHAPE_OPTIONS } from './constants';
 import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from '../kpiTokens';
-import { ReportWorkScreenshotImporter } from './importers';
 import { ImageInput } from '@/components/ImageInput';
 
 export function BusinessFields({ comp }: { comp: EditorComponent }) {
@@ -387,52 +385,8 @@ export function KpiBoardFields({ comp }: { comp: EditorComponent }) {
 
 /* --------------------------- 业绩·商品 自定义字段 ---------------------------- */
 
-/** 作品截图：每张图 ImageInput + 说明 + 删除，底部添加。 */
-
-export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
-  const updateComponentData = useEditorStore((s) => s.updateComponentData);
-  const commit = useEditorStore((s) => s.commit);
-  const data = comp.data as WorkScreenshotData;
-  const images = data.images ?? [];
-
-  const write = (next: WorkScreenshotData['images']) => {
-    updateComponentData(comp.id, { images: next } as Partial<WorkScreenshotData>);
-    commit();
-  };
-  const setItem = (i: number, patch: Partial<{ src: string; caption: string }>) =>
-    write(images.map((im, idx) => (idx === i ? { ...im, ...patch } : im)));
-  const add = () => write([...images, { src: '', caption: '' }]);
-  const remove = (i: number) => write(images.filter((_, idx) => idx !== i));
-
-  return (
-    <>
-      <ReportWorkScreenshotImporter comp={comp} />
-      <FieldGroup title="Screenshots">
-        <div className="space-y-2">
-          {images.map((im, i) => (
-            <div key={i} className="space-y-1 rounded border border-border-subtle p-1.5">
-              <ImageInput value={im.src} onChange={(url) => setItem(i, { src: url })} />
-              <div className="flex items-center gap-1">
-                <input
-                  value={im.caption ?? ''}
-                  placeholder="Caption"
-                  onChange={(e) => setItem(i, { caption: e.target.value })}
-                  className="w-full rounded border border-border-default px-1.5 py-1 text-xs text-foreground-primary"
-                />
-                <button onClick={() => remove(i)} className="text-foreground-muted hover:text-red">
-                  ✕
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button onClick={add} className="text-xs text-accent-primary hover:underline">
-          + Add image
-        </button>
-      </FieldGroup>
-    </>
-  );
-}
+// WorkScreenshotFields 已拆到独立文件（含样式选择器 + 文本显隐开关）
+export { WorkScreenshotFields } from './custom-fields/WorkScreenshotFields';
 
 export function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
   const update = useDataUpdate(comp);
