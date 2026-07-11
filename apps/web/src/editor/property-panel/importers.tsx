@@ -714,3 +714,135 @@ export function KpiBoardImporter({ comp }: { comp: EditorComponent }) {
     </>
   );
 }
+
+/**
+ * creator-fan-gender：从页面绑定达人（或全局达人列表）的 audience.genderSplit 一键填充性别占比饼图。
+ */
+export function ReportCreatorFanGenderImporter({ comp }: { comp: EditorComponent }) {
+  const { creator: pageCreator, creators } = usePageCreator();
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [selected, setSelected] = useState('');
+
+  useEffect(() => {
+    if (pageCreator && !selected) setSelected(pageCreator.id);
+  }, [pageCreator, selected]);
+
+  if (creators.length === 0) return null;
+
+  function apply() {
+    const cr = creators.find((c) => c.id === selected) ?? pageCreator;
+    if (!cr?.audience?.genderSplit?.length) return;
+    updateComponentData(comp.id, {
+      slices: cr.audience.genderSplit.map((g) => ({
+        label: g.label,
+        value: g.value,
+        color: g.color ?? 'auto',
+      })),
+    });
+    commit();
+    setSelected('');
+  }
+
+  const selectedCreator = creators.find((c) => c.id === selected) ?? pageCreator;
+  const hasData = (selectedCreator?.audience?.genderSplit?.length ?? 0) > 0;
+
+  return (
+    <FieldGroup title="从项目数据导入">
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 页面达人：{pageCreator.name}
+        </p>
+      )}
+      <select
+        value={selected}
+        onChange={(e) => setSelected(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择达人…</option>
+        {creators.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}（{c.audience?.genderSplit?.length ?? 0} 项性别数据）
+          </option>
+        ))}
+      </select>
+      {selected && hasData && (
+        <button
+          onClick={apply}
+          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          ⚡ 导入性别占比
+        </button>
+      )}
+      {selected && !hasData && (
+        <p className="mt-1 text-[11px] text-foreground-muted">该达人未配置受众画像数据</p>
+      )}
+    </FieldGroup>
+  );
+}
+
+/**
+ * creator-fan-age：从页面绑定达人（或全局达人列表）的 audience.ageRange 一键填充年龄段柱状图。
+ */
+export function ReportCreatorFanAgeImporter({ comp }: { comp: EditorComponent }) {
+  const { creator: pageCreator, creators } = usePageCreator();
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [selected, setSelected] = useState('');
+
+  useEffect(() => {
+    if (pageCreator && !selected) setSelected(pageCreator.id);
+  }, [pageCreator, selected]);
+
+  if (creators.length === 0) return null;
+
+  function apply() {
+    const cr = creators.find((c) => c.id === selected) ?? pageCreator;
+    if (!cr?.audience?.ageRange?.length) return;
+    updateComponentData(comp.id, {
+      bars: cr.audience.ageRange.map((a) => ({
+        label: a.label,
+        value: a.value,
+        color: a.color ?? 'auto',
+      })),
+    });
+    commit();
+    setSelected('');
+  }
+
+  const selectedCreator = creators.find((c) => c.id === selected) ?? pageCreator;
+  const hasData = (selectedCreator?.audience?.ageRange?.length ?? 0) > 0;
+
+  return (
+    <FieldGroup title="从项目数据导入">
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 页面达人：{pageCreator.name}
+        </p>
+      )}
+      <select
+        value={selected}
+        onChange={(e) => setSelected(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择达人…</option>
+        {creators.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}（{c.audience?.ageRange?.length ?? 0} 个年龄段）
+          </option>
+        ))}
+      </select>
+      {selected && hasData && (
+        <button
+          onClick={apply}
+          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          ⚡ 导入年龄段数据
+        </button>
+      )}
+      {selected && !hasData && (
+        <p className="mt-1 text-[11px] text-foreground-muted">该达人未配置受众画像数据</p>
+      )}
+    </FieldGroup>
+  );
+}

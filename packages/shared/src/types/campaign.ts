@@ -98,6 +98,12 @@ export interface ReportCreator {
   avatar?: string;
   /** 达人数据条 KPI（由数据配置面板从上游填充）。 */
   stats?: CreatorStatItem[];
+  /** 受众画像（性别/年龄/城市分布，用于 fan-gender / fan-age / fan-city 组件一键填充）。 */
+  audience?: {
+    genderSplit?: { label: string; value: number; color?: string }[];
+    ageRange?: { label: string; value: number; color?: string }[];
+    topCities?: { label: string; value: number; color?: string }[];
+  };
 }
 
 /** 报告全局数据上下文：Campaign + 达人列表。存入编辑器 store，随项目保存。 */

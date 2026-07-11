@@ -8,6 +8,10 @@ import { PageProperties } from './PageProperties';
 import { MultiSelectPanel } from './MultiSelectPanel';
 import { DataSourceSection } from './DataSourceSection';
 import {
+  ReportCreatorFanGenderImporter,
+  ReportCreatorFanAgeImporter,
+} from './importers';
+import {
   FieldEditor,
   KpiCompareLabelField,
   NumberField,
@@ -114,6 +118,8 @@ export function PropertyPanel() {
 
       {comp.type === 'business-block' && <BusinessFields comp={comp} />}
       {comp.type === 'creator-stats-strip' && <CreatorStatsFields comp={comp} />}
+      {comp.type === 'creator-fan-gender' && <ReportCreatorFanGenderImporter comp={comp} />}
+      {comp.type === 'creator-fan-age' && <ReportCreatorFanAgeImporter comp={comp} />}
       {comp.type === 'kpi-board' && <KpiCompareLabelField comp={comp} />}
       {comp.type === 'kpi-board' && <KpiRowStyleField comp={comp} />}
       {comp.type === 'kpi-board' && <KpiBoardFields comp={comp} />}
