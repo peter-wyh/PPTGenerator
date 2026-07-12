@@ -9,7 +9,6 @@ import type {
   WorkMetricsData,
   WorkScreenshotData,
 } from '@mediakit/shared';
-import { resolveLayout, buildGridStyle, cellStyle } from './ImageGroupComponent';
 
 /* ------------------------------ shared shell ------------------------------ */
 
@@ -85,6 +84,15 @@ function gridSpans(count: number, cols: number): number[] {
     spans[lastRowStart + j] = base + (j < extra ? 1 : 0);
   }
   return spans;
+}
+
+/** 根据图片数量和容器宽高比计算最佳列数和行高比。
+ *  核心原则：最后一行不满时，让图片跨列填满，绝不留空位。 */
+function smartGrid(count: number): { cols: number; rows: number; rowHeights: string; spans: number[] } {
+  const cols = autoCols(count);
+  const spans = gridSpans(count, cols);
+  const rows = Math.ceil(count / cols);
+  return { cols, rows, rowHeights: `repeat(${rows}, 1fr)`, spans };
 }
 
 /** 非对称拼图模板：按图片数量定义 grid 单元格排列。
@@ -182,7 +190,7 @@ const MOSAIC_TEMPLATES: MosaicTemplate[] = [
 
 /** 作品截图墙：支持 6 种视觉风格（grid / mosaic / skew / overlap / filmstrip / diagonal）。 */
 export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
-  const { variant, style = 'grid', displayCount, title, images: allImages = [], gap = 8 } = data;
+  const { style = 'grid', displayCount, title, images: allImages = [], gap = 8 } = data;
 
   const images = displayCount ? allImages.slice(0, displayCount) : allImages;
 
@@ -347,19 +355,28 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     );
   }
 
-  /* ---- grid (default): 标准网格马赛克 ---- */
-  const layout = resolveLayout(variant, images.length);
+  /* ---- grid (default): 智能网格——任意张数都铺满无空位 ---- */
+  const grid = smartGrid(images.length);
   return (
     <Shell title={title}>
-      <div className="h-full w-full" style={buildGridStyle(layout, gap)}>
-        {layout.cells.map((cell, i) => {
-          const im = images[i];
-          return (
-            <div key={i} style={cellStyle(cell)} className="bg-surface-hover">
-              <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
-            </div>
-          );
-        })}
+      <div
+        className="h-full w-full"
+        style={{
+          display: 'grid',
+          gap,
+          gridTemplateColumns: `repeat(${grid.cols}, 1fr)`,
+          gridTemplateRows: grid.rowHeights,
+        }}
+      >
+        {images.map((im, i) => (
+          <div
+            key={i}
+            className="bg-surface-hover"
+            style={{ gridColumn: `span ${grid.spans[i]}` }}
+          >
+            <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
+          </div>
+        ))}
       </div>
     </Shell>
   );
