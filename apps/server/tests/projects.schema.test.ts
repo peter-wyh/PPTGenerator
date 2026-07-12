@@ -93,11 +93,11 @@ describe('pageSchema — 页面类型字段', () => {
       id: 'p1',
       name: '封面',
       components: [],
-      pageType: 'media-report',
+      pageType: 'report-weekly-overview',
       titleComponentId: 'c1',
       titleOverridden: false,
     });
-    expect(r.pageType).toBe('media-report');
+    expect(r.pageType).toBe('report-weekly-overview');
     expect(r.titleComponentId).toBe('c1');
     expect(r.titleOverridden).toBe(false);
   });
