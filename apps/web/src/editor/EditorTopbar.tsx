@@ -20,6 +20,7 @@ export function EditorTopbar() {
   const hasPages = useEditorStore((s) => s.pages.length > 0);
   const dirty = useEditorStore((s) => s.dirty);
   const saving = useEditorStore((s) => s.saving);
+  const saveError = useEditorStore((s) => s.saveError);
   const save = useEditorStore((s) => s.save);
   const [showSettings, setShowSettings] = useState(false);
   const [showDataConfig, setShowDataConfig] = useState(false);
@@ -79,8 +80,18 @@ export function EditorTopbar() {
         </button>
         <span className="mx-1 h-4 w-px bg-border-default" />
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-foreground-muted" title="保存状态">
-            {saving ? '保存中…' : dirty ? '未保存' : '已保存'}
+          <span
+            className="text-[11px] text-foreground-muted"
+            title={saveError ? `保存失败: ${saveError}` : '保存状态'}
+            style={saveError ? { color: 'var(--red)' } : undefined}
+          >
+            {saving
+              ? '保存中…'
+              : saveError
+                ? '保存失败'
+                : dirty
+                  ? '未保存'
+                  : '已保存'}
           </span>
           <button
             onClick={() => void save()}

@@ -1,14 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { useEditorStore } from './store';
 
-/** pages / 尺寸 / 名称 / meta(含主题) 变更后 debounce 1.5s → 落库（store.save）；保存后清 dirty。 */
+/**
+ * pages / 尺寸 / 名称 / meta(含主题) 变更后 debounce 1.5s → 落库（store.save）；保存后清 dirty。
+ *
+ * 依赖 dirtyTick（每次标脏时递增）而非 dirty 布尔值：
+ * 如果 save 正在进行时用户又做了新编辑，dirty 本来就是 true（save 还没清它），
+ * React 不会重新触发 effect → 新改动永远不会被保存（race condition）。
+ * dirtyTick 每次标脏都递增，确保 effect 总能重新触发。
+ */
 export function useAutosave(): void {
   const projectId = useEditorStore((s) => s.projectId);
-  const dirty = useEditorStore((s) => s.dirty);
+  const dirtyTick = useEditorStore((s) => s.dirtyTick);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!projectId || !dirty) return;
+    if (!projectId || dirtyTick === 0) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       void useEditorStore.getState().save();
@@ -16,5 +23,5 @@ export function useAutosave(): void {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [dirty, projectId]);
+  }, [dirtyTick, projectId]);
 }

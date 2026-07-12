@@ -53,6 +53,8 @@ export type ThemePatch = {
 export interface Snapshot {
   pages: Page[];
   currentPageId: string | null;
+  /** 快照时的 projectMeta（含主题 theme），用于 setTheme 撤销/重做。 */
+  projectMeta: ProjectMeta | null;
 }
 
 export type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
@@ -79,10 +81,14 @@ export interface EditorState {
   isPanning: boolean;
 
   loaded: boolean;
-  /** 自上次保存后是否有未落库变更（供 autosave）。 */
+  /** 自上次保存后是否有未落库变更（供顶栏展示）。 */
   dirty: boolean;
+  /** 每次标脏时递增（即使 dirty 已为 true 也会变化），供 useAutosave effect 依赖。 */
+  dirtyTick: number;
   /** 保存请求进行中（供顶栏状态展示）。 */
   saving: boolean;
+  /** 最近一次保存失败时的错误信息（成功后清空）。null = 无错误。 */
+  saveError: string | null;
   /** 编辑模式：项目（默认）或模板。决定 save() 调 projectsApi 还是 templatesApi。 */
   saveMode: 'project' | 'template';
   /** 报告全局数据上下文（Campaign + 达人）。由「数据配置」面板编辑，存入 projectMeta.reportData。 */
@@ -265,8 +271,8 @@ export function allReportCreators(reportData: ReportDataContext): ReportCreator[
 export const useEditorStore = create<EditorState>((set, get) => {
   /** 把当前 {pages, currentPageId} 推入 history（丢弃 redo 尾，限 50）。 */
   function pushHistory(): void {
-    const { pages, currentPageId, history, historyIndex } = get();
-    const snapshot: Snapshot = { pages: clone(pages), currentPageId };
+    const { pages, currentPageId, projectMeta, history, historyIndex } = get();
+    const snapshot: Snapshot = { pages: clone(pages), currentPageId, projectMeta: clone(projectMeta) };
     const next = history.slice(0, historyIndex + 1);
     next.push(snapshot);
     while (next.length > HISTORY_CAP) next.shift();
@@ -277,7 +283,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
   function mutateAndCommit(updater: (s: EditorState) => Partial<EditorState>): void {
     set(updater);
     pushHistory();
-    set({ dirty: true });
+    markDirty();
+  }
+
+  /** 标脏：设 dirty=true 并递增 dirtyTick（确保 useAutosave effect 重新触发）。 */
+  function markDirty(): void {
+    set((s) => ({ dirty: true, dirtyTick: s.dirtyTick + 1 }));
   }
 
   /** 构造一个大号文本组件作为页面标题。 */
@@ -303,8 +314,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
     const titleComp = titleId ? p.components.find((c) => c.id === titleId && c.type === 'text') : undefined;
     const currentContent = titleComp ? (titleComp.data as { content?: string }).content : undefined;
     if (p.name === title && currentContent === title) return; // 无变化不标脏
-    set({
+    set((s) => ({
       dirty: true,
+      dirtyTick: s.dirtyTick + 1,
       pages: s.pages.map((pg) => {
         if (pg.id !== pageId) return pg;
         if (!titleComp) {
@@ -319,10 +331,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
           ),
         };
       }),
-    });
+    }));
   }
-
-  /** 遍历所有未 overridden 的投放报告页，重算标题。 */
   function refreshAllReportTitles() {
     get().pages.forEach((p) => {
       if (pageCategory(p.pageType) === 'media-report' && !p.titleOverridden) refreshReportTitle(p.id);
@@ -347,7 +357,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
     isPanning: false,
     loaded: false,
     dirty: false,
+    dirtyTick: 0,
     saving: false,
+    saveError: null,
     saveMode: 'project',
     reportData: {},
     previewOpen: false,
@@ -362,12 +374,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const pages = detail.pages.length
         ? detail.pages
         : [{ id: newId(), name: '第 1 页', components: [] }];
-      const snapshot: Snapshot = { pages: clone(pages), currentPageId: pages[0].id };
       // 加载项目时归一化主题：兼容旧扁平形状 { primary, secondary, fontFamily }。
       const rawMeta: ProjectMeta | null = detail.meta ?? null;
       const projectMeta = rawMeta
         ? { ...rawMeta, theme: normalizeTheme(rawMeta.theme) }
         : null;
+      const snapshot: Snapshot = { pages: clone(pages), currentPageId: pages[0].id, projectMeta: clone(projectMeta) };
       set({
         projectId: detail.id,
         projectName: name,
@@ -386,6 +398,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         loaded: true,
         dirty: false,
         saving: false,
+        saveError: null,
         // 编辑模式：决定 save() 落库到 projects 还是 templates。
         saveMode: mode ?? 'project',
         // 报告全局数据上下文：从 projectMeta.reportData 初始化。
@@ -399,7 +412,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setReportData(data) {
       const s = get();
       const nextMeta: ProjectMeta = { ...(s.projectMeta ?? {}), reportData: data };
-      set({ reportData: data, projectMeta: nextMeta, dirty: true });
+      set((s) => ({ reportData: data, projectMeta: nextMeta, dirty: true, dirtyTick: s.dirtyTick + 1 }));
     },
 
     async save() {
@@ -432,17 +445,20 @@ export const useEditorStore = create<EditorState>((set, get) => {
           meta: after.projectMeta ?? undefined,
         });
         // 保存期间有新改动 → 保留 dirty（保持 true），待 autosave 重试；否则清 dirty。
-        set(afterSig === sig ? { dirty: false, saving: false } : { saving: false });
-      } catch {
-        // 失败保 dirty，下轮 autosave 重试。
-        set({ saving: false });
+        set(afterSig === sig ? { dirty: false, saving: false, saveError: null } : { saving: false, saveError: null });
+      } catch (err) {
+        // 失败保 dirty，下轮 autosave 重试；记录错误供顶栏展示。
+        const msg =
+          err instanceof Error ? err.message : typeof err === 'string' ? err : '未知错误';
+        console.error('[editor save] 保存失败:', err);
+        set({ saving: false, saveError: msg });
       }
     },
 
-    setProjectName: (name) => set({ projectName: name, dirty: true }),
+    setProjectName: (name) => set((s) => ({ projectName: name, dirty: true, dirtyTick: s.dirtyTick + 1 })),
 
     setTheme: (patch) =>
-      set((s) => {
+      mutateAndCommit((s) => {
         const current = s.projectMeta?.theme ?? DEFAULT_THEME;
         // 深合并 color / font / layout / branding / background 子对象；density / radius / preset 直接替换。
         // preset: 若 patch 显式含 preset key（含 undefined=清空），则用 patch 值；否则保留当前。
@@ -483,7 +499,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
           preset: 'preset' in patch ? patch.preset : current.preset,
         };
         return {
-          dirty: true,
           projectMeta: { ...(s.projectMeta ?? {}), theme: merged } as ProjectMeta,
         };
       }),
@@ -666,6 +681,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const safe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
         return {
           dirty: true,
+          dirtyTick: s.dirtyTick + 1,
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
             cs.map((c) => {
               if (c.id !== id) return c;
@@ -990,6 +1006,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     patchPageLive: (id, patch) =>
       set((s) => ({
         dirty: true,
+        dirtyTick: s.dirtyTick + 1,
         pages: s.pages.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       })),
 
@@ -1139,6 +1156,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set({
         pages: clone(snap.pages),
         currentPageId: snap.currentPageId,
+        projectMeta: clone(snap.projectMeta),
         selectedIds: [],
         historyIndex: i,
       });
@@ -1152,6 +1170,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set({
         pages: clone(snap.pages),
         currentPageId: snap.currentPageId,
+        projectMeta: clone(snap.projectMeta),
         selectedIds: [],
         historyIndex: i,
       });
