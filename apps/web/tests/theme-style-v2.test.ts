@@ -15,8 +15,8 @@ describe('themeToCssVars v2 变量', () => {
   });
   it('shadow 各档映射 box-shadow', () => {
     expect(vars({ ...DEFAULT_THEME, shadow: 'none' })['--shadow-card']).toBe('none');
-    expect(vars({ ...DEFAULT_THEME, shadow: 'soft' })['--shadow-card']).toBe('0 2px 8px rgba(0,0,0,.08)');
-    expect(vars({ ...DEFAULT_THEME, shadow: 'strong' })['--shadow-card']).toBe('0 8px 24px rgba(0,0,0,.12)');
+    expect(vars({ ...DEFAULT_THEME, shadow: 'soft' })['--shadow-card']).toBe('0 2px 8px var(--shadow-color, rgba(0,0,0,.08))');
+    expect(vars({ ...DEFAULT_THEME, shadow: 'strong' })['--shadow-card']).toBe('0 8px 24px var(--shadow-color, rgba(0,0,0,.12))');
   });
 });
 

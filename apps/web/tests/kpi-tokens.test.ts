@@ -7,7 +7,7 @@ describe('kpiTokens', () => {
       const c = KPI_COLOR_TOKENS[token];
       expect(typeof c.fg).toBe('string');
       expect(c.fg.length).toBeGreaterThan(0);
-      expect(c.softBg).toMatch(/^#/);
+      expect(c.softBg).toMatch(/color-mix|^#/);
     }
   });
 

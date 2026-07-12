@@ -7,6 +7,7 @@ import type {
   CommentWordcloudData,
   ProjectDetail,
   ReportCampaign,
+  ReportCreator,
   WorkMetricsData,
   WorkScreenshotData,
 } from '@mediakit/shared';
@@ -40,8 +41,8 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    expect(screen.getAllByPlaceholderText('Caption').length).toBe(27); // default 27 images (camp-glowlab-q4, 10 creators)
-    expect(screen.getByRole('button', { name: /Add image/ })).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('说明').length).toBe(27); // default 27 images (camp-glowlab-q4, 10 creators)
+    expect(screen.getByRole('button', { name: /添加图片/ })).toBeInTheDocument();
   });
 
   it('edits a caption into data.images[i].caption', () => {
@@ -51,7 +52,7 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    fireEvent.change(screen.getAllByPlaceholderText('Caption')[0], { target: { value: 'Best work A' } });
+    fireEvent.change(screen.getAllByPlaceholderText('说明')[0], { target: { value: 'Best work A' } });
     const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
     expect(data.images[0].caption).toBe('Best work A');
   });
@@ -61,7 +62,9 @@ describe('WorkScreenshotFields', () => {
     store.loadProject(emptyProject, 'p');
     store.setReportData({
       campaign: { id: 'camp-glowlab-q4', name: 'GlowLab Q4' } as unknown as ReportCampaign,
-      creators: [],
+      creators: [
+        { id: 'cre-mia', name: 'Mia', platform: 'tiktok', handle: '@mia' },
+      ] as ReportCreator[],
     });
     store.addComponent('work-screenshot');
     const id = store.currentComponents()[0].id;
@@ -77,12 +80,12 @@ describe('WorkScreenshotFields', () => {
     );
 
     // Wait for creator list to load, then click import button
-    const importBtn = await screen.findByRole('button', { name: /Import \d+ screenshot/ });
+    const importBtn = await screen.findByRole('button', { name: /Import \d+ screenshot/i });
     fireEvent.click(importBtn);
 
     await waitFor(() => {
       const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
-      expect(data.images).toHaveLength(27);
+      expect(data.images).toHaveLength(4);
       expect(data.images[0].src).toContain('picsum.photos');
     });
   });

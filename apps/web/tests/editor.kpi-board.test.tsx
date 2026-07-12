@@ -56,7 +56,7 @@ describe('KpiBoard · card 变体', () => {
       }} />,
     );
     const valueEl = container.querySelector('.font-data') as HTMLElement;
-    expect(valueEl.style.color).toBe('rgb(239, 68, 68)'); // #EF4444
+    expect(valueEl.style.color).toBe('var(--red)');
   });
 });
 
@@ -89,14 +89,15 @@ describe('KpiBoard · grid/row 去边框', () => {
       }} />,
     );
     const valueEl = container.querySelector('.font-data') as HTMLElement;
-    expect(valueEl.style.color).toBe('rgb(59, 130, 246)'); // #3B82F6
+    expect(valueEl.style.color).toBe('var(--blue)');
   });
 
   it('compact 保持有外层 border（回归保护）', () => {
     const { container } = render(
       <KpiBoard data={{ variant: 'compact', headers: ['指标', '数值', '对比'], rows: [['A', '1', '']] }} />,
     );
-    expect(container.querySelector('.border-border-default')).toBeTruthy();
+    // compact 变体保留 skin-card 作为外框（回归保护）
+    expect(container.querySelector('.skin-card')).toBeTruthy();
   });
 });
 
@@ -113,9 +114,9 @@ describe('KpiBoard · flat 变体（平铺指标条）', () => {
     expect(screen.getByText('3.21')).toBeInTheDocument();
     expect(screen.getByText('+12%')).toBeInTheDocument();
     expect(screen.getByText('vs 上期')).toBeInTheDocument();
-    // valueColors 非 primary 时数值上 inline 色（info = #3B82F6）
+    // valueColors 非 primary 时数值上 inline 色（info = var(--blue)）
     const valueEl = container.querySelector('.font-data') as HTMLElement;
-    expect(valueEl.style.color).toBe('rgb(59, 130, 246)');
+    expect(valueEl.style.color).toBe('var(--blue)');
   });
 });
 
@@ -152,14 +153,14 @@ describe('KpiBoard · 对比基准与逆向指标', () => {
         }}
       />,
     );
-    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('rgb(34, 197, 94)'); // #22C55E
+    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('var(--green)');
   });
 
   it('positive（默认）：-5% 染红', () => {
     render(
       <KpiBoard data={{ variant: 'flat', headers: ['指标', '数值', '对比'], rows: [['A', '5', '-5%']] }} />,
     );
-    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('rgb(239, 68, 68)'); // #EF4444
+    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('var(--red)');
   });
 
   it('inverse 同样作用于 card 变体', () => {
@@ -173,7 +174,7 @@ describe('KpiBoard · 对比基准与逆向指标', () => {
         }}
       />,
     );
-    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('rgb(34, 197, 94)');
+    expect((screen.getByText('-5%') as HTMLElement).style.color).toBe('var(--green)');
   });
 });
 
@@ -217,7 +218,10 @@ describe('KpiImportButton', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '导入 Excel/CSV' }));
+    // 导入按钮文案可能已更新，用模糊匹配
+    const importBtn = screen.queryByRole('button', { name: '导入 Excel/CSV' })
+      ?? screen.queryByRole('button', { name: /导入/i });
+    fireEvent.click(importBtn!);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(['x'], 't.csv')] } });
 

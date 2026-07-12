@@ -5,13 +5,13 @@ import type { Page } from '@mediakit/shared';
 type BgFields = Pick<Page, 'bgColor' | 'bgGradient' | 'bgImage'>;
 const P = (over: Partial<BgFields>): BgFields => over as BgFields;
 
-describe('resolvePageBackground — 优先级 bgImage > bgGradient > bgColor > #fff', () => {
+describe('resolvePageBackground — 优先级 bgImage > bgGradient > bgColor > surface', () => {
   it('bgImage 最高', () => {
     expect(
       resolvePageBackground(
         P({ bgImage: 'a.png', bgGradient: { type: 'linear', stops: [] }, bgColor: '#000' }),
       ),
-    ).toBe('#fff url(a.png) center/cover no-repeat');
+    ).toBe('var(--surface-primary) url(a.png) center/cover no-repeat');
   });
   it('bgGradient 高于 bgColor', () => {
     expect(
@@ -26,8 +26,8 @@ describe('resolvePageBackground — 优先级 bgImage > bgGradient > bgColor > #
   it('仅 bgColor', () => {
     expect(resolvePageBackground(P({ bgColor: '#FF5C00' }))).toBe('#FF5C00');
   });
-  it('全空回白', () => {
-    expect(resolvePageBackground(P({}))).toBe('#fff');
+  it('全空回退到 surface 变量', () => {
+    expect(resolvePageBackground(P({}))).toBe('var(--surface-primary)');
   });
 });
 
@@ -41,10 +41,10 @@ describe('backgroundType — 由数据推导', () => {
 });
 
 describe('buildBackgroundTypePatch — 单选切换', () => {
-  it('切到 color：写 bgColor（缺省白），清 gradient/image', () => {
+  it('切到 color：写 bgColor（缺省 surface），清 gradient/image', () => {
     const p = P({ bgGradient: { type: 'linear', stops: [] }, bgImage: 'a.png' });
     expect(buildBackgroundTypePatch(p, 'color')).toEqual({
-      bgColor: '#FFFFFF',
+      bgColor: 'var(--surface-primary)',
       bgGradient: undefined,
       bgImage: undefined,
     });
@@ -66,21 +66,21 @@ describe('buildBackgroundTypePatch — 单选切换', () => {
         angle: 180,
         stops: [
           { color: '#FF5C00', position: 0 },
-          { color: '#E5E7EB', position: 100 },
+          { color: 'var(--border-default)', position: 100 },
         ],
       },
       bgImage: undefined,
     });
   });
-  it('切到 gradient：无旧 bgColor 时第一 stop 白', () => {
+  it('切到 gradient：无旧 bgColor 时第一 stop surface', () => {
     expect(buildBackgroundTypePatch(P({}), 'gradient')).toEqual({
       bgColor: undefined,
       bgGradient: {
         type: 'linear',
         angle: 180,
         stops: [
-          { color: '#FFFFFF', position: 0 },
-          { color: '#E5E7EB', position: 100 },
+          { color: 'var(--surface-primary)', position: 0 },
+          { color: 'var(--border-default)', position: 100 },
         ],
       },
       bgImage: undefined,

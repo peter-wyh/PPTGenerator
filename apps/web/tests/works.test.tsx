@@ -126,9 +126,10 @@ describe('CommentWordcloud', () => {
         }}
       />,
     );
-    expect(screen.getByText('好评')).toHaveStyle({ color: '#22C55E' });
-    expect(screen.getByText('差评')).toHaveStyle({ color: '#EF4444' });
-    expect(screen.getByText('中性')).toHaveStyle({ color: '#9CA3AF' });
+    // weight=50 each, total=150, ratio=0.33 < 0.45 → uses SENTIMENT_LIGHT (40% mix)
+    expect(screen.getByText('好评')).toHaveStyle({ color: 'color-mix(in srgb, var(--green, #22C55E) 40%, white)' });
+    expect(screen.getByText('差评')).toHaveStyle({ color: 'color-mix(in srgb, var(--red, #EF4444) 40%, white)' });
+    expect(screen.getByText('中性')).toHaveStyle({ color: 'var(--border-default, #D1D5DB)' });
   });
 
   it('scales font-size by weight (heavier word is larger than lighter)', () => {
