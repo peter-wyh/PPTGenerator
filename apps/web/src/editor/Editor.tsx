@@ -11,6 +11,7 @@ import { PreviewOverlay } from './preview/PreviewOverlay';
 import { useAutosave } from './useAutosave';
 import { useEditorKeyboard } from './useEditorKeyboard';
 import { ThemeContext, injectFontLinks } from './theme';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 interface EditorProps {
   detail: ProjectDetail;
@@ -49,11 +50,17 @@ export function Editor({ detail, mode }: EditorProps) {
           <PageSidebar />
           <div className="flex min-w-0 flex-1 flex-col">
             <ComponentPanel />
-            <Canvas />
+            <ErrorBoundary label="画布" compact>
+              <Canvas />
+            </ErrorBoundary>
           </div>
-          <PropertyPanel />
+          <ErrorBoundary label="属性面板" compact>
+            <PropertyPanel />
+          </ErrorBoundary>
         </div>
-        <PreviewOverlay />
+        <ErrorBoundary label="预览" compact>
+          <PreviewOverlay />
+        </ErrorBoundary>
       </div>
     </ThemeContext.Provider>
   );

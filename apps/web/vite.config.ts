@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 
@@ -19,6 +20,20 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React 核心（react + react-dom + react-router）
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // 图表库（recharts 很大，单独拆出来）
+          'chart-vendor': ['recharts'],
+          // 状态管理
+          'state-vendor': ['zustand'],
+        },
       },
     },
   },
