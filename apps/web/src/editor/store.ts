@@ -1,18 +1,12 @@
 import { create } from 'zustand';
 import type {
   ComponentData,
-  ComponentType,
   EditorComponent,
   Page,
-  PageType,
-  ProjectDetail,
   ProjectMeta,
   ProjectTheme,
   ReportDataContext,
   ReportCreator,
-  ShapeKind,
-  ThemeDensity,
-  ThemeRadius,
 } from '@mediakit/shared';
 import { buildReportTitle, DEFAULT_THEME, normalizeTheme, pageCategory } from '@mediakit/shared';
 import {
@@ -24,238 +18,29 @@ import {
   MIN_W,
   DEFAULT_GRID_SIZE,
 } from './defaults';
-import { snapMove, snapResize, clampRect, clampResize, safeRectFrom, type SafeRect } from './snap';
+import { snapMove, snapResize, clampRect, clampResize } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
 import { getTemplateByPageType } from './templates';
 import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
 
-/** 主题补丁：支持嵌套 color/font 部分更新（深合并），density/radius/preset 直接替换。 */
-export type ThemePatch = {
-  color?: Partial<ProjectTheme['color']>;
-  font?: Partial<ProjectTheme['font']>;
-  density?: ThemeDensity;
-  radius?: ThemeRadius;
-  layout?: Partial<NonNullable<ProjectTheme['layout']>>;
-  lineHeight?: Partial<NonNullable<ProjectTheme['lineHeight']>>;
-  format?: Partial<NonNullable<ProjectTheme['format']>>;
-  chart?: Partial<NonNullable<ProjectTheme['chart']>>;
-  shadow?: NonNullable<ProjectTheme['shadow']>;
-  branding?: Partial<NonNullable<ProjectTheme['branding']>>;
-  background?: Partial<Omit<NonNullable<ProjectTheme['background']>, 'type'>> & {
-    type?: NonNullable<ProjectTheme['background']>['type'];
-  };
-  skinPreset?: NonNullable<ProjectTheme['skinPreset']>;
-  preset?: string;
-};
-
-/** history 快照：仅 pages + currentPageId（忠实 demo：zoom/尺寸/选中不进 history）。 */
-export interface Snapshot {
-  pages: Page[];
-  currentPageId: string | null;
-  /** 快照时的 projectMeta（含主题 theme），用于 setTheme 撤销/重做。 */
-  projectMeta: ProjectMeta | null;
-}
-
-export type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
-export type Alignment = 'left' | 'center-h' | 'right' | 'top' | 'middle-v' | 'bottom';
-
-export interface EditorState {
-  projectId: string | null;
-  projectName: string;
-  /** 项目元数据（业务线/场景等），供顶栏展示。 */
-  projectMeta: import('@mediakit/shared').ProjectMeta | null;
-  canvasWidth: number;
-  canvasHeight: number;
-  pages: Page[];
-  currentPageId: string | null;
-  selectedIds: string[];
-
-  history: Snapshot[];
-  historyIndex: number;
-  clipboard: EditorComponent[] | null;
-
-  zoom: number;
-  panX: number;
-  panY: number;
-  isPanning: boolean;
-
-  loaded: boolean;
-  /** 自上次保存后是否有未落库变更（供顶栏展示）。 */
-  dirty: boolean;
-  /** 每次标脏时递增（即使 dirty 已为 true 也会变化），供 useAutosave effect 依赖。 */
-  dirtyTick: number;
-  /** 保存请求进行中（供顶栏状态展示）。 */
-  saving: boolean;
-  /** 最近一次保存失败时的错误信息（成功后清空）。null = 无错误。 */
-  saveError: string | null;
-  /** 编辑模式：项目（默认）或模板。决定 save() 调 projectsApi 还是 templatesApi。 */
-  saveMode: 'project' | 'template';
-  /** 报告全局数据上下文（Campaign + 达人）。由「数据配置」面板编辑，存入 projectMeta.reportData。 */
-  reportData: ReportDataContext;
-  /** 更新报告数据上下文（深合并 projectMeta.reportData，标脏）。 */
-  setReportData: (data: ReportDataContext) => void;
-
-  // ---- selectors ----
-  currentPage: () => Page | null;
-  currentComponents: () => EditorComponent[];
-  canUndo: () => boolean;
-  canRedo: () => boolean;
-
-  // ---- lifecycle ----
-  loadProject: (detail: ProjectDetail, name: string, mode?: 'project' | 'template') => void;
-  setProjectName: (name: string) => void;
-  /** 报告维度：更新主题（品牌色/字体/密度/圆角），深合并 color/font，标记 dirty。 */
-  setTheme: (patch: ThemePatch) => void;
-  markSaved: () => void;
-  /** 立即把当前编辑结果落库（name/尺寸/pages/meta）。autosave 与手动保存共用此入口。 */
-  save: () => Promise<void>;
-
-  // ---- view ----
-  setZoom: (z: number) => void;
-  zoomByDelta: (delta: number) => void;
-  setPan: (x: number, y: number) => void;
-  setPanning: (p: boolean) => void;
-
-  // ---- selection ----
-  select: (id: string, additive?: boolean) => void;
-  clearSelection: () => void;
-  selectAll: () => void;
-
-  // ---- components ----
-  addComponent: (type: ComponentType) => void;
-  addComponentAt: (type: ComponentType, x: number, y: number) => void;
-  addBusinessBlock: (kind: string) => void;
-  addBusinessBlockAt: (kind: string, x: number, y: number) => void;
-  addShape: (shape: ShapeKind) => void;
-  addShapeAt: (shape: ShapeKind, x: number, y: number) => void;
-  updateComponent: (id: string, patch: Partial<EditorComponent>) => void;
-  sanitizeComponent: (id: string) => void;
-  updateComponentData: (id: string, dataPatch: Record<string, unknown>) => void;
-  /** 整体替换组件 data（导入数据用），落 history + 标脏。 */
-  setComponentData: (id: string, data: ComponentData) => void;
-  move: (ids: string[], dx: number, dy: number) => void;
-  resize: (
-    id: string,
-    dir: ResizeDir,
-    dx: number,
-    dy: number,
-    start: { x: number; y: number; w: number; h: number },
-  ) => void;
-  commit: () => void; // 拖动结束落 history
-  deleteSelected: () => void;
-  duplicateSelected: () => void;
-  nudge: (dx: number, dy: number) => void;
-  copy: () => void;
-  cut: () => void;
-  paste: () => void;
-
-  bringForward: (id: string) => void;
-  sendBackward: (id: string) => void;
-  bringToFront: (id: string) => void;
-  sendToBack: (id: string) => void;
-  toggleLock: (id: string) => void;
-
-  // ---- 多选：对齐 / 分布 / 等宽等高 ----
-  alignComponents: (ids: string[], alignment: Alignment) => void;
-  distributeH: (ids: string[]) => void;
-  distributeV: (ids: string[]) => void;
-  equalWidth: (ids: string[]) => void;
-  equalHeight: (ids: string[]) => void;
-
-  // ---- pages ----
-  setPage: (id: string) => void;
-  addPage: () => void;
-  addPageWithComponents: (name: string, components: EditorComponent[], opts?: { titleComponentIndex?: number; pageType?: PageType }) => void;
-  addPagesBatch: (pages: { name: string; components: EditorComponent[]; titleComponentIndex?: number; pageType?: PageType }[]) => void;
-  copyPage: (id: string) => void;
-  deletePage: (id: string) => void;
-  renamePage: (id: string, name: string) => void;
-  updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage' | 'pageType' | 'titleComponentId' | 'titleOverridden' | 'campaignId' | 'creatorId'>>) => void;
-  /** 页面属性的实时预览更新（不落 history）：用于色板拖动/文本输入过程中。
-   *  仅改 pages + 标脏，让画布即时反馈；调用方需在交互结束时（onBlur/onChange 提交）
-   *  再调 updatePage() 推一次 history，否则无法撤销。 */
-  patchPageLive: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage'>>) => void;
-  reorderPage: (from: number, to: number) => void;
-
-  /** 设页面类型；'media-report' 会确保存在标题组件并生成默认标题。 */
-  setPageType: (pageId: string, pageType: PageType | undefined) => void;
-  /** 「恢复自动」：清除 overridden 并重算标题。 */
-  restoreReportTitle: (pageId: string) => void;
-
-  // ---- history ----
-  undo: () => void;
-  redo: () => void;
-
-  // ---- 预览（M6，不入 history，与 zoom/pan 同理）----
-  previewOpen: boolean;
-  previewPageIndex: number;
-  enterPreview: () => void;
-  exitPreview: () => void;
-  previewPrev: () => void;
-  previewNext: () => void;
-  setPreviewPageIndex: (index: number) => void;
-}
-
-function newId(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function clone<T>(v: T): T {
-  return structuredClone ? structuredClone(v) : JSON.parse(JSON.stringify(v));
-}
-
-/** 在当前页上不可变地变换组件数组。 */
-function withCurrentComponents(
-  pages: Page[],
-  currentPageId: string | null,
-  fn: (comps: EditorComponent[]) => EditorComponent[],
-): Page[] {
-  return pages.map((p) => (p.id === currentPageId ? { ...p, components: fn(p.components) } : p));
-}
-
-function centered(w: number, h: number, cw: number, ch: number): { x: number; y: number } {
-  return { x: Math.max(0, Math.floor((cw - w) / 2)), y: Math.max(0, Math.floor((ch - h) / 2)) };
-}
-
-/** 把拖放落点 (鼠标位置) 转为组件左上角坐标：以落点为中心、网格吸附、钳制在画布内。 */
-function placed(
-  w: number,
-  h: number,
-  cx: number,
-  cy: number,
-  cw: number,
-  ch: number,
-  grid: number,
-): { x: number; y: number } {
-  const g = grid > 0 ? grid : DEFAULT_GRID_SIZE;
-  const x = Math.round(Math.max(0, Math.min(cx - w / 2, cw - w)) / g) * g;
-  const y = Math.round(Math.max(0, Math.min(cy - h / 2, ch - h)) / g) * g;
-  return { x, y };
-}
-
-/** 从当前 meta + 画布尺寸解析吸附上下文（grid + safe）。showSafeArea=false → 不吸附（参考线也隐藏）。 */
-function snapCtx(
-  meta: ProjectMeta | null,
-  cw: number,
-  ch: number,
-): { grid: number; safe: ReturnType<typeof safeRectFrom> } {
-  const layout = meta?.theme?.layout;
-  const grid = layout?.gridSize ?? DEFAULT_GRID_SIZE;
-  const safe =
-    layout && layout.showSafeArea !== false
-      ? safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch)
-      : null;
-  return { grid, safe };
-}
-
-/** 夹紧用的安全区：只看 safeMargin>0，不看 showSafeArea（隐藏参考线仍夹紧）。与 snapCtx 的磁吸 safe 解耦。
- *  仅当主题含 layout 时生效（无 meta/无 layout 视为「未定义安全距离」，不夹紧）——与 snapCtx 的 null-meta 行为一致。 */
-function clampSafeFrom(meta: ProjectMeta | null, cw: number, ch: number): SafeRect | null {
-  const layout = meta?.theme?.layout;
-  if (!layout) return null;
-  return safeRectFrom(layout.safeMargin ?? DEFAULT_THEME.layout!.safeMargin, cw, ch);
-}
+// 拆分的类型 + 工具函数（re-export 保持向后兼容）
+export type { ThemePatch, Snapshot, ResizeDir, Alignment, EditorState } from './store-types';
+import type { EditorState } from './store-types';
+import type { Snapshot } from './store-types';
+import {
+  newId,
+  clone,
+  withCurrentComponents,
+  centered,
+  placed,
+  snapCtx,
+  clampSafeFrom,
+  moveItem,
+  alignInPlace,
+  distribute,
+  equalize,
+} from './store-helpers';
 
 /**
  * 合并 reportData 中两类达人（campaignCreators + creators），按 id 去重。
@@ -1202,78 +987,3 @@ export const useEditorStore = create<EditorState>((set, get) => {
       })),
   };
 });
-
-/** 在数组中把 id 项朝 end 方向移动 step（越界保持原位）。返回新数组。 */
-function moveItem(comps: EditorComponent[], id: string, step: 1 | -1): EditorComponent[] {
-  const idx = comps.findIndex((c) => c.id === id);
-  if (idx === -1) return comps;
-  const target = idx + step;
-  if (target < 0 || target >= comps.length) return comps;
-  const next = [...comps];
-  [next[idx], next[target]] = [next[target], next[idx]];
-  return next;
-}
-
-/** 多选对齐：按选中组件 bbox 计算，原地改 x/y；结果夹进安全区。 */
-function alignInPlace(comps: EditorComponent[], ids: string[], alignment: Alignment, safe: SafeRect | null): EditorComponent[] {
-  const sel = comps.filter((c) => ids.includes(c.id));
-  if (sel.length < 2) return comps;
-  const minX = Math.min(...sel.map((c) => c.x));
-  const maxX = Math.max(...sel.map((c) => c.x + c.w));
-  const minY = Math.min(...sel.map((c) => c.y));
-  const maxY = Math.max(...sel.map((c) => c.y + c.h));
-  return comps.map((c) => {
-    if (!ids.includes(c.id)) return c;
-    let { x, y } = c;
-    if (alignment === 'left') x = minX;
-    else if (alignment === 'right') x = maxX - c.w;
-    else if (alignment === 'center-h') x = Math.round((minX + maxX) / 2 - c.w / 2);
-    else if (alignment === 'top') y = minY;
-    else if (alignment === 'bottom') y = maxY - c.h;
-    else if (alignment === 'middle-v') y = Math.round((minY + maxY) / 2 - c.h / 2);
-    const cl = clampRect({ x: Math.round(x), y: Math.round(y), w: c.w, h: c.h }, safe);
-    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
-  });
-}
-
-/** 多选分布：沿水平/垂直方向均匀排布间距（保持顺序，首尾不动）；结果夹进安全区。 */
-function distribute(comps: EditorComponent[], ids: string[], axis: 'h' | 'v', safe: SafeRect | null): EditorComponent[] {
-  const sel = comps.filter((c) => ids.includes(c.id));
-  if (sel.length < 3) return comps;
-  const pos = (c: EditorComponent, start: boolean) => (axis === 'h' ? (start ? c.x : c.x + c.w) : start ? c.y : c.y + c.h);
-  const sorted = [...sel].sort((a, b) => pos(a, true) - pos(b, true));
-  const first = sorted[0];
-  const last = sorted[sorted.length - 1];
-  const startEdge = pos(first, true);
-  const endEdge = pos(last, false);
-  const totalSize = sorted.reduce((acc, c) => acc + (axis === 'h' ? c.w : c.h), 0);
-  const gap = (endEdge - startEdge - totalSize) / (sorted.length - 1);
-  let cursor = startEdge;
-  const newPos = new Map<string, number>();
-  for (const c of sorted) {
-    newPos.set(c.id, cursor);
-    cursor += (axis === 'h' ? c.w : c.h) + gap;
-  }
-  return comps.map((c) => {
-    if (!ids.includes(c.id)) return c;
-    const np = newPos.get(c.id);
-    if (np === undefined) return c;
-    const box =
-      axis === 'h' ? { x: Math.round(np), y: c.y, w: c.w, h: c.h } : { x: c.x, y: Math.round(np), w: c.w, h: c.h };
-    const cl = clampRect(box, safe);
-    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
-  });
-}
-
-/** 多选等宽/等高：全部设为均值；结果夹进安全区。 */
-function equalize(comps: EditorComponent[], ids: string[], dim: 'w' | 'h', safe: SafeRect | null): EditorComponent[] {
-  const sel = comps.filter((c) => ids.includes(c.id));
-  if (sel.length < 2) return comps;
-  const avg = Math.round(sel.reduce((acc, c) => acc + c[dim], 0) / sel.length);
-  return comps.map((c) => {
-    if (!ids.includes(c.id)) return c;
-    const next = dim === 'w' ? { ...c, w: avg } : { ...c, h: avg };
-    const cl = clampRect({ x: next.x, y: next.y, w: next.w, h: next.h }, safe);
-    return { ...c, x: cl.x, y: cl.y, w: cl.w, h: cl.h };
-  });
-}
