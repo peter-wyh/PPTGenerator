@@ -5,7 +5,7 @@ import type {
   WorkScreenshotItem,
 } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
-import { campaignCreatorWorks, type CreatorWithWorks } from '@/api/creatorPerformance';
+import { campaignCreatorWorks, allCreatorWorks, type CreatorWithWorks } from '@/api/creatorPerformance';
 import { parseCreatorLink } from '../creatorLink';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
@@ -248,17 +248,20 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
 
   const campaignId = campaign?.id ?? '';
 
-  // Load works for globally-configured creators only (filtered to this campaign).
+  // Load works for globally-configured creators. If a campaign is bound, filter to that
+  // campaign; otherwise fall back to all campaigns' works (cross-campaign aggregate).
   const creatorsKey = allCreators.map((c) => c.id).join(',');
   useEffect(() => {
-    if (!campaignId || allCreators.length === 0) {
+    if (allCreators.length === 0) {
       setCreatorsWithWorks([]);
       return;
     }
     let alive = true;
     setLoading(true);
     try {
-      const allWorks = campaignCreatorWorks(campaignId);
+      const allWorks = campaignId
+        ? campaignCreatorWorks(campaignId)
+        : allCreatorWorks();
       // Only include creators that are in the global data config
       const allowedIds = new Set(allCreators.map((c) => c.id));
       const filtered = allWorks.filter((cw) => allowedIds.has(cw.creatorId));
@@ -309,24 +312,21 @@ export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }
     commit();
   }
 
-  if (!campaignId) {
-    return (
-      <FieldGroup title="Import from Campaign">
-        <p className="text-xs text-foreground-muted">Bind a Campaign in global data settings first.</p>
-      </FieldGroup>
-    );
-  }
-
   if (allCreators.length === 0) {
     return (
-      <FieldGroup title="Import from Campaign">
-        <p className="text-xs text-foreground-muted">Select creators in global data settings first.</p>
+      <FieldGroup title="从达人作品导入">
+        <p className="text-xs text-foreground-muted">请先在全局数据设置中选择达人。</p>
       </FieldGroup>
     );
   }
 
   return (
-    <FieldGroup title="Import from Campaign">
+    <FieldGroup title={campaignId ? '从 Campaign 导入作品' : '从达人作品导入'}>
+      {!campaignId && (
+        <p className="mb-1 text-[10px] text-foreground-muted">
+          未绑定 Campaign — 显示所有达人作品。绑定 Campaign 后可缩小范围。
+        </p>
+      )}
       {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
       {pageCreator && (
         <p className="mb-1 text-[10px] text-accent-primary">

@@ -119,9 +119,12 @@ export interface ProjectTheme {
    * 与 color/font/density 正交——可在任意主题色上叠加不同 skinPreset。
    * 'default' = 标准卡片；'flat' = 无边框扁平；'elevated' = 大圆角深阴影。
    */
-  skinPreset?: 'default' | 'flat' | 'elevated';
+  skinPreset?: SkinPreset;
   preset?: string; // 当前命中的预设 key，仅用于 UI 高亮；手改字段后置空
 }
+
+/** 皮肤风格预设档位。 */
+export type SkinPreset = 'default' | 'flat' | 'elevated';
 
 /**
  * 旧形状兼容：早期 ProjectTheme 是 { primary?, secondary?, fontFamily? } 扁平结构。

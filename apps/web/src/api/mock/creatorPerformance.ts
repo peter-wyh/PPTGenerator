@@ -783,3 +783,28 @@ export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
     })),
   }));
 }
+
+/**
+ * 跨 Campaign 聚合所有达人作品（去重 by postId）。
+ * 供「未绑定 Campaign」场景下的作品截图导入使用——不需要先绑定 Campaign。
+ */
+export function allCreatorWorks(): CreatorWithWorks[] {
+  const seen = new Map<string, CreatorWithWorks>();
+  for (const campaignId of Object.keys(MOCK_PERFORMANCE)) {
+    for (const cw of campaignCreatorWorks(campaignId)) {
+      const existing = seen.get(cw.creatorId);
+      if (existing) {
+        // 合并 posts（按 postId 去重）
+        const existingPostIds = new Set(existing.posts.map((p) => p.postId));
+        for (const post of cw.posts) {
+          if (!existingPostIds.has(post.postId)) {
+            existing.posts.push(post);
+          }
+        }
+      } else {
+        seen.set(cw.creatorId, { ...cw, posts: [...cw.posts] });
+      }
+    }
+  }
+  return [...seen.values()];
+}

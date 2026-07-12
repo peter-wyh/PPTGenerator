@@ -6,6 +6,7 @@ import {
   type ProjectTheme,
   type ThemeDensity,
   type ThemeRadius,
+  type SkinPreset,
 } from '@mediakit/shared';
 import type { PageGradient } from '@mediakit/shared';
 import { useEditorStore } from '../store';
@@ -26,6 +27,12 @@ const RADIUS_OPTIONS: { value: ThemeRadius; label: string }[] = [
   { value: 'sharp', label: '直角' },
   { value: 'small', label: '小圆角' },
   { value: 'large', label: '大圆角' },
+];
+
+const SKIN_PRESET_OPTIONS: { value: SkinPreset; label: string }[] = [
+  { value: 'default', label: '标准' },
+  { value: 'flat', label: '扁平' },
+  { value: 'elevated', label: '浮起' },
 ];
 
 const PRESET_PRIMARIES = [
@@ -82,6 +89,10 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
   function updateRadius(r: ThemeRadius) {
     setTheme({ radius: r, preset: undefined });
+  }
+
+  function updateSkinPreset(s: SkinPreset) {
+    setTheme({ skinPreset: s, preset: undefined });
   }
 
   /** 手改布局字段：清空 preset 高亮。 */
@@ -319,6 +330,27 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                 </Chip>
               ))}
             </div>
+          </section>
+
+          {/* ⑤b 皮肤质感 */}
+          <section>
+            <div className="mb-2 text-xs font-semibold text-foreground-secondary">皮肤质感</div>
+            <div className="flex gap-2">
+              {SKIN_PRESET_OPTIONS.map((opt) => (
+                <Chip
+                  key={opt.value}
+                  active={(theme.skinPreset ?? 'default') === opt.value}
+                  onClick={() => updateSkinPreset(opt.value)}
+                >
+                  {opt.label}
+                </Chip>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-foreground-muted">
+              {(theme.skinPreset ?? 'default') === 'flat' && '无边框扁平风格，去掉卡片阴影和圆角'}
+              {(theme.skinPreset ?? 'default') === 'elevated' && '大圆角 + 深阴影，更现代的浮起感'}
+              {(theme.skinPreset ?? 'default') === 'default' && '标准卡片风格'}
+            </p>
           </section>
 
           {/* ⑥ 布局：安全距离 + 网格 */}
