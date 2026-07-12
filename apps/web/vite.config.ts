@@ -26,13 +26,31 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks(id) {
           // React 核心（react + react-dom + react-router）
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom')) {
+            return 'react-vendor';
+          }
           // 图表库（recharts 很大，单独拆出来）
-          'chart-vendor': ['recharts'],
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-') || id.includes('node_modules/victory-vendor')) {
+            return 'chart-vendor';
+          }
           // 状态管理
-          'state-vendor': ['zustand'],
+          if (id.includes('node_modules/zustand')) {
+            return 'state-vendor';
+          }
+          // 组件渲染层：report 组件（KpiBoard, CampaignAnalysis, SwotMatrix 等较重）
+          if (id.includes('/editor/components/report/') || id.includes('/editor/components/WorksComponents')) {
+            return 'report-components';
+          }
+          // 达人组件（CreatorComponents 40KB 源码）
+          if (id.includes('/editor/components/CreatorComponents')) {
+            return 'creator-components';
+          }
+          // 公司/品牌组件
+          if (id.includes('/editor/components/CompanyComponents')) {
+            return 'company-components';
+          }
         },
       },
     },
