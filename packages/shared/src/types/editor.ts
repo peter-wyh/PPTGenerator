@@ -56,7 +56,19 @@ export type ComponentType =
   | 'creator-works-table'
   // 基础组件：内容卡片（带标题 + 正文 + 可选图片/标签），可自由填充
   | 'content-card'
-  | 'swot-matrix';
+  | 'swot-matrix'
+  // Campaign 强关联组件：数据来自 Campaign Summary / Funnel / Revenue / Publisher / GEO 等
+  | 'campaign-summary'
+  | 'funnel-chart'
+  | 'revenue-timeline'
+  | 'publisher-table'
+  | 'geo-distribution'
+  | 'placement-wide-table'
+  | 'placement-type-summary'
+  | 'device-breakdown'
+  | 'content-topic-performance'
+  | 'search-term-table'
+  | 'hourly-heatmap';
 
 /* ---- 数据来源标记（所有组件 data 通用元字段） ---- */
 
@@ -179,6 +191,98 @@ export interface SwotMatrixData {
   title?: string;
   /** 四个象限：按 [左上, 右上, 左下, 右下] 顺序 */
   quadrants: SwotQuadrant[];
+}
+
+/* ---- Campaign 强关联组件数据类型 ---- */
+/* 数据结构与 campaign.ts 中同名接口对齐，但以「组件可自由编辑」的扁平形式声明。 */
+
+/** Campaign 总览看板。 */
+export interface CampaignSummaryData {
+  title?: string;
+  campaignName: string;
+  period: string;
+  /** 汇总 KPI 行 */
+  metrics: { label: string; value: string; compare?: string }[];
+  /** 新客/老客分布（可选） */
+  customerSplit?: { newCustomers: number; returningCustomers: number; newCustomerRate: string };
+}
+
+/** 转化漏斗。 */
+export interface FunnelChartData {
+  title?: string;
+  subtitle?: string;
+  steps: { label: string; value: number; rate?: string }[];
+  /** AI 洞察 */
+  insight?: string;
+}
+
+/** 收入时间线（趋势线图）。 */
+export interface RevenueTimelineData {
+  title?: string;
+  subtitle?: string;
+  /** 日维度数据点 */
+  points: { date: string; revenue: number; spend: number; commission: number; orders: number }[];
+  /** 显示哪些系列 */
+  series?: ('revenue' | 'spend' | 'commission' | 'orders')[];
+}
+
+/** Publisher 效果宽表。 */
+export interface PublisherTableData {
+  title?: string;
+  /** 列定义 */
+  columns?: { key: string; label: string }[];
+  /** 行数据 */
+  rows: { publisher: string; clicks: string; impressions: string; ctr: string; conversions: string; cvr: string; revenue: string; commission: string; epc: string; roas: string; status: 'good' | 'warn' | 'bad' }[];
+}
+
+/** GEO 国家收入分布。 */
+export interface GeoDistributionData {
+  title?: string;
+  subtitle?: string;
+  /** 国家维度数据，value=收入占比百分比，display=格式化收入 */
+  items: { code: string; name: string; value: number; display: string; share: string }[];
+  variant?: 'bars' | 'list';
+}
+
+/** 投放位宽表（9 列）。 */
+export interface PlacementWideTableData {
+  title?: string;
+  rows: { placement: string; publisher: string; clicks: string; ctr: string; conversions: string; cvr: string; revenue: string; epc: string; status: 'good' | 'warn' | 'bad' }[];
+}
+
+/** 投放位类型汇总（带趋势线）。 */
+export interface PlacementTypeSummaryData {
+  title?: string;
+  subtitle?: string;
+  items: { type: string; revenue: string; revenueShare: string; clicks: string; ctr: string; conversions: string; cvr: string; epc: string; roas: string; trend?: { label: string; value: number }[] }[];
+}
+
+/** 设备分布。 */
+export interface DeviceBreakdownData {
+  title?: string;
+  items: { device: string; sessions: string; revenue: string; share: string; trend: string }[];
+}
+
+/** 内容主题效果。 */
+export interface ContentTopicPerformanceData {
+  title?: string;
+  items: { topic: string; posts: number; impressions: string; engagement: string; revenue: string; roas: string; status: 'good' | 'warn' | 'bad' }[];
+}
+
+/** 搜索词效果表。 */
+export interface SearchTermTableData {
+  title?: string;
+  items: { term: string; clicks: string; conversions: string; ctr: string; revenue: string; status: 'good' | 'warn' | 'bad' }[];
+}
+
+/** 时段效果热力图（24h）。 */
+export interface HourlyHeatmapData {
+  title?: string;
+  subtitle?: string;
+  /** 24 条数据，hour = "00".."23" */
+  hours: { hour: string; impressions: number; clicks: number; conversions: number }[];
+  /** 高亮指标：impressions / clicks / conversions */
+  metric?: 'impressions' | 'clicks' | 'conversions';
 }
 
 /* ---- Campaign 单达人维度分析图表 ---- */
@@ -663,7 +767,18 @@ export type ComponentData =
   | CreatorWorkMetricsData
   | CreatorWorksTableData
   | ContentCardData
-  | SwotMatrixData;
+  | SwotMatrixData
+  | CampaignSummaryData
+  | FunnelChartData
+  | RevenueTimelineData
+  | PublisherTableData
+  | GeoDistributionData
+  | PlacementWideTableData
+  | PlacementTypeSummaryData
+  | DeviceBreakdownData
+  | ContentTopicPerformanceData
+  | SearchTermTableData
+  | HourlyHeatmapData;
 
 export interface EditorComponent {
   id: string;

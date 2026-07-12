@@ -5,7 +5,19 @@ import type {
   WorkScreenshotItem,
 } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
-import { campaignCreatorWorks, allCreatorWorks, type CreatorWithWorks } from '@/api/creatorPerformance';
+import { campaignCreatorWorks, allCreatorWorks, listPlacementTypeSummary, type CreatorWithWorks } from '@/api/creatorPerformance';
+import {
+  getCampaignSummary,
+  getConversionFunnel,
+  getRevenueTimeline,
+  getPublishers,
+  getGeoPerformance,
+  getPlacementWideRows,
+  getDeviceBreakdown,
+  getContentTopics,
+  getSearchTerms,
+  getHourlyPerformance,
+} from '@/api/affiliate';
 import { parseCreatorLink } from '../creatorLink';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
@@ -843,6 +855,103 @@ export function ReportCreatorFanAgeImporter({ comp }: { comp: EditorComponent })
       {selected && !hasData && (
         <p className="mt-1 text-[11px] text-foreground-muted">该达人未配置受众画像数据</p>
       )}
+    </FieldGroup>
+  );
+}
+
+/* ================================================================
+ * Campaign 报告数据导入器（11 种组件通用）
+ * 从绑定的 Campaign 或手动选择 Campaign → 一键填充组件数据
+ * ================================================================ */
+
+/** 根据 ComponentType 从对应 mock 函数取数据，返回 data patch 对象。 */
+function campaignDataPatch(
+  compType: string,
+  campaignId: string,
+): Record<string, unknown> | null {
+  switch (compType) {
+    case 'campaign-summary': {
+      const s = getCampaignSummary(campaignId);
+      return {
+        campaignName: s.campaignName,
+        period: s.period,
+        metrics: [
+          { label: 'Spend', value: s.totalSpend },
+          { label: 'Revenue', value: s.totalRevenue },
+          { label: 'ROAS', value: s.roas },
+          { label: 'Commission', value: s.totalCommission },
+        ],
+        customerSplit: {
+          newCustomers: s.newCustomers,
+          returningCustomers: s.returningCustomers,
+          newCustomerRate: s.newCustomerRate,
+        },
+      };
+    }
+    case 'funnel-chart':
+      return { steps: getConversionFunnel(campaignId) };
+    case 'revenue-timeline':
+      return { points: getRevenueTimeline(campaignId, 14) };
+    case 'publisher-table':
+      return { rows: getPublishers(campaignId) };
+    case 'geo-distribution':
+      return { items: getGeoPerformance(campaignId) };
+    case 'placement-wide-table':
+      return { rows: getPlacementWideRows(campaignId) };
+    case 'placement-type-summary':
+      return { items: listPlacementTypeSummary(campaignId) };
+    case 'device-breakdown':
+      return { items: getDeviceBreakdown(campaignId) };
+    case 'content-topic-performance':
+      return { items: getContentTopics(campaignId) };
+    case 'search-term-table':
+      return { items: getSearchTerms(campaignId) };
+    case 'hourly-heatmap':
+      return { hours: getHourlyPerformance(campaignId) };
+    default:
+      return null;
+  }
+}
+
+/** Campaign 报告组件通用导入器：从已绑定 Campaign 一键填充。 */
+export function CampaignReportImporter({ comp }: { comp: EditorComponent }) {
+  const setComponentData = useEditorStore((s) => s.setComponentData);
+  const boundCampaign = useEditorStore((s) => s.reportData.campaign);
+  const defaultCampaignId = useEditorStore((s) => s.projectMeta?.campaignId);
+  const [campaignId, setCampaignId] = useState(boundCampaign?.id ?? defaultCampaignId ?? '');
+
+  function apply() {
+    if (!campaignId) return;
+    const patch = campaignDataPatch(comp.type, campaignId);
+    if (patch) {
+      setComponentData(comp.id, { ...comp.data, ...patch });
+    }
+  }
+
+  return (
+    <FieldGroup title="从 Campaign 导入">
+      {boundCampaign && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 绑定 Campaign：{boundCampaign.name}
+        </p>
+      )}
+      <select
+        value={campaignId}
+        onChange={(e) => setCampaignId(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择 Campaign…</option>
+        {boundCampaign && <option value={boundCampaign.id}>{boundCampaign.name}</option>}
+        <option value="camp-glowlab-q4">GlowLab Q4</option>
+        <option value="camp-finetech-q3">FineTech Q3</option>
+      </select>
+      <button
+        onClick={apply}
+        disabled={!campaignId}
+        className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-40"
+      >
+        ⚡ 导入 Campaign 数据
+      </button>
     </FieldGroup>
   );
 }

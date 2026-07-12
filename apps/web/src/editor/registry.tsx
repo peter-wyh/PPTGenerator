@@ -36,6 +36,17 @@ import {
   CreatorWorkMetrics,
   CreatorWorksTable,
   SwotMatrix,
+  CampaignSummaryBoard,
+  FunnelChartView,
+  RevenueTimelineChart,
+  PublisherTable,
+  GeoDistribution,
+  PlacementWideTableView,
+  PlacementTypeSummaryView,
+  DeviceBreakdownView,
+  ContentTopicView,
+  SearchTermTableView,
+  HourlyHeatmapView,
 } from './components/report';
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
@@ -49,6 +60,7 @@ import {
   ReportWorkScreenshotImporter,
   ChartImportButton,
   KpiBoardImporter,
+  CampaignReportImporter,
 } from './property-panel/importers';
 
 /* ---------------------------- property schema ---------------------------- */
@@ -695,6 +707,151 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
     ],
+  },
+  /* ---- Campaign 强关联组件 ---- */
+  'campaign-summary': {
+    Component: CampaignSummaryBoard,
+    defaultSize: DEFAULT_SIZES['campaign-summary'],
+    defaultData: () => getDefaultData('campaign-summary'),
+    propertySchema: [
+      { key: 'title', label: '看板标题', kind: 'text' },
+      { key: 'campaignName', label: 'Campaign 名称', kind: 'text' },
+      { key: 'period', label: '周期', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'funnel-chart': {
+    Component: FunnelChartView,
+    defaultSize: DEFAULT_SIZES['funnel-chart'],
+    defaultData: () => getDefaultData('funnel-chart'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'insight', label: 'AI 洞察', kind: 'textarea' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'revenue-timeline': {
+    Component: RevenueTimelineChart,
+    defaultSize: DEFAULT_SIZES['revenue-timeline'],
+    defaultData: () => getDefaultData('revenue-timeline'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ChartImportButton,
+    },
+  },
+  'publisher-table': {
+    Component: PublisherTable,
+    defaultSize: DEFAULT_SIZES['publisher-table'],
+    defaultData: () => getDefaultData('publisher-table'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'geo-distribution': {
+    Component: GeoDistribution,
+    defaultSize: DEFAULT_SIZES['geo-distribution'],
+    defaultData: () => getDefaultData('geo-distribution'),
+    variants: [
+      { id: 'bars', label: '条形图' },
+      { id: 'list', label: '列表' },
+    ],
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'placement-wide-table': {
+    Component: PlacementWideTableView,
+    defaultSize: DEFAULT_SIZES['placement-wide-table'],
+    defaultData: () => getDefaultData('placement-wide-table'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'placement-type-summary': {
+    Component: PlacementTypeSummaryView,
+    defaultSize: DEFAULT_SIZES['placement-type-summary'],
+    defaultData: () => getDefaultData('placement-type-summary'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'device-breakdown': {
+    Component: DeviceBreakdownView,
+    defaultSize: DEFAULT_SIZES['device-breakdown'],
+    defaultData: () => getDefaultData('device-breakdown'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'content-topic-performance': {
+    Component: ContentTopicView,
+    defaultSize: DEFAULT_SIZES['content-topic-performance'],
+    defaultData: () => getDefaultData('content-topic-performance'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'search-term-table': {
+    Component: SearchTermTableView,
+    defaultSize: DEFAULT_SIZES['search-term-table'],
+    defaultData: () => getDefaultData('search-term-table'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
+  },
+  'hourly-heatmap': {
+    Component: HourlyHeatmapView,
+    defaultSize: DEFAULT_SIZES['hourly-heatmap'],
+    defaultData: () => getDefaultData('hourly-heatmap'),
+    propertySchema: [
+      { key: 'title', label: '标题', kind: 'text' },
+      { key: 'subtitle', label: '副标题', kind: 'text' },
+    ],
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: CampaignReportImporter,
+    },
   },
 };
 

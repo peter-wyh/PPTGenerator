@@ -42,6 +42,18 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'creator-works-table': { w: 700, h: 320 },
   'content-card': { w: 360, h: 240 },
   'swot-matrix': { w: 560, h: 400 },
+  // Campaign 强关联组件
+  'campaign-summary': { w: 720, h: 200 },
+  'funnel-chart': { w: 480, h: 360 },
+  'revenue-timeline': { w: 640, h: 320 },
+  'publisher-table': { w: 640, h: 320 },
+  'geo-distribution': { w: 480, h: 280 },
+  'placement-wide-table': { w: 720, h: 320 },
+  'placement-type-summary': { w: 640, h: 320 },
+  'device-breakdown': { w: 480, h: 200 },
+  'content-topic-performance': { w: 640, h: 280 },
+  'search-term-table': { w: 560, h: 280 },
+  'hourly-heatmap': { w: 560, h: 200 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -683,6 +695,139 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { title: 'Challenges', items: ['心智占位不足', '内容同质化严重', '品类教育成本高'] },
           { title: 'Threats', items: ['竞品投放加码', '平台算法波动', '用户注意力碎片化'] },
         ],
+      };
+    case 'campaign-summary':
+      return {
+        title: 'Campaign Overview',
+        campaignName: 'GlowLab Q4 Affiliate Campaign',
+        period: '2026-10-12 ~ 2026-11-12',
+        metrics: [
+          { label: 'Spend', value: '$128,000', compare: '' },
+          { label: 'Revenue', value: '$487,200', compare: '+15%' },
+          { label: 'ROAS', value: '3.81x', compare: '+0.3' },
+          { label: 'Commission', value: '$43,848', compare: '' },
+        ],
+        customerSplit: { newCustomers: 842, returningCustomers: 1588, newCustomerRate: '34.7%' },
+      };
+    case 'funnel-chart':
+      return {
+        title: 'Conversion Funnel',
+        subtitle: 'Impressions → Purchase',
+        steps: [
+          { label: 'Impressions', value: 3200000, rate: '100%' },
+          { label: 'Clicks', value: 96000, rate: '3.0%' },
+          { label: 'Add to Cart', value: 14400, rate: '15.0%' },
+          { label: 'Checkout', value: 5760, rate: '40.0%' },
+          { label: 'Purchase', value: 2430, rate: '42.2%' },
+        ],
+        insight: 'Add-to-Cart → Checkout 转化率 40%，高于行业均值（25-30%），商品页说服力强。',
+      };
+    case 'revenue-timeline':
+      return {
+        title: 'Revenue & Spend Timeline',
+        subtitle: 'Daily performance',
+        points: Array.from({ length: 14 }, (_, i) => ({
+          date: `D${i + 1}`,
+          revenue: Math.round(20000 + Math.sin(i / 2) * 8000 + i * 1500),
+          spend: Math.round(8000 + i * 200),
+          commission: Math.round(1800 + i * 180),
+          orders: Math.round(80 + Math.sin(i / 2) * 30 + i * 5),
+        })),
+        series: ['revenue', 'spend'],
+      };
+    case 'publisher-table':
+      return {
+        title: 'Publisher Performance',
+        rows: [
+          { publisher: 'InfluApp', clicks: '12,400', impressions: '320,000', ctr: '3.88%', conversions: '372', cvr: '3.00%', revenue: '$89,200', commission: '$8,028', epc: '$7.19', roas: '4.2x', status: 'good' },
+          { publisher: 'DealHub', clicks: '8,200', impressions: '180,000', ctr: '4.56%', conversions: '246', cvr: '3.00%', revenue: '$52,800', commission: '$4,752', epc: '$6.44', roas: '3.5x', status: 'good' },
+          { publisher: 'CouponPro', clicks: '15,600', impressions: '520,000', ctr: '3.00%', conversions: '312', cvr: '2.00%', revenue: '$41,600', commission: '$3,744', epc: '$2.67', roas: '2.1x', status: 'warn' },
+          { publisher: 'BlogAds', clicks: '3,100', impressions: '95,000', ctr: '3.26%', conversions: '62', cvr: '2.00%', revenue: '$14,800', commission: '$1,332', epc: '$4.77', roas: '1.8x', status: 'bad' },
+        ],
+      };
+    case 'geo-distribution':
+      return {
+        title: 'Revenue by GEO',
+        subtitle: 'Top 6 markets',
+        variant: 'bars',
+        items: [
+          { code: 'US', name: 'United States', value: 42, display: '$204,624', share: '42.0%' },
+          { code: 'UK', name: 'United Kingdom', value: 18, display: '$87,696', share: '18.0%' },
+          { code: 'DE', name: 'Germany', value: 12, display: '$58,464', share: '12.0%' },
+          { code: 'CA', name: 'Canada', value: 10, display: '$48,720', share: '10.0%' },
+          { code: 'AU', name: 'Australia', value: 8, display: '$38,976', share: '8.0%' },
+          { code: 'JP', name: 'Japan', value: 10, display: '$48,720', share: '10.0%' },
+        ],
+      };
+    case 'placement-wide-table':
+      return {
+        title: 'Placement Breakdown',
+        rows: [
+          { placement: 'Bio Link', publisher: 'InfluApp', clicks: '4,200', ctr: '4.10%', conversions: '168', cvr: '4.00%', revenue: '$38,200', epc: '$9.10', status: 'good' },
+          { placement: 'Story', publisher: 'DealHub', clicks: '3,800', ctr: '3.50%', conversions: '114', cvr: '3.00%', revenue: '$24,500', epc: '$6.45', status: 'good' },
+          { placement: 'Live', publisher: 'InfluApp', clicks: '2,100', ctr: '5.20%', conversions: '105', cvr: '5.00%', revenue: '$22,800', epc: '$10.86', status: 'good' },
+          { placement: 'Shopping Ads', publisher: 'CouponPro', clicks: '6,500', ctr: '2.80%', conversions: '78', cvr: '1.20%', revenue: '$14,600', epc: '$2.25', status: 'warn' },
+          { placement: 'Bio Link', publisher: 'BlogAds', clicks: '1,100', ctr: '3.00%', conversions: '22', cvr: '2.00%', revenue: '$5,800', epc: '$5.27', status: 'bad' },
+        ],
+      };
+    case 'placement-type-summary':
+      return {
+        title: 'Placement Type Summary',
+        subtitle: 'Aggregated by type',
+        items: [
+          { type: 'Bio Link', revenue: '$44,000', revenueShare: '35%', clicks: '5,300', ctr: '3.90%', conversions: '190', cvr: '3.60%', epc: '$8.30', roas: '4.5x', trend: Array.from({ length: 7 }, (_, i) => ({ label: `D${i}`, value: 4000 + i * 500 })) },
+          { type: 'Story', revenue: '$28,000', revenueShare: '22%', clicks: '4,100', ctr: '3.60%', conversions: '126', cvr: '3.10%', epc: '$6.83', roas: '3.2x', trend: Array.from({ length: 7 }, (_, i) => ({ label: `D${i}`, value: 3000 + i * 300 })) },
+          { type: 'Live', revenue: '$32,000', revenueShare: '25%', clicks: '2,800', ctr: '5.00%', conversions: '140', cvr: '5.00%', epc: '$11.43', roas: '5.1x', trend: Array.from({ length: 7 }, (_, i) => ({ label: `D${i}`, value: 3500 + i * 600 })) },
+          { type: 'Shopping Ads', revenue: '$23,200', revenueShare: '18%', clicks: '7,200', ctr: '2.80%', conversions: '86', cvr: '1.20%', epc: '$3.22', roas: '2.0x', trend: Array.from({ length: 7 }, (_, i) => ({ label: `D${i}`, value: 2500 - i * 100 })) },
+        ],
+      };
+    case 'device-breakdown':
+      return {
+        title: 'Device Breakdown',
+        items: [
+          { device: 'Mobile', sessions: '82,400', revenue: '$380,400', share: '78%', trend: '+12%' },
+          { device: 'Desktop', sessions: '14,200', revenue: '$82,800', share: '17%', trend: '-3%' },
+          { device: 'Tablet', sessions: '3,800', revenue: '$24,000', share: '5%', trend: '+1%' },
+        ],
+      };
+    case 'content-topic-performance':
+      return {
+        title: 'Content Topic Performance',
+        items: [
+          { topic: 'Skincare Routine', posts: 12, impressions: '1.2M', engagement: '8.4%', revenue: '$128,000', roas: '4.2x', status: 'good' },
+          { topic: 'Product Review', posts: 8, impressions: '980K', engagement: '6.1%', revenue: '$96,500', roas: '3.8x', status: 'good' },
+          { topic: 'Before & After', posts: 6, impressions: '720K', engagement: '5.2%', revenue: '$72,000', roas: '3.1x', status: 'good' },
+          { topic: 'Tutorial / How-to', posts: 4, impressions: '420K', engagement: '3.8%', revenue: '$38,000', roas: '2.2x', status: 'warn' },
+          { topic: 'UGC Repost', posts: 10, impressions: '1.5M', engagement: '4.1%', revenue: '$42,000', roas: '1.8x', status: 'bad' },
+        ],
+      };
+    case 'search-term-table':
+      return {
+        title: 'Search Term Performance',
+        items: [
+          { term: 'glowlab vitamin c', clicks: '2,400', conversions: '144', ctr: '4.80%', revenue: '$28,800', status: 'good' },
+          { term: 'best vitamin c serum', clicks: '1,800', conversions: '90', ctr: '4.20%', revenue: '$18,000', status: 'good' },
+          { term: 'glowlab discount', clicks: '3,200', conversions: '48', ctr: '2.80%', revenue: '$9,600', status: 'warn' },
+          { term: 'skincare for sensitive skin', clicks: '1,200', conversions: '36', ctr: '3.60%', revenue: '$7,200', status: 'warn' },
+          { term: 'glowlab review', clicks: '800', conversions: '8', ctr: '2.00%', revenue: '$1,600', status: 'bad' },
+        ],
+      };
+    case 'hourly-heatmap':
+      return {
+        title: 'Hourly Performance',
+        subtitle: 'Clicks by hour (24h)',
+        metric: 'clicks',
+        hours: Array.from({ length: 24 }, (_, h) => {
+          const peak1 = Math.exp(-((h - 9) ** 2) / 8) * 800;
+          const peak2 = Math.exp(-((h - 21) ** 2) / 6) * 1200;
+          const base = 50;
+          return {
+            hour: String(h).padStart(2, '0'),
+            impressions: Math.round((peak1 + peak2 + base) * 30),
+            clicks: Math.round(peak1 + peak2 + base),
+            conversions: Math.round((peak1 + peak2 + base) * 0.03),
+          };
+        }),
       };
     default:
       return { content: '', fontSize: 14, color: 'var(--foreground-primary)' };

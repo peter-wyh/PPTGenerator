@@ -13,3 +13,20 @@ export { CampaignAnalysis } from './CampaignAnalysis';
 export { CreatorWorkMetrics } from './CreatorWorkMetrics';
 export { CreatorWorksTable } from './CreatorWorksTable';
 export { SwotMatrix } from './SwotMatrix';
+export {
+  CampaignSummaryBoard,
+  FunnelChartView,
+  RevenueTimelineChart,
+  PublisherTable,
+  GeoDistribution,
+} from './CampaignReport';
+export {
+  PlacementWideTableView,
+  PlacementTypeSummaryView,
+} from './PlacementReport';
+export {
+  DeviceBreakdownView,
+  ContentTopicView,
+  SearchTermTableView,
+  HourlyHeatmapView,
+} from './ContentReport';
