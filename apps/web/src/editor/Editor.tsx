@@ -22,6 +22,10 @@ interface EditorProps {
 /** 编辑器工作区：顶栏 + 页面栏 + 组件库 + 画布 + 属性面板。 */
 export function Editor({ detail, mode }: EditorProps) {
   useEffect(() => {
+    const st = useEditorStore.getState();
+    const m = mode ?? 'project';
+    // HMR 重挂载 Editor 时，若已是同一项目+同模式且已加载，不要用旧 detail 覆盖正在编辑的内存状态。
+    if (st.loaded && st.projectId === detail.id && st.saveMode === m) return;
     useEditorStore.getState().loadProject(detail, detail.name, mode);
   }, [detail, mode]);
 
