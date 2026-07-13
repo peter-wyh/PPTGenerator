@@ -97,6 +97,15 @@ function CreatorPerformanceSection({
   const [perf, setPerf] = useState<CreatorCampaignPerformance[]>([]);
   const [summary, setSummary] = useState<PlacementTypeSummary[]>([]);
   const [loading, setLoading] = useState(false);
+  /** Expanded creator ids (drill-down). Multi-expand; reset on campaign change. */
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpanded = (creatorId: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(creatorId)) next.delete(creatorId);
+      else next.add(creatorId);
+      return next;
+    });
 
   // Select first campaign by default once available.
   useEffect(() => {
@@ -105,6 +114,8 @@ function CreatorPerformanceSection({
 
   // Fetch performance + placement summary on campaign switch.
   useEffect(() => {
+    // Switching campaign collapses all expanded creators — ids differ per campaign.
+    setExpanded(new Set());
     if (!selectedId) {
       setPerf([]);
       setSummary([]);
@@ -169,9 +180,14 @@ function CreatorPerformanceSection({
       )}
 
       {!loading && perf.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {perf.map((p) => (
-            <PerfCard key={p.creatorId} perf={p} />
+            <PerfCard
+              key={p.creatorId}
+              perf={p}
+              expanded={expanded.has(p.creatorId)}
+              onToggle={() => toggleExpanded(p.creatorId)}
+            />
           ))}
         </div>
       )}
@@ -233,8 +249,28 @@ function PlacementSummaryTable({ summary }: { summary: PlacementTypeSummary[] })
   );
 }
 
-/** Single creator performance card: summary → post performance table → CPS summary. */
-function PerfCard({ perf }: { perf: CreatorCampaignPerformance }) {
+/** Compact label+value metric used in the collapsed creator summary row. */
+function RowMetric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <span>
+      <span className="text-foreground-muted">{label} </span>
+      <span className={`font-data ${accent ? 'text-accent-primary' : 'text-foreground-primary'}`}>
+        {value}
+      </span>
+    </span>
+  );
+}
+
+/** Single creator performance card: clickable summary row → expandable detail (posts / placements / daily / CPS). */
+function PerfCard({
+  perf,
+  expanded,
+  onToggle,
+}: {
+  perf: CreatorCampaignPerformance;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const cpsChips: { label: string; value: string }[] = [
     { label: 'GMV', value: perf.cps.gmv },
     { label: 'Orders', value: perf.cps.orders },
@@ -251,18 +287,29 @@ function PerfCard({ perf }: { perf: CreatorCampaignPerformance }) {
 
   return (
     <div className="rounded-lg border border-border-default bg-surface-primary p-3">
-      {/* Header: creator + tier + platform + summary */}
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+      {/* Clickable summary row — always visible; click to drill into this creator */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex w-full flex-wrap items-baseline gap-x-2 gap-y-1 rounded px-1.5 py-1 text-left transition-colors hover:bg-surface-hover/50"
+      >
+        <span className="inline-block w-3 text-foreground-muted">{expanded ? '▾' : '▸'}</span>
         <span className="text-sm font-semibold text-foreground-primary">{perf.creatorName}</span>
         <span className="text-xs text-foreground-muted">
           {perf.handle} · {perf.platform} · {perf.tier}
         </span>
-        <span className="ml-auto text-[11px] text-foreground-secondary">
-          Posted {perf.summary.posts} posts · Impr {perf.summary.totalImpressions} · Eng{' '}
-          {perf.summary.totalEngagement} · Avg ER {perf.summary.avgEngagementRate}
+        <span className="ml-auto flex flex-wrap items-baseline gap-x-2 text-[11px]">
+          <RowMetric label="Posts" value={String(perf.summary.posts)} />
+          <RowMetric label="Impr" value={perf.summary.totalImpressions} />
+          <RowMetric label="ER" value={perf.summary.avgEngagementRate} />
+          <RowMetric label="GMV" value={perf.cps.gmv} />
+          <RowMetric label="ROAS" value={perf.cps.roas} accent />
         </span>
-      </div>
+      </button>
 
+      {expanded && (
+        <>
       {/* Post performance table */}
       <div className="mt-2 overflow-auto">
         <table className="w-full min-w-[860px] border-collapse text-xs">
@@ -442,6 +489,8 @@ function PerfCard({ perf }: { perf: CreatorCampaignPerformance }) {
           </span>
         ))}
       </div>
+        </>
+      )}
     </div>
   );
 }

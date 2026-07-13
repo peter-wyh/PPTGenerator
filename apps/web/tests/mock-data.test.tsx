@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MockData } from '@/routes/MockData';
 
 const { listCampaignsMock } = vi.hoisted(() => ({ listCampaignsMock: vi.fn() }));
@@ -157,12 +157,18 @@ describe('MockData page', () => {
     ]);
 
     render(<MockData />);
-    // 帖子标题（仅 perf 卡渲染后出现）
+    // 折叠的达人汇总行先出现（下钻入口按钮）
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Mia Chen/ })).toBeInTheDocument(),
+    );
+    // 点击该行展开 → 帖子/投放位/CPS 才渲染
+    fireEvent.click(screen.getByRole('button', { name: /Mia Chen/ }));
+    // 帖子标题（仅展开后出现）
     await waitFor(() => expect(screen.getByText('7-Day Sensitive Skin Rescue Vlog')).toBeInTheDocument());
     // Placement type summary table (campaign level)
     expect(screen.getByText('Placement Type Summary (campaign level)')).toBeInTheDocument();
-    // CPS 数值（GMV 唯一；ROAS 在汇总/投放位/CPS 三处都出现，故取 all）
-    expect(screen.getByText('$192,000')).toBeInTheDocument();
+    // CPS 数值：GMV 在折叠汇总行 + 展开 CPS chips 中均出现；ROAS 多处出现 → 取 all
+    expect(screen.getAllByText('$192,000').length).toBeGreaterThan(0);
     expect(screen.getAllByText('7.71').length).toBeGreaterThan(0);
   });
 });
