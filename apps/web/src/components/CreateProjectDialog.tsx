@@ -88,12 +88,6 @@ export function CreateProjectDialog({
   const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
 
   useEffect(() => {
-    if (selectedCampaign && !businessLine) {
-      setBusinessLine(selectedCampaign.businessLine);
-    }
-  }, [selectedCampaign, businessLine]);
-
-  useEffect(() => {
     if (!open) return;
     const m = initial?.meta;
     const initW = initial?.width ?? PRESETS[0].w;
@@ -274,7 +268,13 @@ export function CreateProjectDialog({
                 <select
                   className={selectCls}
                   value={campaignId}
-                  onChange={(e) => setCampaignId(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setCampaignId(id);
+                    // 选 campaign 时回填业务线(用户可再改);edit 模式不触发,保留存量值。
+                    const c = campaigns.find((x) => x.id === id);
+                    if (c) setBusinessLine(c.businessLine);
+                  }}
                   disabled={campaignsLoading}
                 >
                   <option value="">{campaignsLoading ? '加载中…' : '（选择 Campaign）'}</option>
