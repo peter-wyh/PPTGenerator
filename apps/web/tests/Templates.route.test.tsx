@@ -64,4 +64,19 @@ describe('Templates 路由', () => {
     await user.click(screen.getByText('设为默认'));
     await waitFor(() => expect(setDefaultMock).toHaveBeenCalledWith('t1', true));
   });
+
+  it('已是默认时点「取消默认」调用 templatesApi.setDefault(id, false)', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue([
+      {
+        id: 't1', name: 'FT周报模板', width: 1280, height: 720, pageCount: 3, status: 'PUBLISHED',
+        meta: { businessLine: 'FT', scenario: 'campaign-report', templateType: 'weekly', isDefault: true },
+        ownerId: 'u1', createdAt: '2026-07-01', updatedAt: '2026-07-01',
+      },
+    ]);
+    renderIt();
+    await waitFor(() => expect(screen.getByText('取消默认')).toBeInTheDocument());
+    await user.click(screen.getByText('取消默认'));
+    await waitFor(() => expect(setDefaultMock).toHaveBeenCalledWith('t1', false));
+  });
 });

@@ -142,7 +142,21 @@ export function Templates() {
     setTogglingId(t.id);
     try {
       const updated = await templatesApi.setDefault(t.id, value);
-      setTemplates((prev) => prev.map((x) => (x.id === t.id ? { ...x, meta: updated.meta } : x)));
+      setTemplates((prev) =>
+        prev.map((x) => {
+          if (x.id === t.id) return { ...x, meta: updated.meta };
+          // 设为默认时,服务端已清同格其它默认;本地同步清掉它们的徽标,避免重影。
+          if (
+            value &&
+            x.meta?.businessLine === t.meta?.businessLine &&
+            x.meta?.scenario === t.meta?.scenario &&
+            x.meta?.templateType === t.meta?.templateType
+          ) {
+            return { ...x, meta: { ...x.meta, isDefault: false } };
+          }
+          return x;
+        }),
+      );
     } catch {
       /* 失败静默 */
     } finally {
@@ -208,7 +222,11 @@ export function Templates() {
           </select>
           <select
             value={filterScenario}
-            onChange={(e) => setFilterScenario(e.target.value as Scenario | '')}
+            onChange={(e) => {
+              const v = e.target.value as Scenario | '';
+              setFilterScenario(v);
+              if (!v) setFilterTemplateType('');
+            }}
             className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-secondary"
           >
             <option value="">全部场景</option>
