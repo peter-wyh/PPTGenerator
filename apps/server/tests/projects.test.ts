@@ -168,4 +168,70 @@ describe('projects CRUD', () => {
     const res = await request(app()).post('/api/v1/projects').set(h).send({});
     expect(res.status).toBe(400);
   });
+
+  async function setupAdmin(email: string) {
+    const u = await createUser({ email, role: 'ADMIN' });
+    const { accessToken } = await login(app(), u.email);
+    return { h: authHeader(accessToken) };
+  }
+
+  /** 建一个带 2 页 + theme 的已发布默认模板(属于给定 cell)。 */
+  async function mkDefaultTemplate(
+    h: Record<string, string>,
+    cell: { businessLine: string; scenario: string; templateType: string },
+  ) {
+    const created = await request(app()).post('/api/v1/templates').set(h).send({
+      name: 'TPL',
+      width: 1920,
+      height: 1080,
+      pages: [
+        { id: 'x1', name: '封面', components: [] },
+        { id: 'x2', name: '数据', components: [] },
+      ],
+      meta: {
+        ...cell,
+        theme: {
+          color: { primary: '#FF5C00', secondary: '#3B82F6', chartPalette: ['#FF5C00'], neutralText: '#111', neutralBg: '#FFF' },
+          font: { text: 'inter', number: 'inter' },
+          density: 'standard',
+          radius: 'small',
+        },
+      },
+    });
+    const id = created.body.template.id;
+    await request(app()).patch(`/api/v1/templates/${id}`).set(h).send({ status: 'PUBLISHED' });
+    await request(app()).patch(`/api/v1/templates/${id}/default`).set(h).send({ value: true });
+    return id;
+  }
+
+  it('create 命中默认模板 → 套用 pages/尺寸/theme, seeded=true', async () => {
+    const admin = await setupAdmin('seed-admin@x.com');
+    await mkDefaultTemplate(admin.h, { businessLine: 'FT', scenario: 'campaign-report', templateType: 'weekly' });
+    const { h } = await setupOwner('seed-user@x.com');
+
+    const res = await request(app())
+      .post('/api/v1/projects')
+      .set(h)
+      .send({ name: 'P', meta: { businessLine: 'FT', scenario: 'campaign-report', templateType: 'weekly' } });
+
+    expect(res.status).toBe(201);
+    expect(res.body.seeded).toBe(true);
+    expect(res.body.project.pages).toHaveLength(2); // 来自模板
+    expect(res.body.project.width).toBe(1920);
+    expect(res.body.project.meta.theme.color.primary).toBe('#FF5C00');
+    // 业务线/场景/模版类型仍是项目自报值(不被模板覆盖)
+    expect(res.body.project.meta.businessLine).toBe('FT');
+    expect(res.body.project.meta.scenario).toBe('campaign-report');
+  });
+
+  it('create 无匹配默认模板 → 空白页, seeded=false', async () => {
+    const { h } = await setupOwner('seed-user2@x.com');
+    const res = await request(app())
+      .post('/api/v1/projects')
+      .set(h)
+      .send({ name: 'P', meta: { businessLine: 'CX', scenario: 'media-kit', templateType: 'brand' } });
+    expect(res.status).toBe(201);
+    expect(res.body.seeded).toBe(false);
+    expect(res.body.project.pages).toHaveLength(1);
+  });
 });

@@ -13,7 +13,8 @@ export const projectsController = {
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {
-    res.status(201).json({ project: await projectsService.create(owner(req), req.body) });
+    const { detail, seeded } = await projectsService.create(owner(req), req.body);
+    res.status(201).json({ project: detail, seeded });
   }),
 
   get: asyncHandler(async (req: Request, res: Response) => {
