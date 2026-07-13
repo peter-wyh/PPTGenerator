@@ -77,4 +77,12 @@ describe('templates — default + filter', () => {
     expect(res.body.templates).toHaveLength(1);
     expect(res.body.templates[0].id).toBe(t);
   });
+
+  it('设默认:格内无其它模板时也能成功', async () => {
+    const { h } = await setupAdmin('tpl-f@x.com');
+    const t = await mkTemplate(h, 'SOLO');
+    const res = await request(app()).patch(`/api/v1/templates/${t}/default`).set(h).send({ value: true });
+    expect(res.status).toBe(200);
+    expect(res.body.template.meta.isDefault).toBe(true);
+  });
 });

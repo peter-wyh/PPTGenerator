@@ -80,11 +80,11 @@ export const templatesService = {
     }
     const metaAnd: Prisma.TemplateWhereInput[] = [];
     if (filters?.businessLine)
-      metaAnd.push({ meta: { path: '$.businessLine', string_contains: filters.businessLine } });
+      metaAnd.push({ meta: { path: '$.businessLine', equals: filters.businessLine } });
     if (filters?.scenario)
-      metaAnd.push({ meta: { path: '$.scenario', string_contains: filters.scenario } });
+      metaAnd.push({ meta: { path: '$.scenario', equals: filters.scenario } });
     if (filters?.templateType)
-      metaAnd.push({ meta: { path: '$.templateType', string_contains: filters.templateType } });
+      metaAnd.push({ meta: { path: '$.templateType', equals: filters.templateType } });
     if (filters?.isDefault !== undefined)
       metaAnd.push({ meta: { path: '$.isDefault', equals: filters.isDefault } });
     if (metaAnd.length) where.AND = metaAnd;
@@ -184,6 +184,9 @@ export const templatesService = {
    * 设/取消某模板为 (businessLine×scenario×templateType) 格的默认模板。
    * 设默认(value=true):要求 PUBLISHED + 三字段齐全;事务内先清同格其它默认,再置本模板。
    * 取消默认(value=false):仅置本模板 isDefault=false。
+   *
+   * 并发注意:无 DB 级 cell 唯一约束,两个并发 setDefault(true) 同格可能短暂并存两个默认。
+   * Phase 1 接受该风险(仅 ADMIN、低写并发);如需强一致可后续加 SELECT...FOR UPDATE 或 cell 唯一索引。
    */
   async setDefault(ownerId: string, id: string, value: boolean): Promise<TemplateDetail> {
     const tpl = await this.getOwnedOrThrow(ownerId, id);
