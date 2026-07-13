@@ -3,6 +3,7 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { Project, Prisma } from '@prisma/client';
 import type { Page, ProjectDetail, ProjectMeta, ProjectSummary } from '@mediakit/shared';
+import { templatesService } from '../templates/templates.service';
 
 /** 新建项目的默认 pages：单个空白页。 */
 export function defaultPages(): Page[] {
@@ -80,17 +81,11 @@ export const projectsService = {
 
     // 仅当调用方未自带 pages 且三字段齐全时,尝试套用默认模板骨架。
     if (seedKey && !input.pages) {
-      const tpl = await prisma.template.findFirst({
-        where: {
-          status: 'PUBLISHED',
-          AND: [
-            { meta: { path: '$.businessLine', equals: seedKey.businessLine } },
-            { meta: { path: '$.scenario', equals: seedKey.scenario } },
-            { meta: { path: '$.templateType', equals: seedKey.templateType } },
-            { meta: { path: '$.isDefault', equals: true } },
-          ],
-        },
-      });
+      const tpl = await templatesService.findDefaultForCell(
+        seedKey.businessLine,
+        seedKey.scenario,
+        seedKey.templateType,
+      );
       if (tpl) {
         pages = JSON.parse(JSON.stringify(tpl.pages)) as Page[];
         width = tpl.width;

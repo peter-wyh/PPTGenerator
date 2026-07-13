@@ -234,4 +234,21 @@ describe('projects CRUD', () => {
     expect(res.body.seeded).toBe(false);
     expect(res.body.project.pages).toHaveLength(1);
   });
+
+  it('create 自带 pages → 不套用模板, seeded=false', async () => {
+    const admin = await setupAdmin('seed-admin3@x.com');
+    await mkDefaultTemplate(admin.h, { businessLine: 'FT', scenario: 'campaign-report', templateType: 'weekly' });
+    const { h } = await setupOwner('seed-user3@x.com');
+    const res = await request(app())
+      .post('/api/v1/projects')
+      .set(h)
+      .send({
+        name: 'P',
+        pages: [{ id: 'm1', name: '我的封面', components: [] }],
+        meta: { businessLine: 'FT', scenario: 'campaign-report', templateType: 'weekly' },
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.seeded).toBe(false);
+    expect(res.body.project.pages).toEqual([{ id: 'm1', name: '我的封面', components: [] }]);
+  });
 });

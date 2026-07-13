@@ -23,6 +23,20 @@ function metaOf(t: Template): ProjectMeta | undefined {
   return (t.meta as unknown as ProjectMeta | null) ?? undefined;
 }
 
+/** (businessLine×scenario×templateType) 格的默认模板匹配谓词(4 个 JSON equals 子句)。 */
+function cellWhereAnd(cell: {
+  businessLine: string;
+  scenario: string;
+  templateType: string;
+}): Prisma.TemplateWhereInput[] {
+  return [
+    { meta: { path: '$.businessLine', equals: cell.businessLine } },
+    { meta: { path: '$.scenario', equals: cell.scenario } },
+    { meta: { path: '$.templateType', equals: cell.templateType } },
+    { meta: { path: '$.isDefault', equals: true } },
+  ];
+}
+
 /** 列表摘要（不带 pages，节省带宽）。 */
 export function toSummary(t: Template): TemplateSummary {
   return {
@@ -204,12 +218,7 @@ export const templatesService = {
           where: {
             id: { not: id },
             status: 'PUBLISHED',
-            AND: [
-              { meta: { path: '$.businessLine', equals: businessLine } },
-              { meta: { path: '$.scenario', equals: scenario } },
-              { meta: { path: '$.templateType', equals: templateType } },
-              { meta: { path: '$.isDefault', equals: true } },
-            ],
+            AND: cellWhereAnd({ businessLine, scenario, templateType }),
           },
           select: { id: true, meta: true },
         });
@@ -241,5 +250,19 @@ export const templatesService = {
       throw ApiError.notFound('Template not found or not published');
     }
     return toDetail(template);
+  },
+
+  /**
+   * 套骨架用:按 (businessLine×scenario×templateType) 格查唯一默认已发布模板。
+   * 并发下同格可能短暂存在多个默认(setDefault 的已知限制),findFirst 取其一即可。
+   */
+  async findDefaultForCell(
+    businessLine: string,
+    scenario: string,
+    templateType: string,
+  ): Promise<Template | null> {
+    return prisma.template.findFirst({
+      where: { status: 'PUBLISHED', AND: cellWhereAnd({ businessLine, scenario, templateType }) },
+    });
   },
 };
