@@ -7,13 +7,20 @@ import type { Page } from './page';
 
 export type TemplateStatus = 'DRAFT' | 'PUBLISHED';
 
+/**
+ * 模板元数据：在 ProjectMeta 基础上增加 isDefault（仅模板有意义）。
+ * isDefault 标记该模板为 (businessLine×scenario×templateType) 格的默认模板，
+ * 新建项目时按此格自动套用骨架。Project 不使用该字段。
+ */
+export type TemplateMeta = ProjectMeta & { isDefault?: boolean };
+
 export interface TemplateSummary {
   id: string;
   name: string;
   width: number;
   height: number;
   pageCount: number;
-  meta?: ProjectMeta;
+  meta?: TemplateMeta;
   status: TemplateStatus;
   /** 设计师备注（仅管理后台可见）。 */
   note?: string | null;
@@ -28,7 +35,7 @@ export interface TemplateDetail {
   pages: Page[];
   width: number;
   height: number;
-  meta?: ProjectMeta;
+  meta?: TemplateMeta;
   status: TemplateStatus;
   note?: string | null;
   ownerId: string;

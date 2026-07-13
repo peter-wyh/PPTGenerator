@@ -221,20 +221,31 @@ const reportDataContextSchema = z
   })
   .optional();
 
-/** 项目元数据：业务线/创建人/场景/子类/广告主/campaign 信息/主题/数据上下文。 */
-export const projectMetaSchema = z
-  .object({
-    businessLine: z.string().max(40).optional(),
-    creator: z.string().max(80).optional(),
-    scenario: z.enum(['campaign-report', 'campaign-proposal', 'media-kit']).optional(),
-    scenarioSub: z.enum(['weekly', 'monthly', 'wrap-up']).optional(),
-    advertiser: z.string().max(120).optional(),
-    campaignId: z.string().max(120).optional(),
-    campaignInfo: campaignInfoSchema,
-    theme: projectThemeSchema,
-    reportData: reportDataContextSchema,
-  })
+/** 项目/模板共用的 meta 字段集合（templateType 为本期新增）。 */
+const projectMetaFields = {
+  businessLine: z.string().max(40).optional(),
+  creator: z.string().max(80).optional(),
+  scenario: z.enum(['campaign-report', 'campaign-proposal', 'media-kit']).optional(),
+  scenarioSub: z.enum(['weekly', 'monthly', 'wrap-up']).optional(),
+  /** 模版类型：场景下细分，松字符串，取值由前端字典约束。 */
+  templateType: z.string().max(40).optional(),
+  advertiser: z.string().max(120).optional(),
+  campaignId: z.string().max(120).optional(),
+  campaignInfo: campaignInfoSchema,
+  theme: projectThemeSchema,
+  reportData: reportDataContextSchema,
+};
+
+/** 项目元数据 schema（Template 与 Project 共用同一 meta 结构）。 */
+export const projectMetaSchema = z.object(projectMetaFields).optional();
+
+/** 模板 meta：在项目 meta 基础上增加 isDefault（默认模板标记，仅模板用）。 */
+export const templateMetaSchema = z
+  .object({ ...projectMetaFields, isDefault: z.boolean().optional() })
   .optional();
+
+/** 设/取消默认模板的 body 校验。 */
+export const setDefaultSchema = z.object({ value: z.boolean() });
 
 export const createProjectSchema = z.object({
   name: z.string().min(1).max(200),

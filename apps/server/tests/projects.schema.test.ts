@@ -4,6 +4,7 @@ import {
   updateProjectSchema,
   pageSchema,
 } from '../src/modules/projects/projects.schema';
+import { createTemplateSchema } from '../src/modules/templates/templates.schema';
 
 /** 含渐变的页（模拟前端保存时的 pages 项）。 */
 const pageWithGradient = {
@@ -111,5 +112,34 @@ describe('pageSchema — 页面类型字段', () => {
 
   it('拒绝非法 pageType 取值', () => {
     expect(() => pageSchema.parse({ id: 'p1', name: 'n', components: [], pageType: 'bogus' })).toThrow();
+  });
+});
+
+describe('projectMetaSchema — templateType / isDefault', () => {
+  it('createProjectSchema 接受 meta.templateType(任意字符串)', () => {
+    const out = createProjectSchema.parse({ name: 'n', meta: { templateType: 'weekly' } });
+    expect(out.meta?.templateType).toBe('weekly');
+  });
+
+  it('createProjectSchema 不强求 templateType(向后兼容)', () => {
+    const out = createProjectSchema.parse({ name: 'n', meta: { businessLine: 'FT' } });
+    expect(out.meta?.templateType).toBeUndefined();
+  });
+
+  it('createTemplateSchema 接受 meta.isDefault', () => {
+    const out = createTemplateSchema.parse({
+      name: 't',
+      meta: { businessLine: 'FT', scenario: 'campaign-report', templateType: 'weekly', isDefault: true },
+    });
+    expect(out.meta?.isDefault).toBe(true);
+  });
+
+  it('createProjectSchema 剥离 isDefault(项目不持有该字段)', () => {
+    // projectMetaSchema 不含 isDefault → Zod 默认 strip 未知键。
+    const out = createProjectSchema.parse({
+      name: 'n',
+      meta: { businessLine: 'FT', isDefault: true } as never,
+    });
+    expect((out.meta as { isDefault?: boolean })?.isDefault).toBeUndefined();
   });
 });
