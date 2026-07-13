@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { templatesController } from './templates.controller';
 import { validate } from '../../middleware/validate';
 import { authenticate, requireRole } from '../../middleware/auth';
-import { createTemplateSchema, idParamSchema, updateTemplateSchema } from './templates.schema';
+import { createTemplateSchema, idParamSchema, setDefaultSchema, updateTemplateSchema } from './templates.schema';
 
 const router = Router();
 
@@ -23,5 +23,11 @@ router.patch(
 );
 router.delete('/:id', requireRole('ADMIN'), validate({ params: idParamSchema }), templatesController.remove);
 router.post('/:id/duplicate', requireRole('ADMIN'), validate({ params: idParamSchema }), templatesController.duplicate);
+router.patch(
+  '/:id/default',
+  requireRole('ADMIN'),
+  validate({ params: idParamSchema, body: setDefaultSchema }),
+  templatesController.setDefault,
+);
 
 export const templatesRoutes = router;

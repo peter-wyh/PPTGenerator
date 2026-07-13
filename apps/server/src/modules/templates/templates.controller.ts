@@ -17,6 +17,9 @@ export const templatesController = {
       status: (req.query.status as TemplateStatus | undefined) ?? undefined,
       businessLine: (req.query.businessLine as string | undefined) ?? undefined,
       scenario: (req.query.scenario as string | undefined) ?? undefined,
+      templateType: (req.query.templateType as string | undefined) ?? undefined,
+      isDefault:
+        req.query.isDefault === undefined ? undefined : req.query.isDefault === 'true',
     };
     res.json({ templates: await templatesService.list(role(req), filters) });
   }),
@@ -45,5 +48,10 @@ export const templatesController = {
 
   duplicate: asyncHandler(async (req: Request, res: Response) => {
     res.status(201).json({ template: await templatesService.duplicate(owner(req), req.params.id) });
+  }),
+
+  setDefault: asyncHandler(async (req: Request, res: Response) => {
+    const { value } = req.body as { value: boolean };
+    res.json({ template: await templatesService.setDefault(owner(req), req.params.id, value) });
   }),
 };

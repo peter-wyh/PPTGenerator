@@ -6,6 +6,7 @@ import type {
   Page,
   ProjectMeta,
   TemplateDetail,
+  TemplateMeta,
   TemplateSummary,
 } from '@mediakit/shared';
 
@@ -58,28 +59,37 @@ export function toDetail(t: Template): TemplateDetail {
 
 export const templatesService = {
   /**
-   * 列表：ADMIN 看全部（含草稿），普通用户只看已发布。
-   * 支持按 status / businessLine / scenario 过滤。
+   * 列表:ADMIN 看全部(含草稿),普通用户只看已发布。
+   * 支持按 status / businessLine / scenario / templateType / isDefault 过滤。
    */
   async list(
     requesterRole: 'ADMIN' | 'USER',
-    filters?: { status?: TemplateStatus; businessLine?: string; scenario?: string },
+    filters?: {
+      status?: TemplateStatus;
+      businessLine?: string;
+      scenario?: string;
+      templateType?: string;
+      isDefault?: boolean;
+    },
   ) {
     const where: Prisma.TemplateWhereInput = {};
-    // 非 ADMIN 只能看已发布。
     if (requesterRole !== 'ADMIN') {
       where.status = 'PUBLISHED';
     } else if (filters?.status) {
       where.status = filters.status;
     }
+    const metaAnd: Prisma.TemplateWhereInput[] = [];
     if (filters?.businessLine)
-      where.meta = { path: '$.businessLine', string_contains: filters.businessLine };
-    if (filters?.scenario) where.meta = { path: '$.scenario', string_contains: filters.scenario };
+      metaAnd.push({ meta: { path: '$.businessLine', string_contains: filters.businessLine } });
+    if (filters?.scenario)
+      metaAnd.push({ meta: { path: '$.scenario', string_contains: filters.scenario } });
+    if (filters?.templateType)
+      metaAnd.push({ meta: { path: '$.templateType', string_contains: filters.templateType } });
+    if (filters?.isDefault !== undefined)
+      metaAnd.push({ meta: { path: '$.isDefault', equals: filters.isDefault } });
+    if (metaAnd.length) where.AND = metaAnd;
 
-    const templates = await prisma.template.findMany({
-      where,
-      orderBy: { updatedAt: 'desc' },
-    });
+    const templates = await prisma.template.findMany({ where, orderBy: { updatedAt: 'desc' } });
     return templates.map(toSummary);
   },
 
@@ -168,6 +178,57 @@ export const templatesService = {
     };
     const template = await prisma.template.create({ data });
     return toDetail(template);
+  },
+
+  /**
+   * 设/取消某模板为 (businessLine×scenario×templateType) 格的默认模板。
+   * 设默认(value=true):要求 PUBLISHED + 三字段齐全;事务内先清同格其它默认,再置本模板。
+   * 取消默认(value=false):仅置本模板 isDefault=false。
+   */
+  async setDefault(ownerId: string, id: string, value: boolean): Promise<TemplateDetail> {
+    const tpl = await this.getOwnedOrThrow(ownerId, id);
+    const m = (tpl.meta as unknown as TemplateMeta | null) ?? {};
+    if (value) {
+      if (tpl.status !== 'PUBLISHED') {
+        throw ApiError.badRequest('发布后才能设为默认模板');
+      }
+      const { businessLine, scenario, templateType } = m;
+      if (!businessLine || !scenario || !templateType) {
+        throw ApiError.badRequest('请先选择业务线 / 场景 / 模版类型');
+      }
+      await prisma.$transaction(async (tx) => {
+        const others = await tx.template.findMany({
+          where: {
+            id: { not: id },
+            status: 'PUBLISHED',
+            AND: [
+              { meta: { path: '$.businessLine', equals: businessLine } },
+              { meta: { path: '$.scenario', equals: scenario } },
+              { meta: { path: '$.templateType', equals: templateType } },
+              { meta: { path: '$.isDefault', equals: true } },
+            ],
+          },
+          select: { id: true, meta: true },
+        });
+        for (const o of others) {
+          const om = (o.meta as Record<string, unknown> | null) ?? {};
+          await tx.template.update({
+            where: { id: o.id },
+            data: { meta: { ...om, isDefault: false } as unknown as Prisma.InputJsonValue },
+          });
+        }
+        await tx.template.update({
+          where: { id },
+          data: { meta: { ...m, isDefault: true } as unknown as Prisma.InputJsonValue },
+        });
+      });
+    } else {
+      await prisma.template.update({
+        where: { id },
+        data: { meta: { ...m, isDefault: false } as unknown as Prisma.InputJsonValue },
+      });
+    }
+    return toDetail(await this.getOwnedOrThrow(ownerId, id));
   },
 
   /** 已发布模版：任意已登录用户可读（用于"从模版创建项目"）。 */
