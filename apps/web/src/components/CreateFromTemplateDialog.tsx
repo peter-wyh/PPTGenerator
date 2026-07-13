@@ -28,8 +28,10 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
   const [filterTemplateType, setFilterTemplateType] = useState<string>('');
 
   // 打开或筛选条件变化时拉取已发布模板（USER/ADMIN 均只取 PUBLISHED：草稿无法建项目）。
+  // cancelled 标志：deps 变化或对话框关闭/卸载时置 true，丢弃被取代的过期响应，避免竞态覆盖。
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setFetching(true);
     templatesApi
       .list({
@@ -39,12 +41,20 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
         ...(filterTemplateType ? { templateType: filterTemplateType } : {}),
       })
       .then((list) => {
+        if (cancelled) return;
         setTemplates(list);
         setSelectedId(list[0]?.id ?? '');
         setName('');
       })
-      .catch(() => setTemplates([]))
-      .finally(() => setFetching(false));
+      .catch(() => {
+        if (!cancelled) setTemplates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setFetching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open, filterBL, filterScenario, filterTemplateType]);
 
   if (!open) return null;

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
 
 const listMock = vi.fn();
@@ -29,5 +30,29 @@ describe('CreateFromTemplateDialog', () => {
     await waitFor(() => expect(listMock).toHaveBeenCalled());
     expect(screen.getByText('业务线')).toBeInTheDocument();
     expect(screen.getByText('场景')).toBeInTheDocument();
+  });
+
+  it('选择业务线后带参重新拉取', async () => {
+    listMock.mockResolvedValue([]);
+    const user = userEvent.setup();
+    render(<CreateFromTemplateDialog open onCancel={() => {}} onSubmit={() => {}} />);
+    await waitFor(() => expect(listMock).toHaveBeenCalledWith({ status: 'PUBLISHED' }));
+    await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
+    await waitFor(() => expect(listMock).toHaveBeenLastCalledWith({ status: 'PUBLISHED', businessLine: 'FT' }));
+  });
+
+  it('切换场景清空模版类型(不带旧 templateType 重新拉取)', async () => {
+    listMock.mockResolvedValue([]);
+    const user = userEvent.setup();
+    render(<CreateFromTemplateDialog open onCancel={() => {}} onSubmit={() => {}} />);
+    await waitFor(() => expect(listMock).toHaveBeenCalled());
+    await user.selectOptions(screen.getByLabelText('场景'), 'media-kit');
+    await user.selectOptions(screen.getByLabelText('模版类型'), 'brand');
+    await waitFor(() => expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ templateType: 'brand' })));
+    // 切到 campaign-report:模版类型应被清空,refetch 不带 templateType
+    await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
+    await waitFor(() =>
+      expect(listMock).toHaveBeenLastCalledWith(expect.not.objectContaining({ templateType: expect.anything() })),
+    );
   });
 });
