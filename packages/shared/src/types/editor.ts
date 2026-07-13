@@ -445,7 +445,7 @@ export interface CreatorAvatarCardData {
 }
 
 /** 达人数据条：一组 KPI（粉丝/互动率/触达/曝光…）。复用 {label,value,color} 形状。 */
-export type CreatorStatsVariant = 'cards' | 'plain' | 'metric' | 'progress' | 'ring';
+export type CreatorStatsVariant = 'cards' | 'plain' | 'metric' | 'progress' | 'ring' | 'gradient';
 
 /**
  * 达人数据条单项。

@@ -328,6 +328,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'metric', label: '指标' },
       { id: 'progress', label: '进度条' },
       { id: 'ring', label: '环形' },
+      { id: 'gradient', label: '渐变' },
     ],
     dataSource: {
       modes: ['manual', 'project'],

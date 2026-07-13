@@ -129,6 +129,25 @@ describe('creator business components — render', () => {
     expect(screen.getByText('曝光')).toBeInTheDocument();
   });
 
+  it('stats strip gradient variant renders icon + label + value per cell', () => {
+    const { container } = render(
+      <CreatorStatsStrip
+        data={{
+          variant: 'gradient',
+          stats: [
+            { key: 'followers', label: 'Followers', value: '120K+', color: '#EC4899' },
+            { key: 'engagement', label: 'Engagement Rate', value: '8.5%', color: '#EC4899' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('Followers')).toBeInTheDocument();
+    expect(screen.getByText('120K+')).toBeInTheDocument();
+    expect(screen.getByText('Engagement Rate')).toBeInTheDocument();
+    // 每个指标渲染一个语义图标 svg（图标本身无文本，按 svg 节点数断言）
+    expect(container.querySelectorAll('svg')).toHaveLength(2);
+  });
+
   it('works list renders title + cover placeholder when no cover url', () => {
     render(
       <CreatorWorksList
@@ -151,7 +170,7 @@ describe('creator business components — render', () => {
       unmount();
     }
     const statsBase = { stats: [{ label: '粉丝', value: '1M', color: '#FF5C00' }] };
-    for (const v of ['cards', 'plain', 'metric'] as const) {
+    for (const v of ['cards', 'plain', 'metric', 'gradient'] as const) {
       const { unmount } = render(<CreatorStatsStrip data={{ variant: v, ...statsBase }} />);
       expect(screen.getByText('粉丝')).toBeInTheDocument();
       unmount();

@@ -312,6 +312,7 @@ export function CreatorStatsStrip({ data }: { data: CreatorStatsStripData }) {
   if (variant === 'metric') return <StatsMetric stats={visible} />;
   if (variant === 'progress') return <StatsProgress stats={visible} />;
   if (variant === 'ring') return <StatsRing stats={visible} />;
+  if (variant === 'gradient') return <StatsGradient stats={visible} />;
   return <StatsCards stats={visible} />;
 }
 
@@ -428,6 +429,111 @@ function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
       })}
     </div>
   );
+}
+
+/* ------------------------------ stats: gradient ----------------------------- */
+
+/**
+ * gradient：品牌主色渐变实底色条 — 白字 + 白色细分割线 + 指标图标。
+ * 每列纵向排列：图标(上) → 小号标签(中) → 大号数值(下)；列间用 divide-x 白色细线分隔。
+ * 背景取主题 primary→secondary 渐变（与 AvatarGlass 同源），粉色主题下即还原参考稿观感。
+ */
+function StatsGradient({ stats }: { stats: CreatorStatsStripData['stats'] }) {
+  return (
+    <div
+      className="flex h-full w-full items-stretch overflow-hidden rounded-2xl divide-x divide-white/35"
+      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' }}
+    >
+      {stats.map((s, i) => (
+        <div key={i} className="flex flex-1 flex-col items-center justify-center gap-1.5 px-4 py-3 text-center">
+          <MetricIcon keyName={s.key} className="h-[18px] w-[18px] flex-none text-white/90" />
+          <div className="text-[11px] font-medium uppercase leading-tight tracking-wide text-white/80">{s.label}</div>
+          <div className="font-data text-2xl font-bold leading-none text-white">{s.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 指标图标 SVG 属性：stroke 跟随 currentColor，统一描边粗细与圆角端点。 */
+const METRIC_ICON_PROPS = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+};
+
+/**
+ * 达人指标图标：按 metric key 选择语义图标；未知 key 回退到通用 activity 图标。
+ * 与 CREATOR_METRIC_CATALOG 的 key 对齐（followers/engagement/reach/impressions/cpm/cpe/completion/growth）。
+ */
+function MetricIcon({ keyName, className }: { keyName?: string; className?: string }) {
+  const props = { ...METRIC_ICON_PROPS, className };
+  switch (keyName) {
+    case 'followers':
+      return (
+        <svg {...props}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v-2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case 'engagement':
+      return (
+        <svg {...props}>
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" />
+        </svg>
+      );
+    case 'reach':
+      return (
+        <svg {...props}>
+          <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
+          <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
+          <circle cx="12" cy="12" r="2" />
+          <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
+          <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1" />
+        </svg>
+      );
+    case 'impressions':
+      return (
+        <svg {...props}>
+          <path d="M2 12s4-8 10-8 10 8 10 8-4 8-10 8-10-8-10-8Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
+    case 'cpm':
+    case 'cpe':
+      return (
+        <svg {...props}>
+          <line x1="12" x2="12" y1="2" y2="22" />
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+      );
+    case 'completion':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      );
+    case 'growth':
+      return (
+        <svg {...props}>
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+          <polyline points="16 7 22 7 22 13" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...props}>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      );
+  }
 }
 
 /* ---------------------------- creator works list -------------------------- */
