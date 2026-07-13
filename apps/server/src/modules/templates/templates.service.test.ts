@@ -97,15 +97,17 @@ describe('templates.service · list 角色过滤', () => {
     });
   });
 
-  it('ADMIN + businessLine/scenario：where.meta 带 JSON path 过滤', async () => {
+  it('ADMIN + businessLine/scenario:where.AND 同时带两个 JSON path 过滤(修复旧覆盖 bug)', async () => {
     prismaMock.template.findMany.mockResolvedValue([]);
     await templatesService.list('ADMIN', { businessLine: 'FT', scenario: 'campaign-report' });
-    const { where } = prismaMock.template.findMany.mock.calls[0][0] as { where: object };
-    expect(where).toMatchObject({
-      meta: { path: '$.scenario', string_contains: 'campaign-report' },
-    });
-    // businessLine 过滤会覆盖 meta（同 key 合并），这里只断言被调用过且含 path 查询。
-    expect(prismaMock.template.findMany).toHaveBeenCalled();
+    const { where } = prismaMock.template.findMany.mock.calls[0][0] as {
+      where: { AND?: unknown[] };
+    };
+    // 旧实现把 where.meta 后写覆盖,只留 scenario;新实现用 AND 合并 + equals 精确匹配,两者都在。
+    expect(where.AND).toEqual([
+      { meta: { path: '$.businessLine', equals: 'FT' } },
+      { meta: { path: '$.scenario', equals: 'campaign-report' } },
+    ]);
   });
 });
 
