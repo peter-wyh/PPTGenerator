@@ -31,4 +31,22 @@ describe('TemplateFormDialog — 模版类型级联', () => {
     expect(values.meta.templateType).toBe('monthly');
     expect(values.meta.scenario).toBe('campaign-report');
   });
+
+  it('切换场景后模版类型重置(不残留旧值)', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<TemplateFormDialog open onSubmit={onSubmit} onCancel={() => {}} />);
+
+    await user.type(screen.getByLabelText('模板名称'), 'T');
+    await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
+    await user.selectOptions(screen.getByLabelText('模版类型'), 'monthly'); // campaign-report 的值
+    // 切到 media-kit:monthly 对 media-kit 无效,应被重置
+    await user.selectOptions(screen.getByLabelText('场景'), 'media-kit');
+    await user.click(screen.getByRole('button', { name: '创建' }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const values = onSubmit.mock.calls[0][0];
+    expect(values.meta.scenario).toBe('media-kit');
+    expect(values.meta.templateType).toBeUndefined(); // 不残留 'monthly'
+  });
 });

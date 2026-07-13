@@ -168,7 +168,10 @@ export function TemplateFormDialog({
               <span className="mb-1 block text-sm font-medium text-foreground-secondary">场景</span>
               <select
                 value={scenario}
-                onChange={(e) => setScenario(e.target.value as Scenario | '')}
+                onChange={(e) => {
+                  setScenario(e.target.value as Scenario | '');
+                  setTemplateType('');
+                }}
                 className={selectCls}
               >
                 <option value="">不指定</option>
