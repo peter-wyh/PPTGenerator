@@ -13,8 +13,9 @@ describe('TEMPLATE_TYPES', () => {
     expect(ids).toEqual(['weekly', 'monthly', 'wrap-up']);
   });
 
-  it('TEMPLATE_TYPE_LABELS 含全部 id', () => {
-    const all = TEMPLATE_TYPES['campaign-report'].map(([id]) => id);
+  it('TEMPLATE_TYPE_LABELS 含全部 9 个 id', () => {
+    const all = Object.values(TEMPLATE_TYPES).flatMap((rows) => rows.map(([id]) => id));
+    expect(all).toHaveLength(9);
     for (const id of all) expect(TEMPLATE_TYPE_LABELS[id]).toBeTruthy();
   });
 });

@@ -93,8 +93,9 @@ export const SCENARIO_SUB_LABELS: Record<ScenarioSub, string> = {
 };
 
 /**
- * 模版类型：每个场景下的细分取值，与模板对应。
- * 前端下拉据此级联；后端只存字符串，改值不动 schema。
+ * 模版类型:每个场景下的细分取值,与模板对应。
+ * 前端下拉据此级联;后端只存字符串,改值不动 schema。
+ * 本表为模版类型的唯一真源;SCENARIOS[].subs(campaign-report 的英文标签)为历史遗留,新代码用 TEMPLATE_TYPES。
  */
 export const TEMPLATE_TYPES: Record<Scenario, [string, string][]> = {
   'campaign-report': [
