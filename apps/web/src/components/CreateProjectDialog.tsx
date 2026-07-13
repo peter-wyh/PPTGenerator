@@ -7,6 +7,7 @@ import {
   BUSINESS_LINES,
   isCampaignScenario,
   SCENARIOS,
+  TEMPLATE_TYPES,
 } from '@/projectsMeta';
 import { listCampaigns } from '@/api/campaigns';
 
@@ -71,8 +72,10 @@ export function CreateProjectDialog({
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignId, setCampaignId] = useState('');
 
-  // media-kit 手动字段
-  const [mkBusinessLine, setMkBusinessLine] = useState('');
+  // 业务线(顶层必填;campaign 场景由 campaign 自动回填,可改)
+  const [businessLine, setBusinessLine] = useState('');
+  // 模版类型(场景下细分;campaign-report 与 scenarioSub 同值)
+  const [templateType, setTemplateType] = useState<string>('');
   const [mkAdvertiser, setMkAdvertiser] = useState('');
 
   // 画布尺寸
@@ -83,6 +86,12 @@ export function CreateProjectDialog({
 
   const isCampaign = isCampaignScenario(scenario as Scenario);
   const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
+
+  useEffect(() => {
+    if (selectedCampaign && !businessLine) {
+      setBusinessLine(selectedCampaign.businessLine);
+    }
+  }, [selectedCampaign, businessLine]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,7 +105,8 @@ export function CreateProjectDialog({
     setScenarioSub(m?.scenarioSub ?? 'weekly');
     setCreator(m?.creator ?? '');
     setCampaignId(m?.campaignId ?? '');
-    setMkBusinessLine(m?.businessLine ?? '');
+    setBusinessLine(m?.businessLine ?? '');
+    setTemplateType(m?.templateType ?? (m?.scenario === 'campaign-report' ? m?.scenarioSub ?? '' : ''));
     setMkAdvertiser(m?.advertiser ?? '');
     if (matched) {
       setPresetId(matched.id);
@@ -129,7 +139,9 @@ export function CreateProjectDialog({
   }
 
   const canSubmit =
-    !!name.trim() && (!scenario || !isCampaignScenario(scenario as Scenario) || !!campaignId);
+    !!name.trim() &&
+    !!businessLine &&
+    (!scenario || !isCampaignScenario(scenario as Scenario) || !!campaignId);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -138,15 +150,20 @@ export function CreateProjectDialog({
     const w = Math.max(1, Math.min(8192, Math.round(Number(width) || 0)));
     const h = Math.max(1, Math.min(8192, Math.round(Number(height) || 0)));
 
+    // campaign-report 的模版类型取值与 scenarioSub 同集合;报告类型下拉双写两者。
+    // reportSub 兜底取 scenarioSub(默认 'weekly'),保证即使用户没动报告类型也带 templateType。
+    const reportSub: ScenarioSub | undefined =
+      scenario === 'campaign-report' ? ((templateType || scenarioSub) as ScenarioSub) : undefined;
     const meta: ProjectMeta = {
       creator: creator || undefined,
+      businessLine: businessLine || undefined,
       scenario: (scenario || undefined) as Scenario | undefined,
-      scenarioSub: scenario === 'campaign-report' ? scenarioSub : undefined,
+      templateType: (templateType || reportSub) || undefined,
+      scenarioSub: reportSub,
     };
 
     if (isCampaignScenario(scenario as Scenario) && selectedCampaign) {
       meta.campaignId = selectedCampaign.id;
-      meta.businessLine = selectedCampaign.businessLine;
       meta.advertiser = selectedCampaign.advertiser;
       meta.campaignInfo = {
         campaignName: selectedCampaign.name,
@@ -156,7 +173,6 @@ export function CreateProjectDialog({
         budget: selectedCampaign.budget,
       };
     } else if (scenario === 'media-kit') {
-      meta.businessLine = mkBusinessLine || undefined;
       meta.advertiser = mkAdvertiser || undefined;
     }
 
@@ -197,8 +213,10 @@ export function CreateProjectDialog({
               value={scenario}
               disabled={lockScenario}
               onChange={(e) => {
-                setScenario(e.target.value as Scenario | '');
+                const next = e.target.value as Scenario | '';
+                setScenario(next);
                 setCampaignId('');
+                setTemplateType('');
               }}
             >
               <option value="">（请选择场景）</option>
@@ -209,6 +227,42 @@ export function CreateProjectDialog({
               ))}
             </select>
           </label>
+
+          {/* 业务线(必填) */}
+          <label className="block text-sm text-foreground-secondary">
+            <span className="mb-1 block font-medium">业务线</span>
+            <select
+              className={selectCls}
+              value={businessLine}
+              onChange={(e) => setBusinessLine(e.target.value)}
+            >
+              <option value="">（请选择业务线）</option>
+              {BUSINESS_LINES.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* 模版类型(选了场景且非 campaign-report 才出现;campaign-report 走报告类型) */}
+          {scenario && scenario !== 'campaign-report' && (
+            <label className="block text-sm text-foreground-secondary">
+              <span className="mb-1 block font-medium">模版类型</span>
+              <select
+                className={selectCls}
+                value={templateType}
+                onChange={(e) => setTemplateType(e.target.value)}
+              >
+                <option value="">（请选择模版类型）</option>
+                {TEMPLATE_TYPES[scenario as Scenario].map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {/* campaign 类型：选具体 campaign（上游接口 mock） */}
           {isCampaign && (
@@ -244,16 +298,20 @@ export function CreateProjectDialog({
                 </div>
               )}
 
-              {/* campaign 报告：报告类型 */}
+              {/* campaign 报告：报告类型(与模版类型同源,双写 scenarioSub + templateType) */}
               {scenario === 'campaign-report' && (
                 <label className="block text-sm text-foreground-secondary">
                   <span className="mb-1 block">报告类型</span>
                   <select
                     className={selectCls}
-                    value={scenarioSub}
-                    onChange={(e) => setScenarioSub(e.target.value as ScenarioSub)}
+                    value={templateType || scenarioSub}
+                    onChange={(e) => {
+                      const v = e.target.value as ScenarioSub;
+                      setScenarioSub(v);
+                      setTemplateType(v);
+                    }}
                   >
-                    {SCENARIOS.find((s) => s.id === 'campaign-report')?.subs?.map(([id, label]) => (
+                    {TEMPLATE_TYPES['campaign-report'].map(([id, label]) => (
                       <option key={id} value={id}>
                         {label}
                       </option>
@@ -264,32 +322,19 @@ export function CreateProjectDialog({
             </div>
           )}
 
-          {/* media-kit：手动选广告主 / 业务线 */}
+          {/* media-kit:广告主(选填);业务线已在上层必填 */}
           {scenario === 'media-kit' && (
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block text-sm text-foreground-secondary">
-                <span className="mb-1 block">广告主</span>
-                <select className={selectCls} value={mkAdvertiser} onChange={(e) => setMkAdvertiser(e.target.value)}>
-                  <option value="">（选填）</option>
-                  {ADVERTISERS.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm text-foreground-secondary">
-                <span className="mb-1 block">业务线</span>
-                <select className={selectCls} value={mkBusinessLine} onChange={(e) => setMkBusinessLine(e.target.value)}>
-                  <option value="">（选填）</option>
-                  {BUSINESS_LINES.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            <label className="block text-sm text-foreground-secondary">
+              <span className="mb-1 block">广告主</span>
+              <select className={selectCls} value={mkAdvertiser} onChange={(e) => setMkAdvertiser(e.target.value)}>
+                <option value="">（选填）</option>
+                {ADVERTISERS.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
 
           {/* 创建人（通用） */}
