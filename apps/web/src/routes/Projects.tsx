@@ -37,6 +37,8 @@ export function Projects() {
   const [fromTplLoading, setFromTplLoading] = useState(false);
   const [fromTplError, setFromTplError] = useState<string | null>(null);
 
+  const [seededMsg, setSeededMsg] = useState<string | null>(null);
+
   const filtered = projects.filter(
     (p) =>
       (!filterBL || p.meta?.businessLine === filterBL) &&
@@ -60,8 +62,9 @@ export function Projects() {
     setCreating(true);
     setCreateError(null);
     try {
-      const p = await projectsApi.create(values.name, values.width, values.height, values.meta);
+      const { project: p, seeded } = await projectsApi.create(values.name, values.width, values.height, values.meta);
       setShowCreate(false);
+      setSeededMsg(seeded ? `已套用「${values.meta.businessLine ?? ''}」默认模板` : null);
       navigate(`/projects/${p.id}`);
     } catch {
       setCreateError('创建失败，请重试');
@@ -137,6 +140,12 @@ export function Projects() {
           <Button onClick={() => setShowCreate(true)}>+ 新建项目</Button>
         </div>
       </div>
+
+      {seededMsg && (
+        <div className="mt-3 rounded-lg border border-accent-primary/30 bg-accent-primary/5 px-3 py-2 text-xs text-foreground-secondary">
+          {seededMsg}
+        </div>
+      )}
 
       {projects.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">

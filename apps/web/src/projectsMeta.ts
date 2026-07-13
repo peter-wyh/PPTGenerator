@@ -91,3 +91,32 @@ export const SCENARIO_SUB_LABELS: Record<ScenarioSub, string> = {
   monthly: 'Monthly',
   'wrap-up': 'Wrap-Up',
 };
+
+/**
+ * 模版类型：每个场景下的细分取值，与模板对应。
+ * 前端下拉据此级联；后端只存字符串，改值不动 schema。
+ */
+export const TEMPLATE_TYPES: Record<Scenario, [string, string][]> = {
+  'campaign-report': [
+    ['weekly', '周报'],
+    ['monthly', '月报'],
+    ['wrap-up', '总结'],
+  ],
+  'campaign-proposal': [
+    ['lite', '简版'],
+    ['standard', '标准版'],
+    ['full', '完整版'],
+  ],
+  'media-kit': [
+    ['brand', '品牌版'],
+    ['creator', '达人版'],
+    ['platform', '平台版'],
+  ],
+};
+
+/** 模版类型标签（扁平查找，供列表/徽标用）。 */
+export const TEMPLATE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  (['campaign-report', 'campaign-proposal', 'media-kit'] as Scenario[]).flatMap((s) =>
+    TEMPLATE_TYPES[s].map(([id, label]) => [id, label]),
+  ),
+);

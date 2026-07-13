@@ -9,10 +9,13 @@ import type {
 
 export const templatesApi = {
   /** 列表。ADMIN 看全部（含草稿），USER 只看已发布。 */
-  list: (params?: { status?: TemplateStatus; businessLine?: string; scenario?: string }) =>
-    api
-      .get<{ templates: TemplateSummary[] }>('/templates', { params })
-      .then((r) => r.data.templates),
+  list: (params?: {
+    status?: TemplateStatus;
+    businessLine?: string;
+    scenario?: string;
+    templateType?: string;
+    isDefault?: boolean;
+  }) => api.get<{ templates: TemplateSummary[] }>('/templates', { params }).then((r) => r.data.templates),
 
   /** 详情（含 pages，供编辑器加载）。 */
   get: (id: string) =>
@@ -51,6 +54,10 @@ export const templatesApi = {
   /** 发布/取消发布（便捷封装）。 */
   setStatus: (id: string, status: TemplateStatus) =>
     api.patch<{ template: TemplateDetail }>(`/templates/${id}`, { status }).then((r) => r.data.template),
+
+  /** 设/取消默认模板（ADMIN）。 */
+  setDefault: (id: string, value: boolean) =>
+    api.patch<{ template: TemplateDetail }>(`/templates/${id}/default`, { value }).then((r) => r.data.template),
 };
 
 /** 从模板创建项目（任意登录用户）。返回新项目详情。 */
