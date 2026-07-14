@@ -7,6 +7,7 @@ import { useEditorStore } from '../../store';
 import { ImageInput } from '@/components/ImageInput';
 import { FieldGroup } from '../helpers';
 import { ReportWorkScreenshotImporter } from '../importers';
+import { MOSAIC_LAYOUT_OPTIONS } from '@/editor/components/WorksComponents';
 
 const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string; hint: string }[] = [
   { value: 'grid', label: '网格', hint: '标准马赛克' },
@@ -26,6 +27,7 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
   const data = comp.data as WorkScreenshotData;
   const images = data.images ?? [];
   const style = data.style ?? 'grid';
+  const mosaicLayout = data.mosaicLayout;
   const total = images.length;
   // displayCount 未设或 > total 时显示全部
   const displayCount = data.displayCount ?? total;
@@ -65,6 +67,38 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
           {STYLE_OPTIONS.find((o) => o.value === style)?.hint}
         </p>
       </FieldGroup>
+
+      {/* 组合版式（仅 mosaic 风格） */}
+      {style === 'mosaic' && (
+        <FieldGroup title="组合版式">
+          <div className="flex flex-wrap gap-1.5">
+            {MOSAIC_LAYOUT_OPTIONS.map((opt) => {
+              const enabled = displayCount >= opt.minImages;
+              const active = mosaicLayout === opt.value || (!mosaicLayout && opt.value === 'auto');
+              return (
+                <button
+                  key={opt.value}
+                  disabled={!enabled}
+                  onClick={() => write({ mosaicLayout: opt.value === 'auto' ? undefined : opt.value })}
+                  title={!enabled ? `需 ${opt.minImages} 张` : undefined}
+                  className={`rounded border px-2.5 py-1 text-xs transition ${
+                    active
+                      ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                      : 'border-border-default text-foreground-secondary hover:border-foreground-muted'
+                  } ${!enabled ? 'cursor-not-allowed opacity-40' : ''}`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-[10px] text-foreground-muted">
+            {!mosaicLayout || mosaicLayout === 'auto'
+              ? '按张数自动选择版式'
+              : `${MOSAIC_LAYOUT_OPTIONS.find((o) => o.value === mosaicLayout)?.label} · 当前显示 ${displayCount} 张`}
+          </p>
+        </FieldGroup>
+      )}
 
       {/* 显示数量 */}
       <FieldGroup title="显示数量">
