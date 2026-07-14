@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把 `/data` 的 Mock 数据预览改造为数据管理页,服务端新增 `DataRecord` 表 + CRUD/导入 API,前端切换编辑器数据源到该库,支持 CSV/XLSX/JSON 导入 + 手动新增。
+**Goal:** 把 `/data` 的 Mock 数据预览改造为数据管理页,服务端新增 `DataRecord` 表 + CRUD/导入 API,前端切换编辑器数据源到该库,支持 CSV/XLSX/JSON 导入 + 手动新增;**并支持 Campaign→达人 下钻**(campaign 记录带 `creatorIds`,Campaign Tab 行可展开看合作达人)。Part A(Task 1–9)= 库管理;Part B(B2/B6/B7/B8/B9)= 下钻增量,见 spec `2026-07-14-data-management-drill-down-design.md`。
 
 **Architecture:** 服务端一行一记录的 `DataRecord { id, kind, ownerId, data: Json }` 表(复用 opaque-JSON 模式,per-record 粒度),新 `data` 模块(mirrors templates 模块)。前端新 `dataLibrary` client 打 `/api/v1/data`;`listCampaigns()`/`listCreators()` 改读该库(签名不变)。数据管理页 Tab(Campaign/达人库)+ 表格 + 导入预览 + 行编辑/删除。mock 数据保留为种子 payload,显式按钮灌入(upsert-by-id 幂等)。绑定仍快照进 `projectMeta.reportData`(不变)。
 
@@ -17,7 +17,7 @@
 - Web 测试:`pnpm --filter @mediakit/web exec vitest run <path>`
 - Web typecheck:`pnpm --filter @mediakit/web exec tsc --noEmit`
 
-**v1 已知限制(设计已定,见 spec §3):** 性能明细数据(creator performance / placements / GEO / funnel / timeline / products / summary)不导入,保持 mock 生成器;导入的真实 campaign 走 `DEFAULT_PROFILE` 生成 demo 数;`listCampaignCreators(campaignId)` 对导入 campaign 返回空。CSV 导入只带核心字段(无 metrics/platforms);JSON 导入可带完整结构。
+**v1 已知限制(设计已定,见 spec §3):** 性能明细数据(creator performance / placements / GEO / funnel / timeline / products / summary)不导入,保持 mock 生成器;导入的真实 campaign 走 `DEFAULT_PROFILE` 生成 demo 数。**Part B 后**:`listCampaignCreators(campaignId)` 行为不变(perf 派生,demo 用);新增 `listCampaignCollaborators(campaignId)` 按 `creatorIds` 解析合作达人(导入 campaign 可下钻);执行效果明细仍不导入,demo campaign 的二级展开效果走 `listCreatorPerformance` mock 生成器。CSV 导入只带核心字段(无 metrics/platforms);JSON 导入可带完整结构。
 
 ---
 
@@ -1938,6 +1938,957 @@ git commit -m "feat(web): DataManagement page (replaces MockData) + nav rename"
 
 ---
 
+## Part B — Campaign→达人 下钻(drill-down)增量
+
+> **前置:** Part A(Task 1–9)已全部完成并提交(数据管理库 + 双 Tab + 导入 + CRUD 已可用)。本 Part 在其上追加「campaign 记录带 `creatorIds`、Campaign Tab 行可展开看合作达人」的能力,见 spec `docs/superpowers/specs/2026-07-14-data-management-drill-down-design.md`。
+> **顺序:** B2 → B6 → B7 → B8 → B9(B9 依赖 B6/B7/B8)。
+> **隔离与提交:** 同 Part A,worktree 内 `git add <task files> && git commit -m "..."` 原子提交;脏树上用 pathspec-only(`git commit -m "..." -- <files>`)。
+
+---
+
+## Task B2: `campaignRecordDataSchema` 增 `creatorIds` + 测试
+
+**Files:**
+- Modify: `apps/server/src/modules/data/data.schema.ts`(Task 2 产出)
+- Modify: `apps/server/src/modules/data/data.schema.test.ts`(Task 2 产出)
+
+- [ ] **Step 1: 写失败测试(追加到 `data.schema.test.ts` 末尾)**
+
+```ts
+describe('data.schema · campaignRecordDataSchema · creatorIds', () => {
+  it('接受 creatorIds: string[]', () => {
+    const c = { ...validCampaign, creatorIds: ['cre-mia', 'cre-sofia'] };
+    expect(campaignRecordDataSchema.parse(c)).toEqual(c);
+  });
+  it('creatorIds 非数组(字符串)→ 报错', () => {
+    const c = { ...validCampaign, creatorIds: 'cre-mia' };
+    expect(() => campaignRecordDataSchema.parse(c)).toThrow();
+  });
+  it('无 creatorIds 仍通过(可选)', () => {
+    expect(campaignRecordDataSchema.parse(validCampaign)).toEqual(validCampaign);
+  });
+});
+```
+
+- [ ] **Step 2: 运行测试,确认失败**
+
+Run:
+```bash
+pnpm --filter @mediakit/server exec vitest run src/modules/data/data.schema.test.ts
+```
+Expected: FAIL(`creatorIds` 未被 schema 接受/未定义)。
+
+- [ ] **Step 3: 在 `campaignRecordDataSchema` 追加 `creatorIds` 字段**
+
+在 `apps/server/src/modules/data/data.schema.ts` 的 `campaignRecordDataSchema` 对象内(`metrics` 之后、闭合 `})` 之前)追加一行:
+
+```ts
+  creatorIds: z.array(z.string()).optional(),
+```
+
+改后该 schema 尾部应为:
+```ts
+  status: z.string().optional(),
+  owner: z.string().optional(),
+  metrics: z.array(campaignMetricSchema).optional(),
+  creatorIds: z.array(z.string()).optional(),
+});
+```
+
+`creatorRecordDataSchema` **不动**。`createDataSchema`/`importDataSchema`/`updateDataSchema` 入参不变(`creatorIds` 随 `data` 透传,按 kind 校验)。
+
+- [ ] **Step 4: 运行测试,确认通过**
+
+Run:
+```bash
+pnpm --filter @mediakit/server exec vitest run src/modules/data/data.schema.test.ts
+```
+Expected: PASS。
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/server/src/modules/data/data.schema.ts apps/server/src/modules/data/data.schema.test.ts
+git commit -m "feat(server): campaignRecordDataSchema accepts creatorIds"
+```
+
+---
+
+## Task B6: shared `Campaign.creatorIds` + `listCampaignCollaborators` + 测试
+
+**Files:**
+- Modify: `packages/shared/src/types/campaign.ts`(在已有 `Campaign` interface 追加字段)
+- Modify: `apps/web/src/api/creators.ts`(Task 6 产出,追加函数)
+- Create: `apps/web/tests/creators.test.ts`
+
+- [ ] **Step 1: 写失败测试**
+
+创建 `apps/web/tests/creators.test.ts`:
+
+```ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const { getCampaignMock, getMock } = vi.hoisted(() => ({
+  getCampaignMock: vi.fn(),
+  getMock: vi.fn(),
+}));
+
+vi.mock('@/api/campaigns', () => ({ getCampaign: (id: string) => getCampaignMock(id) }));
+vi.mock('@/api/dataLibrary', () => ({ dataApi: { get: (id: string) => getMock(id), list: vi.fn() } }));
+
+import { listCampaignCollaborators } from '@/api/creators';
+
+const mia = { id: 'cre-mia', kind: 'CREATOR', ownerId: 'u', data: { id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }, createdAt: '', updatedAt: '' };
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('listCampaignCollaborators', () => {
+  it('按 campaign.creatorIds 从达人库解析;孤儿 id(404)跳过', async () => {
+    getCampaignMock.mockResolvedValue({ id: 'camp-x', creatorIds: ['cre-mia', 'cre-gone'] });
+    getMock.mockImplementation((id: string) =>
+      id === 'cre-mia' ? Promise.resolve(mia) : Promise.reject(new Error('404')),
+    );
+    const r = await listCampaignCollaborators('camp-x');
+    expect(getMock).toHaveBeenCalledWith('cre-mia');
+    expect(getMock).toHaveBeenCalledWith('cre-gone');
+    expect(r).toEqual([mia.data]);
+  });
+  it('campaign 无 creatorIds → 空数组(不调 get)', async () => {
+    getCampaignMock.mockResolvedValue({ id: 'camp-x' });
+    const r = await listCampaignCollaborators('camp-x');
+    expect(r).toEqual([]);
+    expect(getMock).not.toHaveBeenCalled();
+  });
+});
+```
+
+- [ ] **Step 2: 运行测试,确认失败**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/creators.test.ts
+```
+Expected: FAIL(`listCampaignCollaborators` 不存在)。
+
+- [ ] **Step 3a: shared `Campaign` 追加 `creatorIds`**
+
+在 `packages/shared/src/types/campaign.ts` 的 `Campaign` interface 末尾(`metrics?: CampaignMetric[];` 之后)追加:
+
+```ts
+  /** 参与 campaign 合作的达人 id 列表(数据管理库 Creator 记录 id;下钻解析用)。 */
+  creatorIds?: string[];
+```
+
+- [ ] **Step 3b: 在 `apps/web/src/api/creators.ts` 追加 `listCampaignCollaborators`**
+
+在文件顶部 import 区追加:
+```ts
+import { getCampaign } from './campaigns';
+import { dataApi, type DataRecordDTO } from './dataLibrary';
+```
+(`getCampaign` 来自 Task 6 的 `campaigns.ts`;`dataApi`/`DataRecordDTO` 来自 Task 5 的 `dataLibrary.ts`。若已 import 则不重复。)
+
+在文件末尾追加函数:
+
+```ts
+/**
+ * 取某 campaign 的合作达人列表(按 campaign.creatorIds 从达人库解析)。
+ * 孤儿 id(达人已删 / 404)静默跳过。导入 campaign 无 creatorIds → 返回空。
+ * 与 listCampaignCreators(creatorPerformance mock 派生,服务 demo 效果展开)解耦。
+ */
+export async function listCampaignCollaborators(campaignId: string): Promise<Creator[]> {
+  const campaign = await getCampaign(campaignId);
+  const ids = campaign?.creatorIds ?? [];
+  if (ids.length === 0) return [];
+  const settled = await Promise.allSettled(ids.map((id) => dataApi.get<Creator>(id)));
+  return settled
+    .filter((r): r is PromiseFulfilledResult<DataRecordDTO<Creator>> => r.status === 'fulfilled')
+    .map((r) => r.value.data);
+}
+```
+
+- [ ] **Step 4: 运行测试 + typecheck**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/creators.test.ts && pnpm --filter @mediakit/web exec tsc --noEmit
+```
+Expected:测试 PASS;typecheck 无错误。
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/shared/src/types/campaign.ts apps/web/src/api/creators.ts apps/web/tests/creators.test.ts
+git commit -m "feat(web): Campaign.creatorIds + listCampaignCollaborators"
+```
+
+---
+
+## Task B7: dataImport `creatorIds` 字段 + CSV 列解析 + 测试
+
+**Files:**
+- Modify: `apps/web/src/editor/dataImport.ts`(Task 7 产出)
+- Modify: `apps/web/tests/dataImport.test.ts`(Task 7 产出)
+
+- [ ] **Step 1: 写失败测试(追加到 `dataImport.test.ts`;并在顶部 import 追加 `CAMPAIGN_FIELDS`)**
+
+顶部 import 改为:
+```ts
+import { buildPreviewFromRows, buildPreviewFromObjects, CAMPAIGN_REQUIRED, CREATOR_REQUIRED, CAMPAIGN_FIELDS } from '@/editor/dataImport';
+```
+末尾追加:
+```ts
+describe('dataImport · creatorIds', () => {
+  it('CAMPAIGN_FIELDS 含 creatorIds', () => {
+    expect(CAMPAIGN_FIELDS).toContain('creatorIds');
+  });
+  it('buildPreviewFromRows: creatorIds 列分号分隔 → 拆数组', () => {
+    const rows = [{ id: 'c1', name: 'C', advertiser: 'A', businessLine: 'FT', platform: 'TikTok', startDate: '2026-01-01', endDate: '2026-01-31', budget: '$100K', creatorIds: 'cre-mia;cre-sofia' }];
+    const r = buildPreviewFromRows('campaign', rows);
+    expect(r[0].valid).toBe(true);
+    expect(r[0].data.creatorIds).toEqual(['cre-mia', 'cre-sofia']);
+  });
+  it('buildPreviewFromRows: creatorIds 空段过滤', () => {
+    const rows = [{ id: 'c1', name: 'C', advertiser: 'A', businessLine: 'FT', platform: 'TikTok', startDate: '2026-01-01', endDate: '2026-01-31', budget: '$100K', creatorIds: 'cre-mia;' }];
+    expect(buildPreviewFromRows('campaign', rows)[0].data.creatorIds).toEqual(['cre-mia']);
+  });
+  it('buildPreviewFromObjects: creatorIds 数组原样保留', () => {
+    const items = [{ id: 'c1', name: 'C', advertiser: 'A', businessLine: 'FT', platform: 'TikTok', startDate: '2026-01-01', endDate: '2026-01-31', budget: '$100K', creatorIds: ['cre-mia'] }];
+    expect(buildPreviewFromObjects('campaign', items)[0].data.creatorIds).toEqual(['cre-mia']);
+  });
+});
+```
+
+- [ ] **Step 2: 运行测试,确认失败**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/dataImport.test.ts
+```
+Expected: FAIL(`CAMPAIGN_FIELDS` 不含 `creatorIds`)。
+
+- [ ] **Step 3: 改 `dataImport.ts`**
+
+(a) `CAMPAIGN_FIELDS` 末尾追加 `'creatorIds'`:
+```ts
+export const CAMPAIGN_FIELDS = ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget', 'status', 'owner', 'creatorIds'] as const;
+```
+(`CAMPAIGN_REQUIRED` **不动**——`creatorIds` 非必填。)
+
+(b) `buildPreviewFromRows` 的字段拷贝循环改为对 `creatorIds` 特殊处理(分号拆分、空段过滤):
+```ts
+export function buildPreviewFromRows(kind: DataKind, rows: Record<string, string>[]): PreviewItem[] {
+  const fields = FIELDS[kind];
+  return rows.map((row) => {
+    const data: Record<string, unknown> = {};
+    for (const f of fields) {
+      const v = row[f];
+      if (v === undefined || v === '') continue;
+      if (f === 'creatorIds') {
+        const ids = String(v).split(';').map((s) => s.trim()).filter(Boolean);
+        if (ids.length) data.creatorIds = ids;
+      } else {
+        data[f] = v;
+      }
+    }
+    const missing = checkRequired(kind, data);
+    return missing.length ? { data, valid: false, error: `缺字段: ${missing.join(', ')}` } : { data, valid: true };
+  });
+}
+```
+(`buildPreviewFromObjects` 不动——对象原样保留,`creatorIds` 数组天然透传。)
+
+(c) `downloadTemplate` 的 campaign 示例行追加 `creatorIds` 列值(与 11 个字段对齐):
+```ts
+  const example =
+    kind === 'campaign'
+      ? 'camp-example,示例 Campaign,GlowLab,FT,TikTok,2026-01-01,2026-01-31,$100K,Active,alex,cre-mia;cre-sofia'
+      : 'cre-example,Mia Chen,@mia,TikTok,mega,1.28M,8.7%,Beauty,US,';
+```
+
+- [ ] **Step 4: 运行测试,确认通过**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/dataImport.test.ts
+```
+Expected: PASS。
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/editor/dataImport.ts apps/web/tests/dataImport.test.ts
+git commit -m "feat(web): dataImport supports creatorIds column (CSV split / JSON passthrough)"
+```
+
+---
+
+## Task B8: `CreatorMultiSelect` 组件 + `RecordFormModal` campaign 达人多选 + 测试
+
+**Files:**
+- Create: `apps/web/src/editor/components/CreatorMultiSelect.tsx`
+- Modify: `apps/web/src/editor/components/RecordFormModal.tsx`(Task 8 产出)
+- Create: `apps/web/tests/CreatorMultiSelect.test.tsx`
+
+- [ ] **Step 1: 写失败测试**
+
+创建 `apps/web/tests/CreatorMultiSelect.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { CreatorMultiSelect } from '@/editor/components/CreatorMultiSelect';
+import type { Creator } from '@mediakit/shared';
+
+const creators: Creator[] = [
+  { id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] },
+  { id: 'cre-sofia', name: 'Sofia', handle: '@sofia', platform: 'TikTok', tier: 'macro', followers: '500K', engagement: '7%', category: 'Beauty', region: 'US', metrics: [] },
+];
+
+describe('CreatorMultiSelect', () => {
+  it('列出全部达人;勾选 → onChange 回传 id 数组', async () => {
+    const onChange = vi.fn();
+    render(<CreatorMultiSelect creators={creators} selected={[]} onChange={onChange} />);
+    expect(screen.getByText('Mia')).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText(/Mia/));
+    expect(onChange).toHaveBeenCalledWith(['cre-mia']);
+  });
+  it('selected 预勾选', () => {
+    render(<CreatorMultiSelect creators={creators.slice(0, 1)} selected={['cre-mia']} onChange={() => {}} />);
+    expect((screen.getByLabelText(/Mia/) as HTMLInputElement).checked).toBe(true);
+  });
+  it('空达人库显示占位', () => {
+    render(<CreatorMultiSelect creators={[]} selected={[]} onChange={() => {}} />);
+    expect(screen.getByText('达人库为空')).toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: 运行测试,确认失败**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/CreatorMultiSelect.test.tsx
+```
+Expected: FAIL(组件不存在)。
+
+- [ ] **Step 3: 实现 `CreatorMultiSelect`**
+
+创建 `apps/web/src/editor/components/CreatorMultiSelect.tsx`:
+
+```tsx
+import type { Creator } from '@mediakit/shared';
+
+interface Props {
+  creators: Creator[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}
+
+/** 达人多选复选框组(数据管理:campaign 关联合作达人;新增/编辑表单与「管理合作达人」共用)。 */
+export function CreatorMultiSelect({ creators, selected, onChange }: Props) {
+  const set = new Set(selected);
+  function toggle(id: string) {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange([...next]);
+  }
+  return (
+    <div className="flex max-h-40 flex-col gap-1 overflow-auto rounded border border-border-default p-2">
+      {creators.length === 0 && (
+        <span className="text-xs text-foreground-muted">达人库为空</span>
+      )}
+      {creators.map((c) => (
+        <label key={c.id} className="flex items-center gap-2 text-xs text-foreground-secondary">
+          <input type="checkbox" checked={set.has(c.id)} onChange={() => toggle(c.id)} />
+          <span className="text-foreground-primary">{c.name}</span>
+          <span className="text-foreground-muted">{c.handle}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: 运行测试,确认通过**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/CreatorMultiSelect.test.tsx
+```
+Expected: PASS。
+
+- [ ] **Step 5: 把多选接入 `RecordFormModal`(campaign kind)**
+
+把 `apps/web/src/editor/components/RecordFormModal.tsx` 整文件替换为(在 Task 8 版本上:增 `creatorIds` state + 加载达人库 + 表单内多选 + 保存带 `creatorIds`):
+
+```tsx
+import { useState, useEffect } from 'react';
+import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
+import { listCreators } from '@/api/creators';
+import type { Creator } from '@mediakit/shared';
+import { CreatorMultiSelect } from './CreatorMultiSelect';
+import type { DataKind } from '../dataImport';
+
+interface Props {
+  kind: DataKind;
+  record: DataRecordDTO | null;
+  onSaved: () => void;
+  onCancel: () => void;
+}
+
+interface FieldDef {
+  key: string;
+  label: string;
+}
+
+const CAMPAIGN_FORM_FIELDS: FieldDef[] = [
+  { key: 'id', label: 'Campaign ID' },
+  { key: 'name', label: '名称' },
+  { key: 'advertiser', label: '广告主' },
+  { key: 'businessLine', label: '业务线' },
+  { key: 'platform', label: '平台' },
+  { key: 'startDate', label: '开始日期' },
+  { key: 'endDate', label: '结束日期' },
+  { key: 'budget', label: '预算' },
+  { key: 'status', label: '状态' },
+  { key: 'owner', label: 'Owner' },
+];
+const CREATOR_FORM_FIELDS: FieldDef[] = [
+  { key: 'id', label: '达人 ID' },
+  { key: 'name', label: '名称' },
+  { key: 'handle', label: 'Handle' },
+  { key: 'platform', label: '平台' },
+  { key: 'tier', label: '层级' },
+  { key: 'followers', label: '粉丝' },
+  { key: 'engagement', label: '互动率' },
+  { key: 'category', label: '品类' },
+  { key: 'region', label: '地区' },
+  { key: 'avatar', label: '头像 URL' },
+];
+
+/** 新增/编辑记录表单。campaign 额外可勾选合作达人(creatorIds)。 */
+export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
+  const fields = kind === 'campaign' ? CAMPAIGN_FORM_FIELDS : CREATOR_FORM_FIELDS;
+  const initial = (record?.data ?? {}) as Record<string, unknown>;
+  const [vals, setVals] = useState<Record<string, string>>(() => {
+    const o: Record<string, string> = {};
+    for (const f of fields) o[f.key] = (initial[f.key] as string) ?? '';
+    if (!record) {
+      const prefix = kind === 'campaign' ? 'camp-' : 'cre-';
+      o.id = `${prefix}${crypto.randomUUID().slice(0, 8)}`;
+    }
+    return o;
+  });
+  const [creatorIds, setCreatorIds] = useState<string[]>(
+    kind === 'campaign' ? (initial.creatorIds as string[]) ?? [] : [],
+  );
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (kind === 'campaign') listCreators().then(setCreators).catch(() => setCreators([]));
+  }, [kind]);
+
+  async function save() {
+    setBusy(true);
+    try {
+      const data: Record<string, unknown> = {};
+      for (const f of fields) {
+        const v = vals[f.key];
+        if (v !== '') data[f.key] = v;
+      }
+      if (kind === 'campaign') data.creatorIds = creatorIds;
+      if (record) await dataApi.update(record.id, data);
+      else await dataApi.create(kind, data);
+      onSaved();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
+      <div
+        className="flex max-h-[90vh] w-[560px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="font-headings text-sm font-semibold text-foreground-primary">
+          {record ? '编辑' : '新增'} · {kind === 'campaign' ? 'Campaign' : '达人库'}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {fields.map((f) => {
+            const autoId = f.key === 'id' && !record;
+            return (
+              <label key={f.key} className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                {f.label}{autoId ? '(自动)' : ''}
+                <input
+                  value={vals[f.key] ?? ''}
+                  disabled={autoId}
+                  onChange={(e) => setVals((p) => ({ ...p, [f.key]: e.target.value }))}
+                  className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary disabled:opacity-50"
+                />
+              </label>
+            );
+          })}
+        </div>
+        {kind === 'campaign' && (
+          <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            合作达人
+            <CreatorMultiSelect creators={creators} selected={creatorIds} onChange={setCreatorIds} />
+          </label>
+        )}
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+          >
+            取消
+          </button>
+          <button
+            disabled={busy}
+            onClick={() => void save()}
+            className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50"
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 6: 运行测试 + typecheck**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/CreatorMultiSelect.test.tsx tests/ImportPreviewModal.test.tsx && pnpm --filter @mediakit/web exec tsc --noEmit
+```
+Expected:测试 PASS;typecheck 无错误。
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add apps/web/src/editor/components/CreatorMultiSelect.tsx apps/web/src/editor/components/RecordFormModal.tsx apps/web/tests/CreatorMultiSelect.test.tsx
+git commit -m "feat(web): CreatorMultiSelect + RecordFormModal campaign collaborator picker"
+```
+
+---
+
+## Task B9: DataManagement Campaign 可展开行 + 合作达人子表 + demo 效果二级展开 + 管理合作达人 + seed 派生 creatorIds + 测试
+
+**Files:**
+- Modify: `apps/web/src/routes/DataManagement.tsx`(Task 9 产出)
+- Modify: `apps/web/tests/DataManagement.test.tsx`(Task 9 产出)
+
+> 设计要点(见 spec §4/§5/§6):Campaign Tab 用 `CampaignList`(可展开行)替 flat `DataTable`;展开行渲染 `CollaboratorPanel`——按 `creatorIds` 调 `listCampaignCollaborators` 解析合作达人,demo campaign(命中 mock)额外调 `listCreatorPerformance` 给达人行二级展开效果;「管理合作达人」用 `ManageCollaboratorsModal`(复用 `CreatorMultiSelect`)整记录重写 `creatorIds`(`dataApi.update(id, {...fullData, creatorIds})`)。`seed()` 为 demo campaign 派生 `creatorIds`。
+
+- [ ] **Step 1: 写失败测试**
+
+(a) 在 `apps/web/tests/DataManagement.test.tsx` 顶部 hoisted mock 区追加:
+```ts
+const { collaboratorsMock, listCreatorsMock, listCampaignCreatorsMock, perfMock } = vi.hoisted(() => ({
+  collaboratorsMock: vi.fn(),
+  listCreatorsMock: vi.fn(),
+  listCampaignCreatorsMock: vi.fn(),
+  perfMock: vi.fn(),
+}));
+vi.mock('@/api/creators', () => ({
+  listCampaignCollaborators: (id: string) => collaboratorsMock(id),
+  listCreators: () => listCreatorsMock(),
+  listCampaignCreators: (id: string) => listCampaignCreatorsMock(id),
+}));
+vi.mock('@/api/creatorPerformance', () => ({
+  listCreatorPerformance: (id: string) => perfMock(id),
+}));
+```
+
+(b) 在文件末尾追加测试块:
+```ts
+describe('DataManagement · Campaign drill-down', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
+    removeMock.mockResolvedValue(undefined);
+    importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
+    updateMock.mockResolvedValue({ id: 'camp-x' });
+    collaboratorsMock.mockResolvedValue([]);
+    listCreatorsMock.mockResolvedValue([]);
+    listCampaignCreatorsMock.mockResolvedValue([]);
+    perfMock.mockResolvedValue([]);
+  });
+
+  it('展开 campaign 行 → 调 listCampaignCollaborators 并渲染合作达人', async () => {
+    collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
+    renderPage();
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByRole('button', { name: /Campaign X/ }));
+    await waitFor(() => expect(collaboratorsMock).toHaveBeenCalledWith('camp-x'));
+    expect(await screen.findByText('@mia')).toBeInTheDocument();
+  });
+
+  it('管理合作达人:勾选 + 保存 → dataApi.update 带 creatorIds(整记录重写)', async () => {
+    listCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
+    renderPage();
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByRole('button', { name: /Campaign X/ }));
+    await screen.findByText('管理合作达人');
+    await userEvent.click(screen.getByText('管理合作达人'));
+    await userEvent.click(screen.getByLabelText(/Mia/));
+    await userEvent.click(screen.getByText('保存'));
+    await waitFor(() => expect(updateMock).toHaveBeenCalledWith('camp-x', { ...campaign, creatorIds: ['cre-mia'] }));
+  });
+
+  it('导入示例数据:Campaign 派生 creatorIds', async () => {
+    listMock.mockResolvedValue([]); // 空库才显示「导入示例数据」
+    listCampaignCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: '', region: '', metrics: [] }]);
+    renderPage();
+    await screen.findByText('导入示例数据');
+    await userEvent.click(screen.getByText('导入示例数据'));
+    await waitFor(() => expect(importManyMock).toHaveBeenCalled());
+    const [, itemsArg] = importManyMock.mock.calls[0] as [string, unknown[]];
+    expect((itemsArg[0] as { creatorIds: string[] }).creatorIds).toEqual(['cre-mia']);
+  });
+});
+```
+
+- [ ] **Step 2: 运行测试,确认失败**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/DataManagement.test.tsx
+```
+Expected: FAIL(Campaign 行不可展开 / `listCampaignCollaborators` 未被调用)。
+
+- [ ] **Step 3: 改 `DataManagement.tsx`**
+
+(a) 顶部 import 增补(在已有 import 区追加;`Fragment` 加入 react import):
+```ts
+import { useCallback, useEffect, useRef, useState, Fragment, type ReactNode, type ChangeEvent } from 'react';
+import type { Campaign, Creator } from '@mediakit/shared';
+import { MOCK_CAMPAIGNS } from '@/api/mock/campaigns';
+import { MOCK_CREATORS } from '@/api/mock/creators';
+import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
+import { listCampaignCollaborators, listCreators, listCampaignCreators } from '@/api/creators';
+import { listCreatorPerformance, type CreatorCampaignPerformance } from '@/api/creatorPerformance';
+import { DataTable } from '@/components/DataTable';
+import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
+import { RecordFormModal } from '@/editor/components/RecordFormModal';
+import { CreatorMultiSelect } from '@/editor/components/CreatorMultiSelect';
+import { buildPreviewFromRows, buildPreviewFromObjects, downloadTemplate, type DataKind, type PreviewItem } from '@/editor/dataImport';
+import { parseFile } from '@/editor/datasource/parse';
+```
+
+(b) `seed()` 改为 campaign 派生 `creatorIds`:
+```ts
+  async function seed() {
+    const items =
+      kind === 'campaign'
+        ? await Promise.all(
+            MOCK_CAMPAIGNS.map(async (c) => ({
+              ...c,
+              creatorIds: (await listCampaignCreators(c.id)).map((cr) => cr.id),
+            })),
+          )
+        : MOCK_CREATORS;
+    const r = await dataApi.importMany(kind, items);
+    window.alert(`导入完成:新增 ${r.created},更新 ${r.updated},跳过 ${r.skipped}`);
+    await reload();
+  }
+```
+
+(c) `DataPanel` 的 return 把 campaign 分支换成 `CampaignList`(creator 分支保持 `DataTable`):
+```tsx
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        {/* …工具栏按钮(导入/模板/新增/导入示例数据/清空 + 两个 file input)保持 Task 9 原样… */}
+      </div>
+      {kind === 'campaign' ? (
+        <CampaignList
+          records={records as DataRecordDTO<Campaign>[]}
+          loading={loading}
+          onEdit={setEditing}
+          onDelete={(id) => void del(id)}
+        />
+      ) : (
+        <DataTable loading={loading} headers={headers} rows={rows} />
+      )}
+      {/* …preview/adding/editing 三个 modal 保持 Task 9 原样… */}
+    </div>
+  );
+```
+> 注:`headers`/`rows`/`actions` 仍按 Task 9 计算(creator 分支用);campaign 分支改由 `CampaignList` 自绘,不再消费 `rows`。
+
+(d) 在文件末尾(`DataPanel` 之后)追加四个新组件 `CampaignList` / `CollaboratorPanel` / `ManageCollaboratorsModal` / `CreatorPerfDetail`:
+
+```tsx
+/** Campaign 可展开列表:行展开 → 合作达人子表;每行带 编辑/删除。 */
+function CampaignList({
+  records,
+  loading,
+  onEdit,
+  onDelete,
+}: {
+  records: DataRecordDTO<Campaign>[];
+  loading: boolean;
+  onEdit: (r: DataRecordDTO) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  if (loading) {
+    return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
+  }
+  if (records.length === 0) {
+    return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">No data</p>;
+  }
+  const heads = ['Campaign', 'Advertiser', 'Business Line', 'Platform', 'Period', 'Budget', 'Status', 'Owner', ''];
+  return (
+    <div className="overflow-auto rounded-lg border border-border-default">
+      <table className="w-full min-w-[760px] border-collapse text-sm">
+        <thead>
+          <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
+            {heads.map((h, i) => (
+              <th key={i} className={`px-3 py-2 font-medium ${i === 0 ? '' : 'whitespace-nowrap'}`}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((r) => {
+            const d = r.data;
+            const open = expandedId === r.id;
+            return (
+              <Fragment key={r.id}>
+                <tr className="border-t border-border-subtle hover:bg-surface-hover/50">
+                  <td className="px-3 py-2 font-medium text-foreground-primary">
+                    <button className="text-left hover:underline" onClick={() => setExpandedId(open ? null : r.id)}>
+                      {open ? '▾' : '▸'} {d.name}
+                    </button>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.advertiser}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.businessLine}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.platform}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.startDate} ~ {d.endDate}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.budget}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.status ?? '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.ownerId}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-2">
+                      <button onClick={() => onEdit(r)} className="text-xs text-accent-primary hover:underline">编辑</button>
+                      <button onClick={() => onDelete(r.id)} className="text-xs text-red hover:underline">删除</button>
+                    </div>
+                  </td>
+                </tr>
+                {open && (
+                  <tr>
+                    <td colSpan={heads.length} className="bg-surface-secondary px-4 py-3">
+                      <CollaboratorPanel record={r} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** 展开面板:合作达人子表 + 「管理合作达人」;demo campaign 命中 mock 时达人行二级展开效果。 */
+function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
+  const campaignId = record.id;
+  const [collaborators, setCollaborators] = useState<Creator[]>([]);
+  const [perf, setPerf] = useState<CreatorCampaignPerformance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedCreator, setExpandedCreator] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [cols, perfs] = await Promise.all([
+          listCampaignCollaborators(campaignId),
+          listCreatorPerformance(campaignId).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setCollaborators(cols);
+        setPerf(perfs);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId, tick]);
+
+  const perfByCreator = new Map(perf.map((p) => [p.creatorId, p]));
+  const hasPerf = perf.length > 0;
+
+  if (loading) return <p className="text-xs text-foreground-muted">加载合作达人…</p>;
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-medium text-foreground-secondary">合作达人 · {collaborators.length}</span>
+        <button onClick={() => setManaging(true)} className="text-xs text-accent-primary hover:underline">管理合作达人</button>
+      </div>
+      {collaborators.length === 0 ? (
+        <p className="text-xs text-foreground-muted">暂无合作达人。点「管理合作达人」添加。</p>
+      ) : (
+        <div className="overflow-auto rounded-lg border border-border-default">
+          <table className="w-full min-w-[560px] border-collapse text-xs">
+            <thead>
+              <tr className="bg-surface-hover text-left text-foreground-muted">
+                {['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement'].map((h) => (
+                  <th key={h} className="whitespace-nowrap px-2 py-1 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {collaborators.map((c) => {
+                const cp = perfByCreator.get(c.id);
+                const open = expandedCreator === c.id;
+                return (
+                  <Fragment key={c.id}>
+                    <tr className="border-t border-border-subtle">
+                      <td className="px-2 py-1 font-medium text-foreground-primary">
+                        {hasPerf && cp ? (
+                          <button className="hover:underline" onClick={() => setExpandedCreator(open ? null : c.id)}>
+                            {open ? '▾' : '▸'} {c.name}
+                          </button>
+                        ) : (
+                          c.name
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.handle}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.platform}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.tier}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.followers}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.engagement}</td>
+                    </tr>
+                    {open && cp && (
+                      <tr>
+                        <td colSpan={6} className="bg-surface-primary px-3 py-2">
+                          <CreatorPerfDetail perf={cp} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {managing && (
+        <ManageCollaboratorsModal
+          campaignId={campaignId}
+          campaignData={record.data}
+          currentIds={collaborators.map((c) => c.id)}
+          onClose={() => setManaging(false)}
+          onSaved={() => {
+            setManaging(false);
+            setTick((t) => t + 1);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 管理合作达人:多选达人库 → 整记录重写 creatorIds(服务端 update 校验全量 data)。 */
+function ManageCollaboratorsModal({
+  campaignId,
+  campaignData,
+  currentIds,
+  onClose,
+  onSaved,
+}: {
+  campaignId: string;
+  campaignData: Campaign;
+  currentIds: string[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [selected, setSelected] = useState<string[]>(currentIds);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    listCreators().then(setCreators).catch(() => setCreators([]));
+  }, []);
+  async function save() {
+    setBusy(true);
+    try {
+      await dataApi.update(campaignId, { ...campaignData, creatorIds: selected });
+      onSaved();
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="flex max-h-[80vh] w-[480px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="font-headings text-sm font-semibold text-foreground-primary">管理合作达人</div>
+        <CreatorMultiSelect creators={creators} selected={selected} onChange={setSelected} />
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>
+          <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">保存</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** demo campaign 二级展开:达人执行效果摘要(mock 生成器,字段 summary.*)。 */
+function CreatorPerfDetail({ perf }: { perf: CreatorCampaignPerformance }) {
+  const s = perf.summary;
+  return (
+    <div className="flex flex-wrap gap-3 text-xs text-foreground-secondary">
+      <span>帖数 <b className="text-foreground-primary">{s.posts}</b></span>
+      <span>曝光 <b className="text-foreground-primary">{s.totalImpressions}</b></span>
+      <span>互动 <b className="text-foreground-primary">{s.totalEngagement}</b></span>
+      <span>互动率 <b className="text-foreground-primary">{s.avgEngagementRate}</b></span>
+      <span className="text-foreground-muted">demo 数据(mock 生成器)</span>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: 运行测试 + typecheck**
+
+Run:
+```bash
+pnpm --filter @mediakit/web exec vitest run tests/DataManagement.test.tsx && pnpm --filter @mediakit/web exec tsc --noEmit
+```
+Expected:测试 PASS(含三个 drill-down 用例);typecheck 无错误。
+
+- [ ] **Step 5: 跑全量 web + server 测试确认无回归**
+
+Run:
+```bash
+pnpm --filter @mediakit/web test && pnpm --filter @mediakit/server test
+```
+Expected:全绿。
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add apps/web/src/routes/DataManagement.tsx apps/web/tests/DataManagement.test.tsx
+git commit -m "feat(web): Campaign drill-down — expandable rows + collaborator sub-table + manage collaborators + seed creatorIds"
+```
+
+---
+
 ## Self-Review(写计划后自检)
 
 **1. Spec 覆盖:**
@@ -1954,6 +2905,15 @@ git commit -m "feat(web): DataManagement page (replaces MockData) + nav rename"
 - §10 测试策略 → 每 task 含 TDD 测试 ✓
 - §3 v1 限制(不导入性能明细)→ Task 6 `listCampaignCreators` 注释 + 计划头部声明 ✓
 
+**Part B / drill-down spec(`2026-07-14-data-management-drill-down-design.md`)覆盖:**
+- §3 数据模型(`Campaign.creatorIds` + 服务端 Zod)→ Task B2(server Zod)+ Task B6(shared Campaign)✓
+- §4 下钻 UX(可展开行 + 合作达人子表 + demo 二级展开 + 管理合作达人)→ Task B9(`CampaignList`/`CollaboratorPanel`/`ManageCollaboratorsModal`/`CreatorPerfDetail`)✓
+- §5 `listCampaignCollaborators`(孤儿容忍、空 creatorIds、不改 `listCampaignCreators`)→ Task B6 ✓
+- §6 creatorIds 三来源(种子派生 / CSV·JSON 导入 / 链接 UI)→ Task B9(seed)+ Task B7(import)+ Task B8/B9(链接 UI)✓
+- §7 向后兼容(可选字段、无 Project/Page schema 改、无新迁移)→ 无服务端结构改动 ✓
+- §9 测试(creatorIds schema / collaborators 解析 / CSV 拆分 / 多选 / 下钻渲染 / seed 派生)→ B2/B6/B7/B8/B9 各含 TDD 测试 ✓
+- §12 不在范围(执行效果仍 mock、无批量端点、不改 `listCampaignCreators`/绑定模型)→ 计划头部 v1 + 各 task 注释声明 ✓
+
 **2. Placeholder 扫描:** 无 TBD/TODO;每步含完整代码或确切命令。✓
 
 **3. 类型一致性:**
@@ -1963,6 +2923,7 @@ git commit -m "feat(web): DataManagement page (replaces MockData) + nav rename"
 - `buildPreviewFromRows`/`buildPreviewFromObjects`/`downloadTemplate`/`PREVIEW_COLUMNS` 在 dataImport(Task 7)与 modal/page(Task 8/9)一致 ✓
 - `DataRecord.id` = 数据自带 id(schema 无 `@default`),`create` 用 `valid.id` ✓;`importMany` upsert-by-id ✓
 - 服务端 `validateData` 在 `create`/`update`/`importMany` 复用 ✓
+- Part B:`creatorIds?: string[]` 在 shared `Campaign`(B6)↔ 服务端 `campaignRecordDataSchema`(B2)↔ `RecordFormModal`/`ManageCollaboratorsModal` 写入(B8/B9)↔ `listCampaignCollaborators` 读取(B6)签名一致;`CampaignList`/`CollaboratorPanel`/`ManageCollaboratorsModal`/`CreatorPerfDetail` props 自洽 ✓
 
 **4. 范围检查:** 单一 feature,9 个 task 顺序依赖(server → shared → web client → web UI)。每 task 独立可测、可提交。✓
 
@@ -1972,8 +2933,8 @@ git commit -m "feat(web): DataManagement page (replaces MockData) + nav rename"
 
 Plan complete and saved to `docs/superpowers/plans/2026-07-14-data-management.md`. Two execution options:
 
-**1. Subagent-Driven(推荐)** — 每个 task 派一个 fresh subagent,task 间两阶段 review,迭代快。
+**1. Subagent-Driven(推荐)** — 每个 task 派一个 fresh subagent,task 间两阶段 review,迭代快。**顺序:** 先 Part A(Task 1→9),再 Part B(B2→B6→B7→B8→B9)。
 
-**2. Inline Execution** — 在本 session 内用 executing-plans 批量执行,带 checkpoint review。
+**2. Inline Execution** — 在本 session 内用 executing-plans 批量执行,带 checkpoint review。同样先 Part A 后 Part B。
 
 选哪种?
