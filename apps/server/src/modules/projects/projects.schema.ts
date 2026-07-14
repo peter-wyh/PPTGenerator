@@ -133,7 +133,6 @@ const projectThemeSchema = z
       })
       .optional(),
     shadow: z.enum(['none', 'subtle', 'soft', 'strong']).optional(),
-    skinPreset: z.enum(['default', 'flat', 'elevated']).optional(),
     branding: z
       .object({
         logo: z.string().max(2048).optional(),

@@ -88,6 +88,31 @@ describe('projectThemeSchema.layout', () => {
   });
 });
 
+describe('projectThemeSchema.heading', () => {
+  it('accepts a theme with a valid heading (fontSize + variant + color)', () => {
+    const r = parseTheme({ heading: { fontSize: 40, variant: 'highlight', color: '#FF5C00' } });
+    expect(r.meta?.theme?.heading).toEqual({ fontSize: 40, variant: 'highlight', color: '#FF5C00' });
+  });
+
+  it('accepts a theme without heading (optional)', () => {
+    const r = parseTheme({ color: { primary: '#FF5C00' } });
+    expect(r.meta?.theme?.heading).toBeUndefined();
+  });
+
+  it('rejects fontSize out of range (< 8)', () => {
+    expect(() => parseTheme({ heading: { fontSize: 4 } })).toThrow();
+  });
+
+  it('rejects unknown variant', () => {
+    expect(() => parseTheme({ heading: { variant: 'unknown' } })).toThrow();
+  });
+
+  it('accepts block-underline variant', () => {
+    const r = parseTheme({ heading: { variant: 'block-underline' } });
+    expect(r.meta?.theme?.heading?.variant).toBe('block-underline');
+  });
+});
+
 describe('pageSchema — 页面类型字段', () => {
   it('接受带 pageType/titleComponentId/titleOverridden 的页面', () => {
     const r = pageSchema.parse({
@@ -112,6 +137,15 @@ describe('pageSchema — 页面类型字段', () => {
 
   it('拒绝非法 pageType 取值', () => {
     expect(() => pageSchema.parse({ id: 'p1', name: 'n', components: [], pageType: 'bogus' })).toThrow();
+  });
+
+  it('把历史遗留的 PageCategory 串归一为 undefined（惰性迁移）', () => {
+    // 旧编辑器曾把页面大类（campaign-report / creator-case / media-report / creator-collab）
+    // 误当作 pageType 持久化；当前枚举不含这些值，归一为 undefined 使存量项目可重新保存。
+    for (const legacy of ['campaign-report', 'creator-case', 'media-report', 'creator-collab']) {
+      const r = pageSchema.parse({ id: 'p1', name: 'n', components: [], pageType: legacy });
+      expect(r.pageType).toBeUndefined();
+    }
   });
 });
 
@@ -141,5 +175,23 @@ describe('projectMetaSchema — templateType / isDefault', () => {
       meta: { businessLine: 'FT', isDefault: true } as never,
     });
     expect((out.meta as { isDefault?: boolean })?.isDefault).toBeUndefined();
+  });
+});
+
+describe('projectThemeSchema skinPreset 已移除', () => {
+  it('旧 payload 携带 skinPreset 仍合法（Zod strip 未知键）', () => {
+    const r = createProjectSchema.safeParse({
+      name: 't',
+      meta: { theme: { skinPreset: 'flat', color: { primary: '#FF5C00' } } },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('旧 payload 携带非法 skinPreset 也合法（字段已不校验，被 strip）', () => {
+    const r = createProjectSchema.safeParse({
+      name: 't',
+      meta: { theme: { skinPreset: 'bogus' } },
+    });
+    expect(r.success).toBe(true);
   });
 });
