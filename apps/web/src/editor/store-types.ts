@@ -32,7 +32,6 @@ export type ThemePatch = {
   background?: Partial<Omit<NonNullable<ProjectTheme['background']>, 'type'>> & {
     type?: NonNullable<ProjectTheme['background']>['type'];
   };
-  skinPreset?: NonNullable<ProjectTheme['skinPreset']>;
   preset?: string;
 };
 

@@ -336,7 +336,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
             ...patch.chart,
           } as NonNullable<ProjectTheme['chart']>,
           shadow: patch.shadow ?? current.shadow,
-          skinPreset: 'skinPreset' in patch ? patch.skinPreset : current.skinPreset,
           branding:
             patch.branding || current.branding
               ? { ...(current.branding ?? DEFAULT_THEME.branding), ...patch.branding }
