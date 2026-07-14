@@ -681,6 +681,10 @@ export interface CreatorFanInterestData {
 /** 作品截图视觉风格预设（与版式 variant 正交）。 */
 export type WorkScreenshotStyle = 'grid' | 'skew' | 'overlap' | 'filmstrip' | 'diagonal' | 'mosaic';
 
+/** 作品截图「组合版式」预设（仅 style==='mosaic' 时生效；缺省 'auto' = 按张数自动选模板）。 */
+export type WorkScreenshotMosaicLayout =
+  | 'auto' | 'hero-3' | 'hero-4' | 'hero-5' | 'staggered' | 'grid-3x3';
+
 export interface WorkScreenshotItem {
   src: string;
   caption?: string;
@@ -696,6 +700,8 @@ export interface WorkScreenshotData {
   variant?: ImageGroupLayoutId;
   /** 视觉风格预设，与 variant 正交。 */
   style?: WorkScreenshotStyle;
+  /** 组合版式预设（仅 style==='mosaic' 生效）；缺省 'auto' = 按张数自动选模板。 */
+  mosaicLayout?: WorkScreenshotMosaicLayout;
   /** 显示数量（控制渲染几张图，实际 images 数组可以更多）。缺省=全部显示。 */
   displayCount?: number;
   title?: string;
