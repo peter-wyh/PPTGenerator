@@ -9,7 +9,7 @@ const Templates = lazy(() => import('./routes/Templates').then((m) => ({ default
 const ProjectShell = lazy(() => import('./routes/ProjectShell').then((m) => ({ default: m.ProjectShell })));
 const TemplateShell = lazy(() => import('./routes/TemplateShell').then((m) => ({ default: m.TemplateShell })));
 const SharePage = lazy(() => import('./routes/SharePage').then((m) => ({ default: m.SharePage })));
-const MockData = lazy(() => import('./routes/MockData').then((m) => ({ default: m.MockData })));
+const DataManagement = lazy(() => import('./routes/DataManagement').then((m) => ({ default: m.DataManagement })));
 
 function RouteFallback() {
   return (
@@ -31,7 +31,7 @@ export function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/projects" element={<Projects />} />
             <Route path="/templates" element={<Templates />} />
-            <Route path="/data" element={<MockData />} />
+            <Route path="/data" element={<DataManagement />} />
           </Route>
           {/* 编辑器：沉浸式，无全局导航 */}
           <Route element={<ProtectedLayout bare />}>

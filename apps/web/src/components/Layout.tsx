@@ -32,7 +32,7 @@ export function Layout({ children }: LayoutProps) {
             onClick={() => navigate('/data')}
             className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
           >
-            Mock 数据
+            数据管理
           </button>
           {user?.role === 'ADMIN' && (
             <button
