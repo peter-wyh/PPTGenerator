@@ -68,12 +68,15 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
   async function save() {
     setBusy(true);
     try {
-      const data: Record<string, unknown> = {};
+      const fieldEdits: Record<string, unknown> = {};
       for (const f of fields) {
         const v = vals[f.key];
-        if (v !== '') data[f.key] = v;
+        if (v !== '') fieldEdits[f.key] = v;
       }
-      if (kind === 'campaign') data.creatorIds = creatorIds;
+      if (kind === 'campaign') fieldEdits.creatorIds = creatorIds;
+      // 编辑:在既有记录数据上覆盖表单编辑(保留 platforms/metrics 等非表单字段);
+      // 新增:仅表单字段。
+      const data = record ? { ...(record.data as object), ...fieldEdits } : fieldEdits;
       if (record) await dataApi.update(record.id, data);
       else await dataApi.create(kind, data);
       onSaved();
