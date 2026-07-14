@@ -1,38 +1,24 @@
 /**
- * 上游达人（Creator / Influencer）接口（demo 中 mock）。
- * 真实环境对接达人库/CRM；这里返回固定 mock 列表，带模拟延迟。
- * metrics 为达人自身频道 KPI（Avg Reach/Impressions/Follower Growth/CPM，见 mock/creators.buildChannelMetrics）。
- *
- * mock 数据与频道指标生成逻辑已抽离至 ./mock/creators。
+ * 上游达人（Creator / Influencer）接口。
+ * 真实环境对接达人库/CRM；数据管理库（`/api/v1/data`）提供可导入的达人库。
+ * metrics 为达人自身频道 KPI（Avg Reach/Impressions/Follower Growth/CPM）。
  */
-import type { CampaignMetric } from '@mediakit/shared';
-import { MOCK_CREATORS } from './mock/creators';
+import type { Creator } from '@mediakit/shared';
+import { dataApi } from './dataLibrary';
 import { listCreatorPerformance } from './creatorPerformance';
 
-export interface Creator {
-  id: string;
-  name: string;
-  handle: string;
-  platform: string;
-  tier: string; // mega / macro / micro
-  followers: string;
-  engagement: string;
-  category: string;
-  region: string;
-  /** 达人自身频道 KPI 指标（Avg Reach/Impressions/Follower Growth/CPM）。 */
-  metrics: CampaignMetric[];
-}
+export type { Creator };
 
-/** 模拟上游拉取达人列表。 */
-export function listCreators(): Promise<Creator[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(MOCK_CREATORS.map((c) => ({ ...c }))), 300);
-  });
+/** 从数据管理库拉取达人列表。 */
+export async function listCreators(): Promise<Creator[]> {
+  const records = await dataApi.list<Creator>('creator');
+  return records.map((r) => r.data);
 }
 
 /**
  * 获取 Campaign 下参与合作的达人列表（从 campaign performance 数据提取）。
- * 返回的 Creator 对象仅含基本信息（id/name/platform/tier），不含 channel KPI。
+ * 返回的 Creator 仅含基本信息，不含 channel KPI。
+ * v1 限制：对导入的 campaign 返回空（无 campaign↔达人合作明细）。
  */
 export async function listCampaignCreators(campaignId: string): Promise<Creator[]> {
   const perfs = await listCreatorPerformance(campaignId);

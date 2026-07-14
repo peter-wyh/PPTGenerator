@@ -51,6 +51,24 @@ export interface Campaign {
   metrics?: CampaignMetric[];
 }
 
+/** 上游达人（Creator / Influencer）实体（demo 中 mock；数据管理库管理）。 */
+export interface Creator {
+  id: string;
+  name: string;
+  handle: string;
+  platform: string;
+  /** 层级：mega / macro / micro。 */
+  tier: string;
+  followers: string;
+  engagement: string;
+  category: string;
+  region: string;
+  /** 达人头像 URL。 */
+  avatar?: string;
+  /** 达人自身频道 KPI 指标（Avg Reach/Impressions/Follower Growth/CPM）。 */
+  metrics: CampaignMetric[];
+}
+
 /* ------------------------------------------------------------------ */
 /* 报告全局数据上下文                                                    */
 /* 编辑器「数据配置」面板统一选择 Campaign + 达人，存入 store 供各组件    */
