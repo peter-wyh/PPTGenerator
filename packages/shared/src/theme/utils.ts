@@ -159,12 +159,11 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     ? (obj.shadow as ThemeShadow)
     : d.shadow!;
 
-  const skinPresetRaw = typeof obj.skinPreset === 'string' ? obj.skinPreset : undefined;
-  const validSkins = ['default', 'flat', 'elevated'] as const;
-  const skinPreset: 'default' | 'flat' | 'elevated' | undefined =
-    validSkins.includes(skinPresetRaw as (typeof validSkins)[number])
-      ? (skinPresetRaw as 'default' | 'flat' | 'elevated')
-      : (d.skinPreset ?? 'default');
+  // 旧 skinPreset 迁移：flat→sharp/none、elevated→large/strong（skinPreset 字段已移除，圆角+阴影为唯一真源）。
+  const legacySkin =
+    obj.skinPreset === 'flat' || obj.skinPreset === 'elevated' ? (obj.skinPreset as 'flat' | 'elevated') : undefined;
+  const finalRadius: ThemeRadius = legacySkin === 'flat' ? 'sharp' : legacySkin === 'elevated' ? 'large' : radius;
+  const finalShadow: ThemeShadow = legacySkin === 'flat' ? 'none' : legacySkin === 'elevated' ? 'strong' : shadow;
 
   // ---- 标题样式：缺对象补默认；非法字段回退 ----
   const hRaw = obj.heading as Record<string, unknown> | undefined;
@@ -194,8 +193,7 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
       heading: headingKey,
     },
     density: ['compact', 'standard', 'spacious'].includes(density) ? density : d.density,
-    radius: ['sharp', 'small', 'large'].includes(radius) ? radius : d.radius,
-    skinPreset,
+    radius: ['sharp', 'small', 'large'].includes(finalRadius) ? finalRadius : d.radius,
     preset,
     layout,
     branding,
@@ -204,7 +202,7 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     heading,
     format,
     chart,
-    shadow,
+    shadow: finalShadow,
   };
 }
 

@@ -104,3 +104,26 @@ describe('normalizeTheme v2 tolerance', () => {
     expect(t.format!.compact).toBe('none');
   });
 });
+
+describe('normalizeTheme skinPreset 迁移', () => {
+  it('flat → radius=sharp + shadow=none，且不再输出 skinPreset', () => {
+    const t = normalizeTheme({ skinPreset: 'flat' });
+    expect(t.radius).toBe('sharp');
+    expect(t.shadow).toBe('none');
+    expect('skinPreset' in t).toBe(false);
+  });
+
+  it('elevated → radius=large + shadow=strong', () => {
+    const t = normalizeTheme({ skinPreset: 'elevated' });
+    expect(t.radius).toBe('large');
+    expect(t.shadow).toBe('strong');
+    expect('skinPreset' in t).toBe(false);
+  });
+
+  it('default / 无 skinPreset → 不改 radius/shadow', () => {
+    const t = normalizeTheme({ radius: 'large', shadow: 'subtle' });
+    expect(t.radius).toBe('large');
+    expect(t.shadow).toBe('subtle');
+    expect('skinPreset' in t).toBe(false);
+  });
+});
