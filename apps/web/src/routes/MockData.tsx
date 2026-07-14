@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type {
   Campaign,
   CreatorCampaignPerformance,
@@ -65,7 +65,10 @@ export function MockData() {
           loading={loadingCreators}
           headers={['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement', 'Category', 'Region', 'Avg Reach', 'Impressions', 'Follower Growth', 'CPM']}
           rows={creators.map((c) => [
-            c.name,
+            <div key={c.id} className="flex items-center gap-2">
+              <CreatorAvatar src={c.avatar} name={c.name} />
+              <span>{c.name}</span>
+            </div>,
             c.handle,
             c.platform,
             c.tier,
@@ -495,6 +498,25 @@ function PerfCard({
   );
 }
 
+/** 创作者头像：有 URL 显图（picsum mock），无则首字母兜底。 */
+function CreatorAvatar({ src, name }: { src?: string; name: string }) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        draggable={false}
+        className="h-6 w-6 flex-none rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <div className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-primary/10 text-[10px] font-medium text-primary">
+      {name?.slice(0, 1) || '?'}
+    </div>
+  );
+}
+
 function DataTable({
   loading,
   headers,
@@ -502,7 +524,7 @@ function DataTable({
 }: {
   loading: boolean;
   headers: string[];
-  rows: string[][];
+  rows: ReactNode[][];
 }) {
   if (loading) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;

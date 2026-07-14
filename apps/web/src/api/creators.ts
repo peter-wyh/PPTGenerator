@@ -8,6 +8,7 @@
 import type { CampaignMetric } from '@mediakit/shared';
 import { MOCK_CREATORS } from './mock/creators';
 import { listCreatorPerformance } from './creatorPerformance';
+import { creatorAvatarUrl } from './creatorAvatar';
 
 export interface Creator {
   id: string;
@@ -19,6 +20,8 @@ export interface Creator {
   engagement: string;
   category: string;
   region: string;
+  /** 达人头像 URL（demo 用 dicebear 占位，真实环境接达人库）。 */
+  avatar?: string;
   /** 达人自身频道 KPI 指标（Avg Reach/Impressions/Follower Growth/CPM）。 */
   metrics: CampaignMetric[];
 }
@@ -46,6 +49,7 @@ export async function listCampaignCreators(campaignId: string): Promise<Creator[
     engagement: p.summary.avgEngagementRate,
     category: '',
     region: '',
+    avatar: creatorAvatarUrl(p.creatorName),
     metrics: [],
   }));
 }

@@ -63,7 +63,7 @@ export function CanvasComponent({
       {!comp.locked && (
         <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100">
           <button
-            title="复制"
+            title="Copy"
             onMouseDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -77,7 +77,7 @@ export function CanvasComponent({
             📋
           </button>
           <button
-            title="删除"
+            title="Delete"
             onMouseDown={(e) => {
               e.stopPropagation();
               e.preventDefault();

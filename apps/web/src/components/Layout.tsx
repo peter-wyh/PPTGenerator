@@ -24,15 +24,15 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/projects')}
-            className="font-headings text-base font-semibold tracking-tight text-foreground-primary"
+            className="font-headings text-xl font-semibold tracking-tight text-foreground-primary"
           >
-            MediaKit
+            Report Generator
           </button>
           <button
             onClick={() => navigate('/data')}
             className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
           >
-            Mock 数据
+            数据管理
           </button>
           {user?.role === 'ADMIN' && (
             <button

@@ -5,23 +5,12 @@ import type {
   WorkScreenshotItem,
 } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
-import { campaignCreatorWorks, allCreatorWorks, listPlacementTypeSummary, type CreatorWithWorks } from '@/api/creatorPerformance';
-import {
-  getCampaignSummary,
-  getConversionFunnel,
-  getRevenueTimeline,
-  getPublishers,
-  getGeoPerformance,
-  getPlacementWideRows,
-  getDeviceBreakdown,
-  getContentTopics,
-  getSearchTerms,
-  getHourlyPerformance,
-} from '@/api/affiliate';
+import { campaignCreatorWorks, allCreatorWorks, type CreatorWithWorks } from '@/api/creatorPerformance';
 import { parseCreatorLink } from '../creatorLink';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
 import { metricsToRows } from '../campaignMetrics';
+import { campaignDataPatch, creatorPatch } from '../pageBinding';
 
 /**
  * 从当前页面的 creatorId 绑定中自动获取达人。
@@ -424,14 +413,9 @@ export function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent })
   function apply() {
     const cr = creators.find((c) => c.id === selected) ?? pageCreator;
     if (!cr) return;
-    updateComponentData(comp.id, {
-      name: cr.name,
-      platform: (cr.platform ?? 'TikTok') as CreatorAvatarCardData['platform'],
-      handle: cr.handle,
-      followers: cr.followers,
-      engagement: cr.engagement,
-      intro: cr.category ? `${cr.category} · ${cr.region ?? ''}`.trim() : '',
-    });
+    const patch = creatorPatch('creator-avatar-card', cr, '');
+    if (!patch) return;
+    updateComponentData(comp.id, patch);
     commit();
     setSelected('');
   }
@@ -468,6 +452,64 @@ export function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent })
 }
 
 /**
+ * meta-strip（基础信息）：从「数据配置」面板已选达人中选一个，
+ * 一键填充信息条（CATEGORY / REGION / TIER）。缺字段自动跳过。
+ */
+export function ReportCreatorMetaStripImporter({ comp }: { comp: EditorComponent }) {
+  const { creator: pageCreator, creators } = usePageCreator();
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const [selected, setSelected] = useState('');
+
+  // 自动预选页面绑定的达人
+  useEffect(() => {
+    if (pageCreator && !selected) setSelected(pageCreator.id);
+  }, [pageCreator, selected]);
+
+  if (creators.length === 0) return null;
+
+  function apply() {
+    const cr = creators.find((c) => c.id === selected) ?? pageCreator;
+    if (!cr) return;
+    const patch = creatorPatch('meta-strip', cr, '');
+    if (!patch) return;
+    updateComponentData(comp.id, patch);
+    commit();
+    setSelected('');
+  }
+
+  return (
+    <FieldGroup title="从项目数据导入">
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 页面达人：{pageCreator.name}
+        </p>
+      )}
+      <select
+        value={selected}
+        onChange={(e) => setSelected(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择达人…</option>
+        {creators.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}（{c.platform} · {c.tier}）
+          </option>
+        ))}
+      </select>
+      {selected && (
+        <button
+          onClick={apply}
+          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          ⚡ 导入到基础信息
+        </button>
+      )}
+    </FieldGroup>
+  );
+}
+
+/**
  * creator-stats-strip：从「数据配置」面板已选达人中选一个，一键填充达人数据条 KPI。
  */
 export function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) {
@@ -485,8 +527,10 @@ export function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) 
 
   function apply() {
     const cr = creators.find((c) => c.id === selected) ?? pageCreator;
-    if (!cr || !cr.stats?.length) return;
-    updateComponentData(comp.id, { stats: cr.stats.map((s) => ({ ...s })) });
+    if (!cr) return;
+    const patch = creatorPatch('creator-stats-strip', cr, '');
+    if (!patch) return;
+    updateComponentData(comp.id, patch);
     commit();
     setSelected('');
   }
@@ -637,9 +681,9 @@ export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) 
   const campaignId = reportData?.campaign?.id ?? '';
 
   useEffect(() => {
-    if (!campaignId) { setCreatorsWithWorks([]); return; }
     setLoading(true);
-    const allWorks = campaignCreatorWorks(campaignId);
+    // 绑定 Campaign → 仅该活动作品；未绑定 → 跨活动聚合全部项目达人作品（与 work-screenshot 一致）。
+    const allWorks = campaignId ? campaignCreatorWorks(campaignId) : allCreatorWorks();
     // Only include creators that are in the global data config
     const allowedIds = new Set(creators.map((c) => c.id));
     setCreatorsWithWorks(allWorks.filter((cw) => allowedIds.has(cw.creatorId)));
@@ -652,34 +696,31 @@ export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) 
     if (pageCreatorId && !selectedCreator) setSelectedCreator(pageCreatorId);
   }, [pageCreatorId, selectedCreator]);
 
-  if (!campaignId) {
+  if (creators.length === 0) {
     return (
-      <FieldGroup title="Import from Campaign">
-        <p className="text-xs text-foreground-muted">Bind a Campaign in global data settings first.</p>
+      <FieldGroup title="从达人作品导入">
+        <p className="text-xs text-foreground-muted">请先在全局数据设置中选择达人。</p>
       </FieldGroup>
     );
   }
 
   function apply() {
-    const cw = creatorsWithWorks.find((c) => c.creatorId === selectedCreator);
-    if (!cw || cw.posts.length === 0) return;
-    const headers = ['Cover', 'Title', 'Impressions', 'Likes', 'Comments', 'Shares', 'Eng. Rate'];
-    const rows = cw.posts.map((post) => [
-      post.cover,
-      post.title,
-      post.impressions,
-      post.likes,
-      post.comments,
-      post.shares,
-      post.engagementRate,
-    ]);
-    updateComponentData(comp.id, { headers, rows, title: `${cw.creatorName} Works` });
+    const cr = creators.find((c) => c.id === selectedCreator) ?? pageCreator;
+    if (!cr) return;
+    const patch = creatorPatch(comp.type as 'creator-works-list' | 'creator-works-table', cr, campaignId);
+    if (!patch) return;
+    updateComponentData(comp.id, patch);
     commit();
     setSelectedCreator('');
   }
 
   return (
-    <FieldGroup title="Import from Campaign">
+    <FieldGroup title={campaignId ? '从 Campaign 导入作品' : '从达人作品导入'}>
+      {!campaignId && (
+        <p className="mb-1 text-[10px] text-foreground-muted">
+          未绑定 Campaign — 显示所有选中达人的作品。绑定 Campaign 后可缩小范围。
+        </p>
+      )}
       {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
       {creatorsWithWorks.length > 0 && (
         <>
@@ -744,14 +785,10 @@ export function ReportCreatorFanGenderImporter({ comp }: { comp: EditorComponent
 
   function apply() {
     const cr = creators.find((c) => c.id === selected) ?? pageCreator;
-    if (!cr?.audience?.genderSplit?.length) return;
-    updateComponentData(comp.id, {
-      slices: cr.audience.genderSplit.map((g) => ({
-        label: g.label,
-        value: g.value,
-        color: g.color ?? 'auto',
-      })),
-    });
+    if (!cr) return;
+    const patch = creatorPatch('creator-fan-gender', cr, '');
+    if (!patch) return;
+    updateComponentData(comp.id, patch);
     commit();
     setSelected('');
   }
@@ -810,14 +847,10 @@ export function ReportCreatorFanAgeImporter({ comp }: { comp: EditorComponent })
 
   function apply() {
     const cr = creators.find((c) => c.id === selected) ?? pageCreator;
-    if (!cr?.audience?.ageRange?.length) return;
-    updateComponentData(comp.id, {
-      bars: cr.audience.ageRange.map((a) => ({
-        label: a.label,
-        value: a.value,
-        color: a.color ?? 'auto',
-      })),
-    });
+    if (!cr) return;
+    const patch = creatorPatch('creator-fan-age', cr, '');
+    if (!patch) return;
+    updateComponentData(comp.id, patch);
     commit();
     setSelected('');
   }
@@ -863,55 +896,6 @@ export function ReportCreatorFanAgeImporter({ comp }: { comp: EditorComponent })
  * Campaign 报告数据导入器（11 种组件通用）
  * 从绑定的 Campaign 或手动选择 Campaign → 一键填充组件数据
  * ================================================================ */
-
-/** 根据 ComponentType 从对应 mock 函数取数据，返回 data patch 对象。 */
-function campaignDataPatch(
-  compType: string,
-  campaignId: string,
-): Record<string, unknown> | null {
-  switch (compType) {
-    case 'campaign-summary': {
-      const s = getCampaignSummary(campaignId);
-      return {
-        campaignName: s.campaignName,
-        period: s.period,
-        metrics: [
-          { label: 'Spend', value: s.totalSpend },
-          { label: 'Revenue', value: s.totalRevenue },
-          { label: 'ROAS', value: s.roas },
-          { label: 'Commission', value: s.totalCommission },
-        ],
-        customerSplit: {
-          newCustomers: s.newCustomers,
-          returningCustomers: s.returningCustomers,
-          newCustomerRate: s.newCustomerRate,
-        },
-      };
-    }
-    case 'funnel-chart':
-      return { steps: getConversionFunnel(campaignId) };
-    case 'revenue-timeline':
-      return { points: getRevenueTimeline(campaignId, 14) };
-    case 'publisher-table':
-      return { rows: getPublishers(campaignId) };
-    case 'geo-distribution':
-      return { items: getGeoPerformance(campaignId) };
-    case 'placement-wide-table':
-      return { rows: getPlacementWideRows(campaignId) };
-    case 'placement-type-summary':
-      return { items: listPlacementTypeSummary(campaignId) };
-    case 'device-breakdown':
-      return { items: getDeviceBreakdown(campaignId) };
-    case 'content-topic-performance':
-      return { items: getContentTopics(campaignId) };
-    case 'search-term-table':
-      return { items: getSearchTerms(campaignId) };
-    case 'hourly-heatmap':
-      return { hours: getHourlyPerformance(campaignId) };
-    default:
-      return null;
-  }
-}
 
 /** Campaign 报告组件通用导入器：从已绑定 Campaign 一键填充。 */
 export function CampaignReportImporter({ comp }: { comp: EditorComponent }) {

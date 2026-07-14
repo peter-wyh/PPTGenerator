@@ -51,7 +51,7 @@ describe('brand-wall + package-card — render', () => {
         }}
       />,
     );
-    expect(screen.getByText('推荐')).toBeInTheDocument();
+    expect(screen.getByText('Featured')).toBeInTheDocument();
   });
 
   it('every variant renders without throwing', () => {

@@ -106,7 +106,7 @@ export interface ReportCreator {
   };
 }
 
-/** 报告全局数据上下文：Campaign + 达人列表。存入编辑器 store，随项目保存。 */
+/** 报告全局数据上下文：Campaign + 达人列表 + 商品列表。存入编辑器 store，随项目保存。 */
 export interface ReportDataContext {
   /** 绑定的 Campaign（可空）。 */
   campaign?: ReportCampaign | null;
@@ -114,6 +114,8 @@ export interface ReportDataContext {
   campaignCreators?: ReportCreator[];
   /** 达人库中选中的达人列表（可多个）。 */
   creators?: ReportCreator[];
+  /** 商品列表（campaign 关联的带货商品，可编辑）。 */
+  products?: Product[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -418,4 +420,40 @@ export interface Advertiser {
   merchantId?: string;
   /** Logo URL。 */
   logo?: string;
+}
+
+/** 商品（campaign 关联的带货商品）。 */
+export interface Product {
+  /** 商品 ID。 */
+  id: string;
+  /** 商品名称。 */
+  name: string;
+  /** 商品图片 URL（可选）。 */
+  image?: string;
+  /** 价格（含货币符号）。 */
+  price: string;
+  /** 原价（可选，用于显示折扣）。 */
+  originalPrice?: string;
+  /** 关联的广告主。 */
+  advertiser?: string;
+  /** 关联的业务线。 */
+  businessLine?: string;
+  /** 商品分类/品类。 */
+  category?: string;
+  /** 带货 GMV。 */
+  gmv?: string;
+  /** 销量/订单数。 */
+  orders?: string;
+  /** 点击数。 */
+  clicks?: string;
+  /** 转化率 CVR。 */
+  cvr?: string;
+  /** ROAS。 */
+  roas?: string;
+  /** 佣金（CPS commission）。 */
+  commission?: string;
+  /** CPS 花费（commission + 平台服务费）。 */
+  spend?: string;
+  /** 状态。 */
+  status?: 'active' | 'paused' | 'sold-out';
 }

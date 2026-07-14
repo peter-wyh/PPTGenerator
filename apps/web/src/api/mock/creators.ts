@@ -7,6 +7,7 @@
 import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 import type { CampaignMetric } from '@mediakit/shared';
 import type { Creator } from '../creators';
+import { creatorAvatarUrl } from '../creatorAvatar';
 
 /** Creator tier（与 creatorPerformance.ts 共享）。 */
 export type Tier = 'mega' | 'macro' | 'micro';
@@ -196,5 +197,6 @@ export function buildChannelMetrics(
 /** Creator mock list (the 达人库) with channel-level metrics injected by buildChannelMetrics. */
 export const MOCK_CREATORS: Creator[] = CREATOR_META.map((c, i) => ({
   ...c,
+  avatar: creatorAvatarUrl(c.name),
   metrics: buildChannelMetrics(c, i),
 }));

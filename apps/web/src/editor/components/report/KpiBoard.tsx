@@ -125,7 +125,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
 
   if (variant === 'flat') {
     // 平铺指标条（参考图风格）：单行等宽卡 —— 标题 + 大数值（按类型染色）+ 环比 + 对比基准锚点。
-    const compareLabel = data.compareLabel?.trim() ? data.compareLabel : 'vs 上期';
+    const compareLabel = data.compareLabel?.trim() ? data.compareLabel : 'vs last period';
     return (
       <div className="flex h-full w-full items-stretch gap-2 overflow-auto">
         {items.map((it, i) => (

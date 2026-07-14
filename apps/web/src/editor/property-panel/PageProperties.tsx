@@ -353,6 +353,7 @@ function PageTypeSection({
 }) {
   const reportData = useEditorStore((s) => s.reportData);
   const allCreators = allReportCreators(reportData);
+  const applyPageBinding = useEditorStore((s) => s.applyPageBinding);
 
   // Campaign 列表：全局数据配置中绑定的 campaign
   const boundCampaign = reportData?.campaign;
@@ -404,7 +405,7 @@ function PageTypeSection({
           ) : (
             <select
               value={page.campaignId ?? ''}
-              onChange={(e) => set({ campaignId: e.target.value || undefined })}
+              onChange={(e) => { set({ campaignId: e.target.value || undefined }); applyPageBinding(page.id); }}
               className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
             >
               <option value="">未选择</option>
@@ -425,7 +426,7 @@ function PageTypeSection({
           ) : (
             <select
               value={page.creatorId ?? ''}
-              onChange={(e) => set({ creatorId: e.target.value || undefined })}
+              onChange={(e) => { set({ creatorId: e.target.value || undefined }); applyPageBinding(page.id); }}
               className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
             >
               <option value="">未选择</option>
@@ -450,7 +451,7 @@ function PageTypeSection({
           ) : (
             <select
               value={page.creatorId ?? ''}
-              onChange={(e) => set({ creatorId: e.target.value || undefined })}
+              onChange={(e) => { set({ creatorId: e.target.value || undefined }); applyPageBinding(page.id); }}
               className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
             >
               <option value="">未选择</option>

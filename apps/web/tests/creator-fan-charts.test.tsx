@@ -67,7 +67,7 @@ describe('creator fan city (horizontal bar)', () => {
 
   it('renders empty-state when bars empty', () => {
     render(<CreatorFanCity data={{ title: 'T', bars: [] }} />);
-    expect(screen.getByText('暂无数据')).toBeInTheDocument();
+    expect(screen.getByText('No data')).toBeInTheDocument();
   });
 });
 
@@ -91,7 +91,7 @@ describe('creator fan age (vertical bar)', () => {
 
   it('renders empty-state when bars empty', () => {
     render(<CreatorFanAge data={{ title: 'T', bars: [] }} />);
-    expect(screen.getByText('暂无数据')).toBeInTheDocument();
+    expect(screen.getByText('No data')).toBeInTheDocument();
   });
 });
 
@@ -133,6 +133,54 @@ describe('creator fan interest (proportion bars)', () => {
 
   it('renders empty-state when tags empty', () => {
     render(<CreatorFanInterest data={{ title: 'T', tags: [] }} />);
-    expect(screen.getByText('暂无数据')).toBeInTheDocument();
+    expect(screen.getByText('No data')).toBeInTheDocument();
+  });
+});
+
+// recharts 在 jsdom 下整体 mock（Cell/Bar/Pie → null），SVG fill 无法从 DOM 断言；
+// 但 CreatorFanGender 的图例圆点与 CreatorFanInterest 的占比条是真实 DOM（带 inline
+// backgroundColor），可用来验证 color:'auto' 是否被解析为全局 chartPalette 颜色。
+// 背景：defaults 里所有 fan 图表数据 color 均为 'auto'，未解析时 'auto' 是非法 CSS 色 →
+// SVG fill 渲染为黑色、div 背景透明。DEFAULT_CHART_PALETTE = ['#FF5C00','#3B82F6',...]。
+describe("auto color resolution (color:'auto' → global chartPalette)", () => {
+  const coloredSpans = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll<HTMLElement>('span')).filter((el) => el.style.backgroundColor);
+  const coloredDivs = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll<HTMLElement>('div')).filter((el) => el.style.backgroundColor);
+
+  it('CreatorFanGender resolves auto slices to palette colors on legend dots', () => {
+    const { container } = render(
+      <CreatorFanGender
+        data={{
+          title: 'T',
+          slices: [
+            { label: 'Female', value: 62, color: 'auto' },
+            { label: 'Male', value: 36, color: 'auto' },
+          ],
+        }}
+      />,
+    );
+    const dots = coloredSpans(container);
+    expect(dots.length).toBeGreaterThanOrEqual(2);
+    expect(dots[0].style.backgroundColor).toBe('rgb(255, 92, 0)'); // #FF5C00 = palette[0]
+    expect(dots[1].style.backgroundColor).toBe('rgb(59, 130, 246)'); // #3B82F6 = palette[1]
+  });
+
+  it('CreatorFanInterest resolves auto tags to palette colors on bars', () => {
+    const { container } = render(
+      <CreatorFanInterest
+        data={{
+          title: 'T',
+          tags: [
+            { label: 'Beauty', value: 35, color: 'auto' },
+            { label: 'Food', value: 28, color: 'auto' },
+          ],
+        }}
+      />,
+    );
+    const bars = coloredDivs(container);
+    expect(bars.length).toBeGreaterThanOrEqual(2);
+    expect(bars[0].style.backgroundColor).toBe('rgb(255, 92, 0)'); // #FF5C00
+    expect(bars[1].style.backgroundColor).toBe('rgb(59, 130, 246)'); // #3B82F6
   });
 });

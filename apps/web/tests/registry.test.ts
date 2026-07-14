@@ -38,6 +38,7 @@ const TYPES: ComponentType[] = [
   'campaign-analysis',
   'creator-work-metrics',
   'creator-works-table',
+  'creator-audience-profile',
 ];
 
 describe('REGISTRY', () => {
@@ -91,5 +92,19 @@ describe('indicator-card variants', () => {
     const byId = Object.fromEntries((def.variants ?? []).map((v) => [v.id, v]));
     expect(byId['icon-top'].icon?.defaultKey).toBeTruthy();
     expect(byId['icon-bg'].icon?.defaultWeight).toBeTruthy();
+  });
+});
+
+describe('title-block variants', () => {
+  const def = REGISTRY['title-block'];
+
+  it('declares 10 variants incl. block-underline', () => {
+    expect(def.variants?.map((v) => v.id)).toEqual([
+      'plain', 'bar-left', 'underline', 'gradient', 'card', 'numbered', 'highlight', 'accent-tag', 'accent-underline', 'block-underline',
+    ]);
+  });
+
+  it('exposes a fontSize field for per-component override', () => {
+    expect(def.propertySchema.some((f) => f.key === 'fontSize')).toBe(true);
   });
 });

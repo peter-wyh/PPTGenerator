@@ -8,6 +8,7 @@ import type {
   Sentiment,
   WorkMetricsData,
   WorkScreenshotData,
+  WorkScreenshotMosaicLayout,
 } from '@mediakit/shared';
 
 /* ------------------------------ shared shell ------------------------------ */
@@ -39,10 +40,10 @@ function Screenshot({
   return (
     <div className={`relative h-full w-full overflow-hidden rounded-lg ${cls ?? ''}`}>
       {src ? (
-        <img src={src} alt={caption ?? '作品截图'} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={src} alt={caption ?? 'Work screenshot'} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <div className="flex h-full min-h-[64px] w-full items-center justify-center bg-surface-hover text-[10px] text-foreground-muted">
-          作品截图
+          Work screenshot
         </div>
       )}
       {caption && !captionHidden && (
@@ -188,6 +189,46 @@ const MOSAIC_TEMPLATES: MosaicTemplate[] = [
   ]},
 ];
 
+/** 命名组合版式：用户在属性面板显式挑选（仅 style==='mosaic' 生效）。
+ *  auto / staggered 不走 cell 模板（auto 用 MOSAIC_TEMPLATES；staggered 走偏移渲染）。 */
+const MOSAIC_LAYOUTS: Record<Exclude<WorkScreenshotMosaicLayout, 'auto' | 'staggered'>, MosaicTemplate> = {
+  // 1大2小（3 张）：左大 1×2 + 右侧 2 张竖排
+  'hero-3': { gridCols: 2, gridRows: 2, cells: [
+    { col: 0, row: 0, colSpan: 1, rowSpan: 2 },
+    { col: 1, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 1大3小（4 张）：左大 1×3 + 右侧 3 张竖排
+  'hero-4': { gridCols: 2, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 1, rowSpan: 3 },
+    { col: 1, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 1大4小（5 张）：左大 2×2（半宽全高）+ 右侧 2×2 小图
+  'hero-5': { gridCols: 4, gridRows: 2, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 },
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 九宫格（9 张）：均匀 3×3
+  'grid-3x3': { gridCols: 3, gridRows: 3, cells: Array.from({ length: 9 }, (_, i) => ({
+    col: i % 3, row: Math.floor(i / 3), colSpan: 1, rowSpan: 1,
+  })) },
+};
+
+/** 组合版式可选项：属性面板按钮组与渲染分流共用（单一事实源）。minImages 用于按张数禁用。 */
+export const MOSAIC_LAYOUT_OPTIONS: { value: WorkScreenshotMosaicLayout; label: string; minImages: number }[] = [
+  { value: 'auto', label: '自动', minImages: 1 },
+  { value: 'hero-3', label: '1大2小', minImages: 3 },
+  { value: 'hero-4', label: '1大3小', minImages: 4 },
+  { value: 'hero-5', label: '1大4小', minImages: 5 },
+  { value: 'staggered', label: '错落', minImages: 4 },
+  { value: 'grid-3x3', label: '九宫格', minImages: 9 },
+];
+
 /** 作品截图墙：支持 6 种视觉风格（grid / mosaic / skew / overlap / filmstrip / diagonal）。 */
 export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
   const { style = 'grid', displayCount, title, images: allImages = [], gap = 8 } = data;
@@ -198,7 +239,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     return (
       <Shell title={title}>
         <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
-          暂无作品截图
+          No work screenshots
         </div>
       </Shell>
     );
@@ -324,9 +365,72 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     );
   }
 
-  /* ---- mosaic: 非对称拼图（1大2小 / L型 / 阶梯等不规则组合）---- */
+  /* ---- mosaic: 非对称拼图（命名组合 / auto 按张数 / staggered 错落）---- */
   if (style === 'mosaic') {
-    const tpl = MOSAIC_TEMPLATES[Math.min(images.length, MOSAIC_TEMPLATES.length - 1)];
+    const layout = data.mosaicLayout ?? 'auto';
+
+    // staggered（错落）：3 列，按列交替竖向偏移、不旋转；取前 6 张。
+    if (layout === 'staggered') {
+      const shown = images.slice(0, 6);
+      const COL_OFFSET = ['0%', '10%', '5%'];
+      return (
+        <Shell title={title}>
+          <div
+            className="grid h-full w-full content-stretch gap-2 overflow-hidden"
+            style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}
+          >
+            {shown.map((im, i) => (
+              <div
+                key={i}
+                className="relative h-full overflow-hidden rounded-lg"
+                style={{ transform: `translateY(${COL_OFFSET[i % 3]})` }}
+              >
+                <Screenshot src={im?.src ?? ''} caption={im?.caption} captionHidden={im?.captionHidden} />
+              </div>
+            ))}
+          </div>
+        </Shell>
+      );
+    }
+
+    // 命名组合（非 auto）：取对应模板，按 cells 渲染前 N 张（多出忽略，绝不留空位）。
+    if (layout !== 'auto') {
+      const tpl = MOSAIC_LAYOUTS[layout];
+      const shown = images.slice(0, tpl.cells.length);
+      return (
+        <Shell title={title}>
+          <div
+            className="grid h-full w-full overflow-hidden"
+            style={{
+              gridTemplateColumns: `repeat(${tpl.gridCols}, 1fr)`,
+              gridTemplateRows: `repeat(${tpl.gridRows}, 1fr)`,
+              gap: '4px',
+            }}
+          >
+            {tpl.cells.map((cell, i) => {
+              const im = shown[i];
+              if (!im) return null;
+              return (
+                <div
+                  key={i}
+                  className="relative overflow-hidden rounded-lg"
+                  style={{
+                    gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
+                    gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
+                  }}
+                >
+                  <Screenshot src={im.src} caption={im.caption} captionHidden={im.captionHidden} />
+                </div>
+              );
+            })}
+          </div>
+        </Shell>
+      );
+    }
+
+    // auto：模板按张数 1 基存储（MOSAIC_TEMPLATES[i] 容纳 i+1 张图，N 张取下标 N-1）。
+    const idx = Math.min(Math.max(images.length - 1, 0), MOSAIC_TEMPLATES.length - 1);
+    const tpl = MOSAIC_TEMPLATES[idx];
     const { gridCols, gridRows, cells } = tpl;
     return (
       <Shell title={title}>
@@ -391,7 +495,7 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
     return (
       <Shell title={title}>
         <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
-          暂无作品数据
+          No work data
         </div>
       </Shell>
     );
@@ -405,7 +509,7 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
             {cover && (
               <img
                 src={cover}
-                alt={workName ?? '作品封面'}
+                alt={workName ?? 'Work cover'}
                 draggable={false}
                 className="h-12 w-12 flex-none rounded object-cover"
               />
@@ -545,7 +649,7 @@ export function CommentWordcloud({ data }: { data: CommentWordcloudData }) {
   if (words.length === 0) {
     return (
       <Shell title={title}>
-        <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">暂无数据</div>
+        <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">No data</div>
       </Shell>
     );
   }

@@ -228,7 +228,28 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setReportData(data) {
       const s = get();
       const nextMeta: ProjectMeta = { ...(s.projectMeta ?? {}), reportData: data };
-      set((s) => ({ reportData: data, projectMeta: nextMeta, dirty: true, dirtyTick: s.dirtyTick + 1 }));
+      // 当达人列表更新时，为未绑定 creatorId 的 creator-case / creator-collab 页面自动分配达人
+      const allCr = allReportCreators(data);
+      let crIdx = 0;
+      let pages = s.pages.map((p) => {
+        const cat = pageCategory(p.pageType);
+        if ((cat === 'creator-case' || cat === 'creator-collab') && !p.creatorId && allCr.length > 0) {
+          const cr = allCr[crIdx % allCr.length];
+          crIdx++;
+          return { ...p, creatorId: cr.id };
+        }
+        return p;
+      });
+      // 如果有页面被更新了 creatorId，重新跑一次绑定填充数据
+      if (crIdx > 0) {
+        for (const p of pages) {
+          const cat = pageCategory(p.pageType);
+          if (cat === 'creator-case' || cat === 'creator-collab') {
+            pages = applyPageBindingReducer(pages, p.id, data, new Set(p.components.map((c) => c.id)), s.projectMeta);
+          }
+        }
+      }
+      set({ reportData: data, projectMeta: nextMeta, pages, dirty: true, dirtyTick: s.dirtyTick + 1 });
     },
 
     async save() {
@@ -426,7 +447,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         }
         const pages = withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]);
         return {
-          pages: s.currentPageId ? applyPageBindingReducer(pages, s.currentPageId, s.reportData, new Set([comp.id])) : pages,
+          pages: s.currentPageId ? applyPageBindingReducer(pages, s.currentPageId, s.reportData, new Set([comp.id]), s.projectMeta) : pages,
           selectedIds: [comp.id],
         };
       }),
@@ -468,7 +489,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const comp: EditorComponent = { id: newId(), type, x: cl.x, y: cl.y, w: cl.w, h: cl.h, data: getDefaultData(type) };
         const pages = withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]);
         return {
-          pages: s.currentPageId ? applyPageBindingReducer(pages, s.currentPageId, s.reportData, new Set([comp.id])) : pages,
+          pages: s.currentPageId ? applyPageBindingReducer(pages, s.currentPageId, s.reportData, new Set([comp.id]), s.projectMeta) : pages,
           selectedIds: [comp.id],
         };
       }),
@@ -808,10 +829,15 @@ export const useEditorStore = create<EditorState>((set, get) => {
           if ((pageCategory(opts.pageType) === 'campaign-report' || pageCategory(opts.pageType) === 'creator-collab') && !page.campaignId) {
             page.campaignId = s.reportData?.campaign?.id ?? '';
           }
+          // creator-case / creator-collab 自动绑定第一个可用达人
+          if ((pageCategory(opts.pageType) === 'creator-case' || pageCategory(opts.pageType) === 'creator-collab') && !page.creatorId) {
+            const cr = allReportCreators(s.reportData)[0];
+            if (cr) page.creatorId = cr.id;
+          }
         }
         const pages = [...s.pages, page];
         return {
-          pages: applyPageBindingReducer(pages, page.id, s.reportData, new Set(page.components.map((c) => c.id))),
+          pages: applyPageBindingReducer(pages, page.id, s.reportData, new Set(page.components.map((c) => c.id)), s.projectMeta),
           currentPageId: page.id,
           selectedIds: [],
         };
@@ -822,6 +848,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     addPagesBatch: (pages) => {
       const newIds: string[] = [];
       mutateAndCommit((s) => {
+        const allCr = allReportCreators(s.reportData);
+        let crIdx = 0; // 多个达人页依次分配不同达人
         const built: Page[] = pages.map((p) => {
           const reid = p.components.map((c) => ({ ...clone(c), id: newId() }));
           const page: Page = { id: newId(), name: p.name, components: reid };
@@ -836,13 +864,20 @@ export const useEditorStore = create<EditorState>((set, get) => {
             if ((pageCategory(p.pageType) === 'campaign-report' || pageCategory(p.pageType) === 'creator-collab') && !page.campaignId) {
               page.campaignId = s.reportData?.campaign?.id ?? '';
             }
+            // creator-case / creator-collab 自动绑定达人（多个达人页依次轮询分配）
+            if (pageCategory(p.pageType) === 'creator-case' || pageCategory(p.pageType) === 'creator-collab') {
+              if (allCr.length > 0) {
+                page.creatorId = allCr[crIdx % allCr.length].id;
+                crIdx++;
+              }
+            }
           }
           return page;
         });
         if (built.length === 0) return {};
         let allPages = [...s.pages, ...built];
         for (const pg of built) {
-          allPages = applyPageBindingReducer(allPages, pg.id, s.reportData, new Set(pg.components.map((c) => c.id)));
+          allPages = applyPageBindingReducer(allPages, pg.id, s.reportData, new Set(pg.components.map((c) => c.id)), s.projectMeta);
         }
         return { pages: allPages, currentPageId: built[0].id, selectedIds: [] };
       });
@@ -1001,11 +1036,17 @@ export const useEditorStore = create<EditorState>((set, get) => {
           };
         }
         const patchCampaign = pageCategory(pageType) === 'campaign-report' || pageCategory(pageType) === 'creator-collab';
+        const patchCreator = pageCategory(pageType) === 'creator-case' || pageCategory(pageType) === 'creator-collab';
         const mapped = s.pages.map((p) => {
           if (p.id !== pageId) return p;
           const next: Page = { ...p, pageType };
           if (patchCampaign && !p.campaignId) {
             next.campaignId = s.reportData?.campaign?.id ?? '';
+          }
+          // creator-case / creator-collab 自动绑定第一个可用达人
+          if (patchCreator && !p.creatorId) {
+            const cr = allReportCreators(s.reportData)[0];
+            if (cr) next.creatorId = cr.id;
           }
           // 页面组件为空时，从对应模板填充默认内容
           if (p.components.length === 0) {
@@ -1027,7 +1068,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         // 切到 campaign-report/creator-collab 后，按页面绑定把页内组件当「新增」填充（落地即有数据）。
         const target = mapped.find((p) => p.id === pageId);
         const patched = target
-          ? applyPageBindingReducer(mapped, pageId, s.reportData, new Set(target.components.map((c) => c.id)))
+          ? applyPageBindingReducer(mapped, pageId, s.reportData, new Set(target.components.map((c) => c.id)), s.projectMeta)
           : mapped;
         return { pages: patched };
       });
@@ -1064,7 +1105,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const pid = pageId ?? get().currentPageId;
       if (!pid) return;
       mutateAndCommit((s) => ({
-        pages: applyPageBindingReducer(s.pages, pid, s.reportData, new Set()),
+        pages: applyPageBindingReducer(s.pages, pid, s.reportData, new Set(), s.projectMeta),
       }));
     },
 

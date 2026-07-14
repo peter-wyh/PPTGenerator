@@ -160,6 +160,8 @@ const projectThemeSchema = z
       })
       .optional(),
     preset: z.string().max(120).optional(),
+    /** 皮肤预设（与 color/font 正交，控制圆角+阴影档位）。 */
+    skinPreset: z.enum(['default', 'flat', 'elevated']).optional(),
   })
   .optional();
 
@@ -242,10 +244,31 @@ const reportDataContextSchema = z
         }),
       )
       .optional(),
+    /** 商品列表（Campaign CPS 数据）。 */
+    products: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          image: z.string().max(2048).optional(),
+          price: z.string().max(50).optional(),
+          originalPrice: z.string().max(50).optional(),
+          advertiser: z.string().max(200).optional(),
+          businessLine: z.string().max(40).optional(),
+          category: z.string().max(100).optional(),
+          gmv: z.string().max(50).optional(),
+          orders: z.string().max(50).optional(),
+          clicks: z.string().max(50).optional(),
+          cvr: z.string().max(20).optional(),
+          roas: z.string().max(20).optional(),
+          commission: z.string().max(50).optional(),
+          spend: z.string().max(50).optional(),
+          status: z.enum(['active', 'paused', 'sold-out']).optional(),
+        }),
+      )
+      .optional(),
   })
   .optional();
-
-/** 项目/模板共用的 meta 字段集合（templateType / styleType 为新增）。 */
 const projectMetaFields = {
   businessLine: z.string().max(40).optional(),
   creator: z.string().max(80).optional(),
@@ -253,6 +276,8 @@ const projectMetaFields = {
   scenarioSub: z.enum(['weekly', 'monthly', 'wrap-up']).optional(),
   /** 模版类型：场景下细分，松字符串，取值由前端字典约束。 */
   templateType: z.string().max(40).optional(),
+  /** 样式类型：PPT 多页 / 单页面。 */
+  styleType: z.enum(['ppt', 'single-page']).optional(),
   advertiser: z.string().max(120).optional(),
   campaignId: z.string().max(120).optional(),
   campaignInfo: campaignInfoSchema,
