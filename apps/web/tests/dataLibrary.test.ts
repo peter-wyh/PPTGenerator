@@ -13,7 +13,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('dataApi · list', () => {
   it('GET /data?kind=campaign → 返回 records[]', async () => {
     apiMock.get.mockResolvedValue({ data: { records: [{ id: 'c1', kind: 'campaign', ownerId: 'u', data: { id: 'c1', name: 'C' }, createdAt: '', updatedAt: '' }] } });
-    const r = await dataApi.list('campaign');
+    const r = await dataApi.list<{ id: string; name: string }>('campaign');
     expect(apiMock.get).toHaveBeenCalledWith('/data', { params: { kind: 'campaign' } });
     expect(r).toHaveLength(1);
     expect(r[0].data.id).toBe('c1');
