@@ -3,7 +3,7 @@ import { useEditorStore } from './store';
 import { PageThumbnail } from './components/PageThumbnail';
 import { TemplateOverlay } from './components/TemplateOverlay';
 import { ScenarioOverlay } from './components/ScenarioOverlay';
-import type { Template } from './templates';
+import { resolveTemplateForBusinessLine, type Template } from './templates';
 import { pageCategory } from '@mediakit/shared';
 
 /** 页面类型 → 侧栏图标映射（27 种，与模板 1:1）。 */
@@ -65,14 +65,18 @@ export function PageSidebar() {
     if (tpl.id === 'blank') {
       useEditorStore.getState().addPage();
     } else {
+      // 按当前项目业务线解析：存在同 pageType 的业务线变体则套变体（FT/SM/CX… 风格），否则回退通用。
+      // 页面名仍取通用模板的描述性名称（如「月报 · 达人合作详情」），仅组件布局/变体走业务线。
+      const bl = useEditorStore.getState().projectMeta?.businessLine;
+      const resolved = resolveTemplateForBusinessLine(tpl, bl);
       useEditorStore
         .getState()
         .addPageWithComponents(
           tpl.name,
-          tpl.components(),
+          resolved.components(),
           {
-            ...(tpl.pageTitleIndex != null ? { titleComponentIndex: tpl.pageTitleIndex } : {}),
-            ...(tpl.pageType ? { pageType: tpl.pageType } : {}),
+            ...(resolved.pageTitleIndex != null ? { titleComponentIndex: resolved.pageTitleIndex } : {}),
+            ...(resolved.pageType ? { pageType: resolved.pageType } : {}),
           },
         );
     }

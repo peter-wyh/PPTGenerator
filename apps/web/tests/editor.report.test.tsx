@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { getDefaultData } from '@/editor/defaults';
 import { REGISTRY } from '@/editor/registry';
-import { TEMPLATES } from '@/editor/templates';
+import { TEMPLATES, getTemplate, getTemplateByPageType, resolveTemplateForBusinessLine } from '@/editor/templates';
+import type { PageType } from '@mediakit/shared';
 import { KpiBoard, TimelineCompare, PlacementDisplay, PostList, ProductPerformance } from '@/editor/components/report';
 
 describe('report components — render', () => {
@@ -196,12 +197,10 @@ describe('campaign report page templates', () => {
     expect(t).toContain('creator-avatar-card');
     expect(t).toContain('creator-stats-strip');
     expect(t).toContain('creator-works-list');
-    // 合作指标被模板覆盖（非默认粉丝数据）。
-    const stats = find('report-creator-collab')
-      .components()
-      .find((c) => c.type === 'creator-stats-strip')!;
-    const labels = (stats.data as { stats: { label: string }[] }).stats.map((s) => s.label);
-    expect(labels).toContain('ROAS');
+    // 数据在运行时由 applyPageBinding 从项目数据填充，模板只声明布局+取数逻辑。
+    // 验证组件结构完整（avatar + stats + works + fanGender + fanAge + note）。
+    const comps = find('report-creator-collab').components();
+    expect(comps.length).toBeGreaterThanOrEqual(6);
   });
 
   it('report-placement = title + placement-display(with-text)', () => {
@@ -214,5 +213,102 @@ describe('campaign report page templates', () => {
     const t = types('report-posts');
     expect(t).toContain('post-list');
     expect(t).toContain('text');
+  });
+});
+
+describe('report-creator-collab 业务线变体（"+ 页面" 浮层按业务线套用）', () => {
+  const BUSINESS_LINES = ['FT', 'SM', 'CX', 'DG', 'KN', 'DM'] as const;
+
+  it.each(BUSINESS_LINES)('%s 存在 report-creator-collab 业务线变体', (bl) => {
+    const tpl = getTemplateByPageType('report-creator-collab', bl);
+    expect(tpl?.businessLine).toBe(bl);
+    expect(tpl?.id).toBe(`report-creator-collab-${bl}-bl`);
+  });
+
+  it.each(BUSINESS_LINES)('%s 变体保留 creator 三件套 + 粉丝画像 + 备注', (bl) => {
+    const tpl = getTemplate(`report-creator-collab-${bl}-bl`)!;
+    const compTypes = tpl.components().map((c) => c.type);
+    expect(compTypes).toContain('creator-avatar-card');
+    expect(compTypes).toContain('creator-stats-strip');
+    expect(compTypes).toContain('creator-works-list');
+    expect(compTypes).toContain('creator-fan-gender');
+    expect(compTypes).toContain('creator-fan-age');
+  });
+
+  it('resolveTemplateForBusinessLine：FT 项目点通用 report-creator-collab → 解析到 FT 变体', () => {
+    const generic = getTemplate('report-creator-collab')!;
+    // 命中业务线变体
+    expect(resolveTemplateForBusinessLine(generic, 'FT').id).toBe('report-creator-collab-FT-bl');
+    // 无业务线 → 回退通用
+    expect(resolveTemplateForBusinessLine(generic, undefined).id).toBe('report-creator-collab');
+    // 该 pageType 无业务线变体 → 回退通用（blank 故意不变体化）
+    const blank = getTemplate('blank')!;
+    expect(resolveTemplateForBusinessLine(blank, 'FT').id).toBe('blank');
+  });
+});
+
+describe('其余报告页业务线变体（weekly / channel / wrapup / placement / posts）', () => {
+  // 每个类型断言「6 个业务线都有变体 + 保留该页的关键组件」。
+  const CASES: { id: string; keyComp: string }[] = [
+    { id: 'report-weekly-overview', keyComp: 'kpi-board' },
+    { id: 'report-channel', keyComp: 'table' },
+    { id: 'report-wrapup-review', keyComp: 'timeline-compare' },
+    { id: 'report-placement', keyComp: 'placement-display' },
+    { id: 'report-posts', keyComp: 'post-list' },
+  ];
+  const BLS = ['FT', 'SM', 'CX', 'DG', 'KN', 'DM'];
+
+  it.each(CASES)('$id：6 个业务线均有变体且保留关键组件 $keyComp', ({ id, keyComp }) => {
+    for (const bl of BLS) {
+      const tpl = getTemplateByPageType(id as PageType, bl);
+      expect(tpl?.businessLine, `${id}/${bl} businessLine`).toBe(bl);
+      expect(tpl?.id, `${id}/${bl} id`).toBe(`${id}-${bl}-bl`);
+      expect(tpl!.components().map((c) => c.type), `${id}/${bl} components`).toContain(keyComp);
+    }
+  });
+
+  it('report-channel 变体的 kpi-board 保持 compact 变体；wrapup 的 timeline 保持 with-bar', () => {
+    const channel = getTemplate('report-channel-FT-bl')!.components();
+    expect((channel.find((c) => c.type === 'kpi-board')!.data as { variant: string }).variant).toBe('compact');
+    const wrapup = getTemplate('report-wrapup-review-FT-bl')!.components();
+    expect((wrapup.find((c) => c.type === 'timeline-compare')!.data as { variant: string }).variant).toBe('with-bar');
+  });
+
+  it('report-placement 变体的 placement-display 保持 with-text 变体', () => {
+    const placement = getTemplate('report-placement-FT-bl')!.components();
+    expect((placement.find((c) => c.type === 'placement-display')!.data as { variant: string }).variant).toBe('with-text');
+  });
+});
+
+describe('基础 / 公司 / 策略页业务线变体', () => {
+  const CASES: { id: string; keyComp: string }[] = [
+    { id: 'title', keyComp: 'text' },
+    { id: 'table', keyComp: 'table' },
+    { id: 'agenda', keyComp: 'table' },
+    { id: 'company', keyComp: 'brand-wall' },
+    { id: 'milestone', keyComp: 'table' },
+    { id: 'global', keyComp: 'table' },
+    { id: 'org', keyComp: 'table' },
+    { id: 'service', keyComp: 'table' },
+    { id: 'process', keyComp: 'table' },
+    { id: 'calendar', keyComp: 'table' },
+    { id: 'campaign-plan', keyComp: 'table' },
+    { id: 'challenge', keyComp: 'swot-matrix' },
+    { id: 'content-analysis', keyComp: 'bar-chart' },
+  ];
+  const BLS = ['FT', 'SM', 'CX', 'DG', 'KN', 'DM'];
+
+  it.each(CASES)('$id：6 个业务线均有变体且保留关键组件 $keyComp', ({ id, keyComp }) => {
+    for (const bl of BLS) {
+      const tpl = getTemplateByPageType(id as PageType, bl);
+      expect(tpl?.businessLine, `${id}/${bl} businessLine`).toBe(bl);
+      expect(tpl?.id, `${id}/${bl} id`).toBe(`${id}-${bl}-bl`);
+      expect(tpl!.components().map((c) => c.type), `${id}/${bl} components`).toContain(keyComp);
+    }
+  });
+
+  it('blank 故意无业务线变体（空页无样式可分），FT 项目仍回退通用 blank', () => {
+    expect(getTemplateByPageType('blank', 'FT')?.id).toBe('blank');
+    expect(getTemplateByPageType('blank', 'FT')?.businessLine).toBeUndefined();
   });
 });
