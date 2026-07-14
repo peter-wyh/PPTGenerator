@@ -97,6 +97,15 @@ export interface ProjectTheme {
     mode: 'ratio' | 'fixed';
     value: number;
   };
+  /**
+   * 标题样式：全局默认，「标题块」组件默认继承、可单组件覆盖。
+   * fontSize 为 px；variant/color 为新标题块的初始样式（不强制覆盖已存在组件）。
+   */
+  heading?: {
+    fontSize?: number;
+    variant?: import('./editor').TitleBlockStyle;
+    color?: string;
+  };
   /** 币种 + 数字格式（成对）。 */
   format?: {
     currencySymbol: string;
@@ -152,6 +161,8 @@ export interface ProjectMeta {
   /** 选中的上游 campaign id（campaign 类型场景）。 */
   campaignId?: string;
   campaignInfo?: CampaignInfo;
+  /** 样式类型：'ppt' = 多页 PPT 模式，'single' = 单页面模式。 */
+  styleType?: 'ppt' | 'single';
   /** 报告主题（品牌色等）。 */
   theme?: ProjectTheme;
   /** 报告全局数据上下文（Campaign + 达人），「数据配置」面板编辑，随项目保存。 */

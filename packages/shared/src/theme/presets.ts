@@ -3,6 +3,7 @@
  * 类型来自 ../types/theme。
  */
 import type { FontOption, ProjectTheme, StylePreset, ThemeFormat, ThemeShadow } from '../types/theme';
+import type { AudienceModuleKey } from '../types/editor';
 
 /** 预置字体清单。 */
 export const FONT_OPTIONS: FontOption[] = [
@@ -83,6 +84,8 @@ export const DEFAULT_CHART_CFG: NonNullable<ProjectTheme['chart']> = {
   barRadius: 4,
 };
 export const DEFAULT_SHADOW: ThemeShadow = 'soft';
+/** 标题默认字号(px);标题块缺省 fontSize 时跟随此值,并驱动其高度。 */
+export const DEFAULT_HEADING: NonNullable<ProjectTheme['heading']> = { fontSize: 32 };
 
 /** 默认主题：与原硬编码值对齐（ACCENT=#FF5C00, INK=#1A1A1A, Inter）。 */
 export const DEFAULT_THEME: ProjectTheme = {
@@ -110,6 +113,7 @@ export const DEFAULT_THEME: ProjectTheme = {
   },
   background: { type: 'none' },
   lineHeight: { ...DEFAULT_LINE_HEIGHT },
+  heading: { ...DEFAULT_HEADING },
   format: { ...DEFAULT_FORMAT },
   chart: { ...DEFAULT_CHART_CFG },
   shadow: DEFAULT_SHADOW,
@@ -289,4 +293,11 @@ export const CREATOR_METRIC_CATALOG: {
   { key: 'cpe', label: 'CPE', color: '#14B8A6', placeholder: '$3.2' },
   { key: 'completion', label: 'Completion Rate', color: '#F59E0B', placeholder: '42%' },
   { key: 'growth', label: 'Follower Growth', color: '#6366F1', placeholder: '+38K' },
+];
+
+/** 用户画像容器可选子模块目录（固定枚举，对应 ReportCreator.audience 字段）。 */
+export const AUDIENCE_MODULE_CATALOG: { key: AudienceModuleKey; label: string; color: string }[] = [
+  { key: 'gender', label: '性别占比', color: '#EC4899' },
+  { key: 'age', label: '年龄占比', color: '#3B82F6' },
+  { key: 'city', label: '城市排行', color: '#22C55E' },
 ];

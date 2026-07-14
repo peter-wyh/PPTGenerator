@@ -35,20 +35,92 @@ const SKIN_PRESET_OPTIONS: { value: SkinPreset; label: string }[] = [
   { value: 'elevated', label: '浮起' },
 ];
 
+/** 标题块样式选项（与 registry title-block variants 对齐）。 */
+const TITLE_STYLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'plain', label: '纯文字' },
+  { value: 'bar-left', label: '左色条' },
+  { value: 'underline', label: '下划线' },
+  { value: 'gradient', label: '渐变背景' },
+  { value: 'card', label: '卡片' },
+  { value: 'numbered', label: '序号' },
+  { value: 'highlight', label: '色块强调' },
+  { value: 'accent-tag', label: '色块标签' },
+  { value: 'accent-underline', label: '强调下划线' },
+  { value: 'block-underline', label: '色块下划线' },
+];
+
 const PRESET_PRIMARIES = [
   '#ff5c00', '#2563eb', '#16a34a', '#9333ea', '#e11d48', '#0891b2', '#ca8a04', '#0a0a0a',
 ];
 
+/** 把 ThemePatch 深合并到 draft（复刻 store.setTheme 的合并逻辑，仅本地操作不落 store）。 */
+function applyDraftPatch(prev: ProjectTheme, patch: ThemePatch): ProjectTheme {
+  return {
+    color: { ...prev.color, ...patch.color },
+    font: { ...prev.font, ...patch.font },
+    density: patch.density ?? prev.density,
+    radius: patch.radius ?? prev.radius,
+    layout: { ...(prev.layout ?? DEFAULT_THEME.layout), ...patch.layout } as NonNullable<
+      ProjectTheme['layout']
+    >,
+    lineHeight: {
+      ...(prev.lineHeight ?? DEFAULT_THEME.lineHeight),
+      ...patch.lineHeight,
+    } as NonNullable<ProjectTheme['lineHeight']>,
+    heading: {
+      ...(prev.heading ?? DEFAULT_THEME.heading),
+      ...patch.heading,
+    } as NonNullable<ProjectTheme['heading']>,
+    format: {
+      ...(prev.format ?? DEFAULT_THEME.format),
+      ...patch.format,
+    } as NonNullable<ProjectTheme['format']>,
+    chart: {
+      ...(prev.chart ?? DEFAULT_THEME.chart),
+      ...patch.chart,
+    } as NonNullable<ProjectTheme['chart']>,
+    shadow: patch.shadow ?? prev.shadow,
+    skinPreset: 'skinPreset' in patch ? patch.skinPreset : prev.skinPreset,
+    branding:
+      patch.branding || prev.branding
+        ? { ...(prev.branding ?? DEFAULT_THEME.branding), ...patch.branding }
+        : undefined,
+    background:
+      patch.background || prev.background
+        ? {
+            type: patch.background?.type ?? prev.background?.type ?? 'none',
+            ...(prev.background ?? {}),
+            ...patch.background,
+          }
+        : undefined,
+    preset: 'preset' in patch ? patch.preset : prev.preset,
+  };
+}
+
 /** 报告设置浮层：整体风格（预设 + 配色 + 字体 + 密度 + 圆角）+ 解析参考图占位。 */
 export function ReportSettingsOverlay({ onClose }: Props) {
-  const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
+  // 本地 draft 状态：挂载时从 store 拷贝当前主题，所有编辑写入 draft，仅在点「保存」时整体提交。
+  const commitTheme = useEditorStore((s) => s.setTheme);
+  const [draft, setDraft] = useState<ProjectTheme>(
+    () => useEditorStore.getState().projectMeta?.theme ?? DEFAULT_THEME,
+  );
+  // theme 作为 draft 的只读别名，保留以避免 JSX 中 ~40 处引用全部改名。
+  const theme = draft;
   const layout = theme.layout ?? DEFAULT_THEME.layout!;
   const lineHeight = theme.lineHeight ?? DEFAULT_THEME.lineHeight!;
   const format = theme.format ?? DEFAULT_THEME.format!;
   const chart = theme.chart ?? DEFAULT_THEME.chart!;
   const shadow = theme.shadow ?? DEFAULT_THEME.shadow!;
-  const setTheme = useEditorStore((s) => s.setTheme);
+  const heading = theme.heading ?? DEFAULT_THEME.heading!;
+  // 本地 draft 更新：复刻 store.setTheme 的深合并签名，但不落 store（仅改 draft）。
+  const setTheme = (patch: ThemePatch) => setDraft((prev) => applyDraftPatch(prev, patch));
   const [toast, setToast] = useState<string | null>(null);
+
+  /** 保存：把 draft 整体提交到 store（深合并等价整体替换），然后关闭浮层。 */
+  function handleSave() {
+    commitTheme(draft);
+    onClose();
+  }
 
   /** 应用预设：整套 ProjectTheme 填入。 */
   function applyPreset(presetKey: string) {
@@ -109,6 +181,14 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     value: NonNullable<ProjectTheme['lineHeight']>[K],
   ) {
     setTheme({ lineHeight: { [field]: value }, preset: undefined });
+  }
+
+  /** 手改标题样式字段：清空 preset 高亮。 */
+  function updateHeading<K extends keyof NonNullable<ProjectTheme['heading']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['heading']>[K],
+  ) {
+    setTheme({ heading: { [field]: value }, preset: undefined });
   }
 
   /** 手改数字/币种格式字段：清空 preset 高亮。 */
@@ -298,6 +378,51 @@ export function ReportSettingsOverlay({ onClose }: Props) {
               includeFollowText
               onChange={(v) => updateFont('heading', v || undefined)}
             />
+          </section>
+
+          {/* 标题样式：全局默认,标题块组件默认继承、可单组件覆盖。 */}
+          <section className="space-y-2">
+            <div className="text-xs font-semibold text-foreground-secondary">标题样式</div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 flex-none text-[11px] text-foreground-muted">字号</span>
+              <input
+                type="number"
+                min={8}
+                max={200}
+                step={1}
+                value={heading.fontSize ?? 32}
+                onChange={(e) => updateHeading('fontSize', Math.min(200, Math.max(8, Number(e.target.value) || 32)))}
+                className="w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+              />
+              <span className="text-[11px] text-foreground-muted">px</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 flex-none text-[11px] text-foreground-muted">默认样式</span>
+              <select
+                value={heading.variant ?? ''}
+                onChange={(e) =>
+                  updateHeading('variant', (e.target.value || undefined) as NonNullable<ProjectTheme['heading']>['variant'])
+                }
+                className="flex-1 rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+              >
+                <option value="">跟随组件</option>
+                {TITLE_STYLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 flex-none text-[11px] text-foreground-muted">主色</span>
+              <input
+                type="color"
+                value={heading.color ?? theme.color.primary}
+                onChange={(e) => updateHeading('color', e.target.value)}
+                className="h-7 w-10 flex-none rounded border border-border-default bg-surface-primary"
+              />
+              <span className="text-[11px] text-foreground-muted">新标题块初始主色</span>
+            </div>
           </section>
 
           {/* ④ 密度 */}
@@ -699,12 +824,18 @@ export function ReportSettingsOverlay({ onClose }: Props) {
         </div>
 
         {/* 底部操作栏 */}
-        <div className="flex justify-end border-t border-border-subtle px-6 py-3">
+        <div className="flex justify-end gap-2 border-t border-border-subtle px-6 py-3">
           <button
             onClick={onClose}
+            className="rounded-lg border border-border-default px-4 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSave}
             className="rounded-lg bg-accent-primary px-4 py-1.5 text-sm text-white hover:opacity-90"
           >
-            完成
+            保存
           </button>
         </div>
 

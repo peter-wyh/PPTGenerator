@@ -1,22 +1,38 @@
 import { z } from 'zod';
 
+/**
+ * 历史遗留：旧编辑器版本曾把页面「大类」（PageCategory）误当作 pageType 持久化。
+ * 当前枚举不含这些值，旧项目再次保存会被 Zod 拒绝（HTTP 400）。
+ * 这里把它们归一为 undefined（页面降为普通页，组件/标题不动）——惰性数据迁移，
+ * 既修复存量项目，又保留枚举对真正非法值的严格校验。
+ */
+const LEGACY_CATEGORY_AS_PAGE_TYPE = new Set([
+  'campaign-report',
+  'creator-case',
+  'media-report',
+  'creator-collab',
+]);
+
 /** 页面类型（27 种，与前端 PageType 对齐；与模板 1:1）。 */
-const pageTypeSchema = z
-  .enum([
-    // 基础
-    'blank', 'title', 'overview', 'table',
-    // 投放报告
-    'report-weekly-overview', 'report-monthly-overview', 'report-channel',
-    'report-product', 'report-creator-collab', 'report-placement',
-    'report-posts', 'report-wrapup-review', 'content-analysis', 'funnel',
-    // 公司 · 品牌
-    'cover', 'agenda', 'company', 'package', 'milestone', 'global', 'org', 'service',
-    // 达人 · 案例
-    'creator', 'case',
-    // 策略 · 内容
-    'challenge', 'process', 'calendar', 'campaign-plan',
-  ])
-  .optional();
+const pageTypeSchema = z.preprocess(
+  (v) => (typeof v === 'string' && LEGACY_CATEGORY_AS_PAGE_TYPE.has(v) ? undefined : v),
+  z
+    .enum([
+      // 基础
+      'blank', 'title', 'overview', 'table',
+      // 投放报告
+      'report-weekly-overview', 'report-monthly-overview', 'report-channel',
+      'report-product', 'report-creator-collab', 'report-placement',
+      'report-posts', 'report-wrapup-review', 'content-analysis', 'funnel',
+      // 公司 · 品牌
+      'cover', 'agenda', 'company', 'package', 'milestone', 'global', 'org', 'service',
+      // 达人 · 案例
+      'creator', 'case',
+      // 策略 · 内容
+      'challenge', 'process', 'calendar', 'campaign-plan',
+    ])
+    .optional(),
+);
 
 /** 页面 schema：Template 与 Project 共用同一 Page 结构。 */
 export const pageSchema = z.object({
@@ -89,6 +105,15 @@ const projectThemeSchema = z
       .optional(),
     lineHeight: z
       .object({ mode: z.enum(['ratio', 'fixed']), value: z.number().min(0).max(100) })
+      .optional(),
+    heading: z
+      .object({
+        fontSize: z.number().min(8).max(200).optional(),
+        variant: z
+          .enum(['plain', 'bar-left', 'underline', 'gradient', 'card', 'numbered', 'highlight', 'accent-tag', 'accent-underline', 'block-underline'])
+          .optional(),
+        color: z.string().max(20).optional(),
+      })
       .optional(),
     format: z
       .object({
@@ -221,7 +246,7 @@ const reportDataContextSchema = z
   })
   .optional();
 
-/** 项目/模板共用的 meta 字段集合（templateType 为本期新增）。 */
+/** 项目/模板共用的 meta 字段集合（templateType / styleType 为新增）。 */
 const projectMetaFields = {
   businessLine: z.string().max(40).optional(),
   creator: z.string().max(80).optional(),

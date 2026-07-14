@@ -166,6 +166,20 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
       ? (skinPresetRaw as 'default' | 'flat' | 'elevated')
       : (d.skinPreset ?? 'default');
 
+  // ---- 标题样式：缺对象补默认；非法字段回退 ----
+  const hRaw = obj.heading as Record<string, unknown> | undefined;
+  const heading = {
+    fontSize:
+      typeof hRaw?.fontSize === 'number' && Number.isFinite(hRaw.fontSize) && hRaw.fontSize >= 8 && hRaw.fontSize <= 200
+        ? hRaw.fontSize
+        : d.heading!.fontSize,
+    variant:
+      typeof hRaw?.variant === 'string'
+        ? (hRaw.variant as NonNullable<ProjectTheme['heading']>['variant'])
+        : d.heading!.variant,
+    color: typeof hRaw?.color === 'string' ? hRaw.color : d.heading!.color,
+  };
+
   return {
     color: {
       primary: (colorRaw?.primary as string) || legacyPrimary || d.color.primary,
@@ -187,6 +201,7 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     branding,
     background,
     lineHeight,
+    heading,
     format,
     chart,
     shadow,
