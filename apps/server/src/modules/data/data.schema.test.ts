@@ -84,3 +84,17 @@ describe('data.schema · 端点入参 schema', () => {
     expect(updateDataSchema.parse({ data: validCampaign })).toEqual({ data: validCampaign });
   });
 });
+
+describe('data.schema · campaignRecordDataSchema · creatorIds', () => {
+  it('接受 creatorIds: string[]', () => {
+    const c = { ...validCampaign, creatorIds: ['cre-mia', 'cre-sofia'] };
+    expect(campaignRecordDataSchema.parse(c)).toEqual(c);
+  });
+  it('creatorIds 非数组(字符串)→ 报错', () => {
+    const c = { ...validCampaign, creatorIds: 'cre-mia' };
+    expect(() => campaignRecordDataSchema.parse(c)).toThrow();
+  });
+  it('无 creatorIds 仍通过(可选)', () => {
+    expect(campaignRecordDataSchema.parse(validCampaign)).toEqual(validCampaign);
+  });
+});

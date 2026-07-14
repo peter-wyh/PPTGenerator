@@ -31,6 +31,7 @@ export const campaignRecordDataSchema = z.object({
   status: z.string().optional(),
   owner: z.string().optional(),
   metrics: z.array(campaignMetricSchema).optional(),
+  creatorIds: z.array(z.string()).optional(),
 });
 
 /** Creator 记录数据(镜像 web Creator;metrics 必填)。 */
