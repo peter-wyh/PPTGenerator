@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { templatesApi } from '@/api/templates';
 import { Button } from './Button';
 import { Input } from './Input';
-import { SCENARIO_LABELS } from '@/projectsMeta';
+import { BUSINESS_LINES, SCENARIOS, TEMPLATE_TYPES, SCENARIO_LABELS } from '@/projectsMeta';
+import type { Scenario } from '@mediakit/shared';
 import type { TemplateSummary } from '@mediakit/shared';
 
 interface Props {
@@ -22,21 +23,39 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
   const [fetching, setFetching] = useState(false);
   const [selectedId, setSelectedId] = useState<string>('');
   const [name, setName] = useState('');
+  const [filterBL, setFilterBL] = useState<string>('');
+  const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
+  const [filterTemplateType, setFilterTemplateType] = useState<string>('');
 
-  // 打开时拉取已发布模板（USER/ADMIN 均只取 PUBLISHED：草稿无法建项目）。
+  // 打开或筛选条件变化时拉取已发布模板（USER/ADMIN 均只取 PUBLISHED：草稿无法建项目）。
+  // cancelled 标志：deps 变化或对话框关闭/卸载时置 true，丢弃被取代的过期响应，避免竞态覆盖。
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setFetching(true);
     templatesApi
-      .list({ status: 'PUBLISHED' })
+      .list({
+        status: 'PUBLISHED',
+        ...(filterBL ? { businessLine: filterBL } : {}),
+        ...(filterScenario ? { scenario: filterScenario } : {}),
+        ...(filterTemplateType ? { templateType: filterTemplateType } : {}),
+      })
       .then((list) => {
+        if (cancelled) return;
         setTemplates(list);
         setSelectedId(list[0]?.id ?? '');
         setName('');
       })
-      .catch(() => setTemplates([]))
-      .finally(() => setFetching(false));
-  }, [open]);
+      .catch(() => {
+        if (!cancelled) setTemplates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setFetching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, filterBL, filterScenario, filterTemplateType]);
 
   if (!open) return null;
 
@@ -63,6 +82,53 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
         <h3 className="font-headings text-base font-semibold text-foreground-primary">从模板新建项目</h3>
         <p className="mt-0.5 text-xs text-foreground-muted">选择一个已发布模板，深拷贝其页面/尺寸作为新项目起点。</p>
 
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1 text-xs text-foreground-secondary">
+            <span>业务线</span>
+            <select
+              value={filterBL}
+              onChange={(e) => setFilterBL(e.target.value)}
+              className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-secondary"
+            >
+              <option value="">全部</option>
+              {BUSINESS_LINES.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1 text-xs text-foreground-secondary">
+            <span>场景</span>
+            <select
+              value={filterScenario}
+              onChange={(e) => {
+                setFilterScenario(e.target.value as Scenario | '');
+                setFilterTemplateType('');
+              }}
+              className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-secondary"
+            >
+              <option value="">全部</option>
+              {SCENARIOS.map((s) => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </select>
+          </label>
+          {filterScenario && (
+            <label className="flex items-center gap-1 text-xs text-foreground-secondary">
+              <span>模版类型</span>
+              <select
+                value={filterTemplateType}
+                onChange={(e) => setFilterTemplateType(e.target.value)}
+                className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-secondary"
+              >
+                <option value="">全部</option>
+                {TEMPLATE_TYPES[filterScenario].map(([id, label]) => (
+                  <option key={id} value={id}>{label}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+
         <div className="mt-4 min-h-[160px] flex-1 overflow-auto rounded-lg border border-border-default">
           {fetching ? (
             <p className="p-4 text-sm text-foreground-muted">加载模板…</p>
@@ -86,6 +152,11 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
                           {t.meta?.businessLine ? `${t.meta.businessLine} · ` : ''}
                           {t.meta?.scenario ? SCENARIO_LABELS[t.meta.scenario] : ''}
                           {t.meta?.businessLine || t.meta?.scenario ? ' · ' : ''}
+                          {t.meta?.isDefault && (
+                            <span className="ml-1 inline-block rounded-full bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
+                              默认
+                            </span>
+                          )}
                           {t.width}×{t.height} · {t.pageCount} 页
                         </span>
                       </span>

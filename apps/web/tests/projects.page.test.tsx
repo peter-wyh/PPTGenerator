@@ -30,7 +30,7 @@ vi.mock('@/api/campaigns', () => ({
   getCampaign: vi.fn(),
 }));
 
-const summary = (id: string, name: string, pageCount = 1) => ({
+const summary = (id: string, name: string, pageCount = 1, meta?: Record<string, unknown>) => ({
   id,
   name,
   width: 1280,
@@ -38,6 +38,7 @@ const summary = (id: string, name: string, pageCount = 1) => ({
   pageCount,
   createdAt: '',
   updatedAt: '',
+  ...(meta ? { meta } : {}),
 });
 
 function renderPage() {
@@ -113,6 +114,8 @@ describe('Projects page', () => {
     await user.click(screen.getByRole('button', { name: /新建项目/ }));
     // 填名称
     await user.type(screen.getByPlaceholderText(/例如/), 'My Report');
+    // 选业务线(顶层必填)
+    await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
     // 选 1920×1080 预设并提交
     await user.click(screen.getByText('1920 × 1080'));
     await user.click(screen.getByRole('button', { name: '创建' }));
@@ -164,7 +167,7 @@ describe('Projects page', () => {
 
   it('edits a project via the edit dialog', async () => {
     const user = userEvent.setup();
-    listMock.mockResolvedValue([summary('p1', '报告 A')]);
+    listMock.mockResolvedValue([summary('p1', '报告 A', 1, { businessLine: 'FT' })]);
     updateMock.mockResolvedValue({
       id: 'p1',
       name: '改名后',

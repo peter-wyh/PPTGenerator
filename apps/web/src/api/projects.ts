@@ -6,8 +6,8 @@ export const projectsApi = {
   list: () => api.get<{ projects: ProjectSummary[] }>('/projects').then((r) => r.data.projects),
   create: (name: string, width?: number, height?: number, meta?: ProjectMeta) =>
     api
-      .post<{ project: ProjectDetail }>('/projects', { name, width, height, meta })
-      .then((r) => r.data.project),
+      .post<{ project: ProjectDetail; seeded: boolean }>('/projects', { name, width, height, meta })
+      .then((r) => ({ project: r.data.project, seeded: r.data.seeded ?? false })),
   get: (id: string) =>
     api.get<{ project: ProjectDetail }>(`/projects/${id}`).then((r) => r.data.project),
   rename: (id: string, name: string) =>

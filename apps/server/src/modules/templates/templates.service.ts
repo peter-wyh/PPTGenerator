@@ -6,6 +6,7 @@ import type {
   Page,
   ProjectMeta,
   TemplateDetail,
+  TemplateMeta,
   TemplateSummary,
 } from '@mediakit/shared';
 
@@ -20,6 +21,20 @@ function pageCount(pages: unknown): number {
 
 function metaOf(t: Template): ProjectMeta | undefined {
   return (t.meta as unknown as ProjectMeta | null) ?? undefined;
+}
+
+/** (businessLine×scenario×templateType) 格的默认模板匹配谓词(4 个 JSON equals 子句)。 */
+function cellWhereAnd(cell: {
+  businessLine: string;
+  scenario: string;
+  templateType: string;
+}): Prisma.TemplateWhereInput[] {
+  return [
+    { meta: { path: '$.businessLine', equals: cell.businessLine } },
+    { meta: { path: '$.scenario', equals: cell.scenario } },
+    { meta: { path: '$.templateType', equals: cell.templateType } },
+    { meta: { path: '$.isDefault', equals: true } },
+  ];
 }
 
 /** 列表摘要（不带 pages，节省带宽）。 */
@@ -58,28 +73,37 @@ export function toDetail(t: Template): TemplateDetail {
 
 export const templatesService = {
   /**
-   * 列表：ADMIN 看全部（含草稿），普通用户只看已发布。
-   * 支持按 status / businessLine / scenario 过滤。
+   * 列表:ADMIN 看全部(含草稿),普通用户只看已发布。
+   * 支持按 status / businessLine / scenario / templateType / isDefault 过滤。
    */
   async list(
     requesterRole: 'ADMIN' | 'USER',
-    filters?: { status?: TemplateStatus; businessLine?: string; scenario?: string },
+    filters?: {
+      status?: TemplateStatus;
+      businessLine?: string;
+      scenario?: string;
+      templateType?: string;
+      isDefault?: boolean;
+    },
   ) {
     const where: Prisma.TemplateWhereInput = {};
-    // 非 ADMIN 只能看已发布。
     if (requesterRole !== 'ADMIN') {
       where.status = 'PUBLISHED';
     } else if (filters?.status) {
       where.status = filters.status;
     }
+    const metaAnd: Prisma.TemplateWhereInput[] = [];
     if (filters?.businessLine)
-      where.meta = { path: '$.businessLine', string_contains: filters.businessLine };
-    if (filters?.scenario) where.meta = { path: '$.scenario', string_contains: filters.scenario };
+      metaAnd.push({ meta: { path: '$.businessLine', equals: filters.businessLine } });
+    if (filters?.scenario)
+      metaAnd.push({ meta: { path: '$.scenario', equals: filters.scenario } });
+    if (filters?.templateType)
+      metaAnd.push({ meta: { path: '$.templateType', equals: filters.templateType } });
+    if (filters?.isDefault !== undefined)
+      metaAnd.push({ meta: { path: '$.isDefault', equals: filters.isDefault } });
+    if (metaAnd.length) where.AND = metaAnd;
 
-    const templates = await prisma.template.findMany({
-      where,
-      orderBy: { updatedAt: 'desc' },
-    });
+    const templates = await prisma.template.findMany({ where, orderBy: { updatedAt: 'desc' } });
     return templates.map(toSummary);
   },
 
@@ -170,6 +194,55 @@ export const templatesService = {
     return toDetail(template);
   },
 
+  /**
+   * 设/取消某模板为 (businessLine×scenario×templateType) 格的默认模板。
+   * 设默认(value=true):要求 PUBLISHED + 三字段齐全;事务内先清同格其它默认,再置本模板。
+   * 取消默认(value=false):仅置本模板 isDefault=false。
+   *
+   * 并发注意:无 DB 级 cell 唯一约束,两个并发 setDefault(true) 同格可能短暂并存两个默认。
+   * Phase 1 接受该风险(仅 ADMIN、低写并发);如需强一致可后续加 SELECT...FOR UPDATE 或 cell 唯一索引。
+   */
+  async setDefault(ownerId: string, id: string, value: boolean): Promise<TemplateDetail> {
+    const tpl = await this.getOwnedOrThrow(ownerId, id);
+    const m = (tpl.meta as unknown as TemplateMeta | null) ?? {};
+    if (value) {
+      if (tpl.status !== 'PUBLISHED') {
+        throw ApiError.badRequest('发布后才能设为默认模板');
+      }
+      const { businessLine, scenario, templateType } = m;
+      if (!businessLine || !scenario || !templateType) {
+        throw ApiError.badRequest('请先选择业务线 / 场景 / 模版类型');
+      }
+      await prisma.$transaction(async (tx) => {
+        const others = await tx.template.findMany({
+          where: {
+            id: { not: id },
+            status: 'PUBLISHED',
+            AND: cellWhereAnd({ businessLine, scenario, templateType }),
+          },
+          select: { id: true, meta: true },
+        });
+        for (const o of others) {
+          const om = (o.meta as Record<string, unknown> | null) ?? {};
+          await tx.template.update({
+            where: { id: o.id },
+            data: { meta: { ...om, isDefault: false } as unknown as Prisma.InputJsonValue },
+          });
+        }
+        await tx.template.update({
+          where: { id },
+          data: { meta: { ...m, isDefault: true } as unknown as Prisma.InputJsonValue },
+        });
+      });
+    } else {
+      await prisma.template.update({
+        where: { id },
+        data: { meta: { ...m, isDefault: false } as unknown as Prisma.InputJsonValue },
+      });
+    }
+    return toDetail(await this.getOwnedOrThrow(ownerId, id));
+  },
+
   /** 已发布模版：任意已登录用户可读（用于"从模版创建项目"）。 */
   async getPublishedOrThrow(id: string): Promise<TemplateDetail> {
     const template = await prisma.template.findUnique({ where: { id } });
@@ -177,5 +250,19 @@ export const templatesService = {
       throw ApiError.notFound('Template not found or not published');
     }
     return toDetail(template);
+  },
+
+  /**
+   * 套骨架用:按 (businessLine×scenario×templateType) 格查唯一默认已发布模板。
+   * 并发下同格可能短暂存在多个默认(setDefault 的已知限制),findFirst 取其一即可。
+   */
+  async findDefaultForCell(
+    businessLine: string,
+    scenario: string,
+    templateType: string,
+  ): Promise<Template | null> {
+    return prisma.template.findFirst({
+      where: { status: 'PUBLISHED', AND: cellWhereAnd({ businessLine, scenario, templateType }) },
+    });
   },
 };

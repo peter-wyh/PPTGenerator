@@ -145,6 +145,8 @@ export interface ProjectMeta {
   scenario?: Scenario;
   /** Campaign 报告子类（仅 scenario=campaign-report）。 */
   scenarioSub?: ScenarioSub;
+  /** 模版类型：场景下的细分（周报/月报/总结 等），与模板对应。campaign-report 时与 scenarioSub 同值。 */
+  templateType?: string;
   /** 广告主。 */
   advertiser?: string;
   /** 选中的上游 campaign id（campaign 类型场景）。 */

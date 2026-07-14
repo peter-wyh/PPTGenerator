@@ -9,7 +9,7 @@ import {
   type TemplateFormInitial,
   type TemplateFormValues,
 } from '@/components/TemplateFormDialog';
-import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
+import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS, TEMPLATE_TYPES, TEMPLATE_TYPE_LABELS } from '@/projectsMeta';
 import type { ProjectMeta, Scenario, TemplateStatus, TemplateSummary } from '@mediakit/shared';
 
 /** 模板管理（管理后台）：仅 ADMIN 可见。列表 / 筛选 / 新建 / 编辑 / 发布·取消 / 复制 / 删除。 */
@@ -41,6 +41,7 @@ export function Templates() {
   const [filterStatus, setFilterStatus] = useState<TemplateStatus | ''>('');
   const [filterBL, setFilterBL] = useState<string>('');
   const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
+  const [filterTemplateType, setFilterTemplateType] = useState<string>('');
 
   // 非 ADMIN 重定向回项目列表。
   if (user && user.role !== 'ADMIN') {
@@ -51,7 +52,8 @@ export function Templates() {
     (t) =>
       (!filterStatus || t.status === filterStatus) &&
       (!filterBL || t.meta?.businessLine === filterBL) &&
-      (!filterScenario || t.meta?.scenario === filterScenario),
+      (!filterScenario || t.meta?.scenario === filterScenario) &&
+      (!filterTemplateType || t.meta?.templateType === filterTemplateType),
   );
 
   async function refresh() {
@@ -136,6 +138,32 @@ export function Templates() {
     }
   }
 
+  async function handleSetDefault(t: TemplateSummary, value: boolean) {
+    setTogglingId(t.id);
+    try {
+      const updated = await templatesApi.setDefault(t.id, value);
+      setTemplates((prev) =>
+        prev.map((x) => {
+          if (x.id === t.id) return { ...x, meta: updated.meta };
+          // 设为默认时,服务端已清同格其它默认;本地同步清掉它们的徽标,避免重影。
+          if (
+            value &&
+            x.meta?.businessLine === t.meta?.businessLine &&
+            x.meta?.scenario === t.meta?.scenario &&
+            x.meta?.templateType === t.meta?.templateType
+          ) {
+            return { ...x, meta: { ...x.meta, isDefault: false } };
+          }
+          return x;
+        }),
+      );
+    } catch {
+      /* 失败静默 */
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
   async function handleDuplicate(t: TemplateSummary) {
     try {
       await templatesApi.duplicate(t.id);
@@ -194,7 +222,11 @@ export function Templates() {
           </select>
           <select
             value={filterScenario}
-            onChange={(e) => setFilterScenario(e.target.value as Scenario | '')}
+            onChange={(e) => {
+              const v = e.target.value as Scenario | '';
+              setFilterScenario(v);
+              if (!v) setFilterTemplateType('');
+            }}
             className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-secondary"
           >
             <option value="">全部场景</option>
@@ -204,12 +236,27 @@ export function Templates() {
               </option>
             ))}
           </select>
-          {(filterStatus || filterBL || filterScenario) && (
+          {filterScenario && (
+            <select
+              value={filterTemplateType}
+              onChange={(e) => setFilterTemplateType(e.target.value)}
+              className="rounded-lg border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-secondary"
+            >
+              <option value="">全部模版类型</option>
+              {TEMPLATE_TYPES[filterScenario].map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
+          {(filterStatus || filterBL || filterScenario || filterTemplateType) && (
             <button
               onClick={() => {
                 setFilterStatus('');
                 setFilterBL('');
                 setFilterScenario('');
+                setFilterTemplateType('');
               }}
               className="text-xs text-foreground-muted hover:text-foreground-primary"
             >
@@ -236,6 +283,7 @@ export function Templates() {
                 <th className="px-3 py-2 font-medium">模板名称</th>
                 <th className="px-3 py-2 font-medium">业务线</th>
                 <th className="px-3 py-2 font-medium">场景</th>
+                <th className="px-3 py-2 font-medium">模版类型</th>
                 <th className="px-3 py-2 font-medium">状态</th>
                 <th className="px-3 py-2 font-medium">尺寸</th>
                 <th className="px-3 py-2 font-medium">页数</th>
@@ -257,6 +305,14 @@ export function Templates() {
                   </td>
                   <td className="px-3 py-2 text-foreground-secondary">{t.meta?.businessLine ?? '—'}</td>
                   <td className="px-3 py-2 text-foreground-secondary">{scenarioText(t.meta)}</td>
+                  <td className="px-3 py-2 text-foreground-secondary">
+                    {t.meta?.templateType ? (TEMPLATE_TYPE_LABELS[t.meta.templateType] ?? t.meta.templateType) : '—'}
+                    {t.meta?.isDefault && (
+                      <span className="ml-1 inline-block rounded-full bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
+                        默认
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     <StatusBadge status={t.status} />
                   </td>
@@ -295,6 +351,16 @@ export function Templates() {
                     >
                       {t.status === 'DRAFT' ? '发布' : '取消发布'}
                     </button>
+                    {t.status === 'PUBLISHED' && t.meta?.businessLine && t.meta?.scenario && t.meta?.templateType && (
+                      <button
+                        onClick={() => void handleSetDefault(t, !t.meta?.isDefault)}
+                        disabled={togglingId === t.id}
+                        className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary disabled:opacity-50"
+                        title={t.meta?.isDefault ? '取消默认模板' : '设为该业务线×场景×模版类型的默认模板'}
+                      >
+                        {t.meta?.isDefault ? '取消默认' : '设为默认'}
+                      </button>
+                    )}
                     <button
                       onClick={() => void handleDuplicate(t)}
                       className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -370,6 +436,7 @@ function toInitial(t: TemplateSummary): TemplateFormInitial {
     height: t.height,
     businessLine: t.meta?.businessLine,
     scenario: t.meta?.scenario,
+    templateType: t.meta?.templateType,
     note: t.note,
     status: t.status,
   };

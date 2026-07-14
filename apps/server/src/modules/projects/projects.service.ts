@@ -3,6 +3,7 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { Project, Prisma } from '@prisma/client';
 import type { Page, ProjectDetail, ProjectMeta, ProjectSummary } from '@mediakit/shared';
+import { templatesService } from '../templates/templates.service';
 
 /** 新建项目的默认 pages：单个空白页。 */
 export function defaultPages(): Page[] {
@@ -61,17 +62,54 @@ export const projectsService = {
       pages?: Page[];
       meta?: ProjectMeta;
     },
-  ): Promise<ProjectDetail> {
+  ): Promise<{ detail: ProjectDetail; seeded: boolean }> {
+    const meta = input.meta;
+    const seedKey =
+      meta && meta.businessLine && meta.scenario && meta.templateType
+        ? {
+            businessLine: meta.businessLine,
+            scenario: meta.scenario,
+            templateType: meta.templateType,
+          }
+        : null;
+
+    let pages = input.pages;
+    let width = input.width;
+    let height = input.height;
+    let theme = meta?.theme;
+    let seeded = false;
+
+    // 仅当调用方未自带 pages 且三字段齐全时,尝试套用默认模板骨架。
+    if (seedKey && !input.pages) {
+      const tpl = await templatesService.findDefaultForCell(
+        seedKey.businessLine,
+        seedKey.scenario,
+        seedKey.templateType,
+      );
+      if (tpl) {
+        pages = JSON.parse(JSON.stringify(tpl.pages)) as Page[];
+        width = tpl.width;
+        height = tpl.height;
+        const tplMeta = (tpl.meta as unknown as ProjectMeta | null) ?? {};
+        theme = tplMeta.theme ?? theme;
+        seeded = true;
+      }
+    }
+
+    const finalMeta: ProjectMeta | undefined = meta
+      ? { ...meta, ...(theme !== undefined ? { theme } : {}) }
+      : undefined;
+
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
       name: input.name,
-      width: input.width ?? 1280,
-      height: input.height ?? 720,
-      pages: (input.pages ?? defaultPages()) as unknown as Prisma.InputJsonValue,
-      ...(input.meta ? { meta: input.meta as unknown as Prisma.InputJsonValue } : {}),
+      width: width ?? 1280,
+      height: height ?? 720,
+      pages: (pages ?? defaultPages()) as unknown as Prisma.InputJsonValue,
+      ...(finalMeta ? { meta: finalMeta as unknown as Prisma.InputJsonValue } : {}),
     };
     const project = await prisma.project.create({ data });
-    return toDetail(project);
+    return { detail: toDetail(project), seeded };
   },
 
   /** 取得 owner 自己的项目，否则 404（不泄露存在性）。 */
@@ -126,7 +164,13 @@ export const projectsService = {
       width: tpl.width,
       height: tpl.height,
       pages: JSON.parse(JSON.stringify(tpl.pages)) as unknown as Prisma.InputJsonValue,
-      ...(tpl.meta ? { meta: tpl.meta as unknown as Prisma.InputJsonValue } : {}),
+      ...(tpl.meta
+        ? {
+            meta: (({ isDefault: _omit, ...rest }) => rest)(
+              tpl.meta as Record<string, unknown>,
+            ) as unknown as Prisma.InputJsonValue,
+          }
+        : {}),
     };
     const project = await prisma.project.create({ data });
     return toDetail(project);

@@ -60,9 +60,9 @@ export function Projects() {
     setCreating(true);
     setCreateError(null);
     try {
-      const p = await projectsApi.create(values.name, values.width, values.height, values.meta);
+      const { project: p, seeded } = await projectsApi.create(values.name, values.width, values.height, values.meta);
       setShowCreate(false);
-      navigate(`/projects/${p.id}`);
+      navigate(`/projects/${p.id}`, { state: { seeded } });
     } catch {
       setCreateError('创建失败，请重试');
     } finally {

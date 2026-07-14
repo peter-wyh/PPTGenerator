@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ProjectMeta, Scenario, TemplateStatus } from '@mediakit/shared';
 import { Button } from './Button';
 import { Input } from './Input';
-import { BUSINESS_LINES, SCENARIOS } from '@/projectsMeta';
+import { BUSINESS_LINES, SCENARIOS, TEMPLATE_TYPES } from '@/projectsMeta';
 
 interface SizePreset {
   id: string;
@@ -28,6 +28,7 @@ export interface TemplateFormInitial {
   height: number;
   businessLine?: string;
   scenario?: Scenario;
+  templateType?: string;
   note?: string | null;
   status?: TemplateStatus;
 }
@@ -69,6 +70,7 @@ export function TemplateFormDialog({
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [businessLine, setBusinessLine] = useState('');
   const [scenario, setScenario] = useState<Scenario | ''>('');
+  const [templateType, setTemplateType] = useState('');
   const [note, setNote] = useState('');
   const [status, setStatus] = useState<TemplateStatus>('DRAFT');
 
@@ -81,6 +83,7 @@ export function TemplateFormDialog({
       setPresetId(matched?.id ?? 'custom');
       setBusinessLine(initial.businessLine ?? '');
       setScenario(initial.scenario ?? '');
+      setTemplateType(initial.templateType ?? '');
       setNote(initial.note ?? '');
       setStatus(initial.status ?? 'DRAFT');
     } else {
@@ -88,6 +91,7 @@ export function TemplateFormDialog({
       setPresetId(PRESETS[0].id);
       setBusinessLine('');
       setScenario('');
+      setTemplateType('');
       setNote('');
       setStatus('DRAFT');
     }
@@ -100,6 +104,7 @@ export function TemplateFormDialog({
     const meta: ProjectMeta = {};
     if (businessLine) meta.businessLine = businessLine;
     if (scenario) meta.scenario = scenario as Scenario;
+    if (templateType) meta.templateType = templateType;
     onSubmit({
       name: name.trim(),
       width: preset.w,
@@ -163,7 +168,10 @@ export function TemplateFormDialog({
               <span className="mb-1 block text-sm font-medium text-foreground-secondary">场景</span>
               <select
                 value={scenario}
-                onChange={(e) => setScenario(e.target.value as Scenario | '')}
+                onChange={(e) => {
+                  setScenario(e.target.value as Scenario | '');
+                  setTemplateType('');
+                }}
                 className={selectCls}
               >
                 <option value="">不指定</option>
@@ -175,6 +183,24 @@ export function TemplateFormDialog({
               </select>
             </label>
           </div>
+
+          {scenario && (
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-foreground-secondary">模版类型</span>
+              <select
+                value={templateType}
+                onChange={(e) => setTemplateType(e.target.value)}
+                className={selectCls}
+              >
+                <option value="">不指定</option>
+                {TEMPLATE_TYPES[scenario].map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-foreground-secondary">
