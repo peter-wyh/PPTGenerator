@@ -91,17 +91,6 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     '--shadow-color': 'rgba(0,0,0,.08)',
   };
 
-  // v3：skinPreset → 独立的圆角/阴影修饰层（不覆盖主题级 --radius-card/--shadow-card）。
-  // skinPreset 与 t.radius/t.shadow 正交：主题控制基础档位，skinPreset 做微调覆盖。
-  const skin = t.skinPreset ?? 'default';
-  if (skin === 'flat') {
-    vars['--skin-radius-card'] = '4px';
-    vars['--skin-shadow-card'] = 'none';
-  } else if (skin === 'elevated') {
-    vars['--skin-radius-card'] = '20px';
-    vars['--skin-shadow-card'] = SHADOW_MAP.strong;
-  }
-
   // 图表配色：--chart-1 … --chart-6
   for (let i = 0; i < 6; i++) {
     vars[`--chart-${i + 1}`] = palette[i % palette.length];
