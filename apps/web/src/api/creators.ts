@@ -4,8 +4,9 @@
  * metrics 为达人自身频道 KPI（Avg Reach/Impressions/Follower Growth/CPM）。
  */
 import type { Creator } from '@mediakit/shared';
-import { dataApi } from './dataLibrary';
+import { dataApi, type DataRecordDTO } from './dataLibrary';
 import { listCreatorPerformance } from './creatorPerformance';
+import { getCampaign } from './campaigns';
 
 export type { Creator };
 
@@ -34,4 +35,19 @@ export async function listCampaignCreators(campaignId: string): Promise<Creator[
     region: '',
     metrics: [],
   }));
+}
+
+/**
+ * 取某 campaign 的合作达人列表（按 campaign.creatorIds 从达人库解析）。
+ * 孤儿 id（达人已删 / 404）静默跳过。导入 campaign 无 creatorIds → 返回空。
+ * 与 listCampaignCreators（creatorPerformance mock 派生，服务 demo 效果展开）解耦。
+ */
+export async function listCampaignCollaborators(campaignId: string): Promise<Creator[]> {
+  const campaign = await getCampaign(campaignId);
+  const ids = campaign?.creatorIds ?? [];
+  if (ids.length === 0) return [];
+  const settled = await Promise.allSettled(ids.map((id) => dataApi.get<Creator>(id)));
+  return settled
+    .filter((r): r is PromiseFulfilledResult<DataRecordDTO<Creator>> => r.status === 'fulfilled')
+    .map((r) => r.value.data);
 }

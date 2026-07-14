@@ -49,6 +49,8 @@ export interface Campaign {
   owner?: string;
   /** 投放表现指标（供业绩看板「从 Campaign 导入」）。 */
   metrics?: CampaignMetric[];
+  /** 参与 campaign 合作的达人 id 列表（数据管理库 Creator 记录 id;下钻解析用）。 */
+  creatorIds?: string[];
 }
 
 /** 上游达人（Creator / Influencer）实体（demo 中 mock；数据管理库管理）。 */
