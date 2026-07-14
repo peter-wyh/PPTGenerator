@@ -60,6 +60,70 @@ describe('WorkScreenshot', () => {
     render(<WorkScreenshot data={{ variant: 'auto', images: [] }} />);
     expect(screen.getByText('暂无作品截图')).toBeInTheDocument();
   });
+
+  it('mosaicLayout hero-4 (1大3小): 4 imgs → 2 cols × 3 rows, big cell spans 3 rows', () => {
+    const { container } = render(
+      <WorkScreenshot
+        data={{
+          style: 'mosaic',
+          mosaicLayout: 'hero-4',
+          images: Array.from({ length: 4 }, (_, i) => ({ src: `${i}.jpg` })),
+        }}
+      />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(grid?.style.gridTemplateColumns).toBe('repeat(2, 1fr)');
+    expect(grid?.style.gridTemplateRows).toBe('repeat(3, 1fr)');
+    expect(screen.getAllByRole('img').length).toBe(4);
+    // 大格 gridRow 跨 3 行
+    expect(container.querySelector('[style*="span 3"]')).not.toBeNull();
+  });
+
+  it('mosaicLayout grid-3x3 (九宫格): 9 imgs → 3 cols × 3 rows', () => {
+    const { container } = render(
+      <WorkScreenshot
+        data={{
+          style: 'mosaic',
+          mosaicLayout: 'grid-3x3',
+          images: Array.from({ length: 9 }, (_, i) => ({ src: `${i}.jpg` })),
+        }}
+      />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(grid?.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
+    expect(grid?.style.gridTemplateRows).toBe('repeat(3, 1fr)');
+    expect(screen.getAllByRole('img').length).toBe(9);
+  });
+
+  it('mosaicLayout hero-5 truncates extra images to its 5 cells', () => {
+    render(
+      <WorkScreenshot
+        data={{
+          style: 'mosaic',
+          mosaicLayout: 'hero-5',
+          images: Array.from({ length: 6 }, (_, i) => ({ src: `${i}.jpg` })),
+        }}
+      />,
+    );
+    // hero-5 只有 5 个 cell，第 6 张被忽略
+    expect(screen.getAllByRole('img').length).toBe(5);
+  });
+
+  it('mosaicLayout auto (explicit) keeps count-based template for 4 imgs', () => {
+    const { container } = render(
+      <WorkScreenshot
+        data={{
+          style: 'mosaic',
+          mosaicLayout: 'auto',
+          images: Array.from({ length: 4 }, (_, i) => ({ src: `${i}.jpg` })),
+        }}
+      />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    // auto 4 张 = MOSAIC_TEMPLATES[3]（3 cols × 2 rows 的 L 型），行为不变
+    expect(grid?.style.gridTemplateRows).toBe('repeat(2, 1fr)');
+    expect(screen.getAllByRole('img').length).toBe(4);
+  });
 });
 
 describe('WorkMetrics', () => {
