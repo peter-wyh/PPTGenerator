@@ -1,6 +1,6 @@
 /** 数据管理导入工具:字段定义、预览构造、模板下载。 */
 
-export const CAMPAIGN_FIELDS = ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget', 'status', 'owner'] as const;
+export const CAMPAIGN_FIELDS = ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget', 'status', 'owner', 'creatorIds'] as const;
 export const CAMPAIGN_REQUIRED = ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget'];
 export const CREATOR_FIELDS = ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region', 'avatar'] as const;
 export const CREATOR_REQUIRED = ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region'];
@@ -33,7 +33,13 @@ export function buildPreviewFromRows(kind: DataKind, rows: Record<string, string
     const data: Record<string, unknown> = {};
     for (const f of fields) {
       const v = row[f];
-      if (v !== undefined && v !== '') data[f] = v;
+      if (v === undefined || v === '') continue;
+      if (f === 'creatorIds') {
+        const ids = String(v).split(';').map((s) => s.trim()).filter(Boolean);
+        if (ids.length) data.creatorIds = ids;
+      } else {
+        data[f] = v;
+      }
     }
     const missing = checkRequired(kind, data);
     return missing.length ? { data, valid: false, error: `缺字段: ${missing.join(', ')}` } : { data, valid: true };
@@ -55,7 +61,7 @@ export function downloadTemplate(kind: DataKind): void {
   const header = fields.join(',');
   const example =
     kind === 'campaign'
-      ? 'camp-example,示例 Campaign,GlowLab,FT,TikTok,2026-01-01,2026-01-31,$100K,Active,alex'
+      ? 'camp-example,示例 Campaign,GlowLab,FT,TikTok,2026-01-01,2026-01-31,$100K,Active,alex,cre-mia;cre-sofia'
       : 'cre-example,Mia Chen,@mia,TikTok,mega,1.28M,8.7%,Beauty,US,';
   const csv = `${header}\n${example}\n`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
