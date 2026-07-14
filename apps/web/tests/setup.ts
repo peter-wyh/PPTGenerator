@@ -9,3 +9,22 @@ import { cleanup } from '@testing-library/react';
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * jsdom 不实现 URL.createObjectURL / revokeObjectURL( Blob 下载、图片裁剪等用到)。
+ * 提供空 stub,让 vi.spyOn 可挂载;具体测试如需断言可自行 mockReturnValue。
+ */
+if (!('createObjectURL' in URL)) {
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    writable: true,
+    value: () => 'blob:stub',
+  });
+}
+if (!('revokeObjectURL' in URL)) {
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    writable: true,
+    value: () => {},
+  });
+}
