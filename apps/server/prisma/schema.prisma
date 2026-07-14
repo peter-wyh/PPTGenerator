@@ -23,6 +23,7 @@ model User {
   role         Role       @default(USER)
   projects     Project[]
   templates    Template[]
+  dataRecords  DataRecord[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -70,4 +71,24 @@ model Template {
 enum TemplateStatus {
   DRAFT
   PUBLISHED
+}
+
+/// 数据管理库记录:Campaign / 达人库(Creator)统一存储,opaque JSON payload。全员可管,ownerId 标记创建者。
+model DataRecord {
+  id        String          @id
+  kind      DataRecordKind
+  ownerId   String
+  data      Json
+  owner     User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([kind])
+  @@index([ownerId])
+}
+
+/// 数据记录类型。
+enum DataRecordKind {
+  CAMPAIGN
+  CREATOR
 }
