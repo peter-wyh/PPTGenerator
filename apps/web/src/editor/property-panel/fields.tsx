@@ -336,6 +336,53 @@ export function DataNumberField({ comp, field }: { comp: EditorComponent; field:
   );
 }
 
+/**
+ * 标题块字号:单组件 data.fontSize 缺省时回显「全局标题字号」(projectMeta.theme.heading.fontSize,默认 32),
+ * 而非落到通用 DataNumberField 的 0。已覆盖时提供「跟随全局」复位。
+ * label 文本恒为「字号」(提示文字置于 label 之外),保证 getByLabelText('字号') 精确匹配。
+ */
+export function TitleBlockFontSizeField({ comp }: { comp: EditorComponent }) {
+  const update = useDataUpdate(comp);
+  const globalSize = useEditorStore((s) => s.projectMeta?.theme?.heading?.fontSize) ?? 32;
+  const data = comp.data as { fontSize?: number };
+  const overridden = typeof data.fontSize === 'number' && data.fontSize > 0;
+  const value = overridden ? data.fontSize! : globalSize;
+
+  return (
+    <div className="text-xs text-foreground-secondary">
+      <label className="block">
+        <span className="mb-1 block">字号</span>
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            // 正数才落库;清空/非法 → 清除覆盖,恢复跟随全局。
+            update('fontSize', Number.isFinite(n) && n > 0 ? n : undefined);
+          }}
+          className={`w-full rounded border border-border-default px-2 py-1 ${
+            overridden ? 'text-foreground-primary' : 'text-foreground-muted'
+          }`}
+        />
+      </label>
+      <div className="mt-0.5 flex items-center justify-between">
+        <span className="text-[10px] text-foreground-muted">
+          {overridden ? '已覆盖全局字号' : '跟随全局标题字号'}
+        </span>
+        {overridden && (
+          <button
+            onClick={() => update('fontSize', undefined)}
+            className="shrink-0 rounded border border-border-default px-1.5 py-0.5 text-foreground-secondary hover:bg-surface-hover"
+            title="清除覆盖,恢复跟随全局"
+          >
+            跟随全局
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function SelectField({ comp, field }: { comp: EditorComponent; field: PropertyField }) {
   const update = useDataUpdate(comp);
   const value = String(readValue(comp, field) ?? '');

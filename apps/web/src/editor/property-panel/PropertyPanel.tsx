@@ -17,6 +17,7 @@ import {
   FieldEditor,
   KpiCompareLabelField,
   NumberField,
+  TitleBlockFontSizeField,
 } from './fields';
 import {
   BusinessFields,
@@ -110,9 +111,14 @@ export function PropertyPanel() {
 
       {/* ── ④ 内容（字段编辑 + 自定义字段）── */}
       <FieldGroup title="✏️ 内容">
-        {fields.map((f) => (
-          <FieldEditor key={f.key + f.kind} comp={comp} field={f} />
-        ))}
+        {fields.map((f) =>
+          // title-block 字号:用专用字段回显「全局字号 / 单组件覆盖」,避免落到 0。
+          comp.type === 'title-block' && f.key === 'fontSize' ? (
+            <TitleBlockFontSizeField key="fontSize" comp={comp} />
+          ) : (
+            <FieldEditor key={f.key + f.kind} comp={comp} field={f} />
+          ),
+        )}
         {fields.length === 0 && (def.variants?.length ?? 0) === 0 && (
           <p className="text-xs text-foreground-muted">该组件无可编辑属性。</p>
         )}
