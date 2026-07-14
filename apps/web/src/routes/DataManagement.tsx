@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type ChangeEvent } from 'react';
-import type { Campaign, Creator } from '@mediakit/shared';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode, type ChangeEvent } from 'react';
+import type { Campaign, Creator, CreatorCampaignPerformance } from '@mediakit/shared';
 import { MOCK_CAMPAIGNS } from '@/api/mock/campaigns';
 import { MOCK_CREATORS } from '@/api/mock/creators';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
+import { listCampaignCollaborators, listCreators, listCampaignCreators } from '@/api/creators';
+import { listCreatorPerformance } from '@/api/creatorPerformance';
 import { DataTable } from '@/components/DataTable';
+import { CreatorMultiSelect } from '@/editor/components/CreatorMultiSelect';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { RecordFormModal } from '@/editor/components/RecordFormModal';
 import {
@@ -102,7 +105,15 @@ function DataPanel({ kind }: { kind: DataKind }) {
     await reload();
   }
   async function seed() {
-    const items = kind === 'campaign' ? MOCK_CAMPAIGNS : MOCK_CREATORS;
+    const items =
+      kind === 'campaign'
+        ? await Promise.all(
+            MOCK_CAMPAIGNS.map(async (c) => ({
+              ...c,
+              creatorIds: ((await listCampaignCreators(c.id)) ?? []).map((cr) => cr.id),
+            })),
+          )
+        : MOCK_CREATORS;
     const r = await dataApi.importMany(kind, items);
     window.alert(`导入完成:新增 ${r.created},更新 ${r.updated},跳过 ${r.skipped}`);
     await reload();
@@ -157,7 +168,16 @@ function DataPanel({ kind }: { kind: DataKind }) {
         <input ref={csvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsv} />
         <input ref={jsonRef} type="file" accept=".json,application/json" className="hidden" onChange={onJson} />
       </div>
-      <DataTable loading={loading} headers={headers} rows={rows} />
+      {kind === 'campaign' ? (
+        <CampaignList
+          records={records as DataRecordDTO<Campaign>[]}
+          loading={loading}
+          onEdit={setEditing}
+          onDelete={(id) => void del(id)}
+        />
+      ) : (
+        <DataTable loading={loading} headers={headers} rows={rows} />
+      )}
       {preview && (
         <ImportPreviewModal kind={kind} items={preview} onConfirm={confirmImport} onCancel={() => setPreview(null)} />
       )}
@@ -167,6 +187,243 @@ function DataPanel({ kind }: { kind: DataKind }) {
       {editing && (
         <RecordFormModal kind={kind} record={editing} onSaved={async () => { setEditing(null); await reload(); }} onCancel={() => setEditing(null)} />
       )}
+    </div>
+  );
+}
+
+/** Campaign 可展开列表:行展开 → 合作达人子表;每行带 编辑/删除。 */
+function CampaignList({
+  records,
+  loading,
+  onEdit,
+  onDelete,
+}: {
+  records: DataRecordDTO<Campaign>[];
+  loading: boolean;
+  onEdit: (r: DataRecordDTO) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  if (loading) {
+    return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
+  }
+  if (records.length === 0) {
+    return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">No data</p>;
+  }
+  const heads = ['Campaign', 'Advertiser', 'Business Line', 'Platform', 'Period', 'Budget', 'Status', 'Owner', ''];
+  return (
+    <div className="overflow-auto rounded-lg border border-border-default">
+      <table className="w-full min-w-[760px] border-collapse text-sm">
+        <thead>
+          <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
+            {heads.map((h, i) => (
+              <th key={i} className={`px-3 py-2 font-medium ${i === 0 ? '' : 'whitespace-nowrap'}`}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((r) => {
+            const d = r.data;
+            const open = expandedId === r.id;
+            return (
+              <Fragment key={r.id}>
+                <tr className="border-t border-border-subtle hover:bg-surface-hover/50">
+                  <td className="px-3 py-2 font-medium text-foreground-primary">
+                    <button className="text-left hover:underline" onClick={() => setExpandedId(open ? null : r.id)}>
+                      <span aria-hidden>{open ? '▾' : '▸'}</span> <span>{d.name}</span>
+                    </button>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.advertiser}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.businessLine}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.platform}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.startDate} ~ {d.endDate}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.budget}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.status ?? '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.ownerId}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-2">
+                      <button onClick={() => onEdit(r)} className="text-xs text-accent-primary hover:underline">编辑</button>
+                      <button onClick={() => onDelete(r.id)} className="text-xs text-red hover:underline">删除</button>
+                    </div>
+                  </td>
+                </tr>
+                {open && (
+                  <tr>
+                    <td colSpan={heads.length} className="bg-surface-secondary px-4 py-3">
+                      <CollaboratorPanel record={r} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** 展开面板:合作达人子表 + 「管理合作达人」;demo campaign 命中 mock 时达人行二级展开效果。 */
+function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
+  const campaignId = record.id;
+  const [collaborators, setCollaborators] = useState<Creator[]>([]);
+  const [perf, setPerf] = useState<CreatorCampaignPerformance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedCreator, setExpandedCreator] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [cols, perfs] = await Promise.all([
+          listCampaignCollaborators(campaignId),
+          listCreatorPerformance(campaignId).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setCollaborators(cols);
+        setPerf(perfs);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId, tick]);
+
+  const perfByCreator = new Map(perf.map((p) => [p.creatorId, p]));
+  const hasPerf = perf.length > 0;
+
+  if (loading) return <p className="text-xs text-foreground-muted">加载合作达人…</p>;
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-medium text-foreground-secondary">合作达人 · {collaborators.length}</span>
+        <button onClick={() => setManaging(true)} className="text-xs text-accent-primary hover:underline">管理合作达人</button>
+      </div>
+      {collaborators.length === 0 ? (
+        <p className="text-xs text-foreground-muted">暂无合作达人。点「管理合作达人」添加。</p>
+      ) : (
+        <div className="overflow-auto rounded-lg border border-border-default">
+          <table className="w-full min-w-[560px] border-collapse text-xs">
+            <thead>
+              <tr className="bg-surface-hover text-left text-foreground-muted">
+                {['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement'].map((h) => (
+                  <th key={h} className="whitespace-nowrap px-2 py-1 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {collaborators.map((c) => {
+                const cp = perfByCreator.get(c.id);
+                const open = expandedCreator === c.id;
+                return (
+                  <Fragment key={c.id}>
+                    <tr className="border-t border-border-subtle">
+                      <td className="px-2 py-1 font-medium text-foreground-primary">
+                        {hasPerf && cp ? (
+                          <button className="hover:underline" onClick={() => setExpandedCreator(open ? null : c.id)}>
+                            {open ? '▾' : '▸'} {c.name}
+                          </button>
+                        ) : (
+                          c.name
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.handle}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.platform}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.tier}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.followers}</td>
+                      <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.engagement}</td>
+                    </tr>
+                    {open && cp && (
+                      <tr>
+                        <td colSpan={6} className="bg-surface-primary px-3 py-2">
+                          <CreatorPerfDetail perf={cp} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {managing && (
+        <ManageCollaboratorsModal
+          campaignId={campaignId}
+          campaignData={record.data}
+          currentIds={collaborators.map((c) => c.id)}
+          onClose={() => setManaging(false)}
+          onSaved={() => {
+            setManaging(false);
+            setTick((t) => t + 1);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 管理合作达人:多选达人库 → 整记录重写 creatorIds(服务端 update 校验全量 data)。 */
+function ManageCollaboratorsModal({
+  campaignId,
+  campaignData,
+  currentIds,
+  onClose,
+  onSaved,
+}: {
+  campaignId: string;
+  campaignData: Campaign;
+  currentIds: string[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [selected, setSelected] = useState<string[]>(currentIds);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    listCreators().then(setCreators).catch(() => setCreators([]));
+  }, []);
+  async function save() {
+    setBusy(true);
+    try {
+      await dataApi.update(campaignId, { ...campaignData, creatorIds: selected });
+      onSaved();
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="flex max-h-[80vh] w-[480px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="font-headings text-sm font-semibold text-foreground-primary">管理合作达人</div>
+        <CreatorMultiSelect creators={creators} selected={selected} onChange={setSelected} />
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>
+          <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">保存</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** demo campaign 二级展开:达人执行效果摘要(mock 生成器,字段 summary.*)。 */
+function CreatorPerfDetail({ perf }: { perf: CreatorCampaignPerformance }) {
+  const s = perf.summary;
+  return (
+    <div className="flex flex-wrap gap-3 text-xs text-foreground-secondary">
+      <span>帖数 <b className="text-foreground-primary">{s.posts}</b></span>
+      <span>曝光 <b className="text-foreground-primary">{s.totalImpressions}</b></span>
+      <span>互动 <b className="text-foreground-primary">{s.totalEngagement}</b></span>
+      <span>互动率 <b className="text-foreground-primary">{s.avgEngagementRate}</b></span>
+      <span className="text-foreground-muted">demo 数据(mock 生成器)</span>
     </div>
   );
 }

@@ -4,11 +4,16 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { DataManagement } from '@/routes/DataManagement';
 
-const { listMock, removeMock, importManyMock, clearMock } = vi.hoisted(() => ({
+const { listMock, removeMock, importManyMock, clearMock, updateMock, collaboratorsMock, listCreatorsMock, listCampaignCreatorsMock, perfMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   removeMock: vi.fn(),
   importManyMock: vi.fn(),
   clearMock: vi.fn(),
+  updateMock: vi.fn(),
+  collaboratorsMock: vi.fn(),
+  listCreatorsMock: vi.fn(),
+  listCampaignCreatorsMock: vi.fn(),
+  perfMock: vi.fn(),
 }));
 
 vi.mock('@/api/dataLibrary', () => ({
@@ -17,10 +22,20 @@ vi.mock('@/api/dataLibrary', () => ({
     remove: (id: string) => removeMock(id),
     importMany: (k: string, items: unknown[]) => importManyMock(k, items),
     create: vi.fn(),
-    update: vi.fn(),
+    update: (id: string, data: unknown) => updateMock(id, data),
     get: vi.fn(),
     clear: (k: string) => clearMock(k),
   },
+}));
+
+vi.mock('@/api/creators', () => ({
+  listCampaignCollaborators: (id: string) => collaboratorsMock(id),
+  listCreators: () => listCreatorsMock(),
+  listCampaignCreators: (id: string) => listCampaignCreatorsMock(id),
+}));
+
+vi.mock('@/api/creatorPerformance', () => ({
+  listCreatorPerformance: (id: string) => perfMock(id),
 }));
 
 function renderPage() {
@@ -110,5 +125,51 @@ describe('DataManagement page', () => {
     const seedBtn = await screen.findByText('导入示例数据');
     await userEvent.click(seedBtn);
     await waitFor(() => expect(importManyMock).toHaveBeenCalledWith('campaign', expect.any(Array)));
+  });
+});
+
+describe('DataManagement · Campaign drill-down', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
+    removeMock.mockResolvedValue(undefined);
+    importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
+    updateMock.mockResolvedValue({ id: 'camp-x' });
+    collaboratorsMock.mockResolvedValue([]);
+    listCreatorsMock.mockResolvedValue([]);
+    listCampaignCreatorsMock.mockResolvedValue([]);
+    perfMock.mockResolvedValue([]);
+  });
+
+  it('展开 campaign 行 → 调 listCampaignCollaborators 并渲染合作达人', async () => {
+    collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
+    renderPage();
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByRole('button', { name: /Campaign X/ }));
+    await waitFor(() => expect(collaboratorsMock).toHaveBeenCalledWith('camp-x'));
+    expect(await screen.findByText('@mia')).toBeInTheDocument();
+  });
+
+  it('管理合作达人:勾选 + 保存 → dataApi.update 带 creatorIds(整记录重写)', async () => {
+    listCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
+    renderPage();
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByRole('button', { name: /Campaign X/ }));
+    await screen.findByText('管理合作达人');
+    await userEvent.click(screen.getByText('管理合作达人'));
+    await userEvent.click(screen.getByLabelText(/Mia/));
+    await userEvent.click(screen.getByText('保存'));
+    await waitFor(() => expect(updateMock).toHaveBeenCalledWith('camp-x', { ...campaign, creatorIds: ['cre-mia'] }));
+  });
+
+  it('导入示例数据:Campaign 派生 creatorIds', async () => {
+    listMock.mockResolvedValue([]); // 空库才显示「导入示例数据」
+    listCampaignCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: '', region: '', metrics: [] }]);
+    renderPage();
+    await screen.findByText('导入示例数据');
+    await userEvent.click(screen.getByText('导入示例数据'));
+    await waitFor(() => expect(importManyMock).toHaveBeenCalled());
+    const [, itemsArg] = importManyMock.mock.calls[0] as [string, unknown[]];
+    expect((itemsArg[0] as { creatorIds: string[] }).creatorIds).toEqual(['cre-mia']);
   });
 });
