@@ -97,6 +97,19 @@ describe('dataService · importMany', () => {
     const r = await dataService.importMany('u1', 'campaign', [validCampaign]);
     expect(r).toEqual({ created: 0, updated: 1, skipped: 0 });
   });
+  it('DB 错误(create 抛异常)→ 该行 skipped,批次继续', async () => {
+    prismaMock.dataRecord.findUnique
+      .mockResolvedValueOnce(null) // item 1: new → create succeeds
+      .mockResolvedValueOnce(null); // item 2: new → create throws
+    prismaMock.dataRecord.create
+      .mockResolvedValueOnce(makeRecord({ id: 'camp-a' })) // item 1 ok
+      .mockRejectedValueOnce(new Error('unique constraint')); // item 2 DB error
+    const r = await dataService.importMany('u1', 'campaign', [
+      { ...validCampaign, id: 'camp-a' },
+      { ...validCampaign, id: 'camp-b' },
+    ]);
+    expect(r).toEqual({ created: 1, updated: 0, skipped: 1 });
+  });
 });
 
 describe('dataService · update', () => {

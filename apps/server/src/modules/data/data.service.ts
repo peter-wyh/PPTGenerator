@@ -62,23 +62,28 @@ export const dataService = {
         skipped++;
         continue;
       }
-      const existing = await prisma.dataRecord.findUnique({ where: { id: valid.id } });
-      if (existing) {
-        await prisma.dataRecord.update({
-          where: { id: valid.id },
-          data: { data: valid as unknown as Prisma.InputJsonValue },
-        });
-        updated++;
-      } else {
-        await prisma.dataRecord.create({
-          data: {
-            id: valid.id,
-            kind: kindToDb(kind),
-            ownerId,
-            data: valid as unknown as Prisma.InputJsonValue,
-          },
-        });
-        created++;
+      try {
+        const existing = await prisma.dataRecord.findUnique({ where: { id: valid.id } });
+        if (existing) {
+          await prisma.dataRecord.update({
+            where: { id: valid.id },
+            data: { data: valid as unknown as Prisma.InputJsonValue },
+          });
+          updated++;
+        } else {
+          await prisma.dataRecord.create({
+            data: {
+              id: valid.id,
+              kind: kindToDb(kind),
+              ownerId,
+              data: valid as unknown as Prisma.InputJsonValue,
+            },
+          });
+          created++;
+        }
+      } catch {
+        // DB 错误(并发 create 唯一约束竞争 / 瞬时故障)计入 skipped,不中断批次。
+        skipped++;
       }
     }
     return { created, updated, skipped };
