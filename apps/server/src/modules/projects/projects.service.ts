@@ -164,7 +164,13 @@ export const projectsService = {
       width: tpl.width,
       height: tpl.height,
       pages: JSON.parse(JSON.stringify(tpl.pages)) as unknown as Prisma.InputJsonValue,
-      ...(tpl.meta ? { meta: tpl.meta as unknown as Prisma.InputJsonValue } : {}),
+      ...(tpl.meta
+        ? {
+            meta: (({ isDefault: _omit, ...rest }) => rest)(
+              tpl.meta as Record<string, unknown>,
+            ) as unknown as Prisma.InputJsonValue,
+          }
+        : {}),
     };
     const project = await prisma.project.create({ data });
     return toDetail(project);

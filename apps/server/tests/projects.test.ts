@@ -251,4 +251,22 @@ describe('projects CRUD', () => {
     expect(res.body.seeded).toBe(false);
     expect(res.body.project.pages).toEqual([{ id: 'm1', name: '我的封面', components: [] }]);
   });
+
+  it('createFromTemplate 不把模板的 isDefault 泄漏进项目 meta', async () => {
+    const admin = await setupAdmin('seed-admin4@x.com');
+    const tplId = await mkDefaultTemplate(admin.h, {
+      businessLine: 'FT',
+      scenario: 'campaign-report',
+      templateType: 'weekly',
+    });
+    const { h } = await setupOwner('seed-user4@x.com');
+    const res = await request(app())
+      .post('/api/v1/projects/from-template')
+      .set(h)
+      .send({ templateId: tplId, name: '从模板建' });
+    expect(res.status).toBe(201);
+    expect(res.body.project.meta.isDefault).toBeUndefined();
+    // 其它 meta 字段保留（如 businessLine）
+    expect(res.body.project.meta.businessLine).toBe('FT');
+  });
 });
