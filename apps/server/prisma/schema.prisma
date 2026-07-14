@@ -75,6 +75,7 @@ enum TemplateStatus {
 
 /// 数据管理库记录:Campaign / 达人库(Creator)统一存储,opaque JSON payload。全员可管,ownerId 标记创建者。
 model DataRecord {
+  /// id 由应用层生成(opaque),不使用 cuid() 默认值——便于导入按 id upsert 幂等。
   id        String          @id
   kind      DataRecordKind
   ownerId   String
