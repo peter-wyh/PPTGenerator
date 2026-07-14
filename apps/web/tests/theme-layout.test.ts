@@ -127,3 +127,17 @@ describe('normalizeTheme skinPreset 迁移', () => {
     expect('skinPreset' in t).toBe(false);
   });
 });
+
+describe('STYLE_PRESETS skinPreset→shadow', () => {
+  it('tech-minimal：shadow=none、无 skinPreset', () => {
+    const t = STYLE_PRESETS.find((p) => p.key === 'tech-minimal')!.theme;
+    expect(t.shadow).toBe('none');
+    expect('skinPreset' in t).toBe(false);
+  });
+
+  it('vibrant-trendy：shadow=strong、无 skinPreset', () => {
+    const t = STYLE_PRESETS.find((p) => p.key === 'vibrant-trendy')!.theme;
+    expect(t.shadow).toBe('strong');
+    expect('skinPreset' in t).toBe(false);
+  });
+});
