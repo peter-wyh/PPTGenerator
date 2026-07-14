@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
+import { listCreators } from '@/api/creators';
+import type { Creator } from '@mediakit/shared';
+import { CreatorMultiSelect } from './CreatorMultiSelect';
 import type { DataKind } from '../dataImport';
 
 interface Props {
@@ -39,20 +42,28 @@ const CREATOR_FORM_FIELDS: FieldDef[] = [
   { key: 'avatar', label: '头像 URL' },
 ];
 
-/** 新增/编辑记录表单。新增时自动生成 id(只读)。 */
+/** 新增/编辑记录表单。campaign 额外可勾选合作达人(creatorIds)。 */
 export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
   const fields = kind === 'campaign' ? CAMPAIGN_FORM_FIELDS : CREATOR_FORM_FIELDS;
-  const initial = (record?.data ?? {}) as Record<string, string>;
+  const initial = (record?.data ?? {}) as Record<string, unknown>;
   const [vals, setVals] = useState<Record<string, string>>(() => {
     const o: Record<string, string> = {};
-    for (const f of fields) o[f.key] = initial[f.key] ?? '';
+    for (const f of fields) o[f.key] = (initial[f.key] as string) ?? '';
     if (!record) {
       const prefix = kind === 'campaign' ? 'camp-' : 'cre-';
       o.id = `${prefix}${crypto.randomUUID().slice(0, 8)}`;
     }
     return o;
   });
+  const [creatorIds, setCreatorIds] = useState<string[]>(
+    kind === 'campaign' ? (initial.creatorIds as string[]) ?? [] : [],
+  );
+  const [creators, setCreators] = useState<Creator[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (kind === 'campaign') listCreators().then(setCreators).catch(() => setCreators([]));
+  }, [kind]);
 
   async function save() {
     setBusy(true);
@@ -62,6 +73,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
         const v = vals[f.key];
         if (v !== '') data[f.key] = v;
       }
+      if (kind === 'campaign') data.creatorIds = creatorIds;
       if (record) await dataApi.update(record.id, data);
       else await dataApi.create(kind, data);
       onSaved();
@@ -95,6 +107,12 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             );
           })}
         </div>
+        {kind === 'campaign' && (
+          <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            合作达人
+            <CreatorMultiSelect creators={creators} selected={creatorIds} onChange={setCreatorIds} />
+          </label>
+        )}
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
