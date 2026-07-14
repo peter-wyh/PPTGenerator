@@ -124,6 +124,23 @@ describe('WorkScreenshot', () => {
     expect(grid?.style.gridTemplateRows).toBe('repeat(2, 1fr)');
     expect(screen.getAllByRole('img').length).toBe(4);
   });
+
+  it('mosaicLayout staggered (错落): 5 imgs → 3 cols, per-column vertical offset, 5 rendered', () => {
+    const { container } = render(
+      <WorkScreenshot
+        data={{
+          style: 'mosaic',
+          mosaicLayout: 'staggered',
+          images: Array.from({ length: 5 }, (_, i) => ({ src: `${i}.jpg` })),
+        }}
+      />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(grid?.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
+    expect(screen.getAllByRole('img').length).toBe(5);
+    // staggered 独有：列偏移 translateY
+    expect(container.querySelector('[style*="translateY"]')).not.toBeNull();
+  });
 });
 
 describe('WorkMetrics', () => {
