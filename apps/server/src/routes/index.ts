@@ -6,6 +6,7 @@ import { projectsRoutes } from '../modules/projects/projects.routes';
 import { templatesRoutes } from '../modules/templates/templates.routes';
 import { shareRoutes } from '../modules/share/share.routes';
 import { uploadRoutes } from '../modules/upload/upload.routes';
+import { dataRoutes } from '../modules/data/data.routes';
 
 export const apiRouter = Router();
 
@@ -18,3 +19,4 @@ apiRouter.use('/projects', projectsRoutes);
 apiRouter.use('/templates', templatesRoutes);
 apiRouter.use('/share', shareRoutes);
 apiRouter.use('/uploads', uploadRoutes);
+apiRouter.use('/data', dataRoutes);
