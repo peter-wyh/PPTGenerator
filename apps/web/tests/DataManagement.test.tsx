@@ -4,10 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { DataManagement } from '@/routes/DataManagement';
 
-const { listMock, removeMock, importManyMock } = vi.hoisted(() => ({
+const { listMock, removeMock, importManyMock, clearMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   removeMock: vi.fn(),
   importManyMock: vi.fn(),
+  clearMock: vi.fn(),
 }));
 
 vi.mock('@/api/dataLibrary', () => ({
@@ -18,7 +19,7 @@ vi.mock('@/api/dataLibrary', () => ({
     create: vi.fn(),
     update: vi.fn(),
     get: vi.fn(),
-    clear: vi.fn(),
+    clear: (k: string) => clearMock(k),
   },
 }));
 
@@ -48,6 +49,7 @@ describe('DataManagement page', () => {
     listMock.mockResolvedValue([]);
     removeMock.mockResolvedValue(undefined);
     importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
+    clearMock.mockResolvedValue({ deleted: 0 });
   });
 
   it('渲染标题 + 两个 Tab;Campaign Tab 列表来自 dataApi.list("campaign")', async () => {
@@ -80,5 +82,33 @@ describe('DataManagement page', () => {
     await userEvent.click(screen.getByText('删除'));
     await waitFor(() => expect(removeMock).toHaveBeenCalledWith('camp-x'));
     confirmSpy.mockRestore();
+  });
+
+  it('清空按钮二次确认后调用 dataApi.clear("campaign")', async () => {
+    listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByText('清空'));
+    await waitFor(() => expect(clearMock).toHaveBeenCalledWith('campaign'));
+    confirmSpy.mockRestore();
+  });
+
+  it('删除取消(confirm=false)不调用 dataApi.remove', async () => {
+    listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    renderPage();
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByText('删除'));
+    expect(removeMock).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('空库点「导入示例数据」→ dataApi.importMany("campaign", <array>)', async () => {
+    listMock.mockResolvedValue([]);
+    renderPage();
+    const seedBtn = await screen.findByText('导入示例数据');
+    await userEvent.click(seedBtn);
+    await waitFor(() => expect(importManyMock).toHaveBeenCalledWith('campaign', expect.any(Array)));
   });
 });

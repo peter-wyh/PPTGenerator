@@ -38,7 +38,7 @@ export function DataManagement() {
           </button>
         ))}
       </div>
-      <div className="mt-6">{tab === 'campaign' ? <DataPanel kind="campaign" /> : <DataPanel kind="creator" />}</div>
+      <div className="mt-6"><DataPanel key={tab} kind={tab} /></div>
     </div>
   );
 }
