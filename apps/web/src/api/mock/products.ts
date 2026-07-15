@@ -10,8 +10,8 @@
  * 商品权重（GMV share）由 ProductSeed.gmvWeight 决定（确定性，无 RNG）。
  * 同输入 → 同输出，便于回归与截图。
  */
-import type { Product } from '@mediaket/shared';
-import { formatMoney, DEFAULT_FORMAT } from '@mediaket/shared';
+import type { Product } from '@mediakit/shared';
+import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 import { campaignRawTotals, type CampaignRawTotals } from './creatorPerformance';
 
 /* ------------------------------ Product seeds (static catalog) ------------------------------ */
