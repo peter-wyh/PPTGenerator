@@ -13,6 +13,7 @@ export * from './types/template';
 export * from './types/campaign';
 export * from './types/theme';
 export * from './types/editor';
+export * from './types/collaboration';
 export * from './types/page';
 
 // ---- 运行时常量 / 工具函数 ----
