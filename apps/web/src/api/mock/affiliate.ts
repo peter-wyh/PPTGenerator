@@ -10,7 +10,7 @@ import type {
   RevenueTimelinePoint,
   SearchTermPerformance,
 } from '@mediakit/shared';
-import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
+import { formatMoney, DEFAULT_FORMAT } from '@mediaket/shared';
 
 /**
  * 联盟营销（Affiliate）上游接口（demo 中 mock）。

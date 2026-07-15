@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import type {
   Campaign,
   CampaignMetric,
@@ -10,6 +10,7 @@ import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import { listCampaigns, reportCampaignFrom } from '../../api/campaigns';
 import { listCreators, listCampaignCreators, type Creator } from '../../api/creators';
+import { campaignCreatorWorks, type CreatorWithWorks } from '../../api/mock/creatorPerformance';
 
 interface Props {
   onClose: () => void;
@@ -97,20 +98,26 @@ export function DataConfigOverlay({ onClose }: Props) {
   const [campaignCreators, setCampaignCreators] = useState<Creator[] | null>(null);
   const [ccLoading, setCcLoading] = useState(false);
   const [ccFailed, setCcFailed] = useState(false);
+  // ---- 达人合作作品列表（与 campaignCreators 同时加载）----
+  const [creatorWorks, setCreatorWorks] = useState<CreatorWithWorks[] | null>(null);
 
   useEffect(() => {
     if (!selectedCampaignId) {
       setCampaignCreators(null);
+      setCreatorWorks(null);
       return;
     }
     let alive = true;
     setCcLoading(true);
     setCcFailed(false);
     setCampaignCreators(null);
+    setCreatorWorks(null);
     listCampaignCreators(selectedCampaignId)
       .then((list) => {
         if (!alive) return;
         setCampaignCreators(list);
+        // 同步加载达人合作作品（mock 数据，确定性）
+        setCreatorWorks(campaignCreatorWorks(selectedCampaignId));
         // 自动回显：如果 reportData.campaignCreators 为空（首次打开），自动全选该 campaign 的合作达人。
         const existing = useEditorStore.getState().reportData.campaignCreators;
         if ((!existing || existing.length === 0) && list.length > 0) {
@@ -458,6 +465,16 @@ export function DataConfigOverlay({ onClose }: Props) {
                     />
                   </div>
                 )}
+
+                {/* 达人合作作品 + 数据指标 */}
+                {creatorWorks && creatorWorks.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="mb-2 text-xs font-semibold text-foreground-primary">
+                      Creator Posts（合作作品及效果数据）
+                    </h4>
+                    <CreatorWorksTable works={creatorWorks} />
+                  </div>
+                )}
               </section>
             )}
           </div>
@@ -726,4 +743,132 @@ function buildDefaultStats(c: Creator): ReportCreator['stats'] {
     });
   }
   return stats;
+}
+
+/** 达人合作作品表格：按达人分组，展示每条作品的曝光/互动/互动率等指标。 */
+function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const totalPosts = works.reduce((sum, w) => sum + w.posts.length, 0);
+
+  function toggle(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  return (
+    <div className="overflow-auto rounded border border-border-default">
+      <table className="w-full border-collapse text-xs">
+        <thead>
+          <tr className="border-b border-border-default bg-surface-hover text-foreground-muted">
+            <th className="px-2 py-1 text-left font-normal">达人</th>
+            <th className="px-2 py-1 text-left font-normal">平台</th>
+            <th className="px-2 py-1 text-center font-normal">作品</th>
+            <th className="px-2 py-1 text-right font-normal">总曝光</th>
+            <th className="px-2 py-1 text-right font-normal">总互动</th>
+            <th className="px-2 py-1 text-right font-normal">平均互动率</th>
+            <th className="px-2 py-1 text-center font-normal">展开</th>
+          </tr>
+        </thead>
+        <tbody>
+          {works.map((cw) => {
+            const isOpen = expanded.has(cw.creatorId);
+            const totalImpressions = cw.posts.reduce(
+              (s, p) => s + Number(p.impressions.replace(/[^0-9.]/g, '')) || 0,
+              0,
+            );
+            const totalEngagement = cw.posts.reduce((s, p) => {
+              const likes = Number(p.likes.replace(/[^0-9.]/g, '')) || 0;
+              const comments = Number(p.comments.replace(/[^0-9.]/g, '')) || 0;
+              const shares = Number(p.shares.replace(/[^0-9.]/g, '')) || 0;
+              return s + likes + comments + shares;
+            }, 0);
+            const avgEngRate =
+              cw.posts.length > 0
+                ? cw.posts.reduce((s, p) => {
+                    const r = Number(p.engagementRate.replace(/[^0-9.]/g, '')) || 0;
+                    return s + r;
+                  }, 0) / cw.posts.length
+                : 0;
+            return (
+              <Fragment key={cw.creatorId}>
+                <tr className="border-b border-border-subtle hover:bg-surface-hover/50">
+                  <td className="px-2 py-1 text-left font-medium text-foreground-primary whitespace-nowrap">
+                    {cw.creatorName}
+                    <span className="ml-1 text-[10px] font-normal text-foreground-muted">{cw.tier}</span>
+                  </td>
+                  <td className="px-2 py-1 text-left text-foreground-secondary whitespace-nowrap">{cw.platform}</td>
+                  <td className="px-2 py-1 text-center text-foreground-secondary">{cw.posts.length}</td>
+                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
+                    {totalImpressions.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
+                    {totalEngagement.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
+                    {avgEngRate.toFixed(1)}%
+                  </td>
+                  <td className="px-2 py-1 text-center">
+                    <button
+                      onClick={() => toggle(cw.creatorId)}
+                      className="text-[10px] text-accent-primary hover:underline"
+                    >
+                      {isOpen ? '收起' : `查看 ${cw.posts.length} 条`}
+                    </button>
+                  </td>
+                </tr>
+                {isOpen &&
+                  cw.posts.map((post) => (
+                    <tr key={post.postId} className="border-b border-border-subtle bg-surface-hover/30">
+                      <td className="px-2 py-1 pl-6 text-left text-foreground-secondary" colSpan={2}>
+                        <div className="flex items-center gap-2">
+                          {post.cover && (
+                            <img
+                              src={post.cover}
+                              alt=""
+                              className="h-8 w-8 flex-shrink-0 rounded object-cover"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <div className="truncate text-foreground-primary" title={post.title}>
+                              {post.title}
+                            </div>
+                            <div className="text-[10px] text-foreground-muted">
+                              {post.platform} · {post.publishedAt}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1 text-center text-foreground-muted">—</td>
+                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.impressions}</td>
+                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">
+                        {(
+                          (Number(post.likes.replace(/[^0-9.]/g, '')) || 0) +
+                          (Number(post.comments.replace(/[^0-9.]/g, '')) || 0) +
+                          (Number(post.shares.replace(/[^0-9.]/g, '')) || 0)
+                        ).toLocaleString()}
+                      </td>
+                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.engagementRate}</td>
+                      <td className="px-2 py-1 text-center">
+                        <div className="flex flex-col items-end gap-0.5 text-[10px] text-foreground-muted">
+                          <span>👍 {post.likes}</span>
+                          <span>💬 {post.comments}</span>
+                          <span>↗ {post.shares}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="border-t border-border-default px-2 py-1 text-[10px] text-foreground-muted">
+        共 {works.length} 位达人 · {totalPosts} 条合作作品
+      </div>
+    </div>
+  );
 }
