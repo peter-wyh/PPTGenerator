@@ -1,10 +1,10 @@
 import { api } from './client';
 
-export type DataKind = 'campaign' | 'creator';
+export type DataKind = 'campaign' | 'creator' | 'collaboration';
 
 export interface DataRecordDTO<T = unknown> {
   id: string;
-  kind: 'CAMPAIGN' | 'CREATOR';
+  kind: 'CAMPAIGN' | 'CREATOR' | 'COLLABORATION';
   ownerId: string;
   data: T;
   createdAt: string;
