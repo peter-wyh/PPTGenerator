@@ -69,6 +69,12 @@ export interface Creator {
   avatar?: string;
   /** 达人自身频道 KPI 指标（Avg Reach/Impressions/Follower Growth/CPM）。 */
   metrics: CampaignMetric[];
+  /** 受众画像(性别/年龄/城市)。 */
+  audience?: CreatorAudience;
+  /** 作品列表 + 作品数据。 */
+  works?: CreatorWork[];
+  /** 频道维度 stat 项(creator-stats-strip 用)。 */
+  stats?: CreatorStatItem[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -104,6 +110,36 @@ export interface CreatorStatItem {
   selected?: boolean;
 }
 
+/** 受众画像单项(性别/年龄/城市占比)。value 为百分比数值。 */
+export interface AudienceSlice {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+/** 达人受众画像(性别/年龄/城市分布)。Creator 与 ReportCreator 共用。 */
+export interface CreatorAudience {
+  genderSplit?: AudienceSlice[];
+  ageRange?: AudienceSlice[];
+  topCities?: AudienceSlice[];
+}
+
+/** 达人作品(列表项 + 作品数据)。对齐 works 组件渲染所需字段。 */
+export interface CreatorWork {
+  id: string;
+  title: string;
+  cover?: string;
+  url?: string;
+  platform?: string;
+  publishedAt?: string;
+  impressions?: string;
+  likes?: string;
+  comments?: string;
+  shares?: string;
+  saves?: string;
+  engagementRate?: string;
+}
+
 /** 报告中选中的达人信息（精简版，用于达人组件一键填充）。 */
 export interface ReportCreator {
   id: string;
@@ -118,12 +154,8 @@ export interface ReportCreator {
   avatar?: string;
   /** 达人数据条 KPI（由数据配置面板从上游填充）。 */
   stats?: CreatorStatItem[];
-  /** 受众画像（性别/年龄/城市分布，用于 fan-gender / fan-age / fan-city 组件一键填充）。 */
-  audience?: {
-    genderSplit?: { label: string; value: number; color?: string }[];
-    ageRange?: { label: string; value: number; color?: string }[];
-    topCities?: { label: string; value: number; color?: string }[];
-  };
+  /** 受众画像(性别/年龄/城市分布,用于 fan-gender / fan-age / fan-city 组件一键填充)。 */
+  audience?: CreatorAudience;
 }
 
 /** 报告全局数据上下文：Campaign + 达人列表 + 商品列表。存入编辑器 store，随项目保存。 */
