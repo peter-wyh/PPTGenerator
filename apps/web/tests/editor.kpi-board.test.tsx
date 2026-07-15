@@ -251,8 +251,8 @@ describe('KpiRowStyleField', () => {
     );
     // 默认 9 行，第一行 label 是 'GMV'
     expect(screen.getByText('GMV')).toBeInTheDocument();
-    // 每行 5 个色块，title='红' 每行一个 → 9 行共 9 个
-    expect(screen.getAllByTitle('红').length).toBe(9);
+    // 每行 3 个色块，title='品牌色' 每行一个 → 9 行共 9 个
+    expect(screen.getAllByTitle('品牌色').length).toBe(9);
   });
 
   it('点色块写入 valueColors[i]', () => {
@@ -265,8 +265,8 @@ describe('KpiRowStyleField', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getAllByTitle('红')[0]);
+    fireEvent.click(screen.getAllByTitle('品牌色')[0]);
     const data = useEditorStore.getState().currentComponents()[0].data as KpiBoardData;
-    expect(data.valueColors?.[0]).toBe('danger');
+    expect(data.valueColors?.[0]).toBe('brand');
   });
 });
