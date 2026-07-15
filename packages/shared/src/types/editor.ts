@@ -565,6 +565,8 @@ export interface KpiBoardData {
   rows: string[][];
   /** 每行图标 catalog key（按 rows 索引对齐）；null/缺省=不显示。仅 card 变体消费。 */
   icons?: (string | null)[];
+  /** 卡片变体是否统一显示图标；缺省 true（显示）。false 时所有行图标统一隐藏。 */
+  showIcons?: boolean;
   /** 每行数值主题色 token（按 rows 索引对齐）；缺省/null=默认前景。 */
   valueColors?: (KpiColorToken | null)[];
   /** 图标 weight，缺省 'regular'。 */

@@ -5,6 +5,7 @@
 import type { KpiBoardData, KpiTrendDirection } from '@mediakit/shared';
 import { findIcon } from '../../icons/catalog';
 import { KPI_COLOR_TOKENS } from '../../kpiTokens';
+import { defaultIconFor } from '../../kpiIcons';
 
 /** 对比文本上色：positive=升绿/降红；inverse（CPA/CPC 等降为好）=降绿/升红。 */
 function compareColor(compare: string, direction: KpiTrendDirection = 'positive'): string {
@@ -17,6 +18,7 @@ function compareColor(compare: string, direction: KpiTrendDirection = 'positive'
 export function KpiBoard({ data }: { data: KpiBoardData }) {
   const { variant = 'grid', rows = [] } = data;
   const hidden = new Set(data.hiddenIndices ?? []);
+  const showIcons = data.showIcons !== false;
   const items = rows
     .map((r, i) => {
       const token = data.valueColors?.[i] ?? null;
@@ -164,7 +166,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
           const token = data.valueColors?.[i] ?? null;
           const isPrimary = !token || token === 'primary';
           const c = KPI_COLOR_TOKENS[token ?? 'primary'];
-          const Icon = findIcon(data.icons?.[i] ?? undefined)?.Comp;
+          const Icon = showIcons ? findIcon((data.icons?.[i] ?? defaultIconFor(it.label)) ?? undefined)?.Comp : undefined;
           const weight = data.iconWeight ?? 'regular';
           return (
             <div

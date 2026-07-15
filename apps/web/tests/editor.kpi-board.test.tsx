@@ -40,12 +40,27 @@ describe('KpiBoard · card 变体', () => {
     expect(container.querySelector('svg')).toBeTruthy(); // 图标渲染出 svg
   });
 
-  it('无图标时不渲染图标块（无 svg）', () => {
+  it('showIcons:false 时即使有显式 icons 也不渲染图标', () => {
     const { container } = render(
-      <KpiBoard data={{ variant: 'card', headers: ['指标', '数值', '对比'], rows: [['Sales', '$1.24M', '']] }} />,
+      <KpiBoard
+        data={{
+          variant: 'card',
+          showIcons: false,
+          headers: ['指标', '数值', '对比'],
+          rows: [['Sales', '$1.24M', '']],
+          icons: ['currency'],
+        }}
+      />,
     );
     expect(screen.getByText('$1.24M')).toBeInTheDocument();
     expect(container.querySelector('svg')).toBeNull();
+  });
+
+  it('showIcons 缺省(true) 且无 icons 时渲染默认图标', () => {
+    const { container } = render(
+      <KpiBoard data={{ variant: 'card', headers: ['指标', '数值', '对比'], rows: [['GMV', '$1.24M', '']] }} />,
+    );
+    expect(container.querySelector('svg')).toBeTruthy();
   });
 
   it('valueColors 非 primary 时给 value 上 inline 色', () => {
