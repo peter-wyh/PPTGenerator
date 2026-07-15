@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
 import { Button } from './Button';
 
@@ -7,9 +7,19 @@ interface LayoutProps {
   children: ReactNode;
 }
 
+/** 菜单按钮 className：active 时给选中态，否则给默认态 + hover。 */
+function navBtn(active: boolean) {
+  return `rounded px-2 py-1 text-sm ${
+    active
+      ? 'bg-surface-hover text-foreground-primary font-medium'
+      : 'text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary'
+  }`;
+}
+
 /** 受保护页面的外壳：顶栏（logo / 项目名占位 / 当前用户 / 登出）。 */
 export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
@@ -29,15 +39,21 @@ export function Layout({ children }: LayoutProps) {
             MediaKit
           </button>
           <button
+            onClick={() => navigate('/projects')}
+            className={navBtn(location.pathname === '/projects')}
+          >
+            我的项目
+          </button>
+          <button
             onClick={() => navigate('/data')}
-            className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+            className={navBtn(location.pathname === '/data')}
           >
             数据管理
           </button>
           {user?.role === 'ADMIN' && (
             <button
               onClick={() => navigate('/templates')}
-              className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+              className={navBtn(location.pathname === '/templates')}
             >
               模板管理
             </button>
