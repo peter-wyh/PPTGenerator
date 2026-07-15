@@ -69,8 +69,8 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
           <div className="p-5">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
             <div className="grid grid-cols-2 gap-2">
-              {creator.metrics.map((m) => (
-                <div key={m.label} className="rounded-lg border border-border-subtle p-3">
+              {creator.metrics.map((m, i) => (
+                <div key={`${m.label}-${i}`} className="rounded-lg border border-border-subtle p-3">
                   <div className="text-[11px] text-foreground-muted">{m.label}</div>
                   <div className="text-base font-semibold text-foreground-primary">{m.value}</div>
                 </div>
