@@ -706,6 +706,16 @@ export function listPlacementTypeSummary(
   });
 }
 
+/** 同步获取 campaign 下达人性能（旁路 listCreatorPerformance 的 250ms 延迟，供分析生成器用）。 */
+export function getCreatorPerformances(campaignId: string): CreatorCampaignPerformance[] {
+  return clone(MOCK_PERFORMANCE[campaignId] ?? []);
+}
+
+/** 同步获取 campaign 版位类型汇总（旁路 listPlacementTypeSummary 的延迟）。 */
+export function getPlacementTypeSummaries(campaignId: string): PlacementTypeSummary[] {
+  return clone(MOCK_PLACEMENT_SUMMARY[campaignId] ?? []);
+}
+
 /** Export the multi-platform configuration for a campaign (for UI display). */
 export function campaignPlatforms(campaignId: string): CampaignPlatformEntry[] {
   return CAMPAIGN_PROFILE[campaignId]?.platforms ?? [];
