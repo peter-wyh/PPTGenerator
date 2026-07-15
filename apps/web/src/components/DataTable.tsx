@@ -4,10 +4,12 @@ interface DataTableProps {
   loading: boolean;
   headers: string[];
   rows: ReactNode[][];
+  /** 行点击回调(传入则行可点击 + cursor-pointer)。 */
+  onRowClick?: (rowIndex: number) => void;
 }
 
-/** 通用数据表:loading/空态占位 + 首列强调 + 行 hover。 */
-export function DataTable({ loading, headers, rows }: DataTableProps) {
+/** 通用数据表:loading/空态占位 + 首列强调 + 行 hover;可选行点击。 */
+export function DataTable({ loading, headers, rows, onRowClick }: DataTableProps) {
   if (loading) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
@@ -28,7 +30,11 @@ export function DataTable({ loading, headers, rows }: DataTableProps) {
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} className="border-t border-border-subtle hover:bg-surface-hover/50">
+            <tr
+              key={ri}
+              onClick={onRowClick ? () => onRowClick(ri) : undefined}
+              className={`border-t border-border-subtle hover:bg-surface-hover/50 ${onRowClick ? 'cursor-pointer' : ''}`}
+            >
               {row.map((cell, ci) => (
                 <td
                   key={ci}
