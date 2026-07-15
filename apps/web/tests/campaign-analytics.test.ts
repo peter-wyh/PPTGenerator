@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import type { CampaignAnalytics, CampaignInsight } from '@mediakit/shared';
 import { getCreatorPerformances, getPlacementTypeSummaries } from '@/api/mock/creatorPerformance';
 import { getCampaignAnalytics, getCampaignInsights, rollupWeekly } from '@/api/mock/campaignAnalytics';
+import { reportCampaignFrom } from '@/api/campaigns';
+import { MOCK_CAMPAIGNS } from '@/api/mock/campaigns';
 
 describe('CampaignAnalytics 类型契约', () => {
   it('可构造完整的 analytics 对象', () => {
@@ -109,5 +111,16 @@ describe('getCampaignInsights', () => {
     const list = getCampaignInsights(CID);
     const counts = list.reduce<Record<string, number>>((m, i) => ((m[i.kind] = (m[i.kind] ?? 0) + 1), m), {});
     expect(Object.values(counts).every((c) => c === 1)).toBe(true);
+  });
+});
+
+describe('reportCampaignFrom', () => {
+  it('把 Campaign 映射为带 analytics 的 ReportCampaign', () => {
+    const rc = reportCampaignFrom(MOCK_CAMPAIGNS[0]);
+    expect(rc.id).toBe(MOCK_CAMPAIGNS[0].id);
+    expect(rc.metrics).toEqual(MOCK_CAMPAIGNS[0].metrics);
+    expect(rc.analytics).toBeDefined();
+    expect(rc.analytics?.insights.length).toBeGreaterThan(0);
+    expect(rc.analytics?.trend.length).toBeGreaterThanOrEqual(28);
   });
 });

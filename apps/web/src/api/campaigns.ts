@@ -1,5 +1,6 @@
-import type { Campaign } from '@mediakit/shared';
+import type { Campaign, ReportCampaign } from '@mediakit/shared';
 import { dataApi } from './dataLibrary';
+import { getCampaignAnalytics } from './mock/campaignAnalytics';
 
 /**
  * 上游 Campaign 接口。
@@ -20,4 +21,21 @@ export async function getCampaign(id: string): Promise<Campaign | undefined> {
   } catch {
     return undefined;
   }
+}
+
+/** Campaign → ReportCampaign，并附带分析数据包（趋势/新老客/洞察）。 */
+export function reportCampaignFrom(c: Campaign): ReportCampaign {
+  return {
+    id: c.id,
+    name: c.name,
+    advertiser: c.advertiser,
+    platform: c.platform,
+    platforms: c.platforms,
+    startDate: c.startDate,
+    endDate: c.endDate,
+    budget: c.budget,
+    status: c.status,
+    metrics: c.metrics,
+    analytics: getCampaignAnalytics(c.id),
+  };
 }

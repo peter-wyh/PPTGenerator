@@ -8,7 +8,7 @@ import type {
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from '../store';
-import { listCampaigns } from '../../api/campaigns';
+import { listCampaigns, reportCampaignFrom } from '../../api/campaigns';
 import { listCreators, listCampaignCreators, type Creator } from '../../api/creators';
 
 interface Props {
@@ -157,18 +157,7 @@ export function DataConfigOverlay({ onClose }: Props) {
   function selectCampaign(id: string) {
     const c = campaigns?.find((x) => x.id === id);
     if (!c) return;
-    const rc: ReportCampaign = {
-      id: c.id,
-      name: c.name,
-      advertiser: c.advertiser,
-      platform: c.platform,
-      platforms: c.platforms,
-      startDate: c.startDate,
-      endDate: c.endDate,
-      budget: c.budget,
-      status: c.status,
-      metrics: c.metrics,
-    };
+    const rc = reportCampaignFrom(c);
     // 切换 Campaign 时清空旧的 campaign 达人选择
     setReportData({ ...reportData, campaign: rc, campaignCreators: [] });
   }
