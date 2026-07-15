@@ -1,5 +1,4 @@
-import type { ComponentType, EditorComponent } from '@mediakit/shared';
-import type { PageType } from '@mediakit/shared';
+import type { ComponentType, EditorComponent, PageType, Scenario } from '@mediakit/shared';
 import { getDefaultData } from './defaults';
 
 /**
@@ -22,6 +21,11 @@ export interface Template {
    * getTemplateByPageType 会优先匹配带有此字段的模板。
    */
   businessLine?: string;
+  /**
+   * 标记该模版适用的项目场景。
+   * 缺省 = 所有场景可见（向后兼容）；仅当数组包含当前项目场景时，模版在选择器中可见。
+   */
+  scenario?: Scenario[];
 }
 
 /** Get a page template by id. */
@@ -84,6 +88,26 @@ export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
     ids: ['challenge-page', 'process-page', 'calendar-page', 'campaign-plan-page', 'content-analysis-page', 'funnel-page'],
   },
 ];
+
+/**
+ * 按项目场景过滤模版分类（「+ 页面」浮层用）：
+ * - tpl.scenario 缺省 → 全场景可见；
+ * - 否则仅当 scenario 包含当前场景时保留该模版；
+ * - 过滤后为空的分类被丢弃；
+ * - scenario 为 undefined（旧项目 / 未设场景）→ 返回全部（向后兼容）。
+ */
+export function filterCategoriesByScenario(
+  scenario?: Scenario,
+): { category: string; ids: string[] }[] {
+  if (!scenario) return TEMPLATE_CATEGORIES;
+  return TEMPLATE_CATEGORIES.map((cat) => ({
+    category: cat.category,
+    ids: cat.ids.filter((id) => {
+      const tpl = getTemplate(id);
+      return !tpl?.scenario || tpl.scenario.includes(scenario);
+    }),
+  })).filter((cat) => cat.ids.length > 0);
+}
 
 /* ----------------------------- Scenario templates (layer ④) ----------------------------- */
 // Compose multiple page templates into a full report (one-click multi-page).
@@ -341,6 +365,7 @@ export const TEMPLATES: Template[] = [
     name: '周报 · 业绩概览',
     description: 'KPI 看板 + 下周计划',
     pageType: 'report-weekly-overview',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Weekly Status Update', 80, 50);
       const kpi = t('kpi-board', 80, 130, 1120, 200);
@@ -355,6 +380,7 @@ export const TEMPLATES: Template[] = [
     name: '月报 · 业绩概览',
     description: 'KPI + 趋势图 + 周期对比 + 洞察',
     pageType: 'report-monthly-overview',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Performance Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
@@ -371,6 +397,7 @@ export const TEMPLATES: Template[] = [
     name: '月报 · 渠道表现',
     description: '渠道核心数据 + 对比表格',
     pageType: 'report-channel',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Performance by Channels', 80, 40);
       // Channel big numbers: reuse kpi-board (compact) to carry Engaged Publishers / Est Impression etc.
@@ -387,6 +414,7 @@ export const TEMPLATES: Template[] = [
     name: '总结 · 业绩复盘',
     description: 'KPI + 周期对比 + 亮点策略',
     pageType: 'report-wrapup-review',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Campaign Review', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
@@ -402,6 +430,7 @@ export const TEMPLATES: Template[] = [
     name: '月报 · 商品表现',
     description: '热门商品 + AI 洞察',
     pageType: 'report-product',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Top Products', 80, 40);
       const products = t('product-performance', 80, 110, 1120, 360);
@@ -413,6 +442,7 @@ export const TEMPLATES: Template[] = [
     name: '月报 · 达人合作详情',
     description: '头像 + 合作数据 + 作品 + 变化说明',
     pageType: 'report-creator-collab',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Top Influencer Collaboration', 80, 40);
       // Orchestrate the existing creator trio (validates cross-page reuse of business components).
@@ -436,6 +466,7 @@ export const TEMPLATES: Template[] = [
     name: '月报 · DM 广告位',
     description: '广告位截图 + 亮点/经验',
     pageType: 'report-placement',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Placement Display', 80, 40);
       const placement = t('placement-display', 80, 110, 1120, 320);
@@ -448,6 +479,7 @@ export const TEMPLATES: Template[] = [
     name: '月报 · 渠道贴文',
     description: '内容站 / Reddit / FB 贴文列表',
     pageType: 'report-posts',
+    scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('Channel Posts', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
@@ -519,6 +551,7 @@ export const TEMPLATES: Template[] = [
     name: '机会与挑战',
     description: 'SWOT 四象限矩阵',
     pageType: 'challenge',
+    scenario: ['campaign-report', 'campaign-proposal'],
     components: () => {
       const title = titleAt('Opportunities & Challenges', 80, 50);
       const swot = t('swot-matrix', 80, 130, 1120, 420);
@@ -538,6 +571,7 @@ export const TEMPLATES: Template[] = [
     name: '合作评估流程',
     description: '标题 + 流程步骤表格',
     pageType: 'process',
+    scenario: ['campaign-report', 'campaign-proposal'],
     components: () =>
       tablePage('4 Weeks from Brief to Launch', ['Step', 'Core Work', 'Goal'], [
         ['1', '...', '...'],
@@ -551,6 +585,7 @@ export const TEMPLATES: Template[] = [
     name: '营销日历',
     description: '标题 + 节点规划表格',
     pageType: 'calendar',
+    scenario: ['campaign-report', 'campaign-proposal'],
     components: () =>
       tablePage('2026 Content Marketing Cadence', ['Milestone', 'Theme', 'Action'], [
         ['...', '...', '...'],
@@ -564,6 +599,7 @@ export const TEMPLATES: Template[] = [
     name: '投放计划',
     description: '标题 + 阶段路线图表格',
     pageType: 'campaign-plan',
+    scenario: ['campaign-report', 'campaign-proposal'],
     components: () =>
       tablePage('30-Day TikTok Growth Path', ['Stage', 'Action', 'Goal'], [
         ['...', '...', '...'],
@@ -614,6 +650,7 @@ export const TEMPLATES: Template[] = [
     name: '增长漏斗',
     description: '标题 + 漏斗阶段柱状图',
     pageType: 'funnel',
+    scenario: ['campaign-report', 'campaign-proposal'],
     components: () => {
       const title = titleAt('Content-Driven Conversion Funnel', 80, 50);
       const chart = t('bar-chart', 80, 130, 1120, 360);

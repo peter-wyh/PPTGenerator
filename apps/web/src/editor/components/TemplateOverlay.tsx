@@ -1,4 +1,5 @@
-import { TEMPLATE_CATEGORIES, getTemplate, type Template } from '../templates';
+import { filterCategoriesByScenario, getTemplate, type Template } from '../templates';
+import { useEditorStore } from '../store';
 
 interface Props {
   onApply: (template: Template) => void;
@@ -7,6 +8,7 @@ interface Props {
 
 /** 新建页面时的模板浮层：按分类分组陈列，内容区纵向滚动。 */
 export function TemplateOverlay({ onApply, onClose }: Props) {
+  const scenario = useEditorStore((s) => s.projectMeta?.scenario);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -25,7 +27,7 @@ export function TemplateOverlay({ onApply, onClose }: Props) {
         </div>
 
         <div className="-mr-2 flex-1 overflow-y-auto pr-2">
-          {TEMPLATE_CATEGORIES.map((cat) => {
+          {filterCategoriesByScenario(scenario).map((cat) => {
             const templates = cat.ids.map((id) => getTemplate(id)).filter((t): t is Template => !!t);
             if (templates.length === 0) return null;
             return (

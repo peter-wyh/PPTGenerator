@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SCENARIO_TEMPLATES, getTemplate, TEMPLATE_CATEGORIES, TEMPLATES } from '@/editor/templates';
+import { SCENARIO_TEMPLATES, getTemplate, TEMPLATE_CATEGORIES, TEMPLATES, filterCategoriesByScenario } from '@/editor/templates';
 import { useEditorStore } from '@/editor/store';
 import type { ProjectDetail } from '@mediakit/shared';
 
@@ -134,6 +134,35 @@ describe('TEMPLATE_CATEGORIES（新建页面弹窗分组）', () => {
     const general = new Set(TEMPLATES.filter((t) => !t.businessLine).map((t) => t.id));
     expect(categorized.size).toBe(general.size);
     for (const id of general) expect(categorized.has(id)).toBe(true);
+  });
+});
+
+describe('filterCategoriesByScenario（按场景过滤模版）', () => {
+  it('media-kit：隐藏投放报告整类；策略·内容仅剩 content-analysis', () => {
+    const cats = filterCategoriesByScenario('media-kit');
+    expect(cats.map((c) => c.category)).not.toContain('投放报告');
+    const strategy = cats.find((c) => c.category === '策略 · 内容');
+    expect(strategy?.ids).toEqual(['content-analysis-page']);
+  });
+
+  it('campaign-proposal：隐藏投放报告', () => {
+    expect(filterCategoriesByScenario('campaign-proposal').map((c) => c.category)).not.toContain('投放报告');
+  });
+
+  it('campaign-report：含投放报告', () => {
+    expect(filterCategoriesByScenario('campaign-report').map((c) => c.category)).toContain('投放报告');
+  });
+
+  it('无场景（undefined）→ 返回全部分类，不过滤（向后兼容）', () => {
+    expect(filterCategoriesByScenario(undefined).length).toBe(TEMPLATE_CATEGORIES.length);
+  });
+
+  it('打标正确', () => {
+    expect(getTemplate('report-monthly-overview')?.scenario).toEqual(['campaign-report']);
+    expect(getTemplate('report-creator-collab')?.scenario).toEqual(['campaign-report']);
+    expect(getTemplate('challenge-page')?.scenario).toEqual(['campaign-report', 'campaign-proposal']);
+    expect(getTemplate('content-analysis-page')?.scenario).toBeUndefined();
+    expect(getTemplate('creator-page')?.scenario).toBeUndefined();
   });
 });
 
