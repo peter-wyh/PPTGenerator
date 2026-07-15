@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { useEditorStore } from '@/editor/store';
@@ -11,6 +11,10 @@ import type {
   WorkMetricsData,
   WorkScreenshotData,
 } from '@mediakit/shared';
+import { collaborationId } from '@mediakit/shared';
+import { getCollaboration } from '@/api/collaborations';
+
+vi.mock('@/api/collaborations', () => ({ getCollaboration: vi.fn() }));
 
 const emptyProject: ProjectDetail = {
   id: 'p',
@@ -121,7 +125,14 @@ describe('WorkScreenshotFields', () => {
     expect(screen.getByRole('button', { name: '阶梯' })).not.toBeDisabled();
   });
 
-  it('imports creator work screenshots from a bound campaign', async () => {
+  it('imports screenshots from a bound collaboration deliverable', async () => {
+    vi.mocked(getCollaboration).mockResolvedValue({
+      id: collaborationId('camp-glowlab-q4', 'cre-mia'),
+      campaignId: 'camp-glowlab-q4',
+      creatorId: 'cre-mia',
+      deliverables: [{ contentType: 'post', screenshots: [{ src: 'shot-1.jpg' }, { src: 'shot-2.jpg' }] }],
+    });
+
     const store = useEditorStore.getState();
     store.loadProject(emptyProject, 'p');
     store.setReportData({
@@ -133,7 +144,6 @@ describe('WorkScreenshotFields', () => {
     store.addComponent('work-screenshot');
     const id = store.currentComponents()[0].id;
     store.select(id);
-    // Clear first to verify import writes 27 images
     store.updateComponentData(id, { images: [] });
     store.commit();
 
@@ -143,14 +153,12 @@ describe('WorkScreenshotFields', () => {
       </MemoryRouter>,
     );
 
-    // Wait for creator list to load, then click import button
-    const importBtn = await screen.findByRole('button', { name: /Import \d+ screenshot/i });
+    const importBtn = await screen.findByRole('button', { name: '导入截图' });
     fireEvent.click(importBtn);
 
     await waitFor(() => {
       const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
-      expect(data.images).toHaveLength(4);
-      expect(data.images[0].src).toContain('picsum.photos');
+      expect(data.images).toEqual([{ src: 'shot-1.jpg' }, { src: 'shot-2.jpg' }]);
     });
   });
 });

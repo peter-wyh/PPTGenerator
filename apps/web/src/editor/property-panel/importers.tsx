@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type {
   CreatorAvatarCardData,
   EditorComponent,
-  WorkScreenshotItem,
 } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
-import { campaignCreatorWorks, allCreatorWorks, listPlacementTypeSummary, type CreatorWithWorks } from '@/api/creatorPerformance';
+import { campaignCreatorWorks, listPlacementTypeSummary, type CreatorWithWorks } from '@/api/creatorPerformance';
 import {
   getCampaignSummary,
   getConversionFunnel,
@@ -251,158 +250,16 @@ export function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
  * 只能选全局配置范围内的 campaign 和达人，不能超出。
  */
 export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }) {
-  const { creator: pageCreator, creatorId: pageCreatorId, creators: allCreators } = usePageCreator();
-  const campaign = useEditorStore((s) => s.reportData.campaign);
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
-  const [selectedCreatorIds, setSelectedCreatorIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(false);
-  const [creatorsWithWorks, setCreatorsWithWorks] = useState<{ creatorId: string; creatorName: string; platform: string; tier: string; posts: { id: string; title: string; cover: string; platform: string }[] }[]>([]);
-
-  const campaignId = campaign?.id ?? '';
-
-  // Load works for globally-configured creators. If a campaign is bound, filter to that
-  // campaign; otherwise fall back to all campaigns' works (cross-campaign aggregate).
-  const creatorsKey = allCreators.map((c) => c.id).join(',');
-  useEffect(() => {
-    if (allCreators.length === 0) {
-      setCreatorsWithWorks([]);
-      return;
-    }
-    let alive = true;
-    setLoading(true);
-    try {
-      const allWorks = campaignId
-        ? campaignCreatorWorks(campaignId)
-        : allCreatorWorks();
-      // Only include creators that are in the global data config
-      const allowedIds = new Set(allCreators.map((c) => c.id));
-      const filtered = allWorks.filter((cw) => allowedIds.has(cw.creatorId));
-      if (!alive) return;
-      setCreatorsWithWorks(filtered.map((cw) => ({
-        creatorId: cw.creatorId,
-        creatorName: cw.creatorName,
-        platform: cw.platform,
-        tier: cw.tier,
-        posts: cw.posts.map((p) => ({ id: p.postId, title: p.title, cover: p.cover, platform: p.platform })),
-      })));
-      // Default: select page-bound creator only, or all if no page binding (first load only)
-      setSelectedCreatorIds((prev) => {
-        if (prev.size > 0) return prev; // keep user's choice
-        if (pageCreatorId && filtered.some((c) => c.creatorId === pageCreatorId)) {
-          return new Set([pageCreatorId]); // 只选页面绑定的达人
-        }
-        return new Set(filtered.map((c) => c.creatorId)); // 无页面绑定则全选
-      });
-    } catch {
-      // ignore
-    } finally {
-      if (alive) setLoading(false);
-    }
-    return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId, creatorsKey, pageCreatorId]);
-
-  const selectedCreators = creatorsWithWorks.filter((c) => selectedCreatorIds.has(c.creatorId));
-  const selectedPostCount = selectedCreators.reduce((sum, c) => sum + c.posts.length, 0);
-
-  function toggleCreator(creatorId: string) {
-    const next = new Set(selectedCreatorIds);
-    if (next.has(creatorId)) next.delete(creatorId);
-    else next.add(creatorId);
-    setSelectedCreatorIds(next);
-  }
-
-  function importSelected() {
-    const images: WorkScreenshotItem[] = [];
-    for (const c of selectedCreators) {
-      for (const post of c.posts) {
-        images.push({ src: post.cover, caption: `${c.creatorName} · ${post.title}` });
-      }
-    }
-    if (images.length === 0) return;
-    updateComponentData(comp.id, { images });
-    commit();
-  }
-
-  if (allCreators.length === 0) {
-    return (
-      <FieldGroup title="从达人作品导入">
-        <p className="text-xs text-foreground-muted">请先在全局数据设置中选择达人。</p>
-      </FieldGroup>
-    );
-  }
-
   return (
-    <FieldGroup title={campaignId ? '从 Campaign 导入作品' : '从达人作品导入'}>
-      {!campaignId && (
-        <p className="mb-1 text-[10px] text-foreground-muted">
-          未绑定 Campaign — 显示所有达人作品。绑定 Campaign 后可缩小范围。
-        </p>
-      )}
-      {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
-      {pageCreator && (
-        <p className="mb-1 text-[10px] text-accent-primary">
-          🔗 页面达人：{pageCreator.name}
-        </p>
-      )}
-      {creatorsWithWorks.length > 0 && (
-        <>
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-foreground-secondary">
-                Creators ({selectedCreators.length}/{creatorsWithWorks.length})
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSelectedCreatorIds(new Set(creatorsWithWorks.map((c) => c.creatorId)))}
-                  className="text-[11px] text-accent-primary hover:underline"
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setSelectedCreatorIds(new Set())}
-                  className="text-[11px] text-foreground-muted hover:underline"
-                >
-                  None
-                </button>
-              </div>
-            </div>
-            {creatorsWithWorks.map((c) => (
-              <label
-                key={c.creatorId}
-                className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 hover:bg-surface-hover"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedCreatorIds.has(c.creatorId)}
-                  onChange={() => toggleCreator(c.creatorId)}
-                  className="h-3 w-3 accent-accent-primary"
-                />
-                <span className="text-xs text-foreground-primary">
-                  {c.creatorName}
-                  <span className="ml-1 text-foreground-muted">
-                    {c.platform} · {c.tier} · {c.posts.length} posts
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
-          <button
-            onClick={importSelected}
-            disabled={loading || selectedPostCount === 0}
-            className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-60"
-          >
-            {loading
-              ? 'Loading...'
-              : `Import ${selectedPostCount} screenshot${selectedPostCount === 1 ? '' : 's'} from ${selectedCreators.length} creator${selectedCreators.length === 1 ? '' : 's'}`}
-          </button>
-        </>
-      )}
-      {creatorsWithWorks.length === 0 && !loading && (
-        <p className="text-xs text-foreground-muted">No works found for selected creators in this campaign.</p>
-      )}
-    </FieldGroup>
+    <DeliverablePicker
+      pickLabel="导入截图"
+      onPick={(d) => {
+        updateComponentData(comp.id, { images: d.screenshots ?? [] });
+        commit();
+      }}
+    />
   );
 }
 
