@@ -54,7 +54,8 @@ describe('CreateProjectDialog — 业务线必填 + 模版类型', () => {
 
     await user.type(screen.getByLabelText('项目名称'), 'P');
     await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
-    // 选 campaign(同时回填业务线 FT);不碰报告类型
+    // 业务线决定 campaign 过滤(c1 属 FT);不碰报告类型
+    await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
     await waitFor(() => expect(screen.getByRole('option', { name: /Q4 Launch/ })).toBeInTheDocument());
     const campaignSelect = screen.getByText('Campaign').parentElement!.querySelector('select')!;
     await user.selectOptions(campaignSelect, 'c1');
@@ -66,5 +67,51 @@ describe('CreateProjectDialog — 业务线必填 + 模版类型', () => {
     expect(meta.scenario).toBe('campaign-report');
     expect(meta.templateType).toBe('weekly'); // reportSub 兜底
     expect(meta.scenarioSub).toBe('weekly');
+  });
+});
+
+describe('CreateProjectDialog — campaign 按业务线过滤', () => {
+  // 跨业务线 fixture:FT 两条、SM 一条
+  const FIXTURE: Campaign[] = [
+    { id: 'ft-1', name: 'GlowLab Q4', advertiser: 'GlowLab', businessLine: 'FT', platform: 'TikTok', startDate: '2026-10-12', endDate: '2026-11-10', budget: '$300K' },
+    { id: 'ft-2', name: 'GlowLab Summer', advertiser: 'GlowLab', businessLine: 'FT', platform: 'TikTok', startDate: '2026-06-01', endDate: '2026-07-01', budget: '$120K' },
+    { id: 'sm-1', name: 'LUMIÈRE Launch', advertiser: 'LUMIÈRE', businessLine: 'SM', platform: 'TikTok', startDate: '2026-09-01', endDate: '2026-09-30', budget: '$520K' },
+  ];
+
+  beforeEach(() => {
+    listCampaignsMock.mockResolvedValue(FIXTURE);
+  });
+
+  it('选业务线 FT 后,campaign 下拉只显示 FT 的 campaign', async () => {
+    const user = userEvent.setup();
+    render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
+    await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
+    await screen.findByText(/GlowLab Q4/);
+    expect(screen.getByText(/GlowLab Summer/)).toBeInTheDocument();
+    expect(screen.queryByText(/LUMIÈRE/)).not.toBeInTheDocument();
+  });
+
+  it('切业务线后已选 campaign 被清空', async () => {
+    const user = userEvent.setup();
+    render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
+    await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
+    await screen.findByText(/GlowLab Q4/);
+    const campaignSelect = screen.getByText('Campaign').parentElement!.querySelector('select')!;
+    await user.selectOptions(campaignSelect, 'ft-1');
+    expect(campaignSelect.value).toBe('ft-1');
+
+    // 切到 SM → campaign 清空
+    await user.selectOptions(screen.getByLabelText('业务线'), 'SM');
+    expect((screen.getByText('Campaign').parentElement!.querySelector('select') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('该业务线无 campaign 时下拉显示空态文案', async () => {
+    const user = userEvent.setup();
+    render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await user.selectOptions(screen.getByLabelText('业务线'), 'DG'); // fixture 中无 DG
+    await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
+    await screen.findByText('该业务线暂无可选 Campaign');
   });
 });

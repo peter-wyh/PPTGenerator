@@ -159,7 +159,7 @@ describe('creator business components — render', () => {
       />,
     );
     expect(screen.getByText('7 天肌肤日记')).toBeInTheDocument();
-    expect(screen.getByText('作品封面')).toBeInTheDocument(); // 缺封面占位
+    expect(screen.getByText('Work cover')).toBeInTheDocument(); // 缺封面占位
   });
 
   it('every variant of every component renders without throwing', () => {

@@ -69,6 +69,48 @@ describe('data.schema · creatorRecordDataSchema(镜像 Creator)', () => {
     const { tier, ...bad } = validCreator;
     expect(() => creatorRecordDataSchema.parse(bad)).toThrow();
   });
+
+  const validMetrics = [{ label: 'Avg Reach', value: '1M', compare: '' }];
+  const validCreatorWithRich = {
+    ...validCreator,
+    metrics: validMetrics,
+    audience: {
+      genderSplit: [{ label: 'Female', value: 53 }, { label: 'Male', value: 47 }],
+      ageRange: [{ label: '25-34', value: 40 }],
+      topCities: [{ label: '上海', value: 32, color: '#6366f1' }],
+    },
+    works: [
+      { id: 'w1', title: 'Routine', cover: 'https://x/c.png', platform: 'TikTok', publishedAt: '2026-01-01', impressions: '1.2M', likes: '96K', comments: '1.2K', shares: '3K', engagementRate: '8.0%' },
+    ],
+    stats: [
+      { key: 'followers', label: 'Followers', value: '1.28M', color: '#6366f1' },
+      { label: 'Engagement', value: '8.7%', color: '#10b981' },
+    ],
+  };
+
+  it('合法 creator 含 audience/works/stats → 通过', () => {
+    expect(creatorRecordDataSchema.parse(validCreatorWithRich)).toEqual(validCreatorWithRich);
+  });
+
+  it('audience.genderSplit 项缺 label → 报错', () => {
+    const bad = { ...validCreator, metrics: validMetrics, audience: { genderSplit: [{ value: 50 }] } };
+    expect(() => creatorRecordDataSchema.parse(bad)).toThrow();
+  });
+
+  it('works 项缺必填 id → 报错', () => {
+    const bad = { ...validCreator, metrics: validMetrics, works: [{ title: 'no id' }] };
+    expect(() => creatorRecordDataSchema.parse(bad)).toThrow();
+  });
+
+  it('stats 项缺必填 color → 报错', () => {
+    const bad = { ...validCreator, metrics: validMetrics, stats: [{ label: 'Followers', value: '1M' }] };
+    expect(() => creatorRecordDataSchema.parse(bad)).toThrow();
+  });
+
+  it('audience/works/stats 全缺(只基本字段)→ 仍通过(全可选)', () => {
+    const cr = { ...validCreator, metrics: validMetrics };
+    expect(creatorRecordDataSchema.parse(cr)).toEqual(cr);
+  });
 });
 
 describe('data.schema · 端点入参 schema', () => {

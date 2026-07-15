@@ -9,6 +9,7 @@ import { DEFAULT_THEME } from '@mediakit/shared';
 import { themeToCssVars } from './theme';
 import { DEFAULT_GRID_SIZE } from './defaults';
 import { snapMove, clampRect, safeRectFrom } from './snap';
+import { BUSINESS_LINE_META } from '@/projectsMeta';
 
 type DragState =
   | {
@@ -47,6 +48,10 @@ export function Canvas() {
   // 全局主题 CSS vars — 只作用于画板内容（不影响编辑器 UI）。
   const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
   const themeStyle = useMemo(() => themeToCssVars(theme), [theme]);
+
+  // 业务线 Logo（右上角渲染）
+  const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+  const blLogo = businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined;
   const safeRect = useMemo(
     () => safeRectFrom(safeMargin, canvasWidth, canvasHeight),
     [safeMargin, canvasWidth, canvasHeight],
@@ -340,6 +345,15 @@ export function Canvas() {
               onHoverDelete={handleHoverDelete}
             />
           ))}
+          {/* 业务线 Logo（右上角，仅编辑画布显示，不影响布局） */}
+          {blLogo && (
+            <img
+              src={blLogo}
+              alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}
+              className="pointer-events-none absolute right-4 top-4 z-50 h-10 w-10 rounded-lg object-contain opacity-80"
+              draggable={false}
+            />
+          )}
           {marqueeRect && (
             <div
               className="pointer-events-none absolute border border-accent-primary bg-accent-primary/10"

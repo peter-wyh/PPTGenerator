@@ -115,7 +115,7 @@ export function ImageGroupComponent({ data }: { data: ImageGroupData }) {
   if (!images || images.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center skin-card-flat bg-surface-hover text-xs text-foreground-muted">
-        组图
+        Image group
       </div>
     );
   }
@@ -132,7 +132,7 @@ export function ImageGroupComponent({ data }: { data: ImageGroupData }) {
               <img src={src} alt="" draggable={false} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[10px] text-foreground-muted">
-                图片
+                Image
               </div>
             )}
           </div>

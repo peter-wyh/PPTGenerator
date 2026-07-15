@@ -133,7 +133,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
             {/* 性别分布：水平堆叠条 */}
             {ins.genderSplit && ins.genderSplit.length > 0 && (
               <div className="flex flex-col gap-1">
-                <div className="text-[10px] font-medium text-foreground-secondary">性别分布</div>
+                <div className="text-[10px] font-medium text-foreground-secondary">Gender Distribution</div>
                 <div className="flex h-5 w-full overflow-hidden rounded-full bg-surface-hover">
                   {ins.genderSplit.map((g, i) => (
                     <div
@@ -141,7 +141,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                       className="flex items-center justify-center text-[10px] font-medium text-white"
                       style={{
                         width: `${Math.max(g.value, 4)}%`,
-                        backgroundColor: g.color ?? (g.label.includes('女') ? 'var(--purple)' : 'var(--blue)'),
+                        backgroundColor: g.color ?? (g.label.match(/^(f|female|女)/i) ? 'var(--purple)' : 'var(--blue)'),
                       }}
                     >
                       {g.value >= 12 ? `${g.label} ${g.value}%` : ''}
@@ -153,7 +153,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
             {/* 年龄段：迷你水平占比条 */}
             {ins.ageRange && ins.ageRange.length > 0 && (
               <div className="flex flex-col gap-1">
-                <div className="text-[10px] font-medium text-foreground-secondary">年龄分布</div>
+                <div className="text-[10px] font-medium text-foreground-secondary">Age Distribution</div>
                 {ins.ageRange.map((a, i) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <span className="w-12 flex-none text-[10px] text-foreground-secondary">{a.label}</span>
@@ -171,7 +171,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-[11px] text-foreground-muted">
-            暂无受众数据
+            No audience data
           </div>
         )}
       </div>
@@ -207,7 +207,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-[11px] text-foreground-muted">
-            暂无城市数据
+            No city data
           </div>
         )}
       </div>
@@ -218,7 +218,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     // 趋势：mini 折线图（播放/互动等随时间）。
     const ins = data.audience;
     const trend = ins?.trend ?? [];
-    const trendLabel = ins?.trendLabel ?? '数据趋势';
+    const trendLabel = ins?.trendLabel ?? 'Data Trend';
     return (
       <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
         {(title || subtitle) && (
@@ -254,7 +254,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-[11px] text-foreground-muted">
-            暂无趋势数据
+            No trend data
           </div>
         )}
       </div>

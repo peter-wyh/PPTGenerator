@@ -59,6 +59,13 @@ describe('达人库 roster', () => {
     expect(CREATOR_META).toHaveLength(12);
   });
 
+  it('每名达人带 avatar URL（picsum 占位，供头像卡导入）', () => {
+    for (const c of MOCK_CREATORS) {
+      expect(c.avatar, `missing avatar for ${c.id}`).toBeTruthy();
+      expect(c.avatar).toMatch(/^https:\/\/picsum\.photos\//);
+    }
+  });
+
   it('原 7 名 campaign 合作达人保留（id 与 tier 不变）', () => {
     const byId = Object.fromEntries(CREATOR_META.map((c) => [c.id, c]));
     const must = ['cre-mia', 'cre-sofia', 'cre-ava', 'cre-jamie', 'cre-leo', 'cre-nora', 'cre-tom'];

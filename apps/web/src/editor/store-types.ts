@@ -24,6 +24,7 @@ export type ThemePatch = {
   radius?: ThemeRadius;
   layout?: Partial<NonNullable<ProjectTheme['layout']>>;
   lineHeight?: Partial<NonNullable<ProjectTheme['lineHeight']>>;
+  heading?: Partial<NonNullable<ProjectTheme['heading']>>;
   format?: Partial<NonNullable<ProjectTheme['format']>>;
   chart?: Partial<NonNullable<ProjectTheme['chart']>>;
   shadow?: NonNullable<ProjectTheme['shadow']>;
@@ -31,7 +32,6 @@ export type ThemePatch = {
   background?: Partial<Omit<NonNullable<ProjectTheme['background']>, 'type'>> & {
     type?: NonNullable<ProjectTheme['background']>['type'];
   };
-  skinPreset?: NonNullable<ProjectTheme['skinPreset']>;
   preset?: string;
 };
 
@@ -96,6 +96,8 @@ export interface EditorState {
   markSaved: () => void;
   /** 立即把当前编辑结果落库（name/尺寸/pages/meta）。autosave 与手动保存共用此入口。 */
   save: () => Promise<void>;
+  /** 页面卸载/切后台前的尽力刷盘：用 keepalive fetch 发 PATCH，请求能活过 unload（body ≤ 64KB）。 */
+  flushSync: () => void;
 
   // ---- view ----
   setZoom: (z: number) => void;
@@ -168,6 +170,9 @@ export interface EditorState {
   setPageType: (pageId: string, pageType: PageType | undefined) => void;
   /** 「恢复自动」：清除 overridden 并重算标题。 */
   restoreReportTitle: (pageId: string) => void;
+  /** 把指定页（默认当前页）上所有「跟随页面」(_dataSource='project') 的数据组件，
+   *  按页面 campaign/creator 绑定重新填充。改页面绑定后调用。 */
+  applyPageBinding: (pageId?: string) => void;
 
   // ---- history ----
   undo: () => void;

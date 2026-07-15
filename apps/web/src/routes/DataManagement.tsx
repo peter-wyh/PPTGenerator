@@ -5,6 +5,8 @@ import { MOCK_CREATORS } from '@/api/mock/creators';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { listCampaignCollaborators, listCreators, listCampaignCreators } from '@/api/creators';
 import { DataTable } from '@/components/DataTable';
+import { CreatorAvatar } from '@/components/CreatorAvatar';
+import { CreatorDetailDrawer } from '@/editor/components/CreatorDetailDrawer';
 import { CreatorMultiSelect } from '@/editor/components/CreatorMultiSelect';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { RecordFormModal } from '@/editor/components/RecordFormModal';
@@ -71,6 +73,7 @@ function DataPanel({ kind }: { kind: DataKind }) {
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
   const [editing, setEditing] = useState<DataRecordDTO | null>(null);
   const [adding, setAdding] = useState(false);
+  const [detailCreator, setDetailCreator] = useState<Creator | null>(null);
   const csvRef = useRef<HTMLInputElement>(null);
   const jsonRef = useRef<HTMLInputElement>(null);
 
@@ -81,7 +84,7 @@ function DataPanel({ kind }: { kind: DataKind }) {
       : ['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement', 'Category', 'Region', ''];
 
   const actions = (r: DataRecordDTO): ReactNode => (
-    <div className="flex gap-2">
+    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
       <button onClick={() => setEditing(r)} className="text-xs text-accent-primary hover:underline">编辑</button>
       <button onClick={() => void del(r.id)} className="text-xs text-red hover:underline">删除</button>
     </div>
@@ -92,7 +95,15 @@ function DataPanel({ kind }: { kind: DataKind }) {
     if (kind === 'campaign') {
       return [d.name, d.advertiser, d.businessLine, d.platform, `${d.startDate} ~ ${d.endDate}`, d.budget, d.status ?? '—', r.ownerId, actions(r)];
     }
-    return [d.name, d.handle, d.platform, d.tier, d.followers, d.engagement, d.category, d.region, actions(r)];
+    return [
+      (
+        <div key="n" className="flex items-center gap-2">
+          <CreatorAvatar name={d.name} avatar={d.avatar} size={28} />
+          <span>{d.name}</span>
+        </div>
+      ),
+      d.handle, d.platform, d.tier, d.followers, d.engagement, d.category, d.region, actions(r),
+    ];
   });
 
   async function del(id: string) {
@@ -177,7 +188,12 @@ function DataPanel({ kind }: { kind: DataKind }) {
           onDelete={(id) => void del(id)}
         />
       ) : (
-        <DataTable loading={loading} headers={headers} rows={rows} />
+        <DataTable
+          loading={loading}
+          headers={headers}
+          rows={rows}
+          onRowClick={kind === 'creator' ? (i) => setDetailCreator(records[i].data as Creator) : undefined}
+        />
       )}
       {preview && (
         <ImportPreviewModal kind={kind} items={preview} onConfirm={confirmImport} onCancel={() => setPreview(null)} />
@@ -187,6 +203,9 @@ function DataPanel({ kind }: { kind: DataKind }) {
       )}
       {editing && (
         <RecordFormModal kind={kind} record={editing} onSaved={async () => { setEditing(null); await reload(); }} onCancel={() => setEditing(null)} />
+      )}
+      {detailCreator && (
+        <CreatorDetailDrawer creator={detailCreator} onClose={() => setDetailCreator(null)} />
       )}
     </div>
   );

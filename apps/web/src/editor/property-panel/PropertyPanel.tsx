@@ -12,15 +12,18 @@ import {
   ReportCreatorFanAgeImporter,
   CreatorLinkImporter,
   KpiImportButton,
+  ReportCreatorWorksImporter,
 } from './importers';
 import {
   FieldEditor,
   KpiCompareLabelField,
   NumberField,
+  TitleBlockFontSizeField,
 } from './fields';
 import {
   BusinessFields,
   CreatorStatsFields,
+  CreatorAudienceProfileFields,
   KpiRowStyleField,
   KpiBoardFields,
   WorkScreenshotFields,
@@ -30,6 +33,23 @@ import {
   CommentWordcloudFields,
   ShapeFields,
 } from './custom-fields';
+
+/**
+ * 标题块:序号/主色/底部分割线 三个字段按当前样式变体显隐(联动)。
+ * 未列出的变体回退到空(三者皆隐)。text/subtitle/fontSize 始终显示。
+ */
+const TITLE_BLOCK_FIELDS_BY_VARIANT: Record<string, ('index' | 'color' | 'divider')[]> = {
+  plain: ['divider'],
+  'bar-left': ['color', 'divider'],
+  underline: ['color'],
+  gradient: ['color'],
+  card: ['divider'],
+  numbered: ['index', 'color', 'divider'],
+  highlight: ['color'],
+  'accent-tag': ['index', 'color'],
+  'accent-underline': ['color'],
+  'block-underline': ['divider'],  // 色块颜色跟标题颜色走，无需独立 color 字段
+};
 
 export function PropertyPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
@@ -65,6 +85,15 @@ export function PropertyPanel() {
     const filtered = fields.filter((f) => f.kind !== 'table');
     fields.length = 0;
     fields.push(...filtered);
+  }
+  // title-block:按当前变体显隐 index/color/divider(联动)。
+  if (comp.type === 'title-block') {
+    const v = (comp.data as { variant?: string }).variant ?? 'bar-left';
+    const allowed = new Set<string>(TITLE_BLOCK_FIELDS_BY_VARIANT[v] ?? []);
+    const conditional = new Set(['index', 'color', 'divider']);
+    for (let i = fields.length - 1; i >= 0; i--) {
+      if (conditional.has(fields[i].key) && !allowed.has(fields[i].key)) fields.splice(i, 1);
+    }
   }
   if (activeVariant?.icon) {
     fields.push({ key: 'icon', label: '图标', kind: 'icon' });
@@ -110,9 +139,14 @@ export function PropertyPanel() {
 
       {/* ── ④ 内容（字段编辑 + 自定义字段）── */}
       <FieldGroup title="✏️ 内容">
-        {fields.map((f) => (
-          <FieldEditor key={f.key + f.kind} comp={comp} field={f} />
-        ))}
+        {fields.map((f) =>
+          // title-block 字号:用专用字段回显「全局字号 / 单组件覆盖」,避免落到 0。
+          comp.type === 'title-block' && f.key === 'fontSize' ? (
+            <TitleBlockFontSizeField key="fontSize" comp={comp} />
+          ) : (
+            <FieldEditor key={f.key + f.kind} comp={comp} field={f} />
+          ),
+        )}
         {fields.length === 0 && (def.variants?.length ?? 0) === 0 && (
           <p className="text-xs text-foreground-muted">该组件无可编辑属性。</p>
         )}
@@ -121,6 +155,7 @@ export function PropertyPanel() {
       {comp.type === 'creator-avatar-card' && <CreatorLinkImporter comp={comp} />}
       {comp.type === 'business-block' && <BusinessFields comp={comp} />}
       {comp.type === 'creator-stats-strip' && <CreatorStatsFields comp={comp} />}
+      {comp.type === 'creator-audience-profile' && <CreatorAudienceProfileFields comp={comp} />}
       {comp.type === 'creator-fan-gender' && <ReportCreatorFanGenderImporter comp={comp} />}
       {comp.type === 'creator-fan-age' && <ReportCreatorFanAgeImporter comp={comp} />}
       {comp.type === 'kpi-board' && <KpiImportButton comp={comp} />}
@@ -133,6 +168,9 @@ export function PropertyPanel() {
       {comp.type === 'shape' && <ShapeFields comp={comp} />}
       {comp.type === 'image-group' && <ImageGroupFields comp={comp} />}
       {comp.type === 'strategy-block' && <StrategyBlockFields comp={comp} />}
+      {(comp.type === 'creator-works-list' || comp.type === 'creator-works-table') && (
+        <ReportCreatorWorksImporter comp={comp} />
+      )}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button

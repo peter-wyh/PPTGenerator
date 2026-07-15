@@ -66,6 +66,7 @@ export function CreateProjectDialog({
   const [scenario, setScenario] = useState<Scenario | ''>('');
   const [scenarioSub, setScenarioSub] = useState<ScenarioSub>('weekly');
   const [creator, setCreator] = useState('');
+  const [styleType, setStyleType] = useState<'ppt' | 'single'>('ppt');
 
   // campaign（上游 mock）
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -86,6 +87,10 @@ export function CreateProjectDialog({
 
   const isCampaign = isCampaignScenario(scenario as Scenario);
   const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
+  // campaign 按已选业务线过滤；未选业务线时不展示（业务线为必填前置）
+  const visibleCampaigns = businessLine
+    ? campaigns.filter((c) => c.businessLine === businessLine)
+    : [];
 
   useEffect(() => {
     if (!open) return;
@@ -98,6 +103,8 @@ export function CreateProjectDialog({
     setScenario((m?.scenario ?? '') as Scenario | '');
     setScenarioSub(m?.scenarioSub ?? 'weekly');
     setCreator(m?.creator ?? '');
+    setStyleType((m?.styleType as 'ppt' | 'single') ?? 'ppt');
+    setBusinessLine(m?.businessLine ?? '');
     setCampaignId(m?.campaignId ?? '');
     setBusinessLine(m?.businessLine ?? '');
     setTemplateType(m?.templateType ?? (m?.scenario === 'campaign-report' ? m?.scenarioSub ?? '' : ''));
@@ -154,6 +161,7 @@ export function CreateProjectDialog({
       scenario: (scenario || undefined) as Scenario | undefined,
       templateType: (templateType || reportSub) || undefined,
       scenarioSub: reportSub,
+      styleType,
     };
 
     if (isCampaignScenario(scenario as Scenario) && selectedCampaign) {
@@ -168,6 +176,8 @@ export function CreateProjectDialog({
       };
     } else if (scenario === 'media-kit') {
       meta.advertiser = mkAdvertiser || undefined;
+    } else {
+      meta.businessLine = businessLine || undefined;
     }
 
     onSubmit({ name: trimmed, width: w, height: h, meta });
@@ -228,7 +238,10 @@ export function CreateProjectDialog({
             <select
               className={selectCls}
               value={businessLine}
-              onChange={(e) => setBusinessLine(e.target.value)}
+              onChange={(e) => {
+                setBusinessLine(e.target.value);
+                setCampaignId('');
+              }}
             >
               <option value="">（请选择业务线）</option>
               {BUSINESS_LINES.map((b) => (
@@ -277,8 +290,14 @@ export function CreateProjectDialog({
                   }}
                   disabled={campaignsLoading}
                 >
-                  <option value="">{campaignsLoading ? '加载中…' : '（选择 Campaign）'}</option>
-                  {campaigns.map((c) => (
+                  <option value="">
+                    {campaignsLoading
+                      ? '加载中…'
+                      : visibleCampaigns.length === 0
+                        ? '该业务线暂无可选 Campaign'
+                        : '（选择 Campaign）'}
+                  </option>
+                  {visibleCampaigns.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} · {c.advertiser}
                     </option>
@@ -336,6 +355,31 @@ export function CreateProjectDialog({
               </select>
             </label>
           )}
+
+          {/* 样式类型 */}
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">样式类型</span>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'ppt' as const, label: 'PPT 多页', hint: '多页幻灯片报告' },
+                { id: 'single' as const, label: '单页面', hint: '单页长图 / 海报' },
+              ].map((s) => (
+                <button
+                  type="button"
+                  key={s.id}
+                  onClick={() => setStyleType(s.id)}
+                  className={`rounded-lg border px-3 py-2 text-left transition ${
+                    styleType === s.id
+                      ? 'border-accent-primary bg-accent-primary/5'
+                      : 'border-border-default hover:bg-surface-hover'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-foreground-primary">{s.label}</div>
+                  <div className="text-[11px] text-foreground-muted">{s.hint}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* 创建人（通用） */}
           <label className="block text-sm text-foreground-secondary">

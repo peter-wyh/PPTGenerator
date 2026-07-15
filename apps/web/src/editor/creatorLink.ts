@@ -1,4 +1,5 @@
 import type { CreatorAvatarCardData, CreatorPlatform } from '@mediakit/shared';
+import { creatorAvatarUrl } from '../api/creatorAvatar';
 
 /** 平台 → 命中 host 关键词（小写）。 */
 const PLATFORM_HOSTS: { platform: CreatorPlatform; hosts: string[] }[] = [
@@ -82,7 +83,7 @@ export function parseCreatorLink(
         platform,
         name,
         handle,
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+        avatar: creatorAvatarUrl(name),
         followers,
         likes,
         engagement,

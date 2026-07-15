@@ -7,6 +7,7 @@
 import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 import type { CampaignMetric } from '@mediakit/shared';
 import type { Creator } from '../creators';
+import { creatorAvatarUrl } from '../creatorAvatar';
 
 /** Creator tier（与 creatorPerformance.ts 共享）。 */
 export type Tier = 'mega' | 'macro' | 'micro';
@@ -193,8 +194,117 @@ export function buildChannelMetrics(
   ];
 }
 
-/** Creator mock list (the 达人库) with channel-level metrics injected by buildChannelMetrics. */
+/* ------------------------------ Audience / Works / Stats ------------------------------ */
+
+/** stat 配色（内联，避免 api→editor 跨层依赖）。 */
+const STAT_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'];
+
+/** 按地区取 top 城市池。 */
+const CITY_POOL: Record<string, string[]> = {
+  US: ['New York', 'Los Angeles', 'Chicago', 'Houston'],
+  'US / UK': ['New York', 'Los Angeles', 'Chicago', 'Houston'],
+  CN: ['上海', '北京', '广州', '深圳'],
+  JP: ['Tokyo', 'Osaka', 'Yokohama', 'Nagoya'],
+  KR: ['Seoul', 'Busan', 'Incheon', 'Daegu'],
+  IN: ['Mumbai', 'Delhi', 'Bangalore', 'Chennai'],
+};
+const DEFAULT_CITIES = ['New York', 'Los Angeles', 'Chicago', 'Houston'];
+
+/**
+ * 生成达人受众画像（确定性：genderSplit/ageRange/topCities）。
+ * 抖动取自 CHANNEL_JITTER（与 buildChannelMetrics 同模式，无 RNG）。
+ * @param meta 花名册条目（取 region）
+ * @param index 该达人在达人库中的序号（驱动确定性抖动）
+ */
+export function buildAudience(
+  meta: Omit<Creator, 'metrics'>,
+  index: number,
+): NonNullable<Creator['audience']> {
+  const jit = CHANNEL_JITTER[index % CHANNEL_JITTER.length];
+  const female = Math.round(52 * jit);
+  const ageBase = [
+    { label: '18-24', base: 22 },
+    { label: '25-34', base: 40 },
+    { label: '35-44', base: 25 },
+    { label: '45+', base: 13 },
+  ];
+  const ageRaw = ageBase.map((a) => ({ label: a.label, v: a.base * jit }));
+  const ageSum = ageRaw.reduce((s, x) => s + x.v, 0) || 1;
+  const cities = CITY_POOL[meta.region] ?? DEFAULT_CITIES;
+  const cityBase = [32, 27, 23, 18];
+  return {
+    genderSplit: [
+      { label: 'Female', value: female },
+      { label: 'Male', value: 100 - female },
+    ],
+    ageRange: ageRaw.map((a) => ({ label: a.label, value: Math.round((a.v / ageSum) * 100) })),
+    topCities: cities.map((label, i) => ({ label, value: Math.round(cityBase[i] * jit) })),
+  };
+}
+
+/** 作品标题池（按 category 取，内联确定性）。 */
+const WORK_TITLE_POOL: Record<string, string[]> = {
+  Beauty: ['Summer Glow Routine', 'Sensitive Skin Review', 'Get Ready With Me'],
+  Skincare: ['AM Skincare Routine', 'Vitamin C Review', 'Skin Barrier Tips'],
+  Lifestyle: ['Day in My Life', 'Apartment Tour', 'Weekend Vlog'],
+  Tech: ['Unboxing & First Look', 'Hands-on Review', 'Setup Tour'],
+  Fashion: ['Outfit Ideas', 'Seasonal Lookbook', 'Styling Tips'],
+  Fitness: ['Full Body Workout', 'Meal Prep', 'Form Check'],
+  Food: ['Easy Recipe', 'Restaurant Review', 'Grocery Haul'],
+};
+const DEFAULT_TITLES = ['Brand Collab', 'Product Review', 'Daily Vlog'];
+
+/**
+ * 生成达人作品列表（内联确定性；不依赖 creatorPerformance，避免循环依赖）。
+ * creatorPerformance.ts 已 import CREATOR_META，若此处反向 import 会形成循环
+ * 且 MOCK_CREATORS 在模块顶层急切求值 → 循环会破坏。
+ */
+export function buildWorks(
+  meta: Omit<Creator, 'metrics'>,
+  index: number,
+): NonNullable<Creator['works']> {
+  const pool = WORK_TITLE_POOL[meta.category] ?? DEFAULT_TITLES;
+  return pool.map((title, i) => {
+    const jit = CHANNEL_JITTER[(index + i) % CHANNEL_JITTER.length];
+    const base = (TIER_CHANNEL_BASE[meta.tier as Tier] ?? TIER_CHANNEL_BASE.micro).impressions / 10;
+    return {
+      id: `${meta.id}-work-${i + 1}`,
+      title,
+      cover: `https://picsum.photos/seed/${encodeURIComponent(meta.name + '-' + i)}/400/400`,
+      platform: meta.platform,
+      publishedAt: `2026-0${(i % 6) + 1}-${String(((index + i) % 28) + 1).padStart(2, '0')}`,
+      impressions: compact(base * jit),
+      likes: compact(base * jit * 0.08),
+      comments: compact(base * jit * 0.005),
+      shares: compact(base * jit * 0.012),
+      engagementRate: `${(8 * jit).toFixed(1)}%`,
+    };
+  });
+}
+
+/**
+ * 生成频道 stat 项（Followers/Engagement/Avg Reach/Impressions）。
+ * 后两项复用 buildChannelMetrics 的确定性量级，前两项取 meta 原文。
+ */
+export function buildStats(
+  meta: Omit<Creator, 'metrics'>,
+  index: number,
+): NonNullable<Creator['stats']> {
+  const m = buildChannelMetrics(meta, index); // [Avg Reach, Impressions, Follower Growth, CPM]
+  return [
+    { key: 'followers', label: 'Followers', value: meta.followers, color: STAT_COLORS[0] },
+    { key: 'engagement', label: 'Engagement', value: meta.engagement, color: STAT_COLORS[1] },
+    { key: 'reach', label: 'Avg Reach', value: m[0].value, color: STAT_COLORS[2] },
+    { key: 'impressions', label: 'Impressions', value: m[1].value, color: STAT_COLORS[3] },
+  ];
+}
+
+/** Creator mock list (the 达人库) with channel-level metrics + audience/works/stats injected. */
 export const MOCK_CREATORS: Creator[] = CREATOR_META.map((c, i) => ({
   ...c,
+  avatar: creatorAvatarUrl(c.name),
   metrics: buildChannelMetrics(c, i),
+  audience: buildAudience(c, i),
+  works: buildWorks(c, i),
+  stats: buildStats(c, i),
 }));

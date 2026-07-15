@@ -18,6 +18,52 @@ function setIndicator(variant: string, extra: Record<string, unknown> = {}) {
   } as any);
 }
 
+function setTitleBlock(extra: Record<string, unknown> = {}, headingFontSize?: number) {
+  const comp: EditorComponent = {
+    id: 'c1',
+    type: 'title-block',
+    x: 0, y: 0, w: 600, h: 120,
+    data: { variant: 'bar-left', text: 'T', subtitle: 'S', ...extra } as any,
+  };
+  useEditorStore.setState({
+    pages: [{ id: 'p1', name: 'P1', components: [comp] }],
+    currentPageId: 'p1',
+    selectedIds: ['c1'],
+    ...(headingFontSize !== undefined
+      ? ({ projectMeta: { theme: { heading: { fontSize: headingFontSize } } } } as any)
+      : {}),
+  } as any);
+}
+
+describe('PropertyPanel title-block 字号 回显', () => {
+  beforeEach(() => {
+    useEditorStore.setState({
+      pages: [],
+      currentPageId: 'p1',
+      selectedIds: [],
+      projectMeta: null,
+    } as any);
+  });
+
+  it('字号未设置时回显全局标题字号(默认 32),而非 0', () => {
+    setTitleBlock(); // data 无 fontSize → 继承全局
+    render(<PropertyPanel />);
+    expect((screen.getByLabelText('字号') as HTMLInputElement).value).toBe('32');
+  });
+
+  it('字号已单组件覆盖时回显该覆盖值', () => {
+    setTitleBlock({ fontSize: 48 });
+    render(<PropertyPanel />);
+    expect((screen.getByLabelText('字号') as HTMLInputElement).value).toBe('48');
+  });
+
+  it('字号未设置时跟随全局标题字号(自定义值)', () => {
+    setTitleBlock({}, 28);
+    render(<PropertyPanel />);
+    expect((screen.getByLabelText('字号') as HTMLInputElement).value).toBe('28');
+  });
+});
+
 describe('PropertyPanel icon field gating', () => {
   beforeEach(() => {
     useEditorStore.setState({

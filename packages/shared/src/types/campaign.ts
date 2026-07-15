@@ -69,6 +69,12 @@ export interface Creator {
   avatar?: string;
   /** 达人自身频道 KPI 指标（Avg Reach/Impressions/Follower Growth/CPM）。 */
   metrics: CampaignMetric[];
+  /** 受众画像(性别/年龄/城市)。 */
+  audience?: CreatorAudience;
+  /** 作品列表 + 作品数据。 */
+  works?: CreatorWork[];
+  /** 频道维度 stat 项(creator-stats-strip 用)。 */
+  stats?: CreatorStatItem[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -104,6 +110,36 @@ export interface CreatorStatItem {
   selected?: boolean;
 }
 
+/** 受众画像单项(性别/年龄/城市占比)。value 为百分比数值。 */
+export interface AudienceSlice {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+/** 达人受众画像(性别/年龄/城市分布)。Creator 与 ReportCreator 共用。 */
+export interface CreatorAudience {
+  genderSplit?: AudienceSlice[];
+  ageRange?: AudienceSlice[];
+  topCities?: AudienceSlice[];
+}
+
+/** 达人作品(列表项 + 作品数据)。对齐 works 组件渲染所需字段。 */
+export interface CreatorWork {
+  id: string;
+  title: string;
+  cover?: string;
+  url?: string;
+  platform?: string;
+  publishedAt?: string;
+  impressions?: string;
+  likes?: string;
+  comments?: string;
+  shares?: string;
+  saves?: string;
+  engagementRate?: string;
+}
+
 /** 报告中选中的达人信息（精简版，用于达人组件一键填充）。 */
 export interface ReportCreator {
   id: string;
@@ -118,15 +154,11 @@ export interface ReportCreator {
   avatar?: string;
   /** 达人数据条 KPI（由数据配置面板从上游填充）。 */
   stats?: CreatorStatItem[];
-  /** 受众画像（性别/年龄/城市分布，用于 fan-gender / fan-age / fan-city 组件一键填充）。 */
-  audience?: {
-    genderSplit?: { label: string; value: number; color?: string }[];
-    ageRange?: { label: string; value: number; color?: string }[];
-    topCities?: { label: string; value: number; color?: string }[];
-  };
+  /** 受众画像(性别/年龄/城市分布,用于 fan-gender / fan-age / fan-city 组件一键填充)。 */
+  audience?: CreatorAudience;
 }
 
-/** 报告全局数据上下文：Campaign + 达人列表。存入编辑器 store，随项目保存。 */
+/** 报告全局数据上下文：Campaign + 达人列表 + 商品列表。存入编辑器 store，随项目保存。 */
 export interface ReportDataContext {
   /** 绑定的 Campaign（可空）。 */
   campaign?: ReportCampaign | null;
@@ -134,6 +166,8 @@ export interface ReportDataContext {
   campaignCreators?: ReportCreator[];
   /** 达人库中选中的达人列表（可多个）。 */
   creators?: ReportCreator[];
+  /** 商品列表（campaign 关联的带货商品，可编辑）。 */
+  products?: Product[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -438,4 +472,40 @@ export interface Advertiser {
   merchantId?: string;
   /** Logo URL。 */
   logo?: string;
+}
+
+/** 商品（campaign 关联的带货商品）。 */
+export interface Product {
+  /** 商品 ID。 */
+  id: string;
+  /** 商品名称。 */
+  name: string;
+  /** 商品图片 URL（可选）。 */
+  image?: string;
+  /** 价格（含货币符号）。 */
+  price: string;
+  /** 原价（可选，用于显示折扣）。 */
+  originalPrice?: string;
+  /** 关联的广告主。 */
+  advertiser?: string;
+  /** 关联的业务线。 */
+  businessLine?: string;
+  /** 商品分类/品类。 */
+  category?: string;
+  /** 带货 GMV。 */
+  gmv?: string;
+  /** 销量/订单数。 */
+  orders?: string;
+  /** 点击数。 */
+  clicks?: string;
+  /** 转化率 CVR。 */
+  cvr?: string;
+  /** ROAS。 */
+  roas?: string;
+  /** 佣金（CPS commission）。 */
+  commission?: string;
+  /** CPS 花费（commission + 平台服务费）。 */
+  spend?: string;
+  /** 状态。 */
+  status?: 'active' | 'paused' | 'sold-out';
 }

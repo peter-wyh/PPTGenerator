@@ -130,9 +130,10 @@ describe('TEMPLATE_CATEGORIES（新建页面弹窗分组）', () => {
 
   it('所有模板都被分到某个分类（无遗漏、无孤立）', () => {
     const categorized = new Set(TEMPLATE_CATEGORIES.flatMap((c) => c.ids));
-    const all = new Set(TEMPLATES.map((t) => t.id));
-    expect(categorized.size).toBe(all.size);
-    for (const id of all) expect(categorized.has(id)).toBe(true);
+    // 只检查通用模板（不含业务线变体）。业务线变体通过 getTemplateByPageType(pageType, businessLine) 动态匹配。
+    const general = new Set(TEMPLATES.filter((t) => !t.businessLine).map((t) => t.id));
+    expect(categorized.size).toBe(general.size);
+    for (const id of general) expect(categorized.has(id)).toBe(true);
   });
 });
 

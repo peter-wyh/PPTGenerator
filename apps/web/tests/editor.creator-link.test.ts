@@ -42,7 +42,7 @@ describe('parseCreatorLink', () => {
     expect(r.engagement).toMatch(/%$/);
     expect(r.intro).toContain(r.handle!);
     expect(r.sourceUrl).toBe('https://www.tiktok.com/@miaglowup');
-    expect(r.avatar).toContain('dicebear.com');
+    expect(r.avatar).toContain('picsum.photos');
   });
 
   it('同一 URL 两次解析结果一致（确定性）', async () => {

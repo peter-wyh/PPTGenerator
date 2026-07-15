@@ -20,6 +20,7 @@ export const LABELS: Record<string, string> = {
   'creator-fan-city': '城市分布',
   'creator-fan-age': '年龄段',
   'creator-fan-interest': '兴趣标签',
+  'creator-audience-profile': '用户画像',
   'brand-wall': '品牌墙',
   'package-card': '套餐卡',
   'kpi-board': '业绩看板',

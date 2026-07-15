@@ -40,10 +40,10 @@ function Screenshot({
   return (
     <div className={`relative h-full w-full overflow-hidden rounded-lg ${cls ?? ''}`}>
       {src ? (
-        <img src={src} alt={caption ?? '作品截图'} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={src} alt={caption ?? 'Work screenshot'} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <div className="flex h-full min-h-[64px] w-full items-center justify-center bg-surface-hover text-[10px] text-foreground-muted">
-          作品截图
+          Work screenshot
         </div>
       )}
       {caption && !captionHidden && (
@@ -260,7 +260,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     return (
       <Shell title={title}>
         <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
-          暂无作品截图
+          No work screenshots
         </div>
       </Shell>
     );
@@ -516,7 +516,7 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
     return (
       <Shell title={title}>
         <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
-          暂无作品数据
+          No work data
         </div>
       </Shell>
     );
@@ -530,7 +530,7 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
             {cover && (
               <img
                 src={cover}
-                alt={workName ?? '作品封面'}
+                alt={workName ?? 'Work cover'}
                 draggable={false}
                 className="h-12 w-12 flex-none rounded object-cover"
               />
@@ -670,7 +670,7 @@ export function CommentWordcloud({ data }: { data: CommentWordcloudData }) {
   if (words.length === 0) {
     return (
       <Shell title={title}>
-        <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">暂无数据</div>
+        <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">No data</div>
       </Shell>
     );
   }

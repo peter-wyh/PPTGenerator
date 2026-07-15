@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PageThumbnail } from '@/editor/components/PageThumbnail';
 import { TemplateOverlay } from '@/editor/components/TemplateOverlay';
-import { TEMPLATES } from '@/editor/templates';
+import { TEMPLATES, TEMPLATE_CATEGORIES } from '@/editor/templates';
 import { useEditorStore } from '@/editor/store';
 import type { Page, ProjectDetail } from '@mediakit/shared';
 
@@ -48,7 +48,10 @@ describe('PageThumbnail', () => {
 describe('TemplateOverlay', () => {
   it('renders all templates', () => {
     render(<TemplateOverlay onApply={() => {}} onClose={() => {}} />);
-    for (const tpl of TEMPLATES) expect(screen.getByText(tpl.name)).toBeInTheDocument();
+    // TemplateOverlay 按 TEMPLATE_CATEGORIES 渲染（不含业务线变体）。
+    const categorizedIds = new Set(TEMPLATE_CATEGORIES.flatMap((c) => c.ids));
+    const visible = TEMPLATES.filter((t) => categorizedIds.has(t.id));
+    for (const tpl of visible) expect(screen.getByText(tpl.name)).toBeInTheDocument();
   });
 
   it('blank template creates an empty page', async () => {

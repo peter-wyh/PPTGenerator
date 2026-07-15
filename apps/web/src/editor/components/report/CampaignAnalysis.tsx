@@ -47,7 +47,7 @@ export function CampaignAnalysis({ data }: { data: CampaignAnalysisData }) {
 
 function CampaignRadar({ dimensions }: { dimensions: CampaignAnalysisData['dimensions'] }) {
   if (!dimensions || dimensions.length === 0) {
-    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">无维度数据</div>;
+    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">No dimension data</div>;
   }
   const data = dimensions.map((d) => ({ label: d.label, value: d.value, max: d.max ?? 100 }));
   return (
@@ -65,7 +65,7 @@ function CampaignRadar({ dimensions }: { dimensions: CampaignAnalysisData['dimen
 
 function CampaignCombo({ series }: { series: CampaignAnalysisData['series'] }) {
   if (!series || series.length === 0) {
-    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">无系列数据</div>;
+    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">No series data</div>;
   }
   const data = series.map((s) => ({ label: s.label, barValue: s.barValue, lineValue: s.lineValue }));
   return (
@@ -85,7 +85,7 @@ function CampaignCombo({ series }: { series: CampaignAnalysisData['series'] }) {
 
 function CampaignFunnel({ steps }: { steps: CampaignAnalysisData['funnelSteps'] }) {
   if (!steps || steps.length === 0) {
-    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">无漏斗数据</div>;
+    return <div className="flex h-full items-center justify-center text-xs text-foreground-muted">No funnel data</div>;
   }
   const max = Math.max(...steps.map((s) => s.value), 1);
   return (

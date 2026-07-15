@@ -91,16 +91,6 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     '--shadow-color': 'rgba(0,0,0,.08)',
   };
 
-  // v3：skinPreset → 覆盖圆角和阴影档位（在 skin 语义类层面生效）
-  const skin = t.skinPreset ?? 'default';
-  if (skin === 'flat') {
-    vars['--radius-card'] = '4px';
-    vars['--shadow-card'] = 'none';
-  } else if (skin === 'elevated') {
-    vars['--radius-card'] = '20px';
-    vars['--shadow-card'] = SHADOW_MAP.strong;
-  }
-
   // 图表配色：--chart-1 … --chart-6
   for (let i = 0; i < 6; i++) {
     vars[`--chart-${i + 1}`] = palette[i % palette.length];
@@ -109,6 +99,11 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
   // 标题字体：缺省=跟随 text
   const headingKey = t.font.heading ?? t.font.text;
   vars['--font-heading'] = getFontStack(headingKey, DEFAULT_THEME.font.text);
+
+  // 标题字号：全局 heading.fontSize（标题块组件 fontSize 缺省时取此值）
+  if (typeof t.heading?.fontSize === 'number') {
+    vars['--heading-font-size'] = `${t.heading.fontSize}px`;
+  }
 
   return vars as CSSProperties;
 }

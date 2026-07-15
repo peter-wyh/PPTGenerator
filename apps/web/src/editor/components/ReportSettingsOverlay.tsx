@@ -6,12 +6,12 @@ import {
   type ProjectTheme,
   type ThemeDensity,
   type ThemeRadius,
-  type SkinPreset,
 } from '@mediakit/shared';
 import type { PageGradient } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import type { ThemePatch } from '../store';
 import { ImageInput } from '@/components/ImageInput';
+import { BUSINESS_LINE_META } from '@/projectsMeta';
 
 interface Props {
   onClose: () => void;
@@ -29,10 +29,18 @@ const RADIUS_OPTIONS: { value: ThemeRadius; label: string }[] = [
   { value: 'large', label: '大圆角' },
 ];
 
-const SKIN_PRESET_OPTIONS: { value: SkinPreset; label: string }[] = [
-  { value: 'default', label: '标准' },
-  { value: 'flat', label: '扁平' },
-  { value: 'elevated', label: '浮起' },
+/** 标题块样式选项（与 registry title-block variants 对齐）。 */
+const TITLE_STYLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'plain', label: '纯文字' },
+  { value: 'bar-left', label: '左色条' },
+  { value: 'underline', label: '下划线' },
+  { value: 'gradient', label: '渐变背景' },
+  { value: 'card', label: '卡片' },
+  { value: 'numbered', label: '序号' },
+  { value: 'highlight', label: '色块强调' },
+  { value: 'accent-tag', label: '色块标签' },
+  { value: 'accent-underline', label: '强调下划线' },
+  { value: 'block-underline', label: '色块下划线' },
 ];
 
 /** 从全局 STYLE_PRESETS 动态提取品牌色色板（去重）。 */
@@ -40,16 +48,87 @@ const PRESET_PRIMARIES = Array.from(
   new Set(STYLE_PRESETS.map((p) => p.theme.color.primary)),
 );
 
+/** 把 ThemePatch 深合并到 draft（复刻 store.setTheme 的合并逻辑，仅本地操作不落 store）。 */
+function applyDraftPatch(prev: ProjectTheme, patch: ThemePatch): ProjectTheme {
+  return {
+    color: { ...prev.color, ...patch.color },
+    font: { ...prev.font, ...patch.font },
+    density: patch.density ?? prev.density,
+    radius: patch.radius ?? prev.radius,
+    layout: { ...(prev.layout ?? DEFAULT_THEME.layout), ...patch.layout } as NonNullable<
+      ProjectTheme['layout']
+    >,
+    lineHeight: {
+      ...(prev.lineHeight ?? DEFAULT_THEME.lineHeight),
+      ...patch.lineHeight,
+    } as NonNullable<ProjectTheme['lineHeight']>,
+    heading: {
+      ...(prev.heading ?? DEFAULT_THEME.heading),
+      ...patch.heading,
+    } as NonNullable<ProjectTheme['heading']>,
+    format: {
+      ...(prev.format ?? DEFAULT_THEME.format),
+      ...patch.format,
+    } as NonNullable<ProjectTheme['format']>,
+    chart: {
+      ...(prev.chart ?? DEFAULT_THEME.chart),
+      ...patch.chart,
+    } as NonNullable<ProjectTheme['chart']>,
+    shadow: patch.shadow ?? prev.shadow,
+    branding:
+      patch.branding || prev.branding
+        ? { ...(prev.branding ?? DEFAULT_THEME.branding), ...patch.branding }
+        : undefined,
+    background:
+      patch.background || prev.background
+        ? {
+            type: patch.background?.type ?? prev.background?.type ?? 'none',
+            ...(prev.background ?? {}),
+            ...patch.background,
+          }
+        : undefined,
+    preset: 'preset' in patch ? patch.preset : prev.preset,
+  };
+}
+
 /** 报告设置浮层：整体风格（预设 + 配色 + 字体 + 密度 + 圆角）+ 解析参考图占位。 */
 export function ReportSettingsOverlay({ onClose }: Props) {
-  const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
+  // 本地 draft 状态：挂载时从 store 拷贝当前主题，所有编辑写入 draft，仅在点「保存」时整体提交。
+  const commitTheme = useEditorStore((s) => s.setTheme);
+  const [draft, setDraft] = useState<ProjectTheme>(
+    () => useEditorStore.getState().projectMeta?.theme ?? DEFAULT_THEME,
+  );
+  // theme 作为 draft 的只读别名，保留以避免 JSX 中 ~40 处引用全部改名。
+  const theme = draft;
   const layout = theme.layout ?? DEFAULT_THEME.layout!;
   const lineHeight = theme.lineHeight ?? DEFAULT_THEME.lineHeight!;
   const format = theme.format ?? DEFAULT_THEME.format!;
   const chart = theme.chart ?? DEFAULT_THEME.chart!;
   const shadow = theme.shadow ?? DEFAULT_THEME.shadow!;
-  const setTheme = useEditorStore((s) => s.setTheme);
+  const heading = theme.heading ?? DEFAULT_THEME.heading!;
+  // 本地 draft 更新：复刻 store.setTheme 的深合并签名，但不落 store（仅改 draft）。
+  const setTheme = (patch: ThemePatch) => setDraft((prev) => applyDraftPatch(prev, patch));
   const [toast, setToast] = useState<string | null>(null);
+
+  // 业务线 Logo（标题栏右上角，只读；取自 mock BUSINESS_LINE_META）
+  const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+  const bl = businessLine ? BUSINESS_LINE_META[businessLine] : undefined;
+
+  // 左导航分类
+  type Cat = 'basic' | 'layout' | 'component' | 'brand';
+  const [activeCat, setActiveCat] = useState<Cat>('basic');
+  const CATS: { key: Cat; label: string }[] = [
+    { key: 'basic', label: '基础样式' },
+    { key: 'layout', label: '布局' },
+    { key: 'component', label: '组件样式' },
+    { key: 'brand', label: '品牌' },
+  ];
+
+  /** 保存：把 draft 整体提交到 store（深合并等价整体替换），然后关闭浮层。 */
+  function handleSave() {
+    commitTheme(draft);
+    onClose();
+  }
 
   /** 应用预设：整套 ProjectTheme 填入。 */
   function applyPreset(presetKey: string) {
@@ -61,7 +140,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
       density: preset.theme.density,
       radius: preset.theme.radius,
       layout: { ...preset.theme.layout },
-      skinPreset: preset.theme.skinPreset,
+      shadow: preset.theme.shadow,
       preset: preset.key,
     };
     setTheme(patch);
@@ -92,10 +171,6 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     setTheme({ radius: r, preset: undefined });
   }
 
-  function updateSkinPreset(s: SkinPreset) {
-    setTheme({ skinPreset: s, preset: undefined });
-  }
-
   /** 手改布局字段：清空 preset 高亮。 */
   function updateLayout<K extends keyof NonNullable<ProjectTheme['layout']>>(
     field: K,
@@ -110,6 +185,14 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     value: NonNullable<ProjectTheme['lineHeight']>[K],
   ) {
     setTheme({ lineHeight: { [field]: value }, preset: undefined });
+  }
+
+  /** 手改标题样式字段：清空 preset 高亮。 */
+  function updateHeading<K extends keyof NonNullable<ProjectTheme['heading']>>(
+    field: K,
+    value: NonNullable<ProjectTheme['heading']>[K],
+  ) {
+    setTheme({ heading: { [field]: value }, preset: undefined });
   }
 
   /** 手改数字/币种格式字段：清空 preset 高亮。 */
@@ -181,7 +264,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
       role="presentation"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-surface-primary shadow-lg"
+        className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-surface-primary shadow-lg"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -192,520 +275,596 @@ export function ReportSettingsOverlay({ onClose }: Props) {
             <div className="font-headings text-lg font-semibold text-foreground-primary">全局样式设置</div>
             <p className="text-xs text-foreground-secondary">整体风格驱动整份报告的配色、字体、密度与布局。</p>
           </div>
-          <button onClick={onClose} className="text-foreground-muted hover:text-foreground-primary">✕</button>
-        </div>
-
-        <div className="space-y-5 overflow-y-auto px-6 py-5">
-          {/* ① 预设选择器 */}
-          <section>
-            <div className="mb-2 text-xs font-semibold text-foreground-secondary">整体风格预设</div>
-            <div className="flex flex-wrap gap-2">
-              {STYLE_PRESETS.map((preset) => {
-                const active = theme.preset === preset.key;
-                return (
-                  <button
-                    key={preset.key}
-                    onClick={() => applyPreset(preset.key)}
-                    className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-                      active
-                        ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                        : 'border-border-default text-foreground-secondary hover:border-foreground-muted'
-                    }`}
-                    title={preset.description}
-                  >
-                    {preset.name}
-                  </button>
-                );
-              })}
-            </div>
-            {theme.preset && (
-              <div className="mt-1 text-[11px] text-foreground-muted">
-                {STYLE_PRESETS.find((p) => p.key === theme.preset)?.description ?? ''}
+          <div className="flex items-center gap-3">
+            {bl?.logo && (
+              <div className="flex items-center gap-2">
+                <img
+                  src={bl.logo}
+                  alt={bl.name}
+                  className="h-8 w-8 rounded-lg object-contain"
+                  draggable={false}
+                />
+                <span className="text-xs text-foreground-secondary">{bl.name}</span>
               </div>
             )}
-          </section>
+            <button onClick={onClose} className="text-foreground-muted hover:text-foreground-primary">✕</button>
+          </div>
+        </div>
 
-          {/* ② 配色 */}
-          <section className="space-y-3">
-            <div className="text-xs font-semibold text-foreground-secondary">配色</div>
-
-            {/* 主品牌色 + 次品牌色 */}
-            <div className="grid grid-cols-2 gap-3">
-              <ColorField
-                label="主品牌色"
-                value={theme.color.primary}
-                presetSwatches={PRESET_PRIMARIES}
-                onChange={(v) => updateColor('primary', v)}
-              />
-              <ColorField
-                label="次品牌色"
-                value={theme.color.secondary}
-                onChange={(v) => updateColor('secondary', v)}
-              />
-            </div>
-
-            {/* 中性文字色 + 背景色 */}
-            <div className="grid grid-cols-2 gap-3">
-              <ColorField
-                label="中性文字色"
-                value={theme.color.neutralText}
-                onChange={(v) => updateColor('neutralText', v)}
-              />
-              <ColorField
-                label="背景色"
-                value={theme.color.neutralBg}
-                onChange={(v) => updateColor('neutralBg', v)}
-              />
-            </div>
-
-            {/* 图表配色板 6 色 */}
-            <div>
-              <div className="mb-1.5 text-[11px] text-foreground-muted">图表配色（6 色序列）</div>
-              <div className="flex flex-wrap gap-2">
-                {theme.color.chartPalette.map((c, i) => (
-                  <div key={i} className="flex items-center gap-1">
-                    <input
-                      type="color"
-                      value={c}
-                      onChange={(e) => updateChartColor(i, e.target.value)}
-                      className="h-7 w-8 cursor-pointer rounded border border-border-default p-0.5"
-                    />
-                    <span className="text-[10px] text-foreground-muted">{i + 1}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* ③ 字体 */}
-          <section className="space-y-2">
-            <div className="text-xs font-semibold text-foreground-secondary">字体</div>
-            <FontSelect
-              label="文本字体"
-              value={theme.font.text}
-              options={textFonts}
-              onChange={(v) => updateFont('text', v)}
-            />
-            <FontSelect
-              label="数字字体"
-              value={theme.font.number}
-              options={numberFonts}
-              onChange={(v) => updateFont('number', v)}
-            />
-            <FontSelect
-              label="标题字体"
-              value={theme.font.heading ?? ''}
-              options={headingFonts}
-              includeFollowText
-              onChange={(v) => updateFont('heading', v || undefined)}
-            />
-          </section>
-
-          {/* ④ 密度 */}
-          <section>
-            <div className="mb-2 text-xs font-semibold text-foreground-secondary">密度</div>
-            <div className="flex gap-2">
-              {DENSITY_OPTIONS.map((opt) => (
-                <Chip
-                  key={opt.value}
-                  active={theme.density === opt.value}
-                  onClick={() => updateDensity(opt.value)}
-                >
-                  {opt.label}
-                </Chip>
-              ))}
-            </div>
-          </section>
-
-          {/* ⑤ 圆角 */}
-          <section>
-            <div className="mb-2 text-xs font-semibold text-foreground-secondary">圆角</div>
-            <div className="flex gap-2">
-              {RADIUS_OPTIONS.map((opt) => (
-                <Chip
-                  key={opt.value}
-                  active={theme.radius === opt.value}
-                  onClick={() => updateRadius(opt.value)}
-                >
-                  {opt.label}
-                </Chip>
-              ))}
-            </div>
-          </section>
-
-          {/* ⑤b 皮肤质感 */}
-          <section>
-            <div className="mb-2 text-xs font-semibold text-foreground-secondary">皮肤质感</div>
-            <div className="flex gap-2">
-              {SKIN_PRESET_OPTIONS.map((opt) => (
-                <Chip
-                  key={opt.value}
-                  active={(theme.skinPreset ?? 'default') === opt.value}
-                  onClick={() => updateSkinPreset(opt.value)}
-                >
-                  {opt.label}
-                </Chip>
-              ))}
-            </div>
-            <p className="mt-1 text-[11px] text-foreground-muted">
-              {(theme.skinPreset ?? 'default') === 'flat' && '无边框扁平风格，去掉卡片阴影和圆角'}
-              {(theme.skinPreset ?? 'default') === 'elevated' && '大圆角 + 深阴影，更现代的浮起感'}
-              {(theme.skinPreset ?? 'default') === 'default' && '标准卡片风格'}
-            </p>
-          </section>
-
-          {/* ⑥ 布局：安全距离 + 网格 */}
-          <section className="space-y-3">
-            <div className="text-xs font-semibold text-foreground-secondary">布局</div>
-
-            {/* 安全距离 */}
-            <div>
-              <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">安全距离（px）</div>
-              <div className="flex flex-wrap gap-1">
-                {[24, 48, 64, 96].map((m) => (
-                  <Chip key={m} active={layout.safeMargin === m} onClick={() => updateLayout('safeMargin', m)}>
-                    {m}
-                  </Chip>
-                ))}
-              </div>
-              <input
-                type="number"
-                min={0}
-                max={500}
-                value={layout.safeMargin}
-                onChange={(e) =>
-                  updateLayout('safeMargin', Math.max(0, Math.min(500, Number(e.target.value) || 0)))
-                }
-                className="mt-1.5 w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-              />
-            </div>
-
-            {/* 网格大小 */}
-            <div>
-              <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">网格大小（px）</div>
-              <div className="flex flex-wrap gap-1">
-                {[8, 10, 12, 20].map((g) => (
-                  <Chip key={g} active={layout.gridSize === g} onClick={() => updateLayout('gridSize', g)}>
-                    {g}
-                  </Chip>
-                ))}
-              </div>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={layout.gridSize}
-                onChange={(e) =>
-                  updateLayout('gridSize', Math.max(1, Math.min(100, Number(e.target.value) || 1)))
-                }
-                className="mt-1.5 w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-              />
-            </div>
-
-            {/* 显示开关 */}
-            <div className="flex gap-4">
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                <input
-                  type="checkbox"
-                  checked={layout.showGrid ?? true}
-                  onChange={(e) => updateLayout('showGrid', e.target.checked)}
-                />
-                显示网格
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                <input
-                  type="checkbox"
-                  checked={layout.showSafeArea ?? true}
-                  onChange={(e) => updateLayout('showSafeArea', e.target.checked)}
-                />
-                显示安全区
-              </label>
-            </div>
-          </section>
-
-          {/* 行高 */}
-          <section className="space-y-2">
-            <div className="text-xs font-semibold text-foreground-secondary">行高（文本组件）</div>
-            <div className="flex gap-2">
-              {(['ratio', 'fixed'] as const).map((m) => (
-                <Chip key={m} active={lineHeight.mode === m} onClick={() => updateLineHeight('mode', m)}>
-                  {m === 'ratio' ? '倍数 ×n' : '加法 +px'}
-                </Chip>
-              ))}
-            </div>
-            <input
-              type="number"
-              min={0}
-              max={lineHeight.mode === 'ratio' ? 3 : 100}
-              step={lineHeight.mode === 'ratio' ? 0.05 : 1}
-              value={lineHeight.value}
-              onChange={(e) => updateLineHeight('value', Math.max(0, Number(e.target.value) || 0))}
-              className="w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-            />
-            <p className="text-[11px] text-foreground-muted">
-              {lineHeight.mode === 'ratio' ? `行高 = 字号 × ${lineHeight.value}` : `行高 = 字号 + ${lineHeight.value}px`}
-            </p>
-          </section>
-
-          {/* 币种与数字 */}
-          <section className="space-y-2">
-            <div className="text-xs font-semibold text-foreground-secondary">币种与数字</div>
-            <div className="flex items-center gap-2">
-              <input
-                value={format.currencySymbol}
-                onChange={(e) => updateFormat('currencySymbol', e.target.value || '$')}
-                className="w-16 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-              />
-              <select
-                value={format.currencyPosition}
-                onChange={(e) => updateFormat('currencyPosition', e.target.value as 'before' | 'after')}
-                className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+        <div className="flex flex-1 overflow-hidden">
+          {/* 左导航 */}
+          <nav className="w-52 flex-none space-y-1 border-r border-border-subtle p-3">
+            {CATS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setActiveCat(c.key)}
+                className={`w-full rounded-lg px-3 py-1.5 text-left text-sm transition ${
+                  activeCat === c.key
+                    ? 'bg-accent-primary/10 font-medium text-accent-primary'
+                    : 'text-foreground-secondary hover:bg-surface-hover'
+                }`}
               >
-                <option value="before">符号在前</option>
-                <option value="after">符号在后</option>
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                <input
-                  type="checkbox"
-                  checked={format.thousandsSep}
-                  onChange={(e) => updateFormat('thousandsSep', e.target.checked)}
-                />
-                千分位
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                小数位
-                <select
-                  value={format.decimals}
-                  onChange={(e) => updateFormat('decimals', Number(e.target.value) as 0 | 1 | 2)}
-                  className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
-                >
-                  <option value={0}>0</option>
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                <input
-                  type="checkbox"
-                  checked={format.compact === 'auto'}
-                  onChange={(e) => updateFormat('compact', e.target.checked ? 'auto' : 'none')}
-                />
-                K/M 缩写
-              </label>
-            </div>
-          </section>
+                {c.label}
+              </button>
+            ))}
+          </nav>
 
-          {/* 图表样式 */}
-          <section className="space-y-2">
-            <div className="text-xs font-semibold text-foreground-secondary">图表样式</div>
-            <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                <input
-                  type="checkbox"
-                  checked={chart.showAxis}
-                  onChange={(e) => updateChart('showAxis', e.target.checked)}
-                />
-                坐标轴
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                <input
-                  type="checkbox"
-                  checked={chart.showGrid}
-                  onChange={(e) => updateChart('showGrid', e.target.checked)}
-                />
-                网格线
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-                图例
-                <select
-                  value={chart.legendPosition}
-                  onChange={(e) => updateChart('legendPosition', e.target.value as 'none' | 'top' | 'bottom' | 'right')}
-                  className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
-                >
-                  <option value="none">无</option>
-                  <option value="top">上</option>
-                  <option value="bottom">下</option>
-                  <option value="right">右</option>
-                </select>
-              </label>
-            </div>
-            <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
-              柱圆角 {chart.barRadius}px
-              <input
-                type="range"
-                min={0}
-                max={16}
-                value={chart.barRadius}
-                onChange={(e) => updateChart('barRadius', Math.max(0, Math.min(16, Number(e.target.value) || 0)))}
-              />
-            </label>
-          </section>
+          {/* 右内容：按 activeCat 渲染对应 sections（现有 section JSX 原样搬入） */}
+          <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+            {activeCat === 'basic' && (
+              <>
+                {/* ① 预设选择器 */}
+                <section>
+                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">整体风格预设</div>
+                  <div className="flex flex-wrap gap-2">
+                    {STYLE_PRESETS.map((preset) => {
+                      const active = theme.preset === preset.key;
+                      return (
+                        <button
+                          key={preset.key}
+                          onClick={() => applyPreset(preset.key)}
+                          className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+                            active
+                              ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                              : 'border-border-default text-foreground-secondary hover:border-foreground-muted'
+                          }`}
+                          title={preset.description}
+                        >
+                          {preset.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {theme.preset && (
+                    <div className="mt-1 text-[11px] text-foreground-muted">
+                      {STYLE_PRESETS.find((p) => p.key === theme.preset)?.description ?? ''}
+                    </div>
+                  )}
+                </section>
 
-          {/* 卡片阴影 */}
-          <section>
-            <div className="mb-2 text-xs font-semibold text-foreground-secondary">卡片阴影</div>
-            <div className="flex flex-wrap gap-2">
-              {(['none', 'subtle', 'soft', 'strong'] as const).map((s) => (
-                <Chip key={s} active={shadow === s} onClick={() => updateShadow(s)}>
-                  {{ none: '无', subtle: '细微', soft: '柔和', strong: '强烈' }[s]}
-                </Chip>
-              ))}
-            </div>
-          </section>
+                {/* ② 配色 */}
+                <section className="space-y-3">
+                  <div className="text-xs font-semibold text-foreground-secondary">配色</div>
 
-          {/* ⑦ 品牌：Logo + 标题 + 副标题 */}
-          <section className="space-y-3 border-t border-border-subtle pt-4">
-            <div className="text-xs font-semibold text-foreground-secondary">品牌</div>
+                  {/* 主品牌色 + 次品牌色 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <ColorField
+                      label="主品牌色"
+                      value={theme.color.primary}
+                      presetSwatches={PRESET_PRIMARIES}
+                      onChange={(v) => updateColor('primary', v)}
+                    />
+                    <ColorField
+                      label="次品牌色"
+                      value={theme.color.secondary}
+                      onChange={(v) => updateColor('secondary', v)}
+                    />
+                  </div>
 
-            {/* Logo */}
-            <div className="space-y-1.5">
-              <div className="text-[11px] text-foreground-muted">Logo</div>
-              <ImageInput
-                value={theme.branding?.logo ?? ''}
-                onChange={(url) => updateBranding('logo', url || undefined)}
-              />
-              {(theme.branding?.logo) && (
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
-                    高度
+                  {/* 中性文字色 + 背景色 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <ColorField
+                      label="中性文字色"
+                      value={theme.color.neutralText}
+                      onChange={(v) => updateColor('neutralText', v)}
+                    />
+                    <ColorField
+                      label="背景色"
+                      value={theme.color.neutralBg}
+                      onChange={(v) => updateColor('neutralBg', v)}
+                    />
+                  </div>
+
+                  {/* 图表配色板 6 色 */}
+                  <div>
+                    <div className="mb-1.5 text-[11px] text-foreground-muted">图表配色（6 色序列）</div>
+                    <div className="flex flex-wrap gap-2">
+                      {theme.color.chartPalette.map((c, i) => (
+                        <div key={i} className="flex items-center gap-1">
+                          <input
+                            type="color"
+                            value={c}
+                            onChange={(e) => updateChartColor(i, e.target.value)}
+                            className="h-7 w-8 cursor-pointer rounded border border-border-default p-0.5"
+                          />
+                          <span className="text-[10px] text-foreground-muted">{i + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                {/* ③ 字体 */}
+                <section className="space-y-2">
+                  <div className="text-xs font-semibold text-foreground-secondary">字体</div>
+                  <FontSelect
+                    label="文本字体"
+                    value={theme.font.text}
+                    options={textFonts}
+                    onChange={(v) => updateFont('text', v)}
+                  />
+                  <FontSelect
+                    label="数字字体"
+                    value={theme.font.number}
+                    options={numberFonts}
+                    onChange={(v) => updateFont('number', v)}
+                  />
+                  <FontSelect
+                    label="标题字体"
+                    value={theme.font.heading ?? ''}
+                    options={headingFonts}
+                    includeFollowText
+                    onChange={(v) => updateFont('heading', v || undefined)}
+                  />
+                </section>
+
+                {/* 标题样式：全局默认,标题块组件默认继承、可单组件覆盖。 */}
+                <section className="space-y-2">
+                  <div className="text-xs font-semibold text-foreground-secondary">标题样式</div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-16 flex-none text-[11px] text-foreground-muted">字号</span>
                     <input
                       type="number"
                       min={8}
                       max={200}
-                      value={theme.branding?.logoHeight ?? 32}
-                      onChange={(e) => updateBranding('logoHeight', Math.max(8, Math.min(200, Number(e.target.value) || 32)))}
-                      className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+                      step={1}
+                      value={heading.fontSize ?? 32}
+                      onChange={(e) => updateHeading('fontSize', Math.min(200, Math.max(8, Number(e.target.value) || 32)))}
+                      className="w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
                     />
-                    px
-                  </label>
-                  <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
-                    圆角
+                    <span className="text-[11px] text-foreground-muted">px</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-16 flex-none text-[11px] text-foreground-muted">默认样式</span>
+                    <select
+                      value={heading.variant ?? ''}
+                      onChange={(e) =>
+                        updateHeading('variant', (e.target.value || undefined) as NonNullable<ProjectTheme['heading']>['variant'])
+                      }
+                      className="flex-1 rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+                    >
+                      <option value="">跟随组件</option>
+                      {TITLE_STYLE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-16 flex-none text-[11px] text-foreground-muted">主色</span>
+                    <input
+                      type="color"
+                      value={heading.color ?? theme.color.primary}
+                      onChange={(e) => updateHeading('color', e.target.value)}
+                      className="h-7 w-10 flex-none rounded border border-border-default bg-surface-primary"
+                    />
+                    <span className="text-[11px] text-foreground-muted">新标题块初始主色</span>
+                  </div>
+                </section>
+
+                {/* ④ 密度 */}
+                <section>
+                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">密度</div>
+                  <div className="flex gap-2">
+                    {DENSITY_OPTIONS.map((opt) => (
+                      <Chip
+                        key={opt.value}
+                        active={theme.density === opt.value}
+                        onClick={() => updateDensity(opt.value)}
+                      >
+                        {opt.label}
+                      </Chip>
+                    ))}
+                  </div>
+                </section>
+
+                {/* 行高 */}
+                <section className="space-y-2">
+                  <div className="text-xs font-semibold text-foreground-secondary">行高（文本组件）</div>
+                  <div className="flex gap-2">
+                    {(['ratio', 'fixed'] as const).map((m) => (
+                      <Chip key={m} active={lineHeight.mode === m} onClick={() => updateLineHeight('mode', m)}>
+                        {m === 'ratio' ? '倍数 ×n' : '加法 +px'}
+                      </Chip>
+                    ))}
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    max={lineHeight.mode === 'ratio' ? 3 : 100}
+                    step={lineHeight.mode === 'ratio' ? 0.05 : 1}
+                    value={lineHeight.value}
+                    onChange={(e) => updateLineHeight('value', Math.max(0, Number(e.target.value) || 0))}
+                    className="w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+                  />
+                  <p className="text-[11px] text-foreground-muted">
+                    {lineHeight.mode === 'ratio' ? `行高 = 字号 × ${lineHeight.value}` : `行高 = 字号 + ${lineHeight.value}px`}
+                  </p>
+                </section>
+
+                {/* 币种与数字 */}
+                <section className="space-y-2">
+                  <div className="text-xs font-semibold text-foreground-secondary">币种与数字</div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={format.currencySymbol}
+                      onChange={(e) => updateFormat('currencySymbol', e.target.value || '$')}
+                      className="w-16 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+                    />
+                    <select
+                      value={format.currencyPosition}
+                      onChange={(e) => updateFormat('currencyPosition', e.target.value as 'before' | 'after')}
+                      className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+                    >
+                      <option value="before">符号在前</option>
+                      <option value="after">符号在后</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      <input
+                        type="checkbox"
+                        checked={format.thousandsSep}
+                        onChange={(e) => updateFormat('thousandsSep', e.target.checked)}
+                      />
+                      千分位
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      小数位
+                      <select
+                        value={format.decimals}
+                        onChange={(e) => updateFormat('decimals', Number(e.target.value) as 0 | 1 | 2)}
+                        className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
+                      >
+                        <option value={0}>0</option>
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      <input
+                        type="checkbox"
+                        checked={format.compact === 'auto'}
+                        onChange={(e) => updateFormat('compact', e.target.checked ? 'auto' : 'none')}
+                      />
+                      K/M 缩写
+                    </label>
+                  </div>
+                </section>
+
+                {/* ⑨ 解析参考图（占位） */}
+                <section className="border-t border-border-subtle pt-4">
+                  <button
+                    onClick={handleParseReference}
+                    className="rounded-lg border border-border-default px-4 py-2 text-sm text-foreground-secondary transition hover:border-foreground-muted hover:text-foreground-primary"
+                  >
+                    📷 解析参考图
+                  </button>
+                  <p className="mt-1 text-[11px] text-foreground-muted">
+                    上传参考图自动提取配色与字体（即将上线）。
+                  </p>
+                </section>
+              </>
+            )}
+            {activeCat === 'layout' && (
+              <>
+                {/* ⑥ 布局：安全距离 + 网格 */}
+                <section className="space-y-3">
+                  <div className="text-xs font-semibold text-foreground-secondary">布局</div>
+
+                  {/* 安全距离 */}
+                  <div>
+                    <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">安全距离（px）</div>
+                    <div className="flex flex-wrap gap-1">
+                      {[24, 48, 64, 96].map((m) => (
+                        <Chip key={m} active={layout.safeMargin === m} onClick={() => updateLayout('safeMargin', m)}>
+                          {m}
+                        </Chip>
+                      ))}
+                    </div>
                     <input
                       type="number"
                       min={0}
-                      max={100}
-                      value={theme.branding?.logoRadius ?? 0}
-                      onChange={(e) => updateBranding('logoRadius', Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                      className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+                      max={500}
+                      value={layout.safeMargin}
+                      onChange={(e) =>
+                        updateLayout('safeMargin', Math.max(0, Math.min(500, Number(e.target.value) || 0)))
+                      }
+                      className="mt-1.5 w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
                     />
-                    px
+                  </div>
+
+                  {/* 网格大小 */}
+                  <div>
+                    <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">网格大小（px）</div>
+                    <div className="flex flex-wrap gap-1">
+                      {[8, 10, 12, 20].map((g) => (
+                        <Chip key={g} active={layout.gridSize === g} onClick={() => updateLayout('gridSize', g)}>
+                          {g}
+                        </Chip>
+                      ))}
+                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={layout.gridSize}
+                      onChange={(e) =>
+                        updateLayout('gridSize', Math.max(1, Math.min(100, Number(e.target.value) || 1)))
+                      }
+                      className="mt-1.5 w-24 rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+                    />
+                  </div>
+
+                  {/* 显示开关 */}
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      <input
+                        type="checkbox"
+                        checked={layout.showGrid ?? true}
+                        onChange={(e) => updateLayout('showGrid', e.target.checked)}
+                      />
+                      显示网格
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      <input
+                        type="checkbox"
+                        checked={layout.showSafeArea ?? true}
+                        onChange={(e) => updateLayout('showSafeArea', e.target.checked)}
+                      />
+                      显示安全区
+                    </label>
+                  </div>
+                </section>
+              </>
+            )}
+            {activeCat === 'component' && (
+              <>
+                {/* ⑤ 圆角 */}
+                <section>
+                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">圆角</div>
+                  <div className="flex gap-2">
+                    {RADIUS_OPTIONS.map((opt) => (
+                      <Chip
+                        key={opt.value}
+                        active={theme.radius === opt.value}
+                        onClick={() => updateRadius(opt.value)}
+                      >
+                        {opt.label}
+                      </Chip>
+                    ))}
+                  </div>
+                </section>
+
+                {/* 卡片阴影 */}
+                <section>
+                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">卡片阴影</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(['none', 'subtle', 'soft', 'strong'] as const).map((s) => (
+                      <Chip key={s} active={shadow === s} onClick={() => updateShadow(s)}>
+                        {{ none: '无', subtle: '细微', soft: '柔和', strong: '强烈' }[s]}
+                      </Chip>
+                    ))}
+                  </div>
+                </section>
+
+                {/* 图表样式 */}
+                <section className="space-y-2">
+                  <div className="text-xs font-semibold text-foreground-secondary">图表样式</div>
+                  <div className="flex flex-wrap gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      <input
+                        type="checkbox"
+                        checked={chart.showAxis}
+                        onChange={(e) => updateChart('showAxis', e.target.checked)}
+                      />
+                      坐标轴
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      <input
+                        type="checkbox"
+                        checked={chart.showGrid}
+                        onChange={(e) => updateChart('showGrid', e.target.checked)}
+                      />
+                      网格线
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                      图例
+                      <select
+                        value={chart.legendPosition}
+                        onChange={(e) => updateChart('legendPosition', e.target.value as 'none' | 'top' | 'bottom' | 'right')}
+                        className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
+                      >
+                        <option value="none">无</option>
+                        <option value="top">上</option>
+                        <option value="bottom">下</option>
+                        <option value="right">右</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+                    柱圆角 {chart.barRadius}px
+                    <input
+                      type="range"
+                      min={0}
+                      max={16}
+                      value={chart.barRadius}
+                      onChange={(e) => updateChart('barRadius', Math.max(0, Math.min(16, Number(e.target.value) || 0)))}
+                    />
                   </label>
-                </div>
-              )}
-            </div>
+                </section>
 
-            {/* 品牌标题 */}
-            <div>
-              <label className="mb-1 block text-[11px] text-foreground-muted">品牌标题（留空=跟随项目广告主名）</label>
-              <input
-                value={theme.branding?.title ?? ''}
-                onChange={(e) => updateBranding('title', e.target.value || undefined)}
-                placeholder="如 GlowLab"
-                className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-              />
-            </div>
+                {/* ⑧ 默认页面背景 */}
+                <section className="space-y-3 border-t border-border-subtle pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold text-foreground-secondary">默认页面背景</div>
+                    {theme.background && theme.background.type !== 'none' && (
+                      <button
+                        onClick={applyBackgroundToAllPages}
+                        className="text-[11px] text-accent-primary hover:underline"
+                      >
+                        应用到全部页面
+                      </button>
+                    )}
+                  </div>
 
-            {/* 品牌副标题 */}
-            <div>
-              <label className="mb-1 block text-[11px] text-foreground-muted">品牌副标题</label>
-              <input
-                value={theme.branding?.subtitle ?? ''}
-                onChange={(e) => updateBranding('subtitle', e.target.value || undefined)}
-                placeholder="如 Q4 Campaign Report 2026"
-                className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-              />
-            </div>
-          </section>
+                  <div className="flex flex-wrap gap-1">
+                    {(['none', 'color', 'gradient', 'image'] as const).map((t) => {
+                      const labels: Record<string, string> = { none: '无', color: '纯色', gradient: '渐变', image: '图片' };
+                      const active = (theme.background?.type ?? 'none') === t;
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => updateBackground('type', t)}
+                          className={`rounded border px-2 py-1 text-xs ${
+                            active
+                              ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                              : 'border-border-default text-foreground-secondary hover:bg-surface-hover'
+                          }`}
+                        >
+                          {labels[t]}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-          {/* ⑧ 默认页面背景 */}
-          <section className="space-y-3 border-t border-border-subtle pt-4">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold text-foreground-secondary">默认页面背景</div>
-              {theme.background && theme.background.type !== 'none' && (
-                <button
-                  onClick={applyBackgroundToAllPages}
-                  className="text-[11px] text-accent-primary hover:underline"
-                >
-                  应用到全部页面
-                </button>
-              )}
-            </div>
+                  {theme.background?.type === 'color' && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={theme.background.color ?? 'var(--surface-primary)'}
+                        onChange={(e) => updateBackground('color', e.target.value)}
+                        className="h-8 w-10 rounded border border-border-default p-1"
+                      />
+                      <input
+                        value={theme.background.color ?? ''}
+                        placeholder="var(--surface-primary)"
+                        onChange={(e) => updateBackground('color', e.target.value)}
+                        className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+                      />
+                    </div>
+                  )}
 
-            <div className="flex flex-wrap gap-1">
-              {(['none', 'color', 'gradient', 'image'] as const).map((t) => {
-                const labels: Record<string, string> = { none: '无', color: '纯色', gradient: '渐变', image: '图片' };
-                const active = (theme.background?.type ?? 'none') === t;
-                return (
-                  <button
-                    key={t}
-                    onClick={() => updateBackground('type', t)}
-                    className={`rounded border px-2 py-1 text-xs ${
-                      active
-                        ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                        : 'border-border-default text-foreground-secondary hover:bg-surface-hover'
-                    }`}
-                  >
-                    {labels[t]}
-                  </button>
-                );
-              })}
-            </div>
+                  {theme.background?.type === 'image' && (
+                    <ImageInput
+                      value={theme.background.image ?? ''}
+                      onChange={(url) => updateBackground('image', url || undefined)}
+                    />
+                  )}
 
-            {theme.background?.type === 'color' && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={theme.background.color ?? 'var(--surface-primary)'}
-                  onChange={(e) => updateBackground('color', e.target.value)}
-                  className="h-8 w-10 rounded border border-border-default p-1"
-                />
-                <input
-                  value={theme.background.color ?? ''}
-                  placeholder="var(--surface-primary)"
-                  onChange={(e) => updateBackground('color', e.target.value)}
-                  className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-                />
-              </div>
+                  {theme.background?.type === 'gradient' && (
+                    <BackgroundGradientFields
+                      gradient={theme.background.gradient}
+                      onChange={(g) => updateBackground('gradient', g)}
+                    />
+                  )}
+                </section>
+              </>
             )}
+            {activeCat === 'brand' && (
+              <>
+                {/* ⑦ 品牌：Logo + 标题 + 副标题 */}
+                <section className="space-y-3 border-t border-border-subtle pt-4">
+                  <div className="text-xs font-semibold text-foreground-secondary">品牌</div>
 
-            {theme.background?.type === 'image' && (
-              <ImageInput
-                value={theme.background.image ?? ''}
-                onChange={(url) => updateBackground('image', url || undefined)}
-              />
+                  {/* Logo */}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] text-foreground-muted">Logo</div>
+                    <ImageInput
+                      value={theme.branding?.logo ?? ''}
+                      onChange={(url) => updateBranding('logo', url || undefined)}
+                    />
+                    {(theme.branding?.logo) && (
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
+                          高度
+                          <input
+                            type="number"
+                            min={8}
+                            max={200}
+                            value={theme.branding?.logoHeight ?? 32}
+                            onChange={(e) => updateBranding('logoHeight', Math.max(8, Math.min(200, Number(e.target.value) || 32)))}
+                            className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+                          />
+                          px
+                        </label>
+                        <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
+                          圆角
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={theme.branding?.logoRadius ?? 0}
+                            onChange={(e) => updateBranding('logoRadius', Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                            className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+                          />
+                          px
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 品牌标题 */}
+                  <div>
+                    <label className="mb-1 block text-[11px] text-foreground-muted">品牌标题（留空=跟随项目广告主名）</label>
+                    <input
+                      value={theme.branding?.title ?? ''}
+                      onChange={(e) => updateBranding('title', e.target.value || undefined)}
+                      placeholder="如 GlowLab"
+                      className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+                    />
+                  </div>
+
+                  {/* 品牌副标题 */}
+                  <div>
+                    <label className="mb-1 block text-[11px] text-foreground-muted">品牌副标题</label>
+                    <input
+                      value={theme.branding?.subtitle ?? ''}
+                      onChange={(e) => updateBranding('subtitle', e.target.value || undefined)}
+                      placeholder="如 Q4 Campaign Report 2026"
+                      className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
+                    />
+                  </div>
+                </section>
+              </>
             )}
-
-            {theme.background?.type === 'gradient' && (
-              <BackgroundGradientFields
-                gradient={theme.background.gradient}
-                onChange={(g) => updateBackground('gradient', g)}
-              />
-            )}
-          </section>
-
-          {/* ⑨ 解析参考图（占位） */}
-          <section className="border-t border-border-subtle pt-4">
-            <button
-              onClick={handleParseReference}
-              className="rounded-lg border border-border-default px-4 py-2 text-sm text-foreground-secondary transition hover:border-foreground-muted hover:text-foreground-primary"
-            >
-              📷 解析参考图
-            </button>
-            <p className="mt-1 text-[11px] text-foreground-muted">
-              上传参考图自动提取配色与字体（即将上线）。
-            </p>
-          </section>
+          </div>
         </div>
 
         {/* 底部操作栏 */}
-        <div className="flex justify-end border-t border-border-subtle px-6 py-3">
+        <div className="flex justify-end gap-2 border-t border-border-subtle px-6 py-3">
           <button
             onClick={onClose}
+            className="rounded-lg border border-border-default px-4 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSave}
             className="rounded-lg bg-accent-primary px-4 py-1.5 text-sm text-white hover:opacity-90"
           >
-            完成
+            保存
           </button>
         </div>
 

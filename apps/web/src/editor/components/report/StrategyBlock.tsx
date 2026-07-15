@@ -10,6 +10,7 @@ export function StrategyBlockComponent({ data }: { data: StrategyBlockData }) {
   const { variant = 'default' } = data;
   if (variant === 'labeled') return <StrategyLabeled data={data} />;
   if (variant === 'bulleted') return <StrategyBulleted data={data} />;
+  if (variant === 'cards') return <StrategyCards data={data} />;
   return <StrategyDefault data={data} />;
 }
 
@@ -32,7 +33,7 @@ function StrategyDefault({ data }: { data: StrategyBlockData }) {
               </span>
             </div>
             <div
-              className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+              className="text-sm leading-relaxed text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2.5 [&_p:last-child]:mb-0"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(content) }}
             />
           </div>
@@ -67,7 +68,7 @@ function StrategyLabeled({ data }: { data: StrategyBlockData }) {
           const content = r[2] ?? '';
           const Icon = findIcon(iconKey)?.Comp;
           return (
-            <div key={i} className={`flex flex-col gap-1 ${i > 0 ? 'mt-3 border-t border-border-subtle pt-3' : ''}`}>
+            <div key={i} className={`flex flex-col gap-1.5 ${i > 0 ? 'mt-4 border-t border-border-subtle pt-4' : ''}`}>
               <div className="flex items-center gap-1.5">
                 {Icon && <Icon size={16} className="text-primary" />}
                 <span className="inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">
@@ -75,7 +76,7 @@ function StrategyLabeled({ data }: { data: StrategyBlockData }) {
                 </span>
               </div>
               <div
-                className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+                className="text-sm leading-relaxed text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2.5 [&_p:last-child]:mb-0"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(content) }}
               />
             </div>
@@ -104,20 +105,53 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
         const content = r[2] ?? '';
         const Icon = findIcon(iconKey)?.Comp;
         return (
-          <div
-            key={i}
-            className="flex flex-col gap-1 skin-card skin-pad-sm"
-          >
+          <div key={i} className="flex flex-col gap-1 skin-card skin-pad-sm">
             <div className="flex items-center gap-1.5">
               {Icon && <Icon size={16} className="text-primary" />}
-              <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
-                {title}
-              </span>
+              <span className="text-sm font-bold uppercase tracking-wide text-foreground-primary">{title}</span>
             </div>
             <div
-              className="text-sm text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold"
+              className="text-sm leading-relaxed text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2.5 [&_p:last-child]:mb-0"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(content) }}
             />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** cards（单列卡片堆叠）：每条 = 一张独立卡片，品牌色圆形徽章图标 + 大写标题 + 正文。对标参考图。 */
+function StrategyCards({ data }: { data: StrategyBlockData }) {
+  const rows = data.rows ?? [];
+  if (rows.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center skin-card skin-pad-md text-xs text-foreground-muted">
+        Strategy
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-full w-full flex-col gap-2 overflow-auto">
+      {rows.map((r, i) => {
+        const iconKey = r[0] ?? '';
+        const title = r[1] ?? '';
+        const content = r[2] ?? '';
+        const Icon = findIcon(iconKey)?.Comp;
+        return (
+          <div key={i} className="flex flex-1 items-start gap-2.5 rounded-lg bg-surface-secondary p-3">
+            {Icon && (
+              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-primary">
+                <Icon size={16} className="text-white" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-foreground-primary">{title}</div>
+              <div
+                className="mt-1 text-sm leading-relaxed text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2.5 [&_p:last-child]:mb-0"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(content) }}
+              />
+            </div>
           </div>
         );
       })}

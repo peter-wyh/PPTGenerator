@@ -3,6 +3,7 @@
  * 避免循环依赖（REGISTRY 含 React 组件）。忠实 demo.html。
  */
 import type { ComponentType, ComponentData, CreatorAvatarCardData, MetaStripData, ShapeKind, ShapeData } from '@mediakit/shared';
+import { AUDIENCE_MODULE_CATALOG } from '@mediakit/shared';
 import { campaignWorkScreenshots } from '@/api/creatorPerformance';
 
 export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
@@ -36,7 +37,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'comment-wordcloud': { w: 560, h: 360 },
   'shape': { w: 200, h: 120 },
   'image-group': { w: 600, h: 420 },
-  'title-block': { w: 600, h: 80 },
+  'title-block': { w: 600, h: titleHeightForFontSize(32, { subtitle: true, divider: true }) },
   'campaign-analysis': { w: 520, h: 360 },
   'creator-work-metrics': { w: 560, h: 280 },
   'creator-works-table': { w: 700, h: 320 },
@@ -54,6 +55,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'content-topic-performance': { w: 640, h: 280 },
   'search-term-table': { w: 560, h: 280 },
   'hourly-heatmap': { w: 560, h: 200 },
+  'creator-audience-profile': { w: 720, h: 360 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -67,18 +69,33 @@ export const ZOOM_MAX = 2;
 /** history 上限（demo：50）。 */
 export const HISTORY_CAP = 50;
 
+/**
+ * 标题块高度 = 字号派生:字号×行高 + (副标题一行) + (分割线) + 上下内边距。
+ * 用于:新建标题块的默认 h、改字号(全局/单组件)时重算 h,使高度随字号自适应。
+ */
+export function titleHeightForFontSize(
+  fontSize: number,
+  opts: { subtitle?: boolean; divider?: boolean } = {},
+): number {
+  const titleLh = 1.25;
+  let h = Math.round(fontSize * titleLh);
+  if (opts.subtitle) h += Math.round(fontSize * 0.6 * titleLh);
+  if (opts.divider) h += 4;
+  return h + 8; // 上下内边距
+}
+
 export function getDefaultData(type: ComponentType): ComponentData {
   switch (type) {
     case 'text':
       return {
-        content: '文本内容',
-        fontSize: 14,
+        content: 'Title',
+        fontSize: 28,
         fontFamily: '',
-        fontWeight: 400,
+        fontWeight: 700,
         color: 'var(--foreground-primary)',
       };
     case 'indicator-card':
-      return { variant: 'plain', title: '指标名称', value: '---', colorTheme: 'blue' };
+      return { variant: 'plain', title: 'Metric name', value: '---', colorTheme: 'blue' };
     case 'bar-chart':
       return {
         title: 'Bar Chart',
@@ -117,7 +134,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
       };
     case 'table':
       return {
-        headers: ['列1', '列2', '列3'],
+        headers: ['Col 1', 'Col 2', 'Col 3'],
         rows: [
           ['--', '--', '--'],
           ['--', '--', '--'],
@@ -128,7 +145,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'business-block':
       return {
         businessKind: 'cover',
-        title: '业务组件',
+        title: 'Business block',
         meta: '',
         details: [],
         variant: 'standard',
@@ -248,17 +265,17 @@ export function getDefaultData(type: ComponentType): ComponentData {
         variant: 'table',
         headers: ['Avatar', 'Name', 'Platform', 'Followers', 'Engagement', 'Category'],
         rows: [
-          ['', '林小美', 'xiaohongshu', '128.5K', '4.8%', '美妆'],
-          ['', '张一凡', 'douyin', '456K', '6.2%', '时尚'],
-          ['', 'Emily Chen', 'instagram', '89.3K', '5.1%', '生活方式'],
-          ['', '王大力', 'youtube', '1.2M', '3.4%', '美食'],
-          ['', 'Sarah W.', 'tiktok', '567K', '7.8%', '娱乐'],
+          ['', 'Mia Lin', 'xiaohongshu', '128.5K', '4.8%', 'Beauty'],
+          ['', 'Yifan Zhang', 'douyin', '456K', '6.2%', 'Fashion'],
+          ['', 'Emily Chen', 'instagram', '89.3K', '5.1%', 'Lifestyle'],
+          ['', 'David Wang', 'youtube', '1.2M', '3.4%', 'Food'],
+          ['', 'Sarah W.', 'tiktok', '567K', '7.8%', 'Entertainment'],
         ],
       };
     case 'brand-wall':
       return {
         variant: 'grid',
-        headers: ['品牌', 'Logo URL'],
+        headers: ['Brand', 'Logo URL'],
         rows: [
           ['LUMIÈRE', ''],
           ['NOVA HOME', ''],
@@ -271,21 +288,21 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'package-card':
       return {
         variant: 'standard',
-        name: '增长加速包',
+        name: 'Growth Boost Package',
         price: '$80,000',
-        headers: ['特性'],
+        headers: ['Feature'],
         rows: [
-          ['40–60 位达人'],
-          ['Spark Ads 资源位'],
-          ['8–12% CPS 佣金'],
-          ['6 周服务周期'],
+          ['40–60 creators'],
+          ['Spark Ads placements'],
+          ['8–12% CPS commission'],
+          ['6-week service period'],
         ],
         highlighted: false,
       };
     case 'kpi-board':
       return {
         variant: 'grid',
-        headers: ['指标', '数值', '对比'],
+        headers: ['Metric', 'Value', 'Compare'],
         rows: [
           ['GMV', '$1.24M', '+15%'],
           ['Commission', '$98K', '+12%'],
@@ -299,12 +316,12 @@ export function getDefaultData(type: ComponentType): ComponentData {
         ],
         icons: ['currency', 'currency', 'target', 'eye', 'cart', 'percent', 'currency', 'currency', 'eye'],
         valueColors: ['success', 'success', 'info', 'warning', 'success', 'info', 'primary', 'warning', 'info'],
-        compareLabel: 'vs 上期',
+        compareLabel: 'vs last period',
       };
     case 'meta-strip':
       return {
         variant: 'inline',
-        headers: ['图标', '标签', '文本'],
+        headers: ['Icon', 'Label', 'Text'],
         rows: [
           ['target', 'BASE', 'The United States'],
           ['tag', 'TYPE', 'Beauty'],
@@ -314,7 +331,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'strategy-block':
       return {
         // variant 缺省 = 'default'（见 StrategyBlockComponent）；此处省略以避开与 PlacementData 的联合类型歧义。
-        headers: ['图标', '标题', '内容'],
+        headers: ['Icon', 'Title', 'Content'],
         rows: [
           ['sparkle', 'INSIGHT', 'My audience values authenticity and practical <mark>beauty tips</mark>.'],
           ['target', 'STRATEGY', 'Focus on practical <mark>beauty tips</mark> and authentic product reviews.'],
@@ -323,7 +340,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'timeline-compare':
       return {
         variant: 'standard',
-        headers: ['指标', '本期', '上期', '状态'],
+        headers: ['Metric', 'Current', 'Previous', 'Status'],
         rows: [
           ['Total Sales', '$1.24M', '$1.08M', 'Exceeded'],
           ['Total Reach', '8.1M', '7.0M', 'Exceeded'],
@@ -334,34 +351,34 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'product-performance':
       return {
         variant: 'cards',
-        insight: '【最佳销售 Top5】功效精华类贡献 46% 销售额；建议下阶段单品加投。',
-        headers: ['商品', '图URL', '销量', '占比', '品类'],
+        insight: '[Top 5 Best Sellers] Efficacy serums drive 46% of sales; recommend doubling down on hero SKUs next phase.',
+        headers: ['Product', 'Image URL', 'Sales', 'Share', 'Category'],
         rows: [
-          ['敏感肌精华', '', '12.4K', '32%', '护肤'],
-          ['保湿面霜', '', '8.6K', '22%', '护肤'],
-          ['洁面慕斯', '', '5.2K', '13%', '清洁'],
-          ['防晒霜', '', '4.1K', '11%', '防晒'],
-          ['眼霜', '', '3.0K', '8%', '护肤'],
+          ['Sensitive Skin Serum', '', '12.4K', '32%', 'Skincare'],
+          ['Moisturizing Cream', '', '8.6K', '22%', 'Skincare'],
+          ['Cleansing Mousse', '', '5.2K', '13%', 'Cleansing'],
+          ['Sunscreen', '', '4.1K', '11%', 'Sun Protection'],
+          ['Eye Cream', '', '3.0K', '8%', 'Skincare'],
         ],
       };
     case 'placement-display':
       return {
         variant: 'grid',
-        highlights: '首页 Banner CTR 高于均值 1.8 倍。',
-        learnings: '推荐位素材需强化功效可视化。',
-        headers: ['名称', '截图URL', '数据'],
+        highlights: 'Homepage banner CTR is 1.8x above average.',
+        learnings: 'Recommendation placements need stronger efficacy visuals.',
+        headers: ['Name', 'Screenshot URL', 'Data'],
         rows: [
-          ['首页 Banner', '', 'CTR 2.4%'],
-          ['详情页推荐位', '', 'CTR 1.6%'],
-          ['购物车加购位', '', 'CTR 3.1%'],
+          ['Homepage Banner', '', 'CTR 2.4%'],
+          ['Product Page Recommendation', '', 'CTR 1.6%'],
+          ['Cart Add-on Slot', '', 'CTR 3.1%'],
         ],
       };
     case 'post-list':
       return {
         variant: 'cards',
-        headers: ['截图URL', '标题', 'ID', '链接', '数据'],
+        headers: ['Screenshot URL', 'Title', 'ID', 'Link', 'Data'],
         rows: [
-          ['', 'Content Site 深度测评', 'CS-001', 'https://example.com/1', '阅读 24K'],
+          ['', 'Content Site In-Depth Review', 'CS-001', 'https://example.com/1', '24K reads'],
           ['', 'Reddit Discussion', 'RD-104', 'https://example.com/2', '3.2K engagement'],
           ['', 'FB Recommendation', 'FB-220', 'https://example.com/3', '1.8K engagement'],
         ],
@@ -419,7 +436,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'work-screenshot':
       return {
         variant: 'auto',
-        title: '达人作品截图',
+        title: 'Creator Work Screenshots',
         images: campaignWorkScreenshots('camp-glowlab-q4'),
       };
     case 'work-metrics':
@@ -462,8 +479,10 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'title-block':
       return {
         variant: 'bar-left',
-        text: '章节标题',
-        subtitle: '副标题（可选）',
+        text: 'Section Title',
+        subtitle: 'Subtitle (optional)',
+        fontSize: undefined,
+        titleColor: 'black',
         color: 'auto',
         underlineColor: 'brand',
         divider: true,
@@ -471,12 +490,12 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'campaign-analysis':
       return {
         variant: 'radar',
-        title: '达人投放效果分析',
-        subtitle: '多维度对比',
+        title: 'Creator Campaign Performance Analysis',
+        subtitle: 'Multi-dimensional Comparison',
         dimensions: [
-          { label: '曝光', value: 85, max: 100 },
-          { label: '互动', value: 72, max: 100 },
-          { label: '转化', value: 68, max: 100 },
+          { label: 'Reach', value: 85, max: 100 },
+          { label: 'Engagement', value: 72, max: 100 },
+          { label: 'Conversion', value: 68, max: 100 },
           { label: 'CPE', value: 90, max: 100 },
           { label: 'CVR', value: 65, max: 100 },
           { label: 'CPM', value: 78, max: 100 },
@@ -681,9 +700,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'content-card':
       return {
         variant: 'standard' as const,
-        title: '卡片标题',
-        body: '在此输入正文内容。可用于重点说明、摘要介绍或关键结论的展示。',
-        tag: '标签',
+        title: 'Card Title',
+        body: 'Enter body text here. Use it for key points, summaries, or highlights.',
+        tag: 'Tag',
         footer: '',
       };
     case 'swot-matrix':
@@ -691,10 +710,10 @@ export function getDefaultData(type: ComponentType): ComponentData {
         variant: 'grid' as const,
         title: 'Opportunities & Challenges',
         quadrants: [
-          { title: 'Opportunities', items: ['18–24 高潜受众', 'UGC 口碑背书', '敏感肌蓝海品类'] },
-          { title: 'Strengths', items: ['300+ 品牌服务经验', 'AI 数据归因能力', '跨平台达人资源'] },
-          { title: 'Challenges', items: ['心智占位不足', '内容同质化严重', '品类教育成本高'] },
-          { title: 'Threats', items: ['竞品投放加码', '平台算法波动', '用户注意力碎片化'] },
+          { title: 'Opportunities', items: ['18–24 high-potential audience', 'UGC word-of-mouth endorsement', 'Sensitive-skin blue-ocean category'] },
+          { title: 'Strengths', items: ['300+ brands served', 'AI data attribution capability', 'Cross-platform creator network'] },
+          { title: 'Challenges', items: ['Weak brand mindshare', 'Content homogenization', 'High category education cost'] },
+          { title: 'Threats', items: ['Competitors scaling spend', 'Platform algorithm volatility', 'Fragmented user attention'] },
         ],
       };
     case 'campaign-summary':
@@ -721,7 +740,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
           { label: 'Checkout', value: 5760, rate: '40.0%' },
           { label: 'Purchase', value: 2430, rate: '42.2%' },
         ],
-        insight: 'Add-to-Cart → Checkout 转化率 40%，高于行业均值（25-30%），商品页说服力强。',
+        insight: 'Add-to-Cart → Checkout conversion rate of 40% exceeds the industry average (25–30%); strong product page persuasion.',
       };
     case 'revenue-timeline':
       return {
@@ -829,6 +848,12 @@ export function getDefaultData(type: ComponentType): ComponentData {
             conversions: Math.round((peak1 + peak2 + base) * 0.03),
           };
         }),
+      };
+    case 'creator-audience-profile':
+      return {
+        variant: 'grid-3',
+        title: 'Audience Profile',
+        modules: AUDIENCE_MODULE_CATALOG.map((m) => ({ key: m.key, selected: true, items: [] })),
       };
     default:
       return { content: '', fontSize: 14, color: 'var(--foreground-primary)' };

@@ -13,6 +13,7 @@ export { CampaignAnalysis } from './CampaignAnalysis';
 export { CreatorWorkMetrics } from './CreatorWorkMetrics';
 export { CreatorWorksTable } from './CreatorWorksTable';
 export { SwotMatrix } from './SwotMatrix';
+export { CreatorAudienceProfile } from './CreatorAudienceProfile';
 export {
   CampaignSummaryBoard,
   FunnelChartView,

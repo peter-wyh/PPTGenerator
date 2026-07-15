@@ -68,7 +68,9 @@ export type ComponentType =
   | 'device-breakdown'
   | 'content-topic-performance'
   | 'search-term-table'
-  | 'hourly-heatmap';
+  | 'hourly-heatmap'
+  // 达人域：用户画像复合容器（性别/年龄/城市等可增删子模块，从绑定达人 audience 填充）
+  | 'creator-audience-profile';
 
 /* ---- 数据来源标记（所有组件 data 通用元字段） ---- */
 
@@ -145,15 +147,21 @@ export interface ImageGroupData {
 
 /* ---- 标题块：多样式大标题 ---- */
 
-export type TitleBlockStyle = 'plain' | 'bar-left' | 'underline' | 'gradient' | 'card' | 'numbered';
+export type TitleBlockStyle = 'plain' | 'bar-left' | 'underline' | 'gradient' | 'card' | 'numbered' | 'highlight' | 'accent-tag' | 'accent-underline' | 'block-underline';
 
 export interface TitleBlockData {
   variant: TitleBlockStyle;
   text: string;
   subtitle?: string;
-  /** 序号（numbered 样式用，如 "01"） */
+  /** 字号(px);缺省=跟随全局 heading.fontSize(见 ProjectTheme.heading)。 */
+  fontSize?: number;
+  /** 字重;缺省 700。 */
+  fontWeight?: number;
+  /** 标题文字颜色:'brand'=品牌色(--color-primary),'black'=黑色。缺省=黑色。gradient 变体固定白色。 */
+  titleColor?: 'brand' | 'black';
+  /** 序号（numbered / accent-tag 样式用，如 "01"） */
   index?: string;
-  /** 主色（bar/gradient/numbered 用） */
+  /** 主色（bar/underline/gradient/numbered/highlight/accent-tag 用） */
   color?: string;
   /** 下划线颜色（underline 样式）：品牌色 / 黑色；缺省品牌色 */
   underlineColor?: 'brand' | 'black';
@@ -580,7 +588,7 @@ export interface MetaStripData {
 }
 
 /** 内容策略富文本块（达人画像页 INSIGHT/STRATEGY）。复用 TableData 形态。 */
-export type StrategyBlockVariant = 'default' | 'labeled' | 'bulleted';
+export type StrategyBlockVariant = 'default' | 'labeled' | 'bulleted' | 'cards';
 
 export interface StrategyBlockData {
   /** 样式变体；缺省 'default'（平铺）。labeled=卡片标签，bulleted=卡片列表。 */
@@ -676,6 +684,29 @@ export interface CreatorFanInterestData {
   subtitle?: string;
   showPercent?: boolean;
   tags: { label: string; value: number; color: string }[];
+}
+
+/* ---- 用户画像复合容器（性别/年龄/城市等可增删子模块）Data ---- */
+
+/** 画像子模块 key（固定枚举，对应 ReportCreator.audience 字段）。 */
+export type AudienceModuleKey = 'gender' | 'age' | 'city';
+
+/** 单个子模块：selected 控制增删；items 为该维度数据（{label,value,color?}）。 */
+export interface AudienceModule {
+  key: AudienceModuleKey;
+  /** 是否启用（增删）。缺省视为 true。 */
+  selected?: boolean;
+  items?: { label: string; value: number; color?: string }[];
+}
+
+/** 用户画像复合容器数据。 */
+export interface CreatorAudienceProfileData {
+  /** 布局：grid-2 / grid-3 / stacked。缺省 grid-3。 */
+  variant?: 'grid-2' | 'grid-3' | 'stacked';
+  title?: string;
+  subtitle?: string;
+  /** 启用的子模块列表（按顺序渲染）。 */
+  modules: AudienceModule[];
 }
 
 /* ---- 业务组件（试点：业绩·商品域，作品证据 / 口碑展示）Data ---- */
@@ -786,7 +817,8 @@ export type ComponentData =
   | DeviceBreakdownData
   | ContentTopicPerformanceData
   | SearchTermTableData
-  | HourlyHeatmapData;
+  | HourlyHeatmapData
+  | CreatorAudienceProfileData;
 
 export interface EditorComponent {
   id: string;

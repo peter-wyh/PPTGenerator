@@ -808,3 +808,47 @@ export function allCreatorWorks(): CreatorWithWorks[] {
   }
   return [...seen.values()];
 }
+
+/* ------------------------------ Campaign raw exports (for product CPS engine) ------------------------------ */
+
+/** Campaign 级原始汇总（数值，未格式化）。供 products.ts 推导商品 CPS。 */
+export interface CampaignRawTotals {
+  gmv: number;
+  orders: number;
+  clicks: number;
+  impressions: number;
+  commission: number;
+  cpsSpend: number;
+  commissionPct: number;
+  aov: number;
+}
+
+/**
+ * 取一个 campaign 的原始汇总数值（= Σ all creators' raw totals）。
+ * 与 rollupCampaignMetrics 使用同一数据源（MOCK_RAW），保证自洽。
+ */
+export function campaignRawTotals(campaignId: string): CampaignRawTotals {
+  const raws = MOCK_RAW[campaignId] ?? [];
+  const sum = raws.reduce(
+    (a, r) => ({
+      gmv: a.gmv + r.totals.gmv,
+      orders: a.orders + r.totals.orders,
+      clicks: a.clicks + r.totals.clicks,
+      impressions: a.impressions + r.totals.impressions,
+      commission: a.commission + r.totals.commission,
+      cpsSpend: a.cpsSpend + r.totals.cpsSpend,
+    }),
+    { gmv: 0, orders: 0, clicks: 0, impressions: 0, commission: 0, cpsSpend: 0 },
+  );
+  const profile = CAMPAIGN_PROFILE[campaignId];
+  return {
+    ...sum,
+    commissionPct: profile?.commissionPct ?? 0.1,
+    aov: profile?.aov ?? 200,
+  };
+}
+
+/** 取 campaign 的多平台配置（供 products 引擎推导跨平台商品表现）。 */
+export function campaignProfilePlatforms(campaignId: string): CampaignPlatformEntry[] {
+  return CAMPAIGN_PROFILE[campaignId]?.platforms ?? [];
+}

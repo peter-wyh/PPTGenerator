@@ -147,6 +147,8 @@ describe('Projects page', () => {
 
     // 1) 先选场景 Campaign 报告 → campaign 列表懒加载
     await user.selectOptions(screen.getByRole('combobox', { name: '场景' }), 'campaign-report');
+    // 业务线决定 campaign 过滤(camp-x 属 FT)
+    await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
     await screen.findByText('Campaign X · AdX');
 
     // 2) 选择具体 campaign（联动填充广告主/业务线/campaign 信息）

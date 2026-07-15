@@ -47,8 +47,8 @@ describe('resolveLayout', () => {
 describe('ImageGroupComponent 渲染', () => {
   it('无图片 → 整块占位「组图」', () => {
     render(<ImageGroupComponent data={{ images: [] } as ImageGroupData} />);
-    expect(screen.getByText('组图')).toBeInTheDocument();
-    expect(screen.queryByText('图片')).not.toBeInTheDocument();
+    expect(screen.getByText('Image group')).toBeInTheDocument();
+    expect(screen.queryByText('Image')).not.toBeInTheDocument();
   });
 
   it('auto + 3 张空图 → trio 版式，3 个「图片」占位', () => {
@@ -57,13 +57,13 @@ describe('ImageGroupComponent 渲染', () => {
         data={{ variant: 'auto', images: [{ src: '' }, { src: '' }, { src: '' }] }}
       />,
     );
-    expect(screen.getAllByText('图片')).toHaveLength(3);
+    expect(screen.getAllByText('Image')).toHaveLength(3);
   });
 
   it('锁定 trio + 5 张图 → 仍 3 个槽位（溢出忽略）', () => {
     const images = Array.from({ length: 5 }, () => ({ src: '' }));
     render(<ImageGroupComponent data={{ variant: 'trio', images }} />);
-    expect(screen.getAllByText('图片')).toHaveLength(3);
+    expect(screen.getAllByText('Image')).toHaveLength(3);
   });
 
   it('锁定 quad + 2 张图 → 4 个槽位（不足补空占位）', () => {
@@ -72,7 +72,7 @@ describe('ImageGroupComponent 渲染', () => {
         data={{ variant: 'quad', images: [{ src: '' }, { src: '' }] }}
       />,
     );
-    expect(screen.getAllByText('图片')).toHaveLength(4);
+    expect(screen.getAllByText('Image')).toHaveLength(4);
   });
 
   it('有真实 src 的格子渲染 <img>，空槽仍占位', () => {
@@ -83,6 +83,6 @@ describe('ImageGroupComponent 渲染', () => {
     );
     // alt="" 的装饰性图片 role 为 none，故直接查 <img> 元素。
     expect(container.querySelector('img')).not.toBeNull();
-    expect(screen.getAllByText('图片')).toHaveLength(1); // 另一格为空槽
+    expect(screen.getAllByText('Image')).toHaveLength(1); // 另一格为空槽
   });
 });

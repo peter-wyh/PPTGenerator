@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import type {
+  AudienceModule,
+  AudienceModuleKey,
   CommentWordcloudData,
   ComponentData,
+  CreatorAudienceProfileData,
   CreatorStatItem,
   CreatorStatsStripData,
   EditorComponent,
@@ -16,8 +19,8 @@ import type {
   StrategyBlockData,
   WorkMetricsData,
 } from '@mediakit/shared';
-import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
-import { useEditorStore } from '../store';
+import { AUDIENCE_MODULE_CATALOG, CREATOR_METRIC_CATALOG } from '@mediakit/shared';
+import { useEditorStore, allReportCreators } from '../store';
 import { getStyleOptions, type VariantId } from '../business/catalog';
 import { IconPickerOverlay } from '../icons/IconPickerOverlay';
 import { findIcon } from '../icons/catalog';
@@ -166,6 +169,161 @@ export function CreatorStatsFields({ comp }: { comp: EditorComponent }) {
           })}
         </div>
       </div>
+    </FieldGroup>
+  );
+}
+
+/* --------------------------- 用户画像容器(模块增删 + 从达人导入) --------------------------- */
+
+export function CreatorAudienceProfileFields({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  const data = comp.data as CreatorAudienceProfileData;
+  const modules = data.modules ?? [];
+
+  // 页面绑定的达人(用于一键导入 audience)
+  const pageCreatorId = useEditorStore((s) => {
+    const p = s.pages.find((pg) => pg.id === s.currentPageId);
+    return p?.creatorId;
+  });
+  const creator = useEditorStore((s) =>
+    pageCreatorId ? allReportCreators(s.reportData).find((c) => c.id === pageCreatorId) ?? null : null,
+  );
+
+  // 写入:同时把 _dataSource 切 manual —— 用户一旦手改(勾选/导入/编辑行),
+  // 就不再被页面绑定级联覆盖(applyPageBinding 仅填 isNew || _dataSource==='project')。
+  const write = (next: AudienceModule[]) => {
+    updateComponentData(
+      comp.id,
+      { modules: next, _dataSource: 'manual' } as unknown as Partial<CreatorAudienceProfileData>,
+    );
+    commit();
+  };
+
+  const isEnabled = (key: AudienceModuleKey) => modules.some((m) => m.key === key && m.selected !== false);
+
+  // 增删:勾选切换 selected;不存在则按 catalog 默认补一条。
+  const toggle = (key: AudienceModuleKey) => {
+    const existing = modules.find((m) => m.key === key);
+    if (existing) {
+      write(modules.map((m) => (m.key === key ? { ...m, selected: m.selected === false } : m)));
+    } else {
+      write([...modules, { key, selected: true, items: [] }]);
+    }
+  };
+
+  // 从页面达人导入:按 audience 字段填充各模块 items,保留既有 selected 标记。
+  const importFromCreator = () => {
+    const aud = creator?.audience;
+    if (!aud) return;
+    const pick = (arr?: { label: string; value: number; color?: string }[]) =>
+      (arr ?? []).map((x) => ({ label: x.label, value: x.value, color: x.color }));
+    write(
+      AUDIENCE_MODULE_CATALOG.map((m) => {
+        const prev = modules.find((mm) => mm.key === m.key);
+        const items =
+          m.key === 'gender' ? pick(aud.genderSplit) : m.key === 'age' ? pick(aud.ageRange) : pick(aud.topCities);
+        return { key: m.key, selected: prev ? prev.selected : true, items };
+      }),
+    );
+  };
+
+  // 单模块 items 手动行编辑(add/remove/edit label·value·color)。
+  type Item = { label: string; value: number; color?: string };
+  const setItem = (key: AudienceModuleKey, idx: number, patch: Partial<Item>) =>
+    write(
+      modules.map((m) =>
+        m.key !== key
+          ? m
+          : { ...m, items: (m.items ?? []).map((it, i) => (i === idx ? { ...it, ...patch } : it)) },
+      ),
+    );
+  const addItem = (key: AudienceModuleKey) =>
+    write(
+      modules.map((m) =>
+        m.key !== key ? m : { ...m, items: [...(m.items ?? []), { label: '', value: 0 }] },
+      ),
+    );
+  const removeItem = (key: AudienceModuleKey, idx: number) =>
+    write(
+      modules.map((m) =>
+        m.key !== key ? m : { ...m, items: (m.items ?? []).filter((_, i) => i !== idx) },
+      ),
+    );
+
+  const enabled = modules.filter((m) => m.selected !== false);
+
+  return (
+    <FieldGroup title="画像模块">
+      <div className="grid grid-cols-2 gap-1 text-xs text-foreground-secondary">
+        {AUDIENCE_MODULE_CATALOG.map((m) => (
+          <label key={m.key} className="flex cursor-pointer items-center gap-1">
+            <input type="checkbox" checked={isEnabled(m.key)} onChange={() => toggle(m.key)} className="h-3 w-3" />
+            <span>{m.label}</span>
+          </label>
+        ))}
+      </div>
+      {creator ? (
+        <button
+          onClick={importFromCreator}
+          className="mt-2 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          ⚡ 从页面达人导入（{creator.name}）
+        </button>
+      ) : (
+        <p className="mt-2 text-[11px] text-foreground-muted">
+          未绑定达人。先在页面绑定达人，或在「数据配置」中选择达人。
+        </p>
+      )}
+
+      {/* 启用模块的 items 手动行编辑 */}
+      {enabled.length > 0 && (
+        <div className="mt-2 space-y-2 border-t border-border-subtle pt-2 text-xs text-foreground-secondary">
+          <div className="text-[11px] text-foreground-muted">数据行(可手动增删改)</div>
+          {enabled.map((m) => (
+            <div key={m.key}>
+              <div className="mb-1 font-medium">{AUDIENCE_MODULE_CATALOG.find((c) => c.key === m.key)?.label ?? m.key}</div>
+              <div className="space-y-1">
+                {(m.items ?? []).map((it, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <input
+                      value={it.label}
+                      placeholder="标签"
+                      onChange={(e) => setItem(m.key, i, { label: e.target.value })}
+                      className="w-16 rounded border border-border-default px-1 py-0.5"
+                    />
+                    <input
+                      type="number"
+                      value={it.value}
+                      placeholder="%"
+                      onChange={(e) => setItem(m.key, i, { value: Number(e.target.value) || 0 })}
+                      className="w-14 rounded border border-border-default px-1 py-0.5"
+                    />
+                    <input
+                      type="color"
+                      value={it.color ?? '#3B82F6'}
+                      onChange={(e) => setItem(m.key, i, { color: e.target.value })}
+                      className="h-6 w-6 flex-none rounded border border-border-default"
+                    />
+                    <button
+                      onClick={() => removeItem(m.key, i)}
+                      className="text-foreground-muted hover:text-red"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => addItem(m.key)}
+                className="mt-1 text-[11px] text-accent-primary hover:underline"
+              >
+                + 添加
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </FieldGroup>
   );
 }

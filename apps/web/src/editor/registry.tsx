@@ -47,6 +47,7 @@ import {
   ContentTopicView,
   SearchTermTableView,
   HourlyHeatmapView,
+  CreatorAudienceProfile,
 } from './components/report';
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
@@ -54,6 +55,7 @@ import { TitleBlock } from './components/BasicComponents';
 import { parseCreatorLink } from './creatorLink';
 import {
   ReportCreatorAvatarImporter,
+  ReportCreatorMetaStripImporter,
   ReportCreatorStatsImporter,
   ReportCreatorListImporter,
   ReportCreatorWorksImporter,
@@ -435,6 +437,10 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: MetaStripComponent,
     defaultSize: DEFAULT_SIZES['meta-strip'],
     defaultData: () => getDefaultData('meta-strip'),
+    dataSource: {
+      modes: ['manual', 'project'],
+      projectImporter: ReportCreatorMetaStripImporter,
+    },
     variants: [
       { id: 'inline', label: '横排胶囊' },
       { id: 'divider', label: '竖线分隔' },
@@ -452,6 +458,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'default', label: '默认' },
       { id: 'labeled', label: '卡片标签' },
       { id: 'bulleted', label: '卡片列表' },
+      { id: 'cards', label: '单列卡片' },
     ],
     // 行编辑（图标/标题/富文本内容）+ 高亮词由 PropertyPanel 的 StrategyBlockFields 负责。
     propertySchema: [],
@@ -623,10 +630,16 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'gradient', label: '渐变背景' },
       { id: 'card', label: '卡片' },
       { id: 'numbered', label: '序号' },
+      { id: 'highlight', label: '色块强调' },
+      { id: 'accent-tag', label: '色块标签' },
+      { id: 'accent-underline', label: '强调下划线' },
+      { id: 'block-underline', label: '色块下划线' },
     ],
     propertySchema: [
       { key: 'text', label: '标题文字', kind: 'text' },
       { key: 'subtitle', label: '副标题', kind: 'text' },
+      { key: 'fontSize', label: '字号', kind: 'number' },
+      { key: 'titleColor', label: '标题颜色', kind: 'select', options: [{ value: 'black', label: '黑色' }, { value: 'brand', label: '品牌色' }] },
       { key: 'index', label: '序号', kind: 'text' },
       { key: 'color', label: '主色', kind: 'color' },
       { key: 'underlineColor', label: '下划线颜色', kind: 'select', options: [{ value: 'brand', label: '品牌色' }, { value: 'black', label: '黑色' }] },
@@ -864,6 +877,18 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       modes: ['manual', 'project'],
       projectImporter: CampaignReportImporter,
     },
+  },
+  'creator-audience-profile': {
+    Component: CreatorAudienceProfile,
+    defaultSize: DEFAULT_SIZES['creator-audience-profile'],
+    defaultData: () => getDefaultData('creator-audience-profile'),
+    variants: [
+      { id: 'grid-3', label: '三列' },
+      { id: 'grid-2', label: '两列' },
+      { id: 'stacked', label: '堆叠' },
+    ],
+    // 字段(模块增删/导入)交给自定义面板 CreatorAudienceProfileFields
+    propertySchema: [],
   },
 };
 

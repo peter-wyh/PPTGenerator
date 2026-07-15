@@ -43,7 +43,7 @@ function QuadrantCard({ q, style }: { q: SwotQuadrant; style: (typeof QUADRANT_S
 function EmptyState() {
   return (
     <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
-      暂无数据
+      No data
     </div>
   );
 }

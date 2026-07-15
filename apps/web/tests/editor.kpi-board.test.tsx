@@ -113,7 +113,7 @@ describe('KpiBoard · flat 变体（平铺指标条）', () => {
     expect(screen.getByText('ROAS')).toBeInTheDocument();
     expect(screen.getByText('3.21')).toBeInTheDocument();
     expect(screen.getByText('+12%')).toBeInTheDocument();
-    expect(screen.getByText('vs 上期')).toBeInTheDocument();
+    expect(screen.getByText('vs last period')).toBeInTheDocument();
     // valueColors 非 primary 时数值上 inline 色（info = var(--blue)）
     const valueEl = container.querySelector('.font-data') as HTMLElement;
     expect(valueEl.style.color).toBe('var(--blue)');
@@ -139,7 +139,7 @@ describe('KpiBoard · 对比基准与逆向指标', () => {
     render(
       <KpiBoard data={{ variant: 'flat', headers: ['指标', '数值', '对比'], rows: [['A', '1', '+1%']] }} />,
     );
-    expect(screen.getByText('vs 上期')).toBeInTheDocument();
+    expect(screen.getByText('vs last period')).toBeInTheDocument();
   });
 
   it('inverse 方向：-5% 染绿（降为好）', () => {

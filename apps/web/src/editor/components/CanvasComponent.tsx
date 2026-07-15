@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { ReactNode } from 'react';
-import type { EditorComponent } from '@mediaket/shared';
+import type { EditorComponent } from '@mediakit/shared';
 import type { ResizeDir } from '../store';
 import { ComponentRenderer } from './ComponentRenderer';
 

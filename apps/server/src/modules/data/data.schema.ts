@@ -34,6 +34,43 @@ export const campaignRecordDataSchema = z.object({
   creatorIds: z.array(z.string()).optional(),
 });
 
+/** AudienceSlice / CreatorAudience:镜像 shared。 */
+const audienceSliceSchema = z.object({
+  label: z.string(),
+  value: z.number(),
+  color: z.string().optional(),
+});
+const creatorAudienceSchema = z.object({
+  genderSplit: z.array(audienceSliceSchema).optional(),
+  ageRange: z.array(audienceSliceSchema).optional(),
+  topCities: z.array(audienceSliceSchema).optional(),
+});
+
+/** CreatorWork:镜像 shared。 */
+const creatorWorkSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  cover: z.string().max(2048).optional(),
+  url: z.string().max(2048).optional(),
+  platform: z.string().optional(),
+  publishedAt: z.string().optional(),
+  impressions: z.string().optional(),
+  likes: z.string().optional(),
+  comments: z.string().optional(),
+  shares: z.string().optional(),
+  saves: z.string().optional(),
+  engagementRate: z.string().optional(),
+});
+
+/** CreatorStatItem:镜像 shared。 */
+const creatorStatItemSchema = z.object({
+  key: z.string().optional(),
+  label: z.string(),
+  value: z.string(),
+  color: z.string(),
+  selected: z.boolean().optional(),
+});
+
 /** Creator 记录数据(镜像 web Creator;metrics 必填)。 */
 export const creatorRecordDataSchema = z.object({
   id: z.string(),
@@ -47,6 +84,9 @@ export const creatorRecordDataSchema = z.object({
   region: z.string(),
   avatar: z.string().max(2048).optional(),
   metrics: z.array(campaignMetricSchema),
+  audience: creatorAudienceSchema.optional(),
+  works: z.array(creatorWorkSchema).optional(),
+  stats: z.array(creatorStatItemSchema).optional(),
 });
 
 /** Collaboration 子 schema(镜像 shared CollaborationData)。 */
