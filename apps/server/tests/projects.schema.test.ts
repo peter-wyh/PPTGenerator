@@ -3,6 +3,7 @@ import {
   createProjectSchema,
   updateProjectSchema,
   pageSchema,
+  projectMetaSchema,
 } from '../src/modules/projects/projects.schema';
 import { createTemplateSchema } from '../src/modules/templates/templates.schema';
 
@@ -168,5 +169,35 @@ describe('pageSchema 接受新 media-kit 页面类型', () => {
       const out = pageSchema.parse({ id: 'p', name: 'P', components: [], pageType: pt });
       expect((out as { pageType?: string }).pageType).toBe(pt);
     }
+  });
+});
+
+describe('reportData.creators[].audience 经 schema 保留（round-trip）', () => {
+  it('creators 与 campaignCreators 的 audience 字段不被剥离', () => {
+    const meta = {
+      reportData: {
+        creators: [
+          {
+            id: 'c1',
+            name: 'C1',
+            audience: {
+              genderSplit: [{ label: 'F', value: 62 }],
+              ageRange: [{ label: '18-24', value: 30 }],
+              topCities: [{ label: '上海', value: 28, color: '#FF5C00' }],
+            },
+          },
+        ],
+        campaignCreators: [{ id: 'c2', name: 'C2', audience: { genderSplit: [{ label: 'M', value: 40 }] } }],
+      },
+    };
+    const out = projectMetaSchema.parse(meta) as {
+      reportData?: {
+        creators?: { audience?: { genderSplit?: { value: number }[]; topCities?: { color?: string }[] } }[];
+        campaignCreators?: { audience?: { genderSplit?: { value: number }[] } }[];
+      };
+    };
+    expect(out.reportData?.creators?.[0]?.audience?.genderSplit?.[0]?.value).toBe(62);
+    expect(out.reportData?.creators?.[0]?.audience?.topCities?.[0]?.color).toBe('#FF5C00');
+    expect(out.reportData?.campaignCreators?.[0]?.audience?.genderSplit?.[0]?.value).toBe(40);
   });
 });

@@ -167,6 +167,20 @@ const projectThemeSchema = z
   })
   .optional();
 
+/** 受众画像单项（性别 / 年龄 / 城市占比）。 */
+const audienceSliceSchema = z.object({
+  label: z.string(),
+  value: z.number(),
+  color: z.string().max(20).optional(),
+});
+
+/** 达人受众画像（与 shared CreatorAudience 对齐）。 */
+const creatorAudienceSchema = z.object({
+  genderSplit: z.array(audienceSliceSchema).optional(),
+  ageRange: z.array(audienceSliceSchema).optional(),
+  topCities: z.array(audienceSliceSchema).optional(),
+});
+
 /** 报告数据上下文 schema（Campaign + 达人列表）。 */
 const reportDataContextSchema = z
   .object({
@@ -216,6 +230,7 @@ const reportDataContextSchema = z
               }),
             )
             .optional(),
+          audience: creatorAudienceSchema.optional(),
         }),
       )
       .optional(),
@@ -243,6 +258,7 @@ const reportDataContextSchema = z
               }),
             )
             .optional(),
+          audience: creatorAudienceSchema.optional(),
         }),
       )
       .optional(),
