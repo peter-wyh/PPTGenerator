@@ -55,4 +55,12 @@ describe('CreatorDetailDrawer', () => {
     render(<CreatorDetailDrawer creator={{ ...creator, metrics: [] }} onClose={vi.fn()} />);
     expect(screen.queryByText('频道 KPI')).not.toBeInTheDocument();
   });
+  it('metrics 缺失(CSV 导入)→ 不崩溃、隐藏 KPI 区', () => {
+    const noMetrics = { ...creator, metrics: undefined } as unknown as Creator;
+    const { container } = render(<CreatorDetailDrawer creator={noMetrics} onClose={vi.fn()} />);
+    // 不崩溃:头部仍渲染
+    expect(container.textContent).toContain('Mia Chen');
+    // KPI 区隐藏
+    expect(screen.queryByText('频道 KPI')).not.toBeInTheDocument();
+  });
 });

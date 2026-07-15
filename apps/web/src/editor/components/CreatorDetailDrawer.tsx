@@ -33,6 +33,9 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
     ['Region', creator.region],
   ];
 
+  // CSV/XLSX 导入的 creator 不带 metrics(JSON 导入与 seed 才设),此处归一化防止 undefined.length 崩溃。
+  const metrics = creator.metrics ?? [];
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
       <aside
@@ -65,11 +68,11 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         </div>
 
         {/* 频道 KPI(metrics 为空则隐藏) */}
-        {creator.metrics.length > 0 && (
+        {metrics.length > 0 && (
           <div className="p-5">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
             <div className="grid grid-cols-2 gap-2">
-              {creator.metrics.map((m, i) => (
+              {metrics.map((m, i) => (
                 <div key={`${m.label}-${i}`} className="rounded-lg border border-border-subtle p-3">
                   <div className="text-[11px] text-foreground-muted">{m.label}</div>
                   <div className="text-base font-semibold text-foreground-primary">{m.value}</div>
