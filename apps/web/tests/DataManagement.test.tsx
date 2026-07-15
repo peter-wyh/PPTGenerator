@@ -126,6 +126,40 @@ describe('DataManagement page', () => {
     await userEvent.click(seedBtn);
     await waitFor(() => expect(importManyMock).toHaveBeenCalledWith('campaign', expect.any(Array)));
   });
+
+  it('达人库行点击 → 打开详情浮窗(KPI 区出现)', async () => {
+    const creatorRec = {
+      id: 'cre-1', kind: 'CREATOR', ownerId: 'u', createdAt: '', updatedAt: '',
+      data: {
+        id: 'cre-1', name: 'Mia Chen', handle: '@miaglowup', platform: 'TikTok', tier: 'mega',
+        followers: '1.28M', engagement: '8.7%', category: 'Beauty', region: 'US',
+        avatar: 'https://x/a.png', metrics: [{ label: 'Avg Reach', value: '2.4M', compare: '' }],
+      },
+    };
+    listMock.mockImplementation((k: string) =>
+      k === 'creator' ? Promise.resolve([creatorRec]) : Promise.resolve([]),
+    );
+    renderPage();
+    await userEvent.click(screen.getByText('达人库'));
+    await screen.findByText('Mia Chen');
+    await userEvent.click(screen.getByText('Mia Chen'));
+    expect(await screen.findByText('频道 KPI')).toBeInTheDocument();
+  });
+
+  it('达人库编辑按钮点击不开浮窗(stopPropagation)', async () => {
+    const creatorRec = {
+      id: 'cre-1', kind: 'CREATOR', ownerId: 'u', createdAt: '', updatedAt: '',
+      data: { id: 'cre-1', name: 'Mia Chen', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1', engagement: '1%', category: 'B', region: 'U', metrics: [] },
+    };
+    listMock.mockImplementation((k: string) =>
+      k === 'creator' ? Promise.resolve([creatorRec]) : Promise.resolve([]),
+    );
+    renderPage();
+    await userEvent.click(screen.getByText('达人库'));
+    await screen.findByText('Mia Chen');
+    await userEvent.click(screen.getByText('编辑'));
+    expect(screen.queryByText('频道 KPI')).not.toBeInTheDocument();
+  });
 });
 
 describe('DataManagement · Campaign drill-down', () => {
