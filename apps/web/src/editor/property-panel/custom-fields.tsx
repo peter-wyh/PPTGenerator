@@ -389,7 +389,7 @@ export function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
                   title={opt.label}
                   onClick={() => setColor(i, color === opt.token ? null : opt.token)}
                   className={`h-4 w-4 rounded-full border ${
-                    color === opt.token ? 'border-foreground-primary' : 'border-transparent'
+                    color === opt.token ? 'border-foreground-primary' : 'border-black/10'
                   }`}
                   style={{ backgroundColor: KPI_COLOR_TOKENS[opt.token].fg }}
                 />
