@@ -13,7 +13,9 @@ describe('campaignWorkScreenshots', () => {
     expect(campaignWorkScreenshots('camp-glowlab-q4')).toEqual(shots);
   });
 
-  it('returns [] for an unknown campaign', () => {
-    expect(campaignWorkScreenshots('does-not-exist')).toEqual([]);
+  it('generates fallback data for an unknown campaign', () => {
+    // Unknown campaigns now get deterministic fallback data (all 12 creators)
+    const result = campaignWorkScreenshots('does-not-exist');
+    expect(result.length).toBeGreaterThan(0);
   });
 });

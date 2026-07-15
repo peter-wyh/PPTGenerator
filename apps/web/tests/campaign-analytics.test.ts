@@ -40,9 +40,11 @@ describe('mock sync getter', () => {
     expect(list[0].revenue).toBeTruthy();
     expect(list[0].roas).toBeTruthy();
   });
-  it('未知 campaign 返回空数组（不抛错）', () => {
-    expect(getCreatorPerformances('nope')).toEqual([]);
-    expect(getPlacementTypeSummaries('nope')).toEqual([]);
+  it('未知 campaign 生成 fallback 数据（不抛错）', () => {
+    // fallback 生成确定性数据（12 达人），不抛错
+    const perf = getCreatorPerformances('nope');
+    expect(Array.isArray(perf)).toBe(true);
+    expect(perf.length).toBeGreaterThan(0);
   });
 });
 

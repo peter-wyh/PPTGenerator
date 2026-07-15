@@ -628,6 +628,53 @@ const { MOCK_PERFORMANCE, MOCK_PLACEMENT_SUMMARY, MOCK_RAW } = (() => {
 })();
 
 /**
+ * 通用 fallback Campaign Profile：用于未预定义的 campaignId。
+ * 从 campaignId 派生确定性参数（intensity/commission/aov）+ 全达人花名册。
+ */
+function fallbackProfile(campaignId: string): CampaignProfile {
+  let hash = 0;
+  for (let i = 0; i < campaignId.length; i++) hash = (hash * 31 + campaignId.charCodeAt(i)) & 0x7fffffff;
+  const titles = [
+    'Campaign Highlight Reel | Top Moments',
+    'Product Showcase | Behind the Scenes',
+    'Creator Spotlight | Authentic Review',
+    'Trending Now | What Everyone\u2019s Talking About',
+    'How-To Guide | Step-by-Step Tutorial',
+    'Before & After | Real Results',
+    'My Honest Opinion | 30-Day Review',
+    'Must-Have | Top Picks This Season',
+  ];
+  return {
+    startDate: '2026-01-15',
+    intensity: 0.7 + (hash % 30) / 100, // 0.70–0.99
+    commissionPct: 0.08 + (hash % 10) / 100, // 0.08–0.17
+    aov: 120 + (hash % 200),
+    titles,
+    creators: CREATOR_META.map((c) => c.id),
+    platforms: [
+      { platform: 'TikTok', collaborationType: 'Content' },
+      { platform: 'Instagram', collaborationType: 'Affiliate' },
+      { platform: 'YouTube', collaborationType: 'Long-form Review' },
+    ],
+  };
+}
+
+/** 为任意 campaignId 生成确定性 performance 列表（fallback 缓存）。 */
+const FALLBACK_CACHE = new Map<string, CreatorCampaignPerformance[]>();
+function getOrBuildFallback(campaignId: string): CreatorCampaignPerformance[] {
+  let cached = FALLBACK_CACHE.get(campaignId);
+  if (!cached) {
+    const profile = fallbackProfile(campaignId);
+    const raws = profile.creators.map((creatorId, idx) =>
+      buildPerformance(profile, campaignId, creatorId, idx),
+    );
+    cached = raws.map((r) => r.perf);
+    FALLBACK_CACHE.set(campaignId, cached);
+  }
+  return cached;
+}
+
+/**
  * Deterministic "period-over-period" text: uses campaign intensity as the main signal
  * (strong campaign → positive growth), with per-metric-index jitter.
  * Mock has no real prior-period data; this is a simulated value for dashboard display only.
@@ -693,7 +740,7 @@ export function listCreatorPerformance(
   campaignId: string,
 ): Promise<CreatorCampaignPerformance[]> {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(clone(MOCK_PERFORMANCE[campaignId] ?? [])), 250);
+    setTimeout(() => resolve(clone(MOCK_PERFORMANCE[campaignId] ?? getOrBuildFallback(campaignId))), 250);
   });
 }
 
@@ -708,7 +755,7 @@ export function listPlacementTypeSummary(
 
 /** 同步获取 campaign 下达人性能（旁路 listCreatorPerformance 的 250ms 延迟，供分析生成器用）。 */
 export function getCreatorPerformances(campaignId: string): CreatorCampaignPerformance[] {
-  return clone(MOCK_PERFORMANCE[campaignId] ?? []);
+  return clone(MOCK_PERFORMANCE[campaignId] ?? getOrBuildFallback(campaignId));
 }
 
 /** 同步获取 campaign 版位类型汇总（旁路 listPlacementTypeSummary 的延迟）。 */
@@ -727,7 +774,7 @@ export function campaignPlatforms(campaignId: string): CampaignPlatformEntry[] {
  * for work-screenshot component default seeding / import reuse.
  */
 export function campaignWorkScreenshots(campaignId: string): WorkScreenshotItem[] {
-  const perfs = MOCK_PERFORMANCE[campaignId] ?? [];
+  const perfs = MOCK_PERFORMANCE[campaignId] ?? getOrBuildFallback(campaignId);
   const out: WorkScreenshotItem[] = [];
   for (const p of perfs) {
     for (const post of p.posts) {
@@ -860,7 +907,7 @@ function buildCollabInfo(
  * For work-screenshot component's "select creator works" UI.
  */
 export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
-  const perfs = MOCK_PERFORMANCE[campaignId] ?? [];
+  const perfs = MOCK_PERFORMANCE[campaignId] ?? getOrBuildFallback(campaignId);
   return perfs.map((p) => ({
     creatorId: p.creatorId,
     creatorName: p.creatorName,
