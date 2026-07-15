@@ -278,3 +278,28 @@ describe('达人数据条 — 指标筛选与文案（store 持久化）', () =>
     expect(s.value).toBe('2.5M');
   });
 });
+
+describe('media-kit 专属模版（媒介包类别）', () => {
+  it('三个新模版存在、标 media-kit、components() 非空', () => {
+    for (const id of ['audience-portrait', 'account-overview', 'brand-collab']) {
+      const tpl = getTemplate(id);
+      expect(tpl, `${id} missing`).toBeDefined();
+      expect(tpl!.scenario).toEqual(['media-kit']);
+      expect(tpl!.components().length).toBeGreaterThan(0);
+      expect(tpl!.pageType).toBe(id);
+    }
+  });
+
+  it('「媒介包」类别存在且仅含三个新模版', () => {
+    const mk = TEMPLATE_CATEGORIES.find((c) => c.category === '媒介包');
+    expect(mk?.ids).toEqual(['audience-portrait', 'account-overview', 'brand-collab']);
+  });
+
+  it('media-kit 过滤结果含「媒介包」', () => {
+    expect(filterCategoriesByScenario('media-kit').map((c) => c.category)).toContain('媒介包');
+  });
+
+  it('campaign-report 过滤结果不含「媒介包」（media-kit 专属）', () => {
+    expect(filterCategoriesByScenario('campaign-report').map((c) => c.category)).not.toContain('媒介包');
+  });
+});

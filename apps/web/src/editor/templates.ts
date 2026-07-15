@@ -87,6 +87,7 @@ export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
     category: '策略 · 内容',
     ids: ['challenge-page', 'process-page', 'calendar-page', 'campaign-plan-page', 'content-analysis-page', 'funnel-page'],
   },
+  { category: '媒介包', ids: ['audience-portrait', 'account-overview', 'brand-collab'] },
 ];
 
 /**
@@ -656,6 +657,54 @@ export const TEMPLATES: Template[] = [
       const chart = t('bar-chart', 80, 130, 1120, 360);
       (chart.data as { title: string }).title = 'From Impressions to Orders';
       return [title, chart];
+    },
+  },
+  {
+    id: 'audience-portrait',
+    name: '受众画像',
+    description: '粉丝画像：性别 / 年龄 / 城市 / 兴趣',
+    pageType: 'audience-portrait',
+    scenario: ['media-kit'],
+    components: () => {
+      const title = titleAt('Audience Profile', 80, 40);
+      const profile = t('creator-audience-profile', 80, 110, 1120, 360);
+      const interest = t('creator-fan-interest', 80, 490, 1120, 160);
+      (interest.data as { title: string }).title = 'Audience Interests';
+      const note = t('text', 80, 670, 1120, 70);
+      (note.data as { content: string }).content = 'Audience insight...';
+      return [title, profile, interest, note];
+    },
+  },
+  {
+    id: 'account-overview',
+    name: '账号数据概览',
+    description: '数据条 + 核心指标 + 增长趋势',
+    pageType: 'account-overview',
+    scenario: ['media-kit'],
+    components: () => {
+      const title = titleAt('Account Overview', 80, 40);
+      const stats = t('creator-stats-strip', 80, 110, 1120, 120);
+      const c1 = t('indicator-card', 80, 250, 265, 130);
+      const c2 = t('indicator-card', 365, 250, 265, 130);
+      const c3 = t('indicator-card', 650, 250, 265, 130);
+      const c4 = t('indicator-card', 935, 250, 265, 130);
+      const growth = t('line-chart', 80, 400, 1120, 240);
+      (growth.data as { title: string }).title = 'Growth Trend';
+      return [title, stats, c1, c2, c3, c4, growth];
+    },
+  },
+  {
+    id: 'brand-collab',
+    name: '合作品牌',
+    description: '过往合作品牌 Logo 墙',
+    pageType: 'brand-collab',
+    scenario: ['media-kit'],
+    components: () => {
+      const title = titleAt('Brand Collaborations', 80, 40);
+      const wall = t('brand-wall', 80, 110, 1120, 420);
+      const note = t('text', 80, 550, 1120, 70);
+      (note.data as { content: string }).content = 'Selected past collaborations...';
+      return [title, wall, note];
     },
   },
 ];
