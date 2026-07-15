@@ -17,6 +17,35 @@ const campaignPlatformSchema = z.object({
   collaborationType: z.string(),
 });
 
+const campaignTrendPointSchema = z.object({
+  date: z.string(), revenue: z.number(), spend: z.number(),
+  commission: z.number(), orders: z.number(), roas: z.number(),
+});
+const campaignWeeklyTrendPointSchema = z.object({
+  week: z.string(), start: z.string(), revenue: z.number(),
+  spend: z.number(), orders: z.number(), roas: z.number(),
+});
+const campaignInsightSchema = z.object({
+  kind: z.string(),
+  severity: z.string(),
+  subjectType: z.string(),
+  subjectId: z.string().optional(),
+  subjectName: z.string(),
+  metrics: z.array(z.object({ label: z.string(), value: z.string() })),
+  rationale: z.string(),
+  action: z.string(),
+});
+const campaignAnalyticsSchema = z.object({
+  trend: z.array(campaignTrendPointSchema),
+  weeklyTrend: z.array(campaignWeeklyTrendPointSchema),
+  customerSplit: z.object({
+    newCustomers: z.number(),
+    returningCustomers: z.number(),
+    newCustomerRate: z.string(),
+  }).optional(),
+  insights: z.array(campaignInsightSchema),
+});
+
 /** Campaign 记录数据(镜像 shared Campaign)。 */
 export const campaignRecordDataSchema = z.object({
   id: z.string(),
@@ -32,6 +61,7 @@ export const campaignRecordDataSchema = z.object({
   owner: z.string().optional(),
   metrics: z.array(campaignMetricSchema).optional(),
   creatorIds: z.array(z.string()).optional(),
+  analytics: campaignAnalyticsSchema.optional(),
 });
 
 /** AudienceSlice / CreatorAudience:镜像 shared。 */
