@@ -51,6 +51,18 @@ export const templatesApi = {
   duplicate: (id: string) =>
     api.post<{ template: TemplateDetail }>(`/templates/${id}/duplicate`).then((r) => r.data.template),
 
+  /** 从项目页面创建模板（ADMIN）。将项目中的某页保存为可复用模板。 */
+  createFromProjectPage: (input: {
+    projectId: string;
+    pageId: string;
+    name: string;
+    width?: number;
+    height?: number;
+    meta?: ProjectMeta;
+    note?: string;
+  }) =>
+    api.post<{ template: TemplateDetail }>('/templates/from-project-page', input).then((r) => r.data.template),
+
   /** 发布/取消发布（便捷封装）。 */
   setStatus: (id: string, status: TemplateStatus) =>
     api.patch<{ template: TemplateDetail }>(`/templates/${id}`, { status }).then((r) => r.data.template),

@@ -3,8 +3,9 @@ import { useEditorStore } from './store';
 import { PageThumbnail } from './components/PageThumbnail';
 import { TemplateOverlay } from './components/TemplateOverlay';
 import { ScenarioOverlay } from './components/ScenarioOverlay';
+import { SaveAsTemplateOverlay } from './components/SaveAsTemplateOverlay';
 import { resolveTemplateForBusinessLine, type Template } from './templates';
-import { pageCategory } from '@mediakit/shared';
+import { pageCategory } from '@mediaket/shared';
 
 /** 页面类型 → 侧栏图标映射（27 种，与模板 1:1）。 */
 const PAGE_TYPE_ICONS: Record<string, string> = {
@@ -64,6 +65,8 @@ export function PageSidebar() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showScenarios, setShowScenarios] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  // 存为模板
+  const [saveTplPage, setSaveTplPage] = useState<{ id: string; name: string } | null>(null);
 
   function applyTemplate(tpl: Template) {
     if (tpl.id === 'blank') {
@@ -170,6 +173,16 @@ export function PageSidebar() {
                 >
                   📋
                 </button>
+                <button
+                  title="存为模板"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSaveTplPage({ id: p.id, name: p.name });
+                  }}
+                  className="text-foreground-muted hover:text-foreground-primary"
+                >
+                  💾
+                </button>
                 {pages.length > 1 && (
                   <button
                     title="删除页面"
@@ -206,6 +219,18 @@ export function PageSidebar() {
         <TemplateOverlay onApply={applyTemplate} onClose={() => setShowTemplates(false)} />
       )}
       {showScenarios && <ScenarioOverlay onClose={() => setShowScenarios(false)} />}
+      {saveTplPage && (
+        <SaveAsTemplateOverlay
+          open={!!saveTplPage}
+          projectId={useEditorStore.getState().projectId ?? ''}
+          pageId={saveTplPage.id}
+          pageName={saveTplPage.name}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
+          projectMeta={useEditorStore.getState().projectMeta}
+          onClose={() => setSaveTplPage(null)}
+        />
+      )}
     </div>
   );
 }

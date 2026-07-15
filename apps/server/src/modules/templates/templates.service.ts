@@ -243,6 +243,65 @@ export const templatesService = {
     return toDetail(await this.getOwnedOrThrow(ownerId, id));
   },
 
+  /**
+   * 从项目的某个页面创建模板（ADMIN）。
+   * 取出项目的指定页，将其组件剥离数据绑定（保留样式/布局/类型），包装为单页模板。
+   */
+  async createFromProjectPage(
+    ownerId: string,
+    input: {
+      projectId: string;
+      pageId: string;
+      name: string;
+      width?: number;
+      height?: number;
+      meta?: ProjectMeta;
+      note?: string;
+    },
+  ): Promise<TemplateDetail> {
+    // 取项目数据
+    const project = await prisma.project.findUnique({ where: { id: input.projectId } });
+    if (!project) throw ApiError.notFound('Project not found');
+
+    const projectPages = (project.pages as unknown as Page[]) ?? [];
+    const srcPage = projectPages.find((p) => p.id === input.pageId);
+    if (!srcPage) throw ApiError.notFound('Page not found in project');
+
+    // 复制页面作为模板页（保留组件布局/样式，清除运行时绑定标记）
+    const tplPage: Page = {
+      id: randomUUID(),
+      name: srcPage.name,
+      pageType: srcPage.pageType,
+      titleComponentId: srcPage.titleComponentId,
+      components: (srcPage.components ?? []).map((c) => {
+        // 浅拷贝组件，清除数据绑定字段（creatorId/campaignId 等）
+        const clone = { ...c } as Record<string, unknown>;
+        delete clone.creatorId;
+        delete clone.campaignId;
+        if (clone.data && typeof clone.data === 'object') {
+          const data = { ...(clone.data as Record<string, unknown>) };
+          delete data.creatorId;
+          delete data.campaignId;
+          clone.data = data;
+        }
+        return clone as unknown as Page['components'][number];
+      }),
+    };
+
+    const data: Prisma.TemplateCreateInput = {
+      owner: { connect: { id: ownerId } },
+      name: input.name,
+      width: input.width ?? project.width,
+      height: input.height ?? project.height,
+      pages: [tplPage] as unknown as Prisma.InputJsonValue,
+      ...(input.meta ? { meta: input.meta as unknown as Prisma.InputJsonValue } : {}),
+      ...(input.note ? { note: input.note } : {}),
+      status: 'DRAFT',
+    };
+    const template = await prisma.template.create({ data });
+    return toDetail(template);
+  },
+
   /** 已发布模版：任意已登录用户可读（用于"从模版创建项目"）。 */
   async getPublishedOrThrow(id: string): Promise<TemplateDetail> {
     const template = await prisma.template.findUnique({ where: { id } });

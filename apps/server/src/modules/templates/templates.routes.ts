@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { templatesController } from './templates.controller';
 import { validate } from '../../middleware/validate';
 import { authenticate, requireRole } from '../../middleware/auth';
-import { createTemplateSchema, idParamSchema, setDefaultSchema, updateTemplateSchema } from './templates.schema';
+import { createTemplateSchema, fromProjectPageSchema, idParamSchema, setDefaultSchema, updateTemplateSchema } from './templates.schema';
 
 const router = Router();
 
@@ -15,6 +15,14 @@ router.get('/:id', validate({ params: idParamSchema }), templatesController.get)
 
 // 写操作（增删改 + 复制）：仅 ADMIN。
 router.post('/', requireRole('ADMIN'), validate({ body: createTemplateSchema }), templatesController.create);
+
+// 从项目页面创建模板（ADMIN）：支持将项目中某一页保存为可复用模板。
+router.post(
+  '/from-project-page',
+  requireRole('ADMIN'),
+  validate({ body: fromProjectPageSchema }),
+  templatesController.createFromProjectPage,
+);
 router.patch(
   '/:id',
   requireRole('ADMIN'),

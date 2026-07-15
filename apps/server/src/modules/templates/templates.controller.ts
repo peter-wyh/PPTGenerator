@@ -28,6 +28,12 @@ export const templatesController = {
     res.status(201).json({ template: await templatesService.create(owner(req), req.body) });
   }),
 
+  createFromProjectPage: asyncHandler(async (req: Request, res: Response) => {
+    res
+      .status(201)
+      .json({ template: await templatesService.createFromProjectPage(owner(req), req.body) });
+  }),
+
   get: asyncHandler(async (req: Request, res: Response) => {
     // ADMIN 取自己的（含草稿）；普通用户只能取已发布。
     if (role(req) === 'ADMIN') {
