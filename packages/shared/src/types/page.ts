@@ -53,7 +53,11 @@ export type PageType =
   | 'challenge'
   | 'process'
   | 'calendar'
-  | 'campaign-plan';
+  | 'campaign-plan'
+  // ── 媒介包（media-kit 专属） ──
+  | 'audience-portrait'
+  | 'account-overview'
+  | 'brand-collab';
 
 /**
  * 页面大类（7 种）。由 pageType 映射而来，用于业务逻辑判断。
@@ -109,6 +113,10 @@ const PAGE_CATEGORY_MAP: Record<PageType, PageCategory> = {
   process: 'strategy',
   calendar: 'strategy',
   'campaign-plan': 'strategy',
+  // 媒介包
+  'audience-portrait': 'creator-case',
+  'account-overview': 'creator-case',
+  'brand-collab': 'company-intro',
 };
 
 /** 获取页面类型对应的大类。 */

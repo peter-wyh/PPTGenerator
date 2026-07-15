@@ -30,6 +30,8 @@ const pageTypeSchema = z.preprocess(
       'creator', 'case',
       // 策略 · 内容
       'challenge', 'process', 'calendar', 'campaign-plan',
+      // 媒介包（media-kit 专属）
+      'audience-portrait', 'account-overview', 'brand-collab',
     ])
     .optional(),
 );

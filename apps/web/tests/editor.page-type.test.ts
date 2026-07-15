@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useEditorStore } from '@/editor/store';
+import { pageCategory } from '@mediakit/shared';
 import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
 
 function makeDetail(overrides: Partial<ProjectDetail> = {}): ProjectDetail {
@@ -215,5 +216,13 @@ describe('addPageWithComponents / copyPage — 模板与复制', () => {
     expect(copy.titleComponentId).toBeTruthy();
     expect(copy.titleComponentId).not.toBe(srcTitleId);
     expect(copy.components.find((c) => c.id === copy.titleComponentId)).toBeTruthy();
+  });
+});
+
+describe('新 media-kit 页面类型 → 大类映射', () => {
+  it('audience-portrait / account-overview → creator-case；brand-collab → company-intro', () => {
+    expect(pageCategory('audience-portrait')).toBe('creator-case');
+    expect(pageCategory('account-overview')).toBe('creator-case');
+    expect(pageCategory('brand-collab')).toBe('company-intro');
   });
 });

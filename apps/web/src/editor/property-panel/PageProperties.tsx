@@ -339,6 +339,14 @@ const PAGE_TYPE_GROUPS: { label: string; options: { value: PageType; label: stri
       { value: 'campaign-plan', label: '投放计划', icon: '🗺️', desc: '阶段路线图表格' },
     ],
   },
+  {
+    label: '媒介包',
+    options: [
+      { value: 'audience-portrait', label: '受众画像', icon: '👥', desc: '粉丝画像：性别 / 年龄 / 城市 / 兴趣' },
+      { value: 'account-overview', label: '账号数据概览', icon: '📊', desc: '数据条 + 核心指标 + 增长趋势' },
+      { value: 'brand-collab', label: '合作品牌', icon: '🏷️', desc: '过往合作品牌 Logo 墙' },
+    ],
+  },
 ];
 
 /** 页面类型选择器 + 按类型显示的业务上下文选择器（Campaign / 达人）。 */

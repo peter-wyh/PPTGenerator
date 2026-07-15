@@ -41,6 +41,10 @@ const PAGE_TYPE_ICONS: Record<string, string> = {
   process: '🔄',
   calendar: '📅',
   'campaign-plan': '🗺️',
+  // 媒介包
+  'audience-portrait': '👥',
+  'account-overview': '📊',
+  'brand-collab': '🏷️',
 };
 
 /** 页面栏：缩略图卡片 + 切换/改名/复制/删除 + 拖拽排序 + 模板新建。 */

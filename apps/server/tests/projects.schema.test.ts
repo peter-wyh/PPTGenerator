@@ -161,3 +161,12 @@ describe('projectThemeSchema skinPreset', () => {
     expect(r.success).toBe(false);
   });
 });
+
+describe('pageSchema 接受新 media-kit 页面类型', () => {
+  it('audience-portrait / account-overview / brand-collab 均通过校验', () => {
+    for (const pt of ['audience-portrait', 'account-overview', 'brand-collab'] as const) {
+      const out = pageSchema.parse({ id: 'p', name: 'P', components: [], pageType: pt });
+      expect((out as { pageType?: string }).pageType).toBe(pt);
+    }
+  });
+});
