@@ -4,6 +4,7 @@ import type {
   CollaborationDeliverable,
   ContentType,
   CommentWordItem,
+  WorkAudienceInsight,
   WorkMetricItem,
   WorkScreenshotItem,
 } from '@mediakit/shared';
@@ -126,6 +127,8 @@ function DeliverableEditor({
   const setScreenshots = (s: WorkScreenshotItem[]) => patch({ screenshots: s });
   const setMetrics = (m: WorkMetricItem[]) => patch({ metrics: m });
   const setWords = (w: CommentWordItem[]) => patch({ wordcloud: w });
+  const setAudience = (p: Partial<WorkAudienceInsight>) =>
+    patch({ audience: { ...(deliverable.audience ?? {}), ...p } });
 
   return (
     <div className="rounded border border-border-subtle p-2">
@@ -230,12 +233,24 @@ function DeliverableEditor({
         ))}
       </Section>
 
-      {/* 画像（v1 只读概要，编辑留后续） */}
-      <div className="text-foreground-muted">
-        画像：
-        {audience
-          ? `${(audience.topCities ?? []).length} 城 / ${(audience.genderSplit ?? []).length} 性别 / ${(audience.ageRange ?? []).length} 年龄`
-          : '暂无'}
+      {/* 受众画像（城市/性别/年龄/趋势，editing 可编辑） */}
+      <NamedValueSection title="受众·城市" items={audience?.topCities ?? []} editing={editing}
+        onChange={(items) => setAudience({ topCities: items })} />
+      <NamedValueSection title="受众·性别" items={audience?.genderSplit ?? []} editing={editing}
+        onChange={(items) => setAudience({ genderSplit: items })} />
+      <NamedValueSection title="受众·年龄" items={audience?.ageRange ?? []} editing={editing}
+        onChange={(items) => setAudience({ ageRange: items })} />
+      <NamedValueSection title="受众·趋势" items={audience?.trend ?? []} editing={editing}
+        onChange={(items) => setAudience({ trend: items })} />
+      <div className="ml-2 mb-1 flex items-center gap-1 text-foreground-secondary">
+        <span>趋势名</span>
+        <input
+          value={audience?.trendLabel ?? ''}
+          placeholder="如 播放趋势"
+          disabled={!editing}
+          onChange={(e) => setAudience({ trendLabel: e.target.value })}
+          className="w-28 rounded border border-border-default px-1 py-0.5 disabled:bg-transparent"
+        />
       </div>
     </div>
   );
@@ -262,5 +277,45 @@ function Section({
       </div>
       <div className="ml-2 space-y-0.5">{children}</div>
     </div>
+  );
+}
+
+/** 受众画像的 label/value 行编辑器（城市/性别/年龄/趋势共用）。复用 Section；跳过 color（图表自动上色）。 */
+function NamedValueSection({
+  title,
+  items,
+  editing,
+  onChange,
+}: {
+  title: string;
+  items: { label: string; value: number }[];
+  editing: boolean;
+  onChange: (items: { label: string; value: number }[]) => void;
+}) {
+  return (
+    <Section title={title} editing={editing} onAdd={() => onChange([...items, { label: '', value: 0 }])}>
+      {items.map((it, i) => (
+        <div key={i} className="flex items-center gap-1">
+          <input
+            value={it.label}
+            placeholder="标签"
+            disabled={!editing}
+            onChange={(e) => onChange(items.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)))}
+            className="w-20 rounded border border-border-default px-1 py-0.5 disabled:bg-transparent"
+          />
+          <input
+            type="number"
+            value={it.value}
+            placeholder="值"
+            disabled={!editing}
+            onChange={(e) => onChange(items.map((x, idx) => (idx === i ? { ...x, value: Number(e.target.value) } : x)))}
+            className="w-16 rounded border border-border-default px-1 py-0.5 disabled:bg-transparent"
+          />
+          {editing && (
+            <button onClick={() => onChange(items.filter((_, idx) => idx !== i))} className="text-red">✕</button>
+          )}
+        </div>
+      ))}
+    </Section>
   );
 }
