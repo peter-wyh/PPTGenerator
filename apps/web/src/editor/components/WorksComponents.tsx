@@ -213,6 +213,25 @@ const MOSAIC_LAYOUTS: Record<Exclude<WorkScreenshotMosaicLayout, 'auto' | 'stagg
     { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
     { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
   ]},
+  // 2大4小（6 张）：上方 2 个大图（各 2×2 半区）+ 下方一行 4 小图
+  'pinzhi': { gridCols: 4, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 },
+    { col: 2, row: 0, colSpan: 2, rowSpan: 2 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 2, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 阶梯（7 张）：左大 + 右侧阶梯式宽窄条
+  'staircase': { gridCols: 4, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 2 },
+    { col: 2, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 3, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 1, colSpan: 2, rowSpan: 1 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 2, colSpan: 2, rowSpan: 1 },
+  ]},
   // 九宫格（9 张）：均匀 3×3
   'grid-3x3': { gridCols: 3, gridRows: 3, cells: Array.from({ length: 9 }, (_, i) => ({
     col: i % 3, row: Math.floor(i / 3), colSpan: 1, rowSpan: 1,
@@ -225,6 +244,8 @@ export const MOSAIC_LAYOUT_OPTIONS: { value: WorkScreenshotMosaicLayout; label: 
   { value: 'hero-3', label: '1大2小', minImages: 3 },
   { value: 'hero-4', label: '1大3小', minImages: 4 },
   { value: 'hero-5', label: '1大4小', minImages: 5 },
+  { value: 'pinzhi', label: '2大4小', minImages: 6 },
+  { value: 'staircase', label: '阶梯', minImages: 7 },
   { value: 'staggered', label: '错落', minImages: 4 },
   { value: 'grid-3x3', label: '九宫格', minImages: 9 },
 ];

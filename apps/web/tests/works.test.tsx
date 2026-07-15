@@ -141,6 +141,38 @@ describe('WorkScreenshot', () => {
     // staggered 独有：列偏移 translateY
     expect(container.querySelector('[style*="translateY"]')).not.toBeNull();
   });
+
+  it('mosaicLayout pinzhi (2大4小): 6 imgs → 4 cols × 3 rows', () => {
+    const { container } = render(
+      <WorkScreenshot
+        data={{
+          style: 'mosaic',
+          mosaicLayout: 'pinzhi',
+          images: Array.from({ length: 6 }, (_, i) => ({ src: `${i}.jpg` })),
+        }}
+      />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(grid?.style.gridTemplateColumns).toBe('repeat(4, 1fr)');
+    expect(grid?.style.gridTemplateRows).toBe('repeat(3, 1fr)');
+    expect(screen.getAllByRole('img').length).toBe(6);
+  });
+
+  it('mosaicLayout staircase (阶梯): 7 imgs → 4 cols × 3 rows, 7 rendered', () => {
+    const { container } = render(
+      <WorkScreenshot
+        data={{
+          style: 'mosaic',
+          mosaicLayout: 'staircase',
+          images: Array.from({ length: 7 }, (_, i) => ({ src: `${i}.jpg` })),
+        }}
+      />,
+    );
+    const grid = container.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(grid?.style.gridTemplateColumns).toBe('repeat(4, 1fr)');
+    expect(grid?.style.gridTemplateRows).toBe('repeat(3, 1fr)');
+    expect(screen.getAllByRole('img').length).toBe(7);
+  });
 });
 
 describe('WorkMetrics', () => {

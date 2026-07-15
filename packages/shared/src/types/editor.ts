@@ -683,7 +683,7 @@ export type WorkScreenshotStyle = 'grid' | 'skew' | 'overlap' | 'filmstrip' | 'd
 
 /** 作品截图「组合版式」预设（仅 style==='mosaic' 时生效；缺省 'auto' = 按张数自动选模板）。 */
 export type WorkScreenshotMosaicLayout =
-  | 'auto' | 'hero-3' | 'hero-4' | 'hero-5' | 'staggered' | 'grid-3x3';
+  | 'auto' | 'hero-3' | 'hero-4' | 'hero-5' | 'pinzhi' | 'staircase' | 'staggered' | 'grid-3x3';
 
 export interface WorkScreenshotItem {
   src: string;

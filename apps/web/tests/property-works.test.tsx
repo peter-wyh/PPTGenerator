@@ -101,6 +101,26 @@ describe('WorkScreenshotFields', () => {
     expect(screen.getByRole('button', { name: '自动' })).not.toBeDisabled();
   });
 
+  it('mosaic 组合版式 shows the 2大4小 and 阶梯 options when enough images', () => {
+    const store = useEditorStore.getState();
+    store.loadProject(emptyProject, 'p');
+    store.addComponent('work-screenshot');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+    store.updateComponentData(id, { style: 'mosaic' });
+    store.commit();
+
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+
+    // 默认 27 张 → 2大4小(需6)、阶梯(需7) 均可用
+    expect(screen.getByRole('button', { name: '2大4小' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: '阶梯' })).not.toBeDisabled();
+  });
+
   it('imports creator work screenshots from a bound campaign', async () => {
     const store = useEditorStore.getState();
     store.loadProject(emptyProject, 'p');
