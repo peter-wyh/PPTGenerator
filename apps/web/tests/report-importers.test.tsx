@@ -10,6 +10,7 @@ import {
   ReportWorkMetricsImporter,
   ReportCommentWordcloudImporter,
   ReportWorkAudienceImporter,
+  ReportCreatorWorksImporter,
   buildWorksTable,
 } from '@/editor/property-panel/importers';
 
@@ -139,5 +140,56 @@ describe('buildWorksTable', () => {
   });
   it('无 audience 的 deliverable → insights[i] = {}', () => {
     expect(buildWorksTable([{ contentType: 'post' }]).insights[0]).toEqual({});
+  });
+});
+
+describe('ReportCreatorWorksImporter', () => {
+  const collab: CollaborationData = {
+    id: collaborationId('camp-1', 'cre-1'),
+    campaignId: 'camp-1',
+    creatorId: 'cre-1',
+    deliverables: [
+      { contentType: 'post', screenshots: [{ src: 'p.jpg' }], metrics: [{ label: '曝光', value: '1.2M' }], audience: { genderSplit: [{ label: '女', value: 70 }] } },
+      { contentType: 'reels', screenshots: [{ src: 'r.jpg' }], metrics: [{ label: '曝光', value: '500K' }] },
+    ],
+  };
+
+  async function setupImport(type: 'creator-works-list' | 'creator-works-table') {
+    const store = useEditorStore.getState();
+    store.setReportData({
+      campaign: { id: 'camp-1', name: 'C' } as never,
+      creators: [{ id: 'cre-1', name: 'Mia' } as never],
+    });
+    store.addComponent(type);
+    const comp = store.currentComponents()[0];
+    vi.mocked(getCollaboration).mockResolvedValue(collab);
+    render(<ReportCreatorWorksImporter comp={comp} />);
+    const btn = await screen.findByRole('button', { name: /导入作品列表/ });
+    fireEvent.click(btn);
+    return () =>
+      useEditorStore.getState().currentComponents()[0].data as {
+        headers: string[];
+        rows: string[][];
+        insights: { genderSplit?: { label: string; value: number }[] }[];
+      };
+  }
+
+  it('creator-works-list: 写入对齐的 headers/rows/insights', async () => {
+    const getData = await setupImport('creator-works-list');
+    const data = getData();
+    expect(data.headers).toEqual(['封面', '类型', '曝光']);
+    expect(data.rows).toEqual([
+      ['p.jpg', 'post', '1.2M'],
+      ['r.jpg', 'reels', '500K'],
+    ]);
+    expect(data.insights).toHaveLength(2);
+    expect(data.insights[0]?.genderSplit).toEqual([{ label: '女', value: 70 }]);
+  });
+
+  it('creator-works-table: 同样写入对齐数据', async () => {
+    const getData = await setupImport('creator-works-table');
+    const data = getData();
+    expect(data.rows).toHaveLength(2);
+    expect(data.insights).toHaveLength(2);
   });
 });

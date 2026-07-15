@@ -6,7 +6,8 @@ import type {
   WorkAudienceInsight,
 } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
-import { campaignCreatorWorks, listPlacementTypeSummary, type CreatorWithWorks } from '@/api/creatorPerformance';
+import { listPlacementTypeSummary } from '@/api/creatorPerformance';
+import { getCollaboration } from '@/api/collaborations';
 import {
   getCampaignSummary,
   getConversionFunnel,
@@ -503,88 +504,75 @@ export function buildWorksTable(deliverables: CollaborationDeliverable[]): {
  */
 export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) {
   const { creator: pageCreator, creatorId: pageCreatorId, creators } = usePageCreator();
-  const reportData = useEditorStore((s) => s.reportData);
+  const campaign = useEditorStore((s) => s.reportData.campaign);
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
-  const [selectedCreator, setSelectedCreator] = useState('');
-  const [creatorsWithWorks, setCreatorsWithWorks] = useState<CreatorWithWorks[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const campaignId = reportData?.campaign?.id ?? '';
+  const campaignId = campaign?.id ?? '';
+  const [creatorId, setCreatorId] = useState(pageCreatorId || creators[0]?.id || '');
+  const [deliverables, setDeliverables] = useState<CollaborationDeliverable[] | null>(null);
 
   useEffect(() => {
-    if (!campaignId) { setCreatorsWithWorks([]); return; }
-    setLoading(true);
-    const allWorks = campaignCreatorWorks(campaignId);
-    // Only include creators that are in the global data config
-    const allowedIds = new Set(creators.map((c) => c.id));
-    setCreatorsWithWorks(allWorks.filter((cw) => allowedIds.has(cw.creatorId)));
-    setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId, creators.map((c) => c.id).join(',')]);
+    if (!campaignId || !creatorId) {
+      setDeliverables([]);
+      return;
+    }
+    let alive = true;
+    setDeliverables(null);
+    getCollaboration(campaignId, creatorId).then((c) => {
+      if (alive) setDeliverables(c?.deliverables ?? []);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [campaignId, creatorId]);
 
-  // 自动预选页面绑定的达人
-  useEffect(() => {
-    if (pageCreatorId && !selectedCreator) setSelectedCreator(pageCreatorId);
-  }, [pageCreatorId, selectedCreator]);
+  function apply() {
+    if (!deliverables || deliverables.length === 0) return;
+    const { headers, rows, insights } = buildWorksTable(deliverables);
+    updateComponentData(comp.id, { headers, rows, insights });
+    commit();
+  }
 
   if (!campaignId) {
     return (
-      <FieldGroup title="Import from Campaign">
-        <p className="text-xs text-foreground-muted">Bind a Campaign in global data settings first.</p>
+      <FieldGroup title="从达人合作导入">
+        <p className="text-xs text-foreground-muted">先在「数据配置」选择战役。</p>
+      </FieldGroup>
+    );
+  }
+  if (creators.length === 0) {
+    return (
+      <FieldGroup title="从达人合作导入">
+        <p className="text-xs text-foreground-muted">请先在「数据配置」选择达人。</p>
       </FieldGroup>
     );
   }
 
-  function apply() {
-    const cw = creatorsWithWorks.find((c) => c.creatorId === selectedCreator);
-    if (!cw || cw.posts.length === 0) return;
-    const headers = ['Cover', 'Title', 'Impressions', 'Likes', 'Comments', 'Shares', 'Eng. Rate'];
-    const rows = cw.posts.map((post) => [
-      post.cover,
-      post.title,
-      post.impressions,
-      post.likes,
-      post.comments,
-      post.shares,
-      post.engagementRate,
-    ]);
-    updateComponentData(comp.id, { headers, rows, title: `${cw.creatorName} Works` });
-    commit();
-    setSelectedCreator('');
-  }
-
   return (
-    <FieldGroup title="Import from Campaign">
-      {loading && <p className="text-xs text-foreground-muted">Loading…</p>}
-      {creatorsWithWorks.length > 0 && (
-        <>
-          {pageCreator && (
-            <p className="mb-1 text-[10px] text-accent-primary">
-              🔗 页面达人：{pageCreator.name}
-            </p>
-          )}
-          <select
-            value={selectedCreator}
-            onChange={(e) => setSelectedCreator(e.target.value)}
-            className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
-          >
-            <option value="">Select creator…</option>
-            {creatorsWithWorks.map((c) => (
-              <option key={c.creatorId} value={c.creatorId}>
-                {c.creatorName} ({c.posts.length} posts)
-              </option>
-            ))}
-          </select>
-          {selectedCreator && (
-            <button
-              onClick={apply}
-              className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
-            >
-              Import {creatorsWithWorks.find((c) => c.creatorId === selectedCreator)?.posts.length ?? 0} posts
-            </button>
-          )}
-        </>
+    <FieldGroup title="从达人合作导入">
+      {pageCreator && (
+        <p className="mb-1 text-[10px] text-accent-primary">🔗 页面达人：{pageCreator.name}</p>
+      )}
+      <select
+        value={creatorId}
+        onChange={(e) => setCreatorId(e.target.value)}
+        className="w-full rounded border border-border-default px-1.5 py-1 text-xs"
+      >
+        {creators.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+      {deliverables === null ? (
+        <p className="text-xs text-foreground-muted">加载…</p>
+      ) : deliverables.length === 0 ? (
+        <p className="text-xs text-foreground-muted">该达人暂无合作数据。</p>
+      ) : (
+        <button
+          onClick={apply}
+          className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90"
+        >
+          导入作品列表（{deliverables.length} 个作品类型）
+        </button>
       )}
     </FieldGroup>
   );

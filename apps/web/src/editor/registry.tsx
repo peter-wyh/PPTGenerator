@@ -674,6 +674,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: CreatorWorksTable,
     defaultSize: DEFAULT_SIZES['creator-works-table'],
     defaultData: () => getDefaultData('creator-works-table'),
+    dataSource: { modes: ['manual', 'project'], projectImporter: ReportCreatorWorksImporter },
     variants: [
       { id: 'list', label: '列表' },
       { id: 'cards', label: '卡片' },
