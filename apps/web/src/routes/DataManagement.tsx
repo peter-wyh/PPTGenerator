@@ -9,6 +9,7 @@ import { CreatorMultiSelect } from '@/editor/components/CreatorMultiSelect';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { RecordFormModal } from '@/editor/components/RecordFormModal';
 import { CollaborationDetail } from '@/components/CollaborationDetail';
+import { importSeedCollaborations } from '@/api/mock/collaborationSeed';
 import {
   buildPreviewFromRows,
   buildPreviewFromObjects,
@@ -327,7 +328,17 @@ function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
     <div>
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-foreground-secondary">合作达人 · {collaborators.length}</span>
-        <button onClick={() => setManaging(true)} className="text-xs text-accent-primary hover:underline">管理合作达人</button>
+        <div className="flex gap-3">
+          <button
+            onClick={() =>
+              void importSeedCollaborations(campaignId, collaborators.map((c) => c.id)).then(() => setTick((t) => t + 1))
+            }
+            className="text-xs text-accent-primary hover:underline"
+          >
+            导入演示数据
+          </button>
+          <button onClick={() => setManaging(true)} className="text-xs text-accent-primary hover:underline">管理合作达人</button>
+        </div>
       </div>
       {collaborators.length === 0 ? (
         <p className="text-xs text-foreground-muted">暂无合作达人。点「管理合作达人」添加。</p>
