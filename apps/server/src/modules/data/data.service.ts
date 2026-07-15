@@ -7,8 +7,10 @@ import { dataSchemaForKind, kindSchema } from './data.schema';
 type Kind = z.infer<typeof kindSchema>;
 
 /** API 小写 kind → Prisma 大写枚举。 */
-function kindToDb(kind: Kind): 'CAMPAIGN' | 'CREATOR' {
-  return kind === 'campaign' ? 'CAMPAIGN' : 'CREATOR';
+export function kindToDb(kind: Kind): 'CAMPAIGN' | 'CREATOR' | 'COLLABORATION' {
+  if (kind === 'campaign') return 'CAMPAIGN';
+  if (kind === 'collaboration') return 'COLLABORATION';
+  return 'CREATOR';
 }
 
 export const dataService = {
@@ -91,7 +93,8 @@ export const dataService = {
 
   async update(id: string, data: unknown) {
     const rec = await this.getOrThrow(id);
-    const kind: Kind = rec.kind === 'CAMPAIGN' ? 'campaign' : 'creator';
+    const kind: Kind =
+      rec.kind === 'CAMPAIGN' ? 'campaign' : rec.kind === 'COLLABORATION' ? 'collaboration' : 'creator';
     const valid = this.validateData(kind, data);
     return prisma.dataRecord.update({
       where: { id },

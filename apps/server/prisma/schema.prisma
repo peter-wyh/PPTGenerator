@@ -92,4 +92,5 @@ model DataRecord {
 enum DataRecordKind {
   CAMPAIGN
   CREATOR
+  COLLABORATION
 }

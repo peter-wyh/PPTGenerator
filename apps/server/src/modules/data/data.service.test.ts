@@ -13,7 +13,7 @@ const prismaMock = vi.hoisted(() => ({
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
-import { dataService } from './data.service';
+import { dataService, kindToDb } from './data.service';
 
 const validCampaign = {
   id: 'camp-x',
@@ -147,5 +147,13 @@ describe('dataService · remove / clear', () => {
     const r = await dataService.clear('campaign');
     expect(prismaMock.dataRecord.deleteMany).toHaveBeenCalledWith({ where: { kind: 'CAMPAIGN' } });
     expect(r).toEqual({ deleted: 5 });
+  });
+});
+
+describe('kindToDb', () => {
+  it('三种 kind 映射到 Prisma 大写枚举', () => {
+    expect(kindToDb('campaign')).toBe('CAMPAIGN');
+    expect(kindToDb('creator')).toBe('CREATOR');
+    expect(kindToDb('collaboration')).toBe('COLLABORATION');
   });
 });
