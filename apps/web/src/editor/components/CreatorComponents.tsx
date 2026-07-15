@@ -853,7 +853,7 @@ function CreatorChartShell({
 /** 空数据占位。 */
 function EmptyChart() {
   return (
-    <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">No data</div>
+    <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">暂无数据</div>
   );
 }
 

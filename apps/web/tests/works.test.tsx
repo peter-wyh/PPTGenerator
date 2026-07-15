@@ -58,7 +58,7 @@ describe('WorkScreenshot', () => {
 
   it('shows an empty hint when there are no images', () => {
     render(<WorkScreenshot data={{ variant: 'auto', images: [] }} />);
-    expect(screen.getByText('No work screenshots')).toBeInTheDocument();
+    expect(screen.getByText('暂无作品截图')).toBeInTheDocument();
   });
 
   it('mosaic style: 4 images use the 4-cell template — no empty 5th cell / wide blank', () => {
@@ -302,7 +302,7 @@ describe('WorkMetrics', () => {
 
   it('shows an empty hint when metrics list is empty', () => {
     render(<WorkMetrics data={{ title: '作品数据', metrics: [] }} />);
-    expect(screen.getByText('No work data')).toBeInTheDocument();
+    expect(screen.getByText('暂无作品数据')).toBeInTheDocument();
   });
 });
 
@@ -360,6 +360,6 @@ describe('CommentWordcloud', () => {
 
   it('shows empty state when there are no words', () => {
     render(<CommentWordcloud data={{ words: [] }} />);
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });

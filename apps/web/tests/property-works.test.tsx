@@ -45,7 +45,7 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    expect(screen.getAllByPlaceholderText('说明').length).toBe(27); // default 27 images (camp-glowlab-q4, 10 creators)
+    expect(screen.getAllByPlaceholderText('说明').length).toBe(47); // default 47 images (camp-glowlab-q4, 10 creators)
     expect(screen.getByRole('button', { name: /添加图片/ })).toBeInTheDocument();
   });
 

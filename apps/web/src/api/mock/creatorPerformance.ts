@@ -440,7 +440,7 @@ function buildPerformance(
   const cr = ROSTER[creatorId];
   const base = TIER_BASE[cr.tier];
   const k = profile.intensity;
-  const numPosts = cr.tier === 'mega' ? 4 : cr.tier === 'macro' ? 3 : 2;
+  const numPosts = cr.tier === 'mega' ? 6 : cr.tier === 'macro' ? 5 : cr.tier === 'micro' ? 4 : 3;
 
   const posts: PostEffect[] = [];
   let totalImpr = 0;
@@ -755,6 +755,45 @@ export interface CreatorWorkPost {
   engagementRate: string;
 }
 
+/** 合作方式枚举。 */
+const COLLAB_TYPES = ['独家定制视频', '品牌种草图文', '直播带货', '产品评测', '联名款推广', 'UGC挑战赛'] as const;
+
+/** 达人合作概要（Campaign 级别）。 */
+export interface CreatorCollabInfo {
+  /** 合作方式。 */
+  collabType: string;
+  /** 合作状态。 */
+  status: '已完成' | '进行中' | '已签约';
+  /** 合同金额（CNY）。 */
+  contractFee: string;
+  /** 投放周期。 */
+  period: string;
+  /** 内容形式。 */
+  contentType: string;
+  /** 预估曝光。 */
+  estImpressions: string;
+  /** 实际曝光。 */
+  actualImpressions: string;
+  /** 预估互动。 */
+  estEngagement: string;
+  /** 实际互动。 */
+  actualEngagement: string;
+  /** CPE（单次互动成本）。 */
+  cpe: string;
+  /** CPM（千次曝光成本）。 */
+  cpm: string;
+  /** ROI。 */
+  roi: string;
+  /** 品牌词提及次数。 */
+  brandMentions: number;
+  /** 带 link 点击。 */
+  linkClicks: string;
+  /** 合作评分（1-5）。 */
+  rating: number;
+  /** 评价。 */
+  comment: string;
+}
+
 /**
  * A creator and their work list under a campaign.
  */
@@ -763,7 +802,57 @@ export interface CreatorWithWorks {
   creatorName: string;
   platform: string;
   tier: string;
+  /** 合作详情。 */
+  collab?: CreatorCollabInfo;
   posts: CreatorWorkPost[];
+}
+
+/**
+ * 生成达人合作概要 mock 数据（确定性，基于 creatorId + campaignId）。
+ */
+function buildCollabInfo(
+  creatorId: string,
+  campaignId: string,
+  summary: { totalImpressions: string; totalEngagement: string; avgEngagementRate: string },
+  tier: string,
+): CreatorCollabInfo {
+  // 确定性 hash
+  const seed = creatorId.charCodeAt(0) + campaignId.charCodeAt(0);
+  const feeBase = tier === 'mega' ? 120000 : tier === 'macro' ? 50000 : tier === 'micro' ? 15000 : 5000;
+  const fee = Math.round(feeBase * (0.8 + ((seed % 7) / 10)));
+  const imprNum = parseFloat(summary.totalImpressions.replace(/[KM]/, '')) * (summary.totalImpressions.includes('K') ? 1000 : 1000000);
+  const engNum = parseFloat(summary.totalEngagement.replace(/[KM]/, '')) * (summary.totalEngagement.includes('K') ? 1000 : 1000000);
+  const cpe = fee / Math.max(engNum, 1);
+  const cpm = (fee / Math.max(imprNum, 1)) * 1000;
+  const roi = (1.5 + (seed % 20) / 10).toFixed(2);
+  const statusOptions: CreatorCollabInfo['status'][] = ['已完成', '进行中', '已签约'];
+  const contentTypes = ['短视频', '图文笔记', '直播切片', '评测视频', '开箱视频'];
+  const comments = [
+    '内容质量高，粉丝互动热烈，品牌曝光超预期',
+    '达人专业度高，种草效果好，转化率优秀',
+    '合作顺畅，内容贴合品牌调性，推荐复投',
+    '数据表现稳定，ROI 达标，性价比高',
+    '创意执行到位，评论区正向反馈居多',
+  ];
+
+  return {
+    collabType: COLLAB_TYPES[seed % COLLAB_TYPES.length],
+    status: statusOptions[seed % statusOptions.length],
+    contractFee: `¥${fee.toLocaleString()}`,
+    period: '2024.12.01 - 2024.12.15',
+    contentType: contentTypes[seed % contentTypes.length],
+    estImpressions: `${(imprNum * 0.85).toFixed(0)}`,
+    actualImpressions: summary.totalImpressions,
+    estEngagement: `${(engNum * 0.9).toFixed(0)}`,
+    actualEngagement: summary.totalEngagement,
+    cpe: `¥${cpe.toFixed(2)}`,
+    cpm: `¥${cpm.toFixed(2)}`,
+    roi,
+    brandMentions: 3 + (seed % 8),
+    linkClicks: `${Math.round(imprNum * 0.03).toLocaleString()}`,
+    rating: 3 + (seed % 3),
+    comment: comments[seed % comments.length],
+  };
 }
 
 /**
@@ -777,6 +866,7 @@ export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
     creatorName: p.creatorName,
     platform: p.platform,
     tier: p.tier,
+    collab: buildCollabInfo(p.creatorId, campaignId, p.summary, p.tier),
     posts: p.posts.map((post) => ({
       postId: post.id,
       creatorId: p.creatorId,

@@ -11,13 +11,13 @@ const parseCompact = (s: string): number => {
 };
 
 describe('Creator performance (posts + basics)', () => {
-  it('post count by tier: mega 4 > macro 3 > micro 2', async () => {
+  it('post count by tier: mega 6 > macro 5 > micro 4 > nano 3', async () => {
     const list = await listCreatorPerformance('camp-glowlab-q4');
     // glowlab participants: cre-mia(mega) / cre-sofia(macro) / cre-tom(micro)
     const byId = Object.fromEntries(list.map((p) => [p.creatorId, p]));
-    expect(byId['cre-mia'].posts.length).toBe(4);
-    expect(byId['cre-sofia'].posts.length).toBe(3);
-    expect(byId['cre-tom'].posts.length).toBe(2);
+    expect(byId['cre-mia'].posts.length).toBe(6);
+    expect(byId['cre-sofia'].posts.length).toBe(5);
+    expect(byId['cre-tom'].posts.length).toBe(4);
   });
 
   it('each post has platform / cover / url / hashtags (basics)', async () => {

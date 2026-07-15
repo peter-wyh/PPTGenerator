@@ -171,7 +171,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-[11px] text-foreground-muted">
-            No audience data
+            暂无画像数据
           </div>
         )}
       </div>

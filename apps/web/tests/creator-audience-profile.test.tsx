@@ -6,7 +6,7 @@ import type { CreatorAudienceProfileData } from '@mediakit/shared';
 describe('CreatorAudienceProfile', () => {
   it('无启用模块时显示占位', () => {
     render(<CreatorAudienceProfile data={{ variant: 'grid-3', modules: [] }} />);
-    expect(screen.getByText(/No audience modules enabled/i)).toBeInTheDocument();
+    expect(screen.getByText(/暂未启用画像模块/i)).toBeInTheDocument();
   });
 
   it('selected=false 的模块不渲染', () => {
@@ -37,14 +37,14 @@ describe('CreatorAudienceProfile', () => {
     expect(screen.getByText('22%')).toBeInTheDocument();
   });
 
-  it('空 items 的模块显示 No data', () => {
+  it('空 items 的模块显示 暂无数据', () => {
     const data: CreatorAudienceProfileData = {
       variant: 'stacked',
       modules: [{ key: 'city', selected: true, items: [] }],
     };
     render(<CreatorAudienceProfile data={data} />);
     expect(screen.getByText('城市排行')).toBeInTheDocument();
-    expect(screen.getAllByText(/No data/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/暂无数据/i).length).toBeGreaterThan(0);
   });
 
   it('gender 渲染大数字 + 标签(非环形)', () => {

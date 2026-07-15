@@ -820,6 +820,31 @@ function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
                     </button>
                   </td>
                 </tr>
+                {isOpen && cw.collab && (
+                  <tr className="border-b border-border-subtle bg-accent-primary/5">
+                    <td colSpan={7} className="px-3 py-2">
+                      <div className="grid grid-cols-4 gap-x-4 gap-y-1 text-[11px]">
+                        <div><span className="text-foreground-muted">合作方式：</span><span className="font-medium text-foreground-primary">{cw.collab.collabType}</span></div>
+                        <div><span className="text-foreground-muted">合作状态：</span><span className="font-medium text-foreground-primary">{cw.collab.status}</span></div>
+                        <div><span className="text-foreground-muted">内容形式：</span><span className="text-foreground-secondary">{cw.collab.contentType}</span></div>
+                        <div><span className="text-foreground-muted">合同金额：</span><span className="font-medium text-foreground-primary">{cw.collab.contractFee}</span></div>
+                        <div><span className="text-foreground-muted">投放周期：</span><span className="text-foreground-secondary">{cw.collab.period}</span></div>
+                        <div><span className="text-foreground-muted">预估曝光：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.estImpressions}</span></div>
+                        <div><span className="text-foreground-muted">实际曝光：</span><span className="font-medium text-foreground-primary tabular-nums">{cw.collab.actualImpressions}</span></div>
+                        <div><span className="text-foreground-muted">品牌提及：</span><span className="text-foreground-secondary">{cw.collab.brandMentions} 次</span></div>
+                        <div><span className="text-foreground-muted">CPE：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.cpe}</span></div>
+                        <div><span className="text-foreground-muted">CPM：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.cpm}</span></div>
+                        <div><span className="text-foreground-muted">ROI：</span><span className="font-medium text-accent-primary tabular-nums">{cw.collab.roi}</span></div>
+                        <div><span className="text-foreground-muted">链接点击：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.linkClicks}</span></div>
+                        <div className="col-span-4 mt-1 border-t border-border-subtle pt-1">
+                          <span className="text-foreground-muted">评价：</span>
+                          <span className="text-foreground-secondary">{'★'.repeat(cw.collab.rating)}{'☆'.repeat(5 - cw.collab.rating)} </span>
+                          <span className="text-foreground-secondary">{cw.collab.comment}</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {isOpen &&
                   cw.posts.map((post) => (
                     <tr key={post.postId} className="border-b border-border-subtle bg-surface-hover/30">

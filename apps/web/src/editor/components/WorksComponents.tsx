@@ -260,7 +260,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     return (
       <Shell title={title}>
         <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
-          No work screenshots
+          暂无作品截图
         </div>
       </Shell>
     );
@@ -516,7 +516,7 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
     return (
       <Shell title={title}>
         <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
-          No work data
+          暂无作品数据
         </div>
       </Shell>
     );
@@ -670,7 +670,7 @@ export function CommentWordcloud({ data }: { data: CommentWordcloudData }) {
   if (words.length === 0) {
     return (
       <Shell title={title}>
-        <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">No data</div>
+        <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">暂无数据</div>
       </Shell>
     );
   }

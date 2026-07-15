@@ -13,7 +13,7 @@ const MODULE_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 /** gender 大数字配色兜底(粉/蓝/紫),item 自带 color 优先。 */
-const GENDER_COLORS = ['#EC4899', '#3B82F6', '#8B5CF6'];
+const GENDER_COLORS = ['var(--color-primary)', '#3B82F6', '#8B5CF6'];
 
 function ModuleCard({ module }: { module: AudienceModule }) {
   const items = module.items ?? [];
@@ -22,7 +22,7 @@ function ModuleCard({ module }: { module: AudienceModule }) {
     <div className="flex min-h-0 flex-col gap-1.5 rounded-lg bg-surface-secondary p-2">
       <div className="text-[11px] font-semibold text-foreground-secondary">{label}</div>
       {items.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center text-[10px] text-foreground-muted">No data</div>
+        <div className="flex flex-1 items-center justify-center text-[10px] text-foreground-muted">暂无数据</div>
       ) : module.key === 'gender' ? (
         // 性别:大数字 + 色点 + 标签(对标参考图,替代环形)
         <div className="flex flex-col justify-center gap-1.5">
@@ -63,7 +63,7 @@ export function CreatorAudienceProfile({ data }: { data: CreatorAudienceProfileD
   if (active.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-xl bg-surface-primary p-3 text-xs text-foreground-muted">
-        No audience modules enabled
+        暂未启用画像模块
       </div>
     );
   }

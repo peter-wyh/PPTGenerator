@@ -809,6 +809,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
     addPage: () =>
       mutateAndCommit((s) => {
         const page: Page = { id: newId(), name: `第 ${s.pages.length + 1} 页`, components: [] };
+        // 自动应用全局默认背景到新页面
+        const bg = s.projectMeta?.theme?.background;
+        if (bg && bg.type !== 'none') {
+          if (bg.type === 'color' && bg.color) page.bgColor = bg.color;
+          else if (bg.type === 'gradient' && bg.gradient) page.bgGradient = bg.gradient;
+          else if (bg.type === 'image' && bg.image) page.bgImage = bg.image;
+        }
         return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
       }),
 
@@ -817,6 +824,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
       mutateAndCommit((s) => {
         const reid = components.map((c) => ({ ...clone(c), id: newId() }));
         const page: Page = { id: newId(), name, components: reid };
+        // 自动应用全局默认背景到新页面
+        const bg = s.projectMeta?.theme?.background;
+        if (bg && bg.type !== 'none') {
+          if (bg.type === 'color' && bg.color) page.bgColor = bg.color;
+          else if (bg.type === 'gradient' && bg.gradient) page.bgGradient = bg.gradient;
+          else if (bg.type === 'image' && bg.image) page.bgImage = bg.image;
+        }
         pageId = page.id;
         const idx = opts?.titleComponentIndex;
         if (idx != null && reid[idx]) {
@@ -853,6 +867,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const built: Page[] = pages.map((p) => {
           const reid = p.components.map((c) => ({ ...clone(c), id: newId() }));
           const page: Page = { id: newId(), name: p.name, components: reid };
+          // 自动应用全局默认背景到新页面
+          const bg = s.projectMeta?.theme?.background;
+          if (bg && bg.type !== 'none') {
+            if (bg.type === 'color' && bg.color) page.bgColor = bg.color;
+            else if (bg.type === 'gradient' && bg.gradient) page.bgGradient = bg.gradient;
+            else if (bg.type === 'image' && bg.image) page.bgImage = bg.image;
+          }
           newIds.push(page.id);
           const idx = p.titleComponentIndex;
           if (idx != null && reid[idx]) {
@@ -899,9 +920,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
           id: newId(),
           name: `${src.name} (副本)`,
           components: copiedComps,
+          ...(src.bgColor ? { bgColor: src.bgColor } : {}),
+          ...(src.bgGradient ? { bgGradient: src.bgGradient } : {}),
+          ...(src.bgImage ? { bgImage: src.bgImage } : {}),
           ...(src.pageType ? { pageType: src.pageType } : {}),
           ...(src.titleComponentId ? { titleComponentId: idMap.get(src.titleComponentId) } : {}),
           ...(src.titleOverridden ? { titleOverridden: src.titleOverridden } : {}),
+          ...(src.campaignId ? { campaignId: src.campaignId } : {}),
+          ...(src.creatorId ? { creatorId: src.creatorId } : {}),
         };
         newPageId = copied.id;
         const idx = s.pages.findIndex((p) => p.id === id);

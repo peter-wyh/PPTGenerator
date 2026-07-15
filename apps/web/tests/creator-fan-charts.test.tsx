@@ -67,7 +67,7 @@ describe('creator fan city (horizontal bar)', () => {
 
   it('renders empty-state when bars empty', () => {
     render(<CreatorFanCity data={{ title: 'T', bars: [] }} />);
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });
 
@@ -91,7 +91,7 @@ describe('creator fan age (vertical bar)', () => {
 
   it('renders empty-state when bars empty', () => {
     render(<CreatorFanAge data={{ title: 'T', bars: [] }} />);
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });
 
@@ -133,7 +133,7 @@ describe('creator fan interest (proportion bars)', () => {
 
   it('renders empty-state when tags empty', () => {
     render(<CreatorFanInterest data={{ title: 'T', tags: [] }} />);
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });
 });
 
