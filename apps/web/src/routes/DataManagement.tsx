@@ -1,14 +1,14 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode, type ChangeEvent } from 'react';
-import type { Campaign, Creator, CreatorCampaignPerformance } from '@mediakit/shared';
+import type { Campaign, Creator } from '@mediakit/shared';
 import { MOCK_CAMPAIGNS } from '@/api/mock/campaigns';
 import { MOCK_CREATORS } from '@/api/mock/creators';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { listCampaignCollaborators, listCreators, listCampaignCreators } from '@/api/creators';
-import { listCreatorPerformance } from '@/api/creatorPerformance';
 import { DataTable } from '@/components/DataTable';
 import { CreatorMultiSelect } from '@/editor/components/CreatorMultiSelect';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { RecordFormModal } from '@/editor/components/RecordFormModal';
+import { CollaborationDetail } from '@/components/CollaborationDetail';
 import {
   buildPreviewFromRows,
   buildPreviewFromObjects,
@@ -300,7 +300,6 @@ function CollaboratorDrawer({ record, onClose }: { record: DataRecordDTO<Campaig
 function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
   const campaignId = record.id;
   const [collaborators, setCollaborators] = useState<Creator[]>([]);
-  const [perf, setPerf] = useState<CreatorCampaignPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCreator, setExpandedCreator] = useState<string | null>(null);
   const [managing, setManaging] = useState(false);
@@ -311,13 +310,9 @@ function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
     (async () => {
       setLoading(true);
       try {
-        const [cols, perfs] = await Promise.all([
-          listCampaignCollaborators(campaignId),
-          listCreatorPerformance(campaignId).catch(() => []),
-        ]);
+        const cols = await listCampaignCollaborators(campaignId);
         if (cancelled) return;
         setCollaborators(cols);
-        setPerf(perfs);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -326,9 +321,6 @@ function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
       cancelled = true;
     };
   }, [campaignId, tick]);
-
-  const perfByCreator = new Map(perf.map((p) => [p.creatorId, p]));
-  const hasPerf = perf.length > 0;
 
   if (loading) return <p className="text-xs text-foreground-muted">加载合作达人…</p>;
   return (
@@ -351,19 +343,14 @@ function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
             </thead>
             <tbody>
               {collaborators.map((c) => {
-                const cp = perfByCreator.get(c.id);
                 const open = expandedCreator === c.id;
                 return (
                   <Fragment key={c.id}>
                     <tr className="border-t border-border-subtle">
                       <td className="px-2 py-1 font-medium text-foreground-primary">
-                        {hasPerf && cp ? (
-                          <button className="hover:underline" onClick={() => setExpandedCreator(open ? null : c.id)}>
-                            {open ? '▾' : '▸'} {c.name}
-                          </button>
-                        ) : (
-                          c.name
-                        )}
+                        <button className="hover:underline" onClick={() => setExpandedCreator(open ? null : c.id)}>
+                          {open ? '▾' : '▸'} {c.name}
+                        </button>
                       </td>
                       <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.handle}</td>
                       <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.platform}</td>
@@ -371,10 +358,15 @@ function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
                       <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.followers}</td>
                       <td className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{c.engagement}</td>
                     </tr>
-                    {open && cp && (
+                    {open && (
                       <tr>
                         <td colSpan={6} className="bg-surface-primary px-3 py-2">
-                          <CreatorPerfDetail perf={cp} />
+                          <CollaborationDetail
+                            campaignId={campaignId}
+                            creatorId={c.id}
+                            creatorName={c.name}
+                            onChange={() => setTick((t) => t + 1)}
+                          />
                         </td>
                       </tr>
                     )}
@@ -447,16 +439,4 @@ function ManageCollaboratorsModal({
   );
 }
 
-/** demo campaign 二级展开:达人执行效果摘要(mock 生成器,字段 summary.*)。 */
-function CreatorPerfDetail({ perf }: { perf: CreatorCampaignPerformance }) {
-  const s = perf.summary;
-  return (
-    <div className="flex flex-wrap gap-3 text-xs text-foreground-secondary">
-      <span>帖数 <b className="text-foreground-primary">{s.posts}</b></span>
-      <span>曝光 <b className="text-foreground-primary">{s.totalImpressions}</b></span>
-      <span>互动 <b className="text-foreground-primary">{s.totalEngagement}</b></span>
-      <span>互动率 <b className="text-foreground-primary">{s.avgEngagementRate}</b></span>
-      <span className="text-foreground-muted">demo 数据(mock 生成器)</span>
-    </div>
-  );
-}
+
