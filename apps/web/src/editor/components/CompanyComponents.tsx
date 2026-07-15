@@ -156,7 +156,7 @@ export function PackageCard({ data }: { data: PackageCardData }) {
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground-primary">{name}</span>
         {highlighted && (
-          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">推荐</span>
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">Featured</span>
         )}
       </div>
       <div className="mt-1 font-data text-2xl font-bold text-primary">{price}</div>

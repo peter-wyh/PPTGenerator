@@ -62,7 +62,7 @@ export function ImageComponent({ data }: { data: ImageData }) {
   if (!data.src) {
     return (
       <div className="flex h-full w-full items-center justify-center border border-dashed border-border-default bg-surface-hover text-xs text-foreground-muted">
-        图片占位
+        Image placeholder
       </div>
     );
   }
@@ -196,7 +196,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
         </div>
         {data.trend && (
           <div className="flex-none border-l border-border-subtle pl-3 text-right">
-            <div className="text-[10px] text-foreground-muted">变化</div>
+            <div className="text-[10px] text-foreground-muted">Change</div>
             <div className="font-data text-sm font-semibold" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
               {data.trendUp ? '▲' : '▼'} {data.trend}
             </div>
@@ -384,7 +384,7 @@ export function TableComponent({ data }: { data: TableData }) {
 export function BusinessBlockPlaceholder({ data }: { data: { title?: string; businessKind?: string } }) {
   return (
     <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-primary/40 bg-primary/5 text-center text-sm text-primary">
-      业务组件 · {data.businessKind ?? 'unknown'}
+      Business · {data.businessKind ?? 'unknown'}
       {data.title ? ` · ${data.title}` : ''}
     </div>
   );
@@ -414,13 +414,23 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
   const { variant = 'plain', text, subtitle, index, divider } = data;
   const color = data.color ?? 'var(--color-primary)';
 
+  // 字号:单组件 data.fontSize 优先;否则跟随全局 --heading-font-size(32px 兜底)。
+  // fs(m) 派生相对字号(序号=1.6× 等),兼容 px 与 CSS var 两种基线。
+  const fs = (m = 1): string =>
+    data.fontSize
+      ? `${Math.round(data.fontSize * m)}px`
+      : `calc(var(--heading-font-size, 32px) * ${m})`;
+  const fw = data.fontWeight ?? 700;
+  // 标题文字颜色:品牌色 / 黑色(默认黑)。gradient 在彩色背景上固定白。
+  const titleFg = variant === 'gradient' ? '#fff' : data.titleColor === 'brand' ? 'var(--color-primary)' : '#000000';
+
   // 内层：按变体渲染。divider 由外层统一控制（统一加底部分割线）。
   let inner: React.ReactNode;
   switch (variant) {
     case 'plain':
       inner = (
         <div className="min-w-0">
-          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
           {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
         </div>
       );
@@ -431,7 +441,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
         <div className="flex min-w-0 items-center gap-3">
           <span className="h-full w-1 flex-none rounded-full" style={{ backgroundColor: color }} />
           <div className="min-w-0">
-            <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+            <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
             {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
           </div>
         </div>
@@ -441,7 +451,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
     case 'underline':
       inner = (
         <div className="min-w-0">
-          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
           <div className="mt-1.5 h-0.5 w-full rounded-full" style={{ backgroundColor: color }} />
           {subtitle && <div className="mt-1.5 text-sm text-foreground-muted">{subtitle}</div>}
         </div>
@@ -451,7 +461,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
     case 'gradient':
       inner = (
         <div className="w-full rounded-xl px-5 py-4" style={{ background: `linear-gradient(135deg, ${color}, ${color}99)` }}>
-          <div className="text-2xl font-bold leading-tight text-white">{text}</div>
+          <div className="leading-tight text-white" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
           {subtitle && <div className="mt-1 text-sm text-white/80">{subtitle}</div>}
         </div>
       );
@@ -460,7 +470,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
     case 'card':
       inner = (
         <div className="w-full skin-card px-5 py-4">
-          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
           {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
         </div>
       );
@@ -470,14 +480,73 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
       inner = (
         <div className="flex min-w-0 items-center gap-3">
           {index && (
-            <span className="text-4xl font-bold leading-none flex-none" style={{ color }}>
+            <span className="leading-none flex-none" style={{ color, fontSize: fs(1.6), fontWeight: fw }}>
               {index}
             </span>
           )}
           <div className="min-w-0">
-            <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+            <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
             {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
           </div>
+        </div>
+      );
+      break;
+
+    case 'highlight':
+      // 色块强调:主色浅底 + 底部主色条(对标参考图)。
+      inner = (
+        <div
+          className="w-full rounded-md px-4 py-2"
+          style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`, borderBottom: `3px solid ${color}` }}
+        >
+          <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
+          {subtitle && <div className="mt-0.5 text-sm" style={{ color }}>{subtitle}</div>}
+        </div>
+      );
+      break;
+
+    case 'accent-tag':
+      // 色块标签:左圆角色块(显序号/空) + 标题。
+      inner = (
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className="flex h-9 w-9 flex-none items-center justify-center rounded-lg text-sm font-bold text-white"
+            style={{ backgroundColor: color }}
+          >
+            {index || ''}
+          </span>
+          <div className="min-w-0">
+            <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
+            {subtitle && <div className="mt-0.5 text-sm text-foreground-muted">{subtitle}</div>}
+          </div>
+        </div>
+      );
+      break;
+
+    case 'accent-underline':
+      // 强调下划线:粗体标题 + 贴文字宽度的彩色细下划线条(inline-block 让色条宽度=文字宽度)。
+      inner = (
+        <div className="min-w-0">
+          <div className="inline-block">
+            <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
+            <div className="mt-1 h-[3px] w-full rounded-full" style={{ backgroundColor: color }} />
+          </div>
+          {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
+        </div>
+      );
+      break;
+
+    case 'block-underline':
+      // 色块下划线:粗体标题 + 贴文字宽度 60% 的粗彩色块(标记笔质感,无背景)。
+      // inline-block 让色块百分比基准=标题文字宽;h-2 比 underline/accent-underline 的细线明显更粗。
+      // 色块颜色跟随标题颜色（titleFg），不再使用独立 color 字段。
+      inner = (
+        <div className="min-w-0">
+          <div className="inline-block">
+            <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
+            <div className="mt-1 h-2 w-[60%] rounded-sm" style={{ backgroundColor: titleFg }} />
+          </div>
+          {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
         </div>
       );
       break;
@@ -485,7 +554,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
     default:
       inner = (
         <div className="min-w-0">
-          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
           {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
         </div>
       );

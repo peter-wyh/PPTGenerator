@@ -29,8 +29,8 @@ export function Login() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-xl bg-surface-primary p-8 shadow-lg"
       >
-        <h1 className="font-headings text-2xl font-semibold tracking-tight text-foreground-primary">
-          MediaKit
+        <h1 className="font-headings text-3xl font-semibold tracking-tight text-foreground-primary">
+          Report Generator
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">广告投放报告编辑器 · 登录</p>
 

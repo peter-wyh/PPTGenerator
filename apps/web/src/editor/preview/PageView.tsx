@@ -1,6 +1,8 @@
 import type { Page } from '@mediakit/shared';
 import { ComponentRenderer } from '../components/ComponentRenderer';
 import { resolvePageBackground } from '../background';
+import { useEditorStore } from '../store';
+import { BUSINESS_LINE_META } from '@/projectsMeta';
 
 /**
  * 只读单页渲染（M6 预览 / 分享页 / PDF 共用）。
@@ -22,6 +24,11 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
   const sorted = [...page.components].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
   // 背景与编辑器 Canvas 一致：统一走 resolvePageBackground（图 > 渐变 > 纯色 > 白）。
   const background = resolvePageBackground(page);
+
+  // 业务线 Logo（与编辑器 Canvas 同步渲染，右上角）
+  const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+  const blLogo = businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined;
+
   return (
     <div
       style={{
@@ -51,6 +58,26 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
             <ComponentRenderer comp={comp} />
           </div>
         ))}
+        {/* 业务线 Logo（右上角，预览/导出同步） */}
+        {blLogo && (
+          <img
+            src={blLogo}
+            alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}
+            style={{
+              position: 'absolute',
+              right: 24,
+              top: 24,
+              width: 40,
+              height: 40,
+              objectFit: 'contain',
+              opacity: 0.8,
+              pointerEvents: 'none',
+              zIndex: 50,
+              borderRadius: 8,
+            }}
+            draggable={false}
+          />
+        )}
       </div>
     </div>
   );

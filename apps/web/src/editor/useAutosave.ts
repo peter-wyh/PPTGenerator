@@ -24,4 +24,26 @@ export function useAutosave(): void {
       if (timer.current) clearTimeout(timer.current);
     };
   }, [dirtyTick, projectId]);
+
+  // 堵住「debounce 还没 fire 就被刷新/切走」的丢数据窗口：
+  // - beforeunload（整页刷新/关闭）：走 flushSync，keepalive fetch 能活过 unload（body ≤ 64KB）。
+  // - visibilitychange（切到后台 / 切去 IDE）：页面还活着，直接 save()（走常规 axios）。
+  useEffect(() => {
+    const flush = () => {
+      const s = useEditorStore.getState();
+      if (!s.projectId || !s.dirty || s.saving) return;
+      s.flushSync();
+    };
+    const saveNow = () => {
+      const s = useEditorStore.getState();
+      if (!s.projectId || !s.dirty || s.saving) return;
+      void s.save();
+    };
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', saveNow);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', saveNow);
+    };
+  }, []);
 }

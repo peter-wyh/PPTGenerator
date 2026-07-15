@@ -65,7 +65,7 @@ export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
       </div>
       {customerSplit && (
         <div className="flex flex-none items-center gap-2 rounded-lg bg-primary/5 p-2">
-          <span className="text-[11px] font-medium text-primary">新客 {customerSplit.newCustomerRate}</span>
+          <span className="text-[11px] font-medium text-primary">New {customerSplit.newCustomerRate}</span>
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
             <div
               className="h-full rounded-full bg-primary"
@@ -73,7 +73,7 @@ export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
             />
           </div>
           <span className="text-[10px] text-foreground-muted">
-            {customerSplit.newCustomers} 新 / {customerSplit.returningCustomers} 老
+            {customerSplit.newCustomers} new / {customerSplit.returningCustomers} returning
           </span>
         </div>
       )}

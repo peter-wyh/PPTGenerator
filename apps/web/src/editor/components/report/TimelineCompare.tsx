@@ -19,8 +19,8 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
 
   if (variant === 'cards') {
     // 卡片：每行数据用独立卡片展示，2 列网格。指标名在顶部，本期/上期并列大数值，状态在底部色块。
-    const curLabel = headers[1] ?? '本期';
-    const prevLabel = headers[2] ?? '上期';
+    const curLabel = headers[1] ?? 'Current';
+    const prevLabel = headers[2] ?? 'Previous';
     return (
       <div className="grid h-full w-full grid-cols-2 gap-3 overflow-auto">
         {rows.map((row, ri) => {

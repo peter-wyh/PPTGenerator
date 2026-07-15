@@ -62,7 +62,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
     // 品类饼图：按品类聚合商品，左侧 PieChart 展示品类分布，右侧 TOP 商品列表。
     const catMap = new Map<string, number>();
     items.forEach((it) => {
-      const cat = it.cat || '未分类';
+      const cat = it.cat || 'Uncategorized';
       const m = it.sold.match(/-?\d+(\.\d+)?/);
       const v = m ? parseFloat(m[0]) : 1;
       catMap.set(cat, (catMap.get(cat) ?? 0) + v);
@@ -97,7 +97,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
           </ResponsiveContainer>
         </div>
         <div className="flex w-[260px] flex-none flex-col gap-1 overflow-auto">
-          <div className="mb-1 text-[11px] font-semibold text-foreground-secondary">TOP 商品</div>
+          <div className="mb-1 text-[11px] font-semibold text-foreground-secondary">Top Products</div>
           {items.slice(0, 8).map((it, i) => (
             <div key={i} className="flex items-center gap-2 border-b border-border-subtle py-1 last:border-b-0">
               <span className="w-4 flex-none text-center text-[10px] text-foreground-muted">{i + 1}</span>
@@ -133,7 +133,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
       </div>
       <div className="flex-none text-right">
         <div className="font-data text-sm font-semibold text-foreground-primary">{it.sold}</div>
-        <div className="text-[10px] text-foreground-secondary">占比 {it.share}</div>
+        <div className="text-[10px] text-foreground-secondary">Share {it.share}</div>
       </div>
     </div>
   );

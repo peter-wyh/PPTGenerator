@@ -57,6 +57,50 @@ describe('WorkScreenshotFields', () => {
     expect(data.images[0].caption).toBe('Best work A');
   });
 
+  it('mosaic 组合版式 picker writes mosaicLayout on click', () => {
+    const store = useEditorStore.getState();
+    store.loadProject(emptyProject, 'p');
+    store.addComponent('work-screenshot');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+    store.updateComponentData(id, { style: 'mosaic' });
+    store.commit();
+
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+
+    const btn = screen.getByRole('button', { name: '1大3小' });
+    expect(btn).not.toBeDisabled();
+    fireEvent.click(btn);
+
+    const data = useEditorStore.getState().currentComponents()[0].data as WorkScreenshotData;
+    expect(data.mosaicLayout).toBe('hero-4');
+  });
+
+  it('mosaic 组合版式 disables layouts when too few images', () => {
+    const store = useEditorStore.getState();
+    store.loadProject(emptyProject, 'p');
+    store.addComponent('work-screenshot');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+    store.updateComponentData(id, { style: 'mosaic', images: [{ src: 'a' }, { src: 'b' }] });
+    store.commit();
+
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+
+    // 仅 2 张：1大3小(需4)、九宫格(需9) 应禁用；自动(需1) 可用
+    expect(screen.getByRole('button', { name: '1大3小' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '九宫格' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '自动' })).not.toBeDisabled();
+  });
+
   it('imports creator work screenshots from a bound campaign', async () => {
     const store = useEditorStore.getState();
     store.loadProject(emptyProject, 'p');

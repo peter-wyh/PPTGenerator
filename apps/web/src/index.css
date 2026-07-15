@@ -45,9 +45,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* strategy-block 富文本高亮：内联 <mark> 染色（跟随全局品牌辅色）。 */
+/* strategy-block 富文本高亮：内联 <mark> 染色（跟随全局品牌主色）。 */
 mark {
-  color: var(--color-secondary);
+  color: var(--color-primary);
   font-weight: 500;
   background: transparent;
 }
@@ -57,25 +57,27 @@ mark {
  * 所有值引用 CSS 变量 → 切换 ProjectTheme 即全局换肤。
  * ============================================================ */
 
-/* 卡片容器：圆角 + 边框 + 背景 + 阴影。 */
+/* 卡片容器：圆角 + 边框 + 背景 + 阴影。
+   skinPreset 通过 --skin-radius-card / --skin-shadow-card 覆盖（可选），
+   未设置时回退到主题级 --radius-card / --shadow-card。 */
 .skin-card {
-  border-radius: var(--radius-card, 12px);
+  border-radius: var(--skin-radius-card, var(--radius-card, 12px));
   border: 1px solid var(--border-default);
   background: var(--surface-primary);
-  box-shadow: var(--shadow-card, 0 1px 2px rgba(0,0,0,.05));
+  box-shadow: var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
 }
 
 /* 大卡片容器：更圆 + 更深阴影（hero / glass 等强调卡）。 */
 .skin-card-lg {
-  border-radius: calc(var(--radius-card, 12px) * 1.33);
+  border-radius: calc(var(--skin-radius-card, var(--radius-card, 12px)) * 1.33);
   border: 1px solid var(--border-default);
   background: var(--surface-primary);
-  box-shadow: var(--shadow-card, 0 1px 2px rgba(0,0,0,.05));
+  box-shadow: var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
 }
 
 /* 无边框卡片（仅背景 + 圆角，无 border 无 shadow）。 */
 .skin-card-flat {
-  border-radius: var(--radius-card, 12px);
+  border-radius: var(--skin-radius-card, var(--radius-card, 12px));
   background: var(--surface-primary);
 }
 

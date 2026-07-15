@@ -47,3 +47,17 @@ describe('resolveChartStyle', () => {
     expect(resolveChartStyle(undefined).showGrid).toBe(true);
   });
 });
+
+describe('themeToCssVars 不再输出 skin 变量', () => {
+  it('skinPreset=flat 不再设 --skin-radius-card / --skin-shadow-card', () => {
+    const v = vars({ ...DEFAULT_THEME, skinPreset: 'flat' } as never);
+    expect(v['--skin-radius-card']).toBeUndefined();
+    expect(v['--skin-shadow-card']).toBeUndefined();
+  });
+
+  it('skinPreset=elevated 不再设 --skin-*', () => {
+    const v = vars({ ...DEFAULT_THEME, skinPreset: 'elevated' } as never);
+    expect(v['--skin-radius-card']).toBeUndefined();
+    expect(v['--skin-shadow-card']).toBeUndefined();
+  });
+});

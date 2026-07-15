@@ -7,6 +7,7 @@ import type {
   ProjectTheme,
   ReportDataContext,
   ReportCreator,
+  TitleBlockData,
 } from '@mediakit/shared';
 import { buildReportTitle, DEFAULT_THEME, normalizeTheme, pageCategory } from '@mediakit/shared';
 import {
@@ -17,12 +18,16 @@ import {
   MIN_H,
   MIN_W,
   DEFAULT_GRID_SIZE,
+  titleHeightForFontSize,
 } from './defaults';
 import { snapMove, snapResize, clampRect, clampResize } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
 import { getTemplateByPageType } from './templates';
+import { applyPageBinding as applyPageBindingReducer } from './pageBinding';
 import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
+import { creatorAvatarUrl } from '@/api/creatorAvatar';
+import { getAccessToken } from '@/api/client';
 
 // 拆分的类型 + 工具函数（re-export 保持向后兼容）
 export type { ThemePatch, Snapshot, ResizeDir, Alignment, EditorState } from './store-types';
@@ -45,12 +50,38 @@ import {
 /**
  * 合并 reportData 中两类达人（campaignCreators + creators），按 id 去重。
  * campaignCreators 优先（靠前）。
+ *
+ * 回填 avatar：旧项目持久化的达人可能没有 avatar 字段（修复前导入的），
+ * 按 name 确定性补一张 picsum 占位图，保证所有消费方（头像卡/达人列表/…）
+ * 取到的达人都有头像，不会落到字母兜底。
  */
 export function allReportCreators(reportData: ReportDataContext): ReportCreator[] {
   const cc = reportData.campaignCreators ?? [];
   const lc = reportData.creators ?? [];
   const seen = new Set(cc.map((c) => c.id));
-  return [...cc, ...lc.filter((c) => !seen.has(c.id))];
+  const withAvatar = (c: ReportCreator): ReportCreator =>
+    c.avatar ? c : { ...c, avatar: creatorAvatarUrl(c.name) };
+  return [...cc, ...lc.filter((c) => !seen.has(c.id))].map(withAvatar);
+}
+
+/**
+ * HMR 回填 / 刷盘 时需要保留的「数据字段」白名单。
+ * 故意排除 action 函数（save / loadProject / …）：它们的闭包绑定到具体 store 实例，
+ * 回填旧 action 会让它指向已废弃的旧 store。新 store 自带全新 action。
+ */
+export const PERSIST_KEYS = [
+  'projectId', 'projectName', 'projectMeta', 'canvasWidth', 'canvasHeight',
+  'pages', 'currentPageId', 'selectedIds', 'history', 'historyIndex', 'clipboard',
+  'zoom', 'panX', 'panY', 'isPanning', 'loaded', 'dirty', 'dirtyTick',
+  'saving', 'saveError', 'saveMode', 'reportData', 'previewOpen', 'previewPageIndex',
+] as const;
+
+/** 从 EditorState 中挑出数据字段（不含 action），用于 HMR 回填。 */
+export function pickPersistableState(s: EditorState): Partial<EditorState> {
+  const out: Partial<EditorState> = {};
+  const sink = out as Record<string, unknown>;
+  for (const k of PERSIST_KEYS) sink[k] = s[k];
+  return out;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
@@ -197,7 +228,28 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setReportData(data) {
       const s = get();
       const nextMeta: ProjectMeta = { ...(s.projectMeta ?? {}), reportData: data };
-      set((s) => ({ reportData: data, projectMeta: nextMeta, dirty: true, dirtyTick: s.dirtyTick + 1 }));
+      // 当达人列表更新时，为未绑定 creatorId 的 creator-case / creator-collab 页面自动分配达人
+      const allCr = allReportCreators(data);
+      let crIdx = 0;
+      let pages = s.pages.map((p) => {
+        const cat = pageCategory(p.pageType);
+        if ((cat === 'creator-case' || cat === 'creator-collab') && !p.creatorId && allCr.length > 0) {
+          const cr = allCr[crIdx % allCr.length];
+          crIdx++;
+          return { ...p, creatorId: cr.id };
+        }
+        return p;
+      });
+      // 如果有页面被更新了 creatorId，重新跑一次绑定填充数据
+      if (crIdx > 0) {
+        for (const p of pages) {
+          const cat = pageCategory(p.pageType);
+          if (cat === 'creator-case' || cat === 'creator-collab') {
+            pages = applyPageBindingReducer(pages, p.id, data, new Set(p.components.map((c) => c.id)), s.projectMeta);
+          }
+        }
+      }
+      set({ reportData: data, projectMeta: nextMeta, pages, dirty: true, dirtyTick: s.dirtyTick + 1 });
     },
 
     async save() {
@@ -240,6 +292,39 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }
     },
 
+    /** 卸载/隐藏前的尽力刷盘：keepalive fetch 让请求活过页面 unload（body ≤ 64KB）。 */
+    flushSync() {
+      const s = get();
+      if (!s.projectId || !s.dirty || s.saving) return;
+      const body = JSON.stringify({
+        name: s.projectName,
+        width: s.canvasWidth,
+        height: s.canvasHeight,
+        pages: s.pages,
+        meta: s.projectMeta ?? undefined,
+      });
+      const url =
+        s.saveMode === 'template'
+          ? `/api/v1/templates/${s.projectId}`
+          : `/api/v1/projects/${s.projectId}`;
+      const token = getAccessToken();
+      // 故意不 await / 不动 saving·dirty：调用点即 unload，store 即将销毁。
+      try {
+        void fetch(url, {
+          method: 'PATCH',
+          keepalive: true,
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body,
+        }).catch(() => {});
+      } catch {
+        // best-effort：忽略。
+      }
+    },
+
     setProjectName: (name) => set((s) => ({ projectName: name, dirty: true, dirtyTick: s.dirtyTick + 1 })),
 
     setTheme: (patch) =>
@@ -259,6 +344,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
             ...(current.lineHeight ?? DEFAULT_THEME.lineHeight),
             ...patch.lineHeight,
           } as NonNullable<ProjectTheme['lineHeight']>,
+          heading: {
+            ...(current.heading ?? DEFAULT_THEME.heading),
+            ...patch.heading,
+          } as NonNullable<ProjectTheme['heading']>,
           format: {
             ...(current.format ?? DEFAULT_THEME.format),
             ...patch.format,
@@ -268,7 +357,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
             ...patch.chart,
           } as NonNullable<ProjectTheme['chart']>,
           shadow: patch.shadow ?? current.shadow,
-          skinPreset: 'skinPreset' in patch ? patch.skinPreset : current.skinPreset,
           branding:
             patch.branding || current.branding
               ? { ...(current.branding ?? DEFAULT_THEME.branding), ...patch.branding }
@@ -283,9 +371,29 @@ export const useEditorStore = create<EditorState>((set, get) => {
               : undefined,
           preset: 'preset' in patch ? patch.preset : current.preset,
         };
-        return {
+        // 钩子3：全局标题字号变化 → 重排所有「未单组件覆盖字号」的 title-block 高度（动态行高）。
+        const newFs = patch.heading?.fontSize;
+        const prevFs = (current.heading ?? DEFAULT_THEME.heading)?.fontSize;
+        let pagesOut = s.pages;
+        if (newFs !== undefined && newFs !== prevFs) {
+          pagesOut = s.pages.map((pg) => ({
+            ...pg,
+            components: pg.components.map((c) => {
+              if (c.type !== 'title-block') return c;
+              const d = c.data as { fontSize?: number; subtitle?: string; divider?: boolean };
+              if (d.fontSize !== undefined) return c; // 单组件已覆盖字号,不随全局变
+              return {
+                ...c,
+                h: titleHeightForFontSize(newFs, { subtitle: !!d.subtitle, divider: !!d.divider }),
+              };
+            }),
+          }));
+        }
+        const out: Partial<EditorState> = {
           projectMeta: { ...(s.projectMeta ?? {}), theme: merged } as ProjectMeta,
         };
+        if (pagesOut !== s.pages) out.pages = pagesOut;
+        return out;
       }),
 
     setZoom: (z) => set({ zoom: Math.round(z * 100) / 100 }),
@@ -313,7 +421,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const size = DEFAULT_SIZES[type] ?? { w: 300, h: 200 };
         const { x, y } = centered(size.w, size.h, s.canvasWidth, s.canvasHeight);
         const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
-        const comp: EditorComponent = {
+        let comp: EditorComponent = {
           id: newId(),
           type,
           x: cl.x,
@@ -322,8 +430,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
           h: cl.h,
           data: getDefaultData(type),
         };
+        // 钩子1:title-block 新建时按全局 heading 字号动态定高,并继承全局变体/主色作初始(可单组件改)。
+        if (type === 'title-block') {
+          const theme = s.projectMeta?.theme;
+          const gFs = theme?.heading?.fontSize ?? 32;
+          const d = comp.data as TitleBlockData;
+          comp = {
+            ...comp,
+            h: titleHeightForFontSize(gFs, { subtitle: !!d.subtitle, divider: !!d.divider }),
+            data: {
+              ...d,
+              ...(theme?.heading?.variant ? { variant: theme.heading.variant } : {}),
+              ...(theme?.heading?.color ? { color: theme.heading.color } : {}),
+            },
+          };
+        }
+        const pages = withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]);
         return {
-          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
+          pages: s.currentPageId ? applyPageBindingReducer(pages, s.currentPageId, s.reportData, new Set([comp.id]), s.projectMeta) : pages,
           selectedIds: [comp.id],
         };
       }),
@@ -363,8 +487,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const { x, y } = placed(size.w, size.h, cx, cy, s.canvasWidth, s.canvasHeight, grid);
         const cl = clampRect({ x, y, w: size.w, h: size.h }, clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight));
         const comp: EditorComponent = { id: newId(), type, x: cl.x, y: cl.y, w: cl.w, h: cl.h, data: getDefaultData(type) };
+        const pages = withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]);
         return {
-          pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, comp]),
+          pages: s.currentPageId ? applyPageBindingReducer(pages, s.currentPageId, s.reportData, new Set([comp.id]), s.projectMeta) : pages,
           selectedIds: [comp.id],
         };
       }),
@@ -480,11 +605,21 @@ export const useEditorStore = create<EditorState>((set, get) => {
     updateComponentData: (id, dataPatch) =>
       mutateAndCommit((s) => ({
         pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
-          cs.map((c) =>
-            c.id === id
-              ? { ...c, data: { ...(c.data as object), ...dataPatch } as unknown as ComponentData }
-              : c,
-          ),
+          cs.map((c) => {
+            if (c.id !== id) return c;
+            const nextData = { ...(c.data as object), ...dataPatch } as unknown as ComponentData;
+            let next: EditorComponent = { ...c, data: nextData };
+            // 钩子2:title-block 改 fontSize → 同步重算 h(动态行高)。
+            if (c.type === 'title-block' && Object.prototype.hasOwnProperty.call(dataPatch, 'fontSize')) {
+              const d = nextData as TitleBlockData;
+              const fs =
+                typeof d.fontSize === 'number' && d.fontSize > 0
+                  ? d.fontSize
+                  : (s.projectMeta?.theme?.heading?.fontSize ?? 32);
+              next = { ...next, h: titleHeightForFontSize(fs, { subtitle: !!d.subtitle, divider: !!d.divider }) };
+            }
+            return next;
+          }),
         ),
       })),
 
@@ -694,8 +829,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
           if ((pageCategory(opts.pageType) === 'campaign-report' || pageCategory(opts.pageType) === 'creator-collab') && !page.campaignId) {
             page.campaignId = s.reportData?.campaign?.id ?? '';
           }
+          // creator-case / creator-collab 自动绑定第一个可用达人
+          if ((pageCategory(opts.pageType) === 'creator-case' || pageCategory(opts.pageType) === 'creator-collab') && !page.creatorId) {
+            const cr = allReportCreators(s.reportData)[0];
+            if (cr) page.creatorId = cr.id;
+          }
         }
-        return { pages: [...s.pages, page], currentPageId: page.id, selectedIds: [] };
+        const pages = [...s.pages, page];
+        return {
+          pages: applyPageBindingReducer(pages, page.id, s.reportData, new Set(page.components.map((c) => c.id)), s.projectMeta),
+          currentPageId: page.id,
+          selectedIds: [],
+        };
       });
       if (pageId) refreshReportTitle(pageId);
     },
@@ -703,6 +848,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     addPagesBatch: (pages) => {
       const newIds: string[] = [];
       mutateAndCommit((s) => {
+        const allCr = allReportCreators(s.reportData);
+        let crIdx = 0; // 多个达人页依次分配不同达人
         const built: Page[] = pages.map((p) => {
           const reid = p.components.map((c) => ({ ...clone(c), id: newId() }));
           const page: Page = { id: newId(), name: p.name, components: reid };
@@ -717,11 +864,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
             if ((pageCategory(p.pageType) === 'campaign-report' || pageCategory(p.pageType) === 'creator-collab') && !page.campaignId) {
               page.campaignId = s.reportData?.campaign?.id ?? '';
             }
+            // creator-case / creator-collab 自动绑定达人（多个达人页依次轮询分配）
+            if (pageCategory(p.pageType) === 'creator-case' || pageCategory(p.pageType) === 'creator-collab') {
+              if (allCr.length > 0) {
+                page.creatorId = allCr[crIdx % allCr.length].id;
+                crIdx++;
+              }
+            }
           }
           return page;
         });
         if (built.length === 0) return {};
-        return { pages: [...s.pages, ...built], currentPageId: built[0].id, selectedIds: [] };
+        let allPages = [...s.pages, ...built];
+        for (const pg of built) {
+          allPages = applyPageBindingReducer(allPages, pg.id, s.reportData, new Set(pg.components.map((c) => c.id)), s.projectMeta);
+        }
+        return { pages: allPages, currentPageId: built[0].id, selectedIds: [] };
       });
       newIds.forEach((id) => refreshReportTitle(id));
     },
@@ -815,7 +973,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
               const hasTitleComp = !!titleId && !!p.components.find((c) => c.id === titleId && c.type === 'text');
               // 空页时从模板填充默认内容（保留标题组件逻辑）
               if (p.components.length === 0) {
-                const tpl = getTemplateByPageType(pageType!);
+                const tpl = getTemplateByPageType(pageType!, s.projectMeta?.businessLine);
                 if (tpl) {
                   const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
                   // 确保 title 组件存在
@@ -878,31 +1036,41 @@ export const useEditorStore = create<EditorState>((set, get) => {
           };
         }
         const patchCampaign = pageCategory(pageType) === 'campaign-report' || pageCategory(pageType) === 'creator-collab';
-        return {
-          pages: s.pages.map((p) => {
-            if (p.id !== pageId) return p;
-            const next: Page = { ...p, pageType };
-            if (patchCampaign && !p.campaignId) {
-              next.campaignId = s.reportData?.campaign?.id ?? '';
-            }
-            // 页面组件为空时，从对应模板填充默认内容
-            if (p.components.length === 0) {
-              const tpl = getTemplateByPageType(pageType);
-              if (tpl) {
-                const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
-                next.components = comps;
-                // 如果模板有 pageTitleIndex，设置标题组件
-                if (tpl.pageTitleIndex != null && comps[tpl.pageTitleIndex]) {
-                  next.titleComponentId = comps[tpl.pageTitleIndex].id;
-                  next.titleOverridden = false;
-                }
-                // 用模板名称作为页面名
-                if (tpl.name) next.name = tpl.name;
+        const patchCreator = pageCategory(pageType) === 'creator-case' || pageCategory(pageType) === 'creator-collab';
+        const mapped = s.pages.map((p) => {
+          if (p.id !== pageId) return p;
+          const next: Page = { ...p, pageType };
+          if (patchCampaign && !p.campaignId) {
+            next.campaignId = s.reportData?.campaign?.id ?? '';
+          }
+          // creator-case / creator-collab 自动绑定第一个可用达人
+          if (patchCreator && !p.creatorId) {
+            const cr = allReportCreators(s.reportData)[0];
+            if (cr) next.creatorId = cr.id;
+          }
+          // 页面组件为空时，从对应模板填充默认内容
+          if (p.components.length === 0) {
+            const tpl = getTemplateByPageType(pageType, s.projectMeta?.businessLine);
+            if (tpl) {
+              const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
+              next.components = comps;
+              // 如果模板有 pageTitleIndex，设置标题组件
+              if (tpl.pageTitleIndex != null && comps[tpl.pageTitleIndex]) {
+                next.titleComponentId = comps[tpl.pageTitleIndex].id;
+                next.titleOverridden = false;
               }
+              // 用模板名称作为页面名
+              if (tpl.name) next.name = tpl.name;
             }
-            return next;
-          }),
-        };
+          }
+          return next;
+        });
+        // 切到 campaign-report/creator-collab 后，按页面绑定把页内组件当「新增」填充（落地即有数据）。
+        const target = mapped.find((p) => p.id === pageId);
+        const patched = target
+          ? applyPageBindingReducer(mapped, pageId, s.reportData, new Set(target.components.map((c) => c.id)), s.projectMeta)
+          : mapped;
+        return { pages: patched };
       });
     },
 
@@ -931,6 +1099,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
           }),
         };
       });
+    },
+
+    applyPageBinding: (pageId) => {
+      const pid = pageId ?? get().currentPageId;
+      if (!pid) return;
+      mutateAndCommit((s) => ({
+        pages: applyPageBindingReducer(s.pages, pid, s.reportData, new Set(), s.projectMeta),
+      }));
     },
 
     undo: () => {
@@ -987,3 +1163,19 @@ export const useEditorStore = create<EditorState>((set, get) => {
       })),
   };
 });
+
+// ---- Vite HMR：避免改代码触发 HMR 时 store 被重置成空白 ----
+// store.ts 是模块级单例；Vite 重新求值本模块（或其 import 图）会再跑一遍 create()
+// → 全新空 store → 画布变白。dispose 前抓数据快照、新模块求值后回填；
+// 仅回填数据字段（见 pickPersistableState），action 用新 store 自带的。accept() 自接收，
+// 阻止冒泡到 Editor 触发重挂载（否则 loadProject 会用旧 detail 覆盖当前编辑）。
+// 注意：vitest 也暴露 import.meta.hot 但无 .data，用 import.meta.hot?.data 兜住，仅在真 Vite 下生效。
+if (import.meta.hot?.data) {
+  import.meta.hot.dispose((data) => {
+    data.editorState = pickPersistableState(useEditorStore.getState());
+  });
+  if (import.meta.hot.data.editorState) {
+    useEditorStore.setState(import.meta.hot.data.editorState as Partial<EditorState>);
+  }
+  import.meta.hot.accept();
+}

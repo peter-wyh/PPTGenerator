@@ -6,8 +6,16 @@
  * 每个组件提供多个样式变体（data.variant），对应 PRD 组件三层定义中的
  * "样式变体（选版式）"。风格对齐 BasicComponents.tsx；占位态参考 ImageComponent。
  */
+import { useEffect, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useChartStyle } from '../theme';
+import { useChartColors } from './report/shared';
+
+/** 解析数据项颜色：'auto' 或空值 → 从全局 chartPalette 按索引取色（与 BasicComponents 一致）。 */
+function resolveColor(color: string | undefined, index: number, palette: string[]): string {
+  if (!color || color === 'auto') return palette[index % palette.length];
+  return color;
+}
 import type {
   CreatorAvatarCardData,
   CreatorFanAgeData,
@@ -317,20 +325,24 @@ export function CreatorStatsStrip({ data }: { data: CreatorStatsStripData }) {
 }
 
 function StatsCards({ stats }: { stats: CreatorStatsStripData['stats'] }) {
+  const palette = useChartColors();
   return (
     <div className="flex h-full w-full items-stretch gap-2 skin-card p-2">
-      {stats.map((s, i) => (
-        <div
-          key={i}
-          className="flex flex-1 flex-col justify-center rounded-lg px-3 py-1"
-          style={{ backgroundColor: `${s.color}14` }}
-        >
-          <div className="text-[11px] text-foreground-secondary">{s.label}</div>
-          <div className="font-data text-lg font-semibold" style={{ color: s.color }}>
-            {s.value}
+      {stats.map((s, i) => {
+        const color = resolveColor(s.color, i, palette);
+        return (
+          <div
+            key={i}
+            className="flex flex-1 flex-col justify-center rounded-lg px-3 py-1"
+            style={{ backgroundColor: `${color}14` }}
+          >
+            <div className="text-[11px] text-foreground-secondary">{s.label}</div>
+            <div className="font-data text-lg font-semibold" style={{ color }}>
+              {s.value}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -349,16 +361,20 @@ function StatsPlain({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 }
 
 function StatsMetric({ stats }: { stats: CreatorStatsStripData['stats'] }) {
+  const palette = useChartColors();
   return (
     <div className="flex h-full w-full items-stretch gap-3 skin-card skin-pad-sm">
-      {stats.map((s, i) => (
-        <div key={i} className="flex flex-1 flex-col justify-center" style={{ borderBottom: `2px solid ${s.color}` }}>
-          <div className="font-data text-2xl font-bold" style={{ color: s.color }}>
-            {s.value}
+      {stats.map((s, i) => {
+        const color = resolveColor(s.color, i, palette);
+        return (
+          <div key={i} className="flex flex-1 flex-col justify-center" style={{ borderBottom: `2px solid ${color}` }}>
+            <div className="font-data text-2xl font-bold" style={{ color }}>
+              {s.value}
+            </div>
+            <div className="mt-0.5 text-[10px] uppercase tracking-wide text-foreground-secondary">{s.label}</div>
           </div>
-          <div className="mt-0.5 text-[10px] uppercase tracking-wide text-foreground-secondary">{s.label}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -371,20 +387,22 @@ function parsePercent(value: string): number {
 
 /** progress：每个指标用横向进度条展示 — label(上方) + value(右侧) + 进度条(底部)。 */
 function StatsProgress({ stats }: { stats: CreatorStatsStripData['stats'] }) {
+  const palette = useChartColors();
   return (
     <div className="flex h-full w-full flex-col justify-center gap-3 skin-card skin-pad-sm">
       {stats.map((s, i) => {
         const pct = Math.min(100, Math.max(0, parsePercent(s.value)));
+        const color = resolveColor(s.color, i, palette);
         return (
           <div key={i} className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-foreground-secondary">{s.label}</span>
-              <span className="font-data text-sm font-semibold" style={{ color: s.color }}>
+              <span className="font-data text-sm font-semibold" style={{ color }}>
                 {s.value}
               </span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">
-              <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: s.color }} />
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
             </div>
           </div>
         );
@@ -395,10 +413,12 @@ function StatsProgress({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 
 /** ring：用 recharts 环形进度图（innerRadius 60% outerRadius 90%），每个指标一个 mini ring(48px) + label + value 横排。 */
 function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
+  const palette = useChartColors();
   return (
     <div className="flex h-full w-full flex-wrap items-center gap-4 skin-card skin-pad-sm">
       {stats.map((s, i) => {
         const pct = Math.min(100, Math.max(0, parsePercent(s.value)));
+        const color = resolveColor(s.color, i, palette);
         const ringData = [
           { name: 'value', value: pct },
           { name: 'rest', value: 100 - pct },
@@ -409,7 +429,7 @@ function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={ringData} dataKey="value" cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" startAngle={90} endAngle={-270}>
-                    <Cell key="value" fill={s.color} />
+                    <Cell key="value" fill={color} />
                     <Cell key="rest" fill="var(--color-surface-hover, #F3F4F6)" />
                   </Pie>
                 </PieChart>
@@ -420,7 +440,7 @@ function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
             </div>
             <div className="flex flex-col">
               <span className="text-[11px] text-foreground-secondary">{s.label}</span>
-              <span className="font-data text-sm font-semibold" style={{ color: s.color }}>
+              <span className="font-data text-sm font-semibold" style={{ color }}>
                 {s.value}
               </span>
             </div>
@@ -566,7 +586,7 @@ function Cover({ url, alt, cls }: { url: string; alt: string; cls?: string }) {
     <div
       className={`flex items-center justify-center rounded bg-surface-hover text-[10px] text-foreground-muted ${cls ?? ''}`}
     >
-      作品封面
+      Work cover
     </div>
   );
 }
@@ -662,14 +682,15 @@ type WorkItem = {
 /* ----- detailed 变体：作品卡 + 受众画像（城市/性别/年龄）+ 数据趋势图 ----- */
 
 /** 迷你水平占比条（单维度分布，如城市/年龄）。 */
-function MiniBar({ label, value, color }: { label: string; value: number; color?: string }) {
+export function MiniBar({ label, value, color, index = 0 }: { label: string; value: number; color?: string; index?: number }) {
+  const palette = useChartColors();
   return (
     <div className="flex items-center gap-1.5">
       <span className="w-14 flex-none truncate text-[10px] text-foreground-secondary">{label}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
         <div
           className="h-full rounded-full"
-          style={{ width: `${Math.min(100, value)}%`, backgroundColor: color ?? 'var(--color-primary)' }}
+          style={{ width: `${Math.min(100, value)}%`, backgroundColor: resolveColor(color, index, palette) }}
         />
       </div>
       <span className="w-7 flex-none text-right text-[10px] font-data text-foreground-primary">{value}%</span>
@@ -705,7 +726,8 @@ function MiniTrend({ data, label }: { data: { label: string; value: number }[]; 
 }
 
 /** 性别环形迷你图。 */
-function MiniGenderDonut({ data }: { data: { label: string; value: number; color?: string }[] }) {
+export function MiniGenderDonut({ data }: { data: { label: string; value: number; color?: string }[] }) {
+  const palette = useChartColors();
   if (!data.length) return null;
   return (
     <div className="flex items-center gap-2">
@@ -714,7 +736,7 @@ function MiniGenderDonut({ data }: { data: { label: string; value: number; color
           <PieChart>
             <Pie data={data} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius="60%" outerRadius="90%">
               {data.map((d, i) => (
-                <Cell key={i} fill={d.color ?? (d.label.includes('女') ? 'var(--purple, #EC4899)' : 'var(--blue, #3B82F6)')} />
+                <Cell key={i} fill={resolveColor(d.color, i, palette)} />
               ))}
             </Pie>
           </PieChart>
@@ -723,7 +745,7 @@ function MiniGenderDonut({ data }: { data: { label: string; value: number; color
       <div className="flex flex-col gap-0.5">
         {data.map((d, i) => (
           <span key={i} className="flex items-center gap-1 text-[10px] text-foreground-secondary">
-            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: d.color ?? (d.label.includes('女') ? 'var(--purple, #EC4899)' : 'var(--blue, #3B82F6)') }} />
+            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: resolveColor(d.color, i, palette) }} />
             {d.label} {d.value}%
           </span>
         ))}
@@ -767,32 +789,32 @@ function WorksDetailed({
                 {/* 城市 Top */}
                 {ins.topCities && ins.topCities.length > 0 && (
                   <div className="flex flex-col gap-1">
-                    <div className="text-[10px] font-medium text-foreground-secondary">粉丝城市 Top</div>
+                    <div className="text-[10px] font-medium text-foreground-secondary">Top Fan Cities</div>
                     {ins.topCities.slice(0, 4).map((c, ci) => (
-                      <MiniBar key={ci} label={c.label} value={c.value} color={c.color} />
+                      <MiniBar key={ci} label={c.label} value={c.value} color={c.color} index={ci} />
                     ))}
                   </div>
                 )}
                 {/* 年龄段 */}
                 {ins.ageRange && ins.ageRange.length > 0 && (
                   <div className="flex flex-col gap-1">
-                    <div className="text-[10px] font-medium text-foreground-secondary">年龄分布</div>
+                    <div className="text-[10px] font-medium text-foreground-secondary">Age Distribution</div>
                     {ins.ageRange.slice(0, 4).map((a, ci) => (
-                      <MiniBar key={ci} label={a.label} value={a.value} color={a.color ?? 'auto'} />
+                      <MiniBar key={ci} label={a.label} value={a.value} color={a.color ?? 'auto'} index={ci} />
                     ))}
                   </div>
                 )}
                 {/* 性别 */}
                 {ins.genderSplit && ins.genderSplit.length > 0 && (
                   <div className="flex flex-col gap-1">
-                    <div className="text-[10px] font-medium text-foreground-secondary">性别分布</div>
+                    <div className="text-[10px] font-medium text-foreground-secondary">Gender Distribution</div>
                     <MiniGenderDonut data={ins.genderSplit} />
                   </div>
                 )}
                 {/* 趋势 */}
                 {ins.trend && ins.trend.length > 0 && (
                   <div className="flex flex-col gap-1">
-                    <MiniTrend data={ins.trend} label={ins.trendLabel ?? '数据趋势'} />
+                    <MiniTrend data={ins.trend} label={ins.trendLabel ?? 'Data Trend'} />
                   </div>
                 )}
               </div>
@@ -831,20 +853,41 @@ function CreatorChartShell({
 /** 空数据占位。 */
 function EmptyChart() {
   return (
-    <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">暂无数据</div>
+    <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">No data</div>
   );
 }
 
-/** 性别占比环形图；center 为中心主项摘要。 */
+/** 性别占比组件的默认设计宽度（px），文本按容器宽度相对它等比缩放。 */
+const GENDER_DESIGN_W = 320;
+
+/** 性别占比环形图；center 为中心主项摘要。组件缩小时，「性别项」文案（饼图标签 + 中心摘要 + 图例）按容器宽度等比缩小。 */
 export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
   const { title, subtitle, center, slices = [] } = data;
+  const palette = useChartColors();
+  // 测量渲染宽度，按相对设计宽 320 的比例缩放文案；下限 0.6 保证仍可读。
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(GENDER_DESIGN_W);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return; // jsdom 等无 RO 环境：保持设计宽，测试照常
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const scale = Math.max(0.6, Math.min(1, width / GENDER_DESIGN_W));
+  const labelFont = Math.round(12 * scale); // 饼图标签 + 中心摘要
+  const legendFont = Math.round(10 * scale); // 图例
+
   return (
     <CreatorChartShell title={title} subtitle={subtitle}>
       {slices.length === 0 ? (
         <EmptyChart />
       ) : (
-        <div className="flex h-full w-full flex-col">
-          <div className="relative min-h-0 flex-1">
+        <div ref={ref} className="flex h-full w-full flex-col">
+          <div className="relative min-h-0 flex-1" style={{ fontSize: labelFont }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -858,23 +901,29 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
                   label={(e: { label?: string }) => e.label ?? ''}
                 >
                   {slices.map((s, i) => (
-                    <Cell key={i} fill={s.color} />
+                    <Cell key={i} fill={resolveColor(s.color, i, palette)} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
             {center && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-xs font-semibold text-foreground-primary">
+              <div
+                className="pointer-events-none absolute inset-0 flex items-center justify-center text-center font-semibold text-foreground-primary"
+                style={{ fontSize: labelFont }}
+              >
                 {center}
               </div>
             )}
           </div>
           {/* recharts label 在 jsdom 测试环境下因整体 mock 不会触发；保留一份 DOM 可见的图例作为兜底。 */}
-          <div className="mt-1 flex flex-none flex-wrap justify-center gap-x-3 gap-y-0.5 text-[10px] text-foreground-secondary">
+          <div
+            className="mt-1 flex flex-none flex-wrap justify-center gap-x-3 gap-y-0.5 text-foreground-secondary"
+            style={{ fontSize: legendFont }}
+          >
             {slices.map((s, i) => (
               <span key={i} className="inline-flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: resolveColor(s.color, i, palette) }} />
                 <span>{s.label}</span>
               </span>
             ))}
@@ -889,6 +938,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
 export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
   const { title, subtitle, bars = [] } = data;
   const cs = useChartStyle();
+  const palette = useChartColors();
   const sorted = [...bars].sort((a, b) => b.value - a.value);
   const sum = sorted.reduce((acc, b) => acc + b.value, 0) || 1;
   const withPct = sorted.map((b) => ({ ...b, pct: Math.round((b.value / sum) * 100) }));
@@ -905,7 +955,7 @@ export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
             <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
             <Bar dataKey="value" radius={[0, cs.barRadius, cs.barRadius, 0]}>
               {withPct.map((b, i) => (
-                <Cell key={i} fill={b.color} />
+                <Cell key={i} fill={resolveColor(b.color, i, palette)} />
               ))}
               <LabelList dataKey="pct" position="right" formatter={(v: number) => `${v}%`} style={{ fontSize: 11 }} />
             </Bar>
@@ -920,6 +970,7 @@ export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
 export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
   const { title, subtitle, bars = [] } = data;
   const cs = useChartStyle();
+  const palette = useChartColors();
   return (
     <CreatorChartShell title={title} subtitle={subtitle}>
       {bars.length === 0 ? (
@@ -933,7 +984,7 @@ export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
             <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
             <Bar dataKey="value" radius={[cs.barRadius, cs.barRadius, 0, 0]}>
               {bars.map((b, i) => (
-                <Cell key={i} fill={b.color} />
+                <Cell key={i} fill={resolveColor(b.color, i, palette)} />
               ))}
             </Bar>
           </BarChart>
@@ -946,6 +997,7 @@ export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
 /** 兴趣标签：纯 div 横向占比条。占比 = value / sum(values)；showPercent 缺省视为 true。 */
 export function CreatorFanInterest({ data }: { data: CreatorFanInterestData }) {
   const { title, subtitle, tags = [], showPercent } = data;
+  const palette = useChartColors();
   const showPct = showPercent !== false;
   const sum = tags.reduce((acc, t) => acc + t.value, 0) || 1;
   return (
@@ -960,7 +1012,7 @@ export function CreatorFanInterest({ data }: { data: CreatorFanInterestData }) {
               <div key={i} className="flex items-center gap-2">
                 <div className="w-12 flex-none truncate text-[11px] text-foreground-secondary">{t.label}</div>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-hover">
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: t.color }} />
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: resolveColor(t.color, i, palette) }} />
                 </div>
                 {showPct && <div className="w-9 flex-none text-right text-[11px] font-data text-foreground-primary">{pct}%</div>}
               </div>
@@ -1016,11 +1068,11 @@ function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers
     <div className="flex h-full w-full flex-col overflow-auto skin-card">
       {/* 表头 */}
       <div className="flex items-center border-b border-border-default bg-surface-subtle px-3 py-2 text-[11px] font-medium text-foreground-secondary">
-        <div className="min-w-0 flex-1">{headers[1] ?? '达人'}</div>
-        <div className="w-20 flex-none text-center">{headers[2] ?? '平台'}</div>
-        <div className="w-20 flex-none text-right">{headers[3] ?? '粉丝数'}</div>
-        <div className="w-16 flex-none text-right">{headers[4] ?? '互动率'}</div>
-        <div className="w-16 flex-none text-right">{headers[5] ?? '分类'}</div>
+        <div className="min-w-0 flex-1">{headers[1] ?? 'Creator'}</div>
+        <div className="w-20 flex-none text-center">{headers[2] ?? 'Platform'}</div>
+        <div className="w-20 flex-none text-right">{headers[3] ?? 'Followers'}</div>
+        <div className="w-16 flex-none text-right">{headers[4] ?? 'Engagement'}</div>
+        <div className="w-16 flex-none text-right">{headers[5] ?? 'Category'}</div>
       </div>
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-2 border-b border-border-subtle px-3 py-2 last:border-b-0 hover:bg-surface-hover">
@@ -1046,7 +1098,7 @@ function CreatorListCards({ items }: { items: CreatorListRow[] }) {
           <div className="truncate text-xs font-medium text-foreground-primary">{it.name}</div>
           <div className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">{PLATFORM_LABEL_SHORT[it.platform] ?? it.platform}</div>
           <div className="font-data text-sm font-semibold text-foreground-primary">{it.followers}</div>
-          <div className="text-[10px] text-foreground-muted">互动率 {it.engagement}</div>
+          <div className="text-[10px] text-foreground-muted">Engagement {it.engagement}</div>
           {it.category && <div className="text-[10px] text-foreground-secondary">{it.category}</div>}
         </div>
       ))}

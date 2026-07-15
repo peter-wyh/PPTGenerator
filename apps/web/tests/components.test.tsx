@@ -26,6 +26,7 @@ import {
   PieChartComponent,
   TableComponent,
   TextComponent,
+  TitleBlock,
 } from '@/editor/components/BasicComponents';
 
 describe('basic components render', () => {
@@ -52,7 +53,7 @@ describe('basic components render', () => {
 
   it('image shows placeholder when no src', () => {
     render(<ImageComponent data={{ src: '', fit: 'cover' }} />);
-    expect(screen.getByText('图片占位')).toBeInTheDocument();
+    expect(screen.getByText('Image placeholder')).toBeInTheDocument();
   });
 
   it('bar chart renders its title', () => {
@@ -125,5 +126,33 @@ describe('IndicatorCardComponent variants', () => {
       <IndicatorCardComponent data={{ ...base, variant: 'icon-bg' }} />
     );
     expect(container.querySelector('svg')).toBeTruthy();
+  });
+});
+
+describe('title-block block-underline variant', () => {
+  it('色块颜色跟随标题颜色（默认黑色），宽≈标题文字 60%，粗标记笔质感', () => {
+    const { container } = render(
+      <TitleBlock data={{ variant: 'block-underline', text: '区域销售' } as any} />,
+    );
+    expect(screen.getByText('区域销售')).toBeInTheDocument();
+    // 色块颜色 = titleFg（默认 #000000 → rgb(0, 0, 0)）
+    const bars = Array.from(container.querySelectorAll('div')).filter(
+      (d) => (d as HTMLElement).style.backgroundColor === 'rgb(0, 0, 0)',
+    );
+    expect(bars).toHaveLength(1); // 仅一条色块
+    expect(bars[0].className).toContain('w-[60%]'); // 宽≈标题文字 60%
+    expect(bars[0].className).toContain('h-2'); // 粗(标记笔质感)
+  });
+  it('titleColor=brand 时色块也跟随品牌色', () => {
+    const { container } = render(
+      <TitleBlock data={{ variant: 'block-underline', text: '区域销售', titleColor: 'brand' } as any} />,
+    );
+    // 标题和色块都使用 var(--color-primary)
+    const titleEl = screen.getByText('区域销售');
+    expect((titleEl as HTMLElement).style.color).toBe('var(--color-primary)');
+    const bars = Array.from(container.querySelectorAll('div')).filter(
+      (d) => (d as HTMLElement).style.backgroundColor === 'var(--color-primary)',
+    );
+    expect(bars).toHaveLength(1);
   });
 });

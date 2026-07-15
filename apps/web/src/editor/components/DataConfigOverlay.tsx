@@ -4,6 +4,7 @@ import type {
   CampaignMetric,
   ReportCampaign,
   ReportCreator,
+  ReportDataContext,
 } from '@mediakit/shared';
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from '../store';
@@ -24,8 +25,19 @@ interface Props {
  * 各业务组件属性面板可一键从 reportData 取数填充。
  */
 export function DataConfigOverlay({ onClose }: Props) {
-  const reportData = useEditorStore((s) => s.reportData);
-  const setReportData = useEditorStore((s) => s.setReportData);
+  // Draft 模式：本地拷贝 reportData，点击保存才提交到 store。
+  const commitReportData = useEditorStore((s) => s.setReportData);
+  const [reportData, setLocalReportData] = useState<ReportDataContext>(() => useEditorStore.getState().reportData);
+  // 同名函数替换 store 的 setReportData，所有下游代码零改动。
+  const setReportData = (data: ReportDataContext) => setLocalReportData(data);
+
+  // 项目业务线（只读；用于过滤 campaign 下拉）。存量项目无业务线 → 显示全部。
+  const projectBusinessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+
+  function handleSave() {
+    commitReportData(reportData);
+    onClose();
+  }
 
   const [activeTab, setActiveTab] = useState<'campaign' | 'library'>('campaign');
 
@@ -33,6 +45,15 @@ export function DataConfigOverlay({ onClose }: Props) {
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [campaignFailed, setCampaignFailed] = useState(false);
   const selectedCampaignId = reportData.campaign?.id ?? '';
+
+  // 按项目业务线过滤；无业务线（存量项目）显示全部；已绑定 campaign 即便不在过滤内也保留
+  const visibleCampaigns =
+    campaigns?.filter((c) => !projectBusinessLine || c.businessLine === projectBusinessLine) ?? [];
+  const boundMissing =
+    selectedCampaignId && !visibleCampaigns.some((c) => c.id === selectedCampaignId)
+      ? campaigns?.find((c) => c.id === selectedCampaignId) ?? null
+      : null;
+  const dropdownCampaigns = boundMissing ? [boundMissing, ...visibleCampaigns] : visibleCampaigns;
 
   useEffect(() => {
     let alive = true;
@@ -132,6 +153,7 @@ export function DataConfigOverlay({ onClose }: Props) {
           engagement: c.engagement,
           category: c.category,
           region: c.region,
+          avatar: c.avatar,
           stats,
         },
       ];
@@ -161,6 +183,7 @@ export function DataConfigOverlay({ onClose }: Props) {
           engagement: c.engagement,
           category: c.category,
           region: c.region,
+          avatar: c.avatar,
           stats,
         },
       ];
@@ -286,7 +309,7 @@ export function DataConfigOverlay({ onClose }: Props) {
                     className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-sm"
                   >
                     <option value="">— No campaign —</option>
-                    {campaigns.map((c) => (
+                    {dropdownCampaigns.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}（{c.advertiser}）
                       </option>
@@ -384,40 +407,20 @@ export function DataConfigOverlay({ onClose }: Props) {
                   </div>
                 )}
 
-                {/* 已选达人详情 + KPI 编辑 */}
+                {/* 已选达人详情 + KPI 表格编辑 */}
                 {selectedCampaignCreators.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {selectedCampaignCreators.map((cr) => (
-                      <CreatorKpiCard
-                        key={cr.id}
-                        cr={cr}
-                        onRemove={() =>
-                          toggleCampaignCreator(
-                            campaignCreators?.find((x) => x.id === cr.id) ?? {
-                              id: cr.id,
-                              name: cr.name,
-                              handle: cr.handle ?? '',
-                              platform: cr.platform ?? '',
-                              tier: cr.tier ?? '',
-                              followers: cr.followers ?? '',
-                              engagement: cr.engagement ?? '',
-                              category: cr.category ?? '',
-                              region: cr.region ?? '',
-                              metrics: [],
-                            },
-                          )
-                        }
-                        onUpdateStat={(si, val) =>
-                          updateCreatorStat('campaignCreators', cr.id, si, val)
-                        }
-                        onRemoveStat={(si) =>
-                          removeCreatorStat('campaignCreators', cr.id, si)
-                        }
-                        onAddStat={(key) =>
-                          addCreatorStat('campaignCreators', cr.id, key)
-                        }
-                      />
-                    ))}
+                  <div className="mt-3">
+                    <CreatorTable
+                      creators={selectedCampaignCreators}
+                      section="campaignCreators"
+                      onUpdateStat={updateCreatorStat}
+                      onRemoveStat={removeCreatorStat}
+                      onAddStat={addCreatorStat}
+                      onRemoveCreator={(creatorId) => {
+                        const orig = campaignCreators?.find((x) => x.id === creatorId);
+                        if (orig) toggleCampaignCreator(orig);
+                      }}
+                    />
                   </div>
                 )}
               </section>
@@ -463,40 +466,20 @@ export function DataConfigOverlay({ onClose }: Props) {
               </div>
             )}
 
-            {/* 已选达人详情 + KPI 编辑 */}
+            {/* 已选达人详情 + KPI 表格编辑 */}
             {selectedCreators.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {selectedCreators.map((cr) => (
-                  <CreatorKpiCard
-                    key={cr.id}
-                    cr={cr}
-                    onRemove={() =>
-                      toggleCreator(
-                        allCreators?.find((x) => x.id === cr.id) ?? {
-                          id: cr.id,
-                          name: cr.name,
-                          handle: cr.handle ?? '',
-                          platform: cr.platform ?? '',
-                          tier: cr.tier ?? '',
-                          followers: cr.followers ?? '',
-                          engagement: cr.engagement ?? '',
-                          category: cr.category ?? '',
-                          region: cr.region ?? '',
-                          metrics: [],
-                        },
-                      )
-                    }
-                    onUpdateStat={(si, val) =>
-                      updateCreatorStat('creators', cr.id, si, val)
-                    }
-                    onRemoveStat={(si) =>
-                      removeCreatorStat('creators', cr.id, si)
-                    }
-                    onAddStat={(key) =>
-                      addCreatorStat('creators', cr.id, key)
-                    }
-                  />
-                ))}
+              <div className="mt-3">
+                <CreatorTable
+                  creators={selectedCreators}
+                  section="creators"
+                  onUpdateStat={updateCreatorStat}
+                  onRemoveStat={removeCreatorStat}
+                  onAddStat={addCreatorStat}
+                  onRemoveCreator={(creatorId) => {
+                    const orig = allCreators?.find((x) => x.id === creatorId);
+                    if (orig) toggleCreator(orig);
+                  }}
+                />
               </div>
             )}
           </section>
@@ -506,9 +489,15 @@ export function DataConfigOverlay({ onClose }: Props) {
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
+            className="rounded border border-border-default px-4 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSave}
             className="rounded bg-accent-primary px-4 py-1.5 text-sm text-white hover:bg-accent-secondary"
           >
-            Done
+            保存
           </button>
         </div>
       </div>
@@ -541,63 +530,140 @@ function TabButton({
   );
 }
 
-/** 达人 KPI 编辑卡：达人信息 + KPI 列表 + 添加/删除 KPI。 */
-function CreatorKpiCard({
-  cr,
-  onRemove,
+/** 达人数据可编辑表格：行=达人，列=KPI 指标，单元格直接编辑。 */
+function CreatorTable({
+  creators,
+  section,
   onUpdateStat,
   onRemoveStat,
   onAddStat,
+  onRemoveCreator,
 }: {
-  cr: ReportCreator;
-  onRemove: () => void;
-  onUpdateStat: (statIndex: number, value: string) => void;
-  onRemoveStat: (statIndex: number) => void;
-  onAddStat: (metricKey: string) => void;
+  creators: ReportCreator[];
+  section: 'campaignCreators' | 'creators';
+  onUpdateStat: (section: 'campaignCreators' | 'creators', creatorId: string, statIndex: number, value: string) => void;
+  onRemoveStat: (section: 'campaignCreators' | 'creators', creatorId: string, statIndex: number) => void;
+  onAddStat: (section: 'campaignCreators' | 'creators', creatorId: string, metricKey: string) => void;
+  onRemoveCreator: (creatorId: string) => void;
 }) {
+  if (creators.length === 0) return null;
+
+  // 收集所有出现过的 metric key（保持插入顺序）作为动态列。
+  const metricKeys: string[] = [];
+  const keySet = new Set<string>();
+  for (const cr of creators) {
+    for (const s of cr.stats ?? []) {
+      const k = s.key;
+      if (k && !keySet.has(k)) {
+        keySet.add(k);
+        metricKeys.push(k);
+      }
+    }
+  }
+
+  const colLabel = (key: string) =>
+    CREATOR_METRIC_CATALOG.find((m) => m.key === key)?.label ?? key;
+
   return (
-    <div className="rounded border border-border-default p-2">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-semibold text-foreground-primary">
-          {cr.name}
-          <span className="ml-1 font-normal text-foreground-muted">
-            {cr.handle} · {cr.platform} · {cr.tier}
-          </span>
-        </span>
-        <button
-          onClick={onRemove}
-          className="text-[10px] text-foreground-muted hover:text-red"
-        >
-          Remove
-        </button>
-      </div>
-      <div className="space-y-1">
-        {(cr.stats ?? []).map((stat, si) => (
-          <div key={si} className="flex items-center gap-2">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: stat.color }}
-            />
-            <span className="w-28 text-xs text-foreground-secondary">{stat.label}</span>
-            <input
-              value={stat.value}
-              onChange={(e) => onUpdateStat(si, e.target.value)}
-              className="flex-1 rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs"
-            />
-            <button
-              onClick={() => onRemoveStat(si)}
-              className="text-[10px] text-foreground-muted hover:text-red"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-        <AddStatRow
-          existingKeys={(cr.stats ?? []).map((s) => s.key)}
-          onAdd={onAddStat}
-        />
-      </div>
+    <div className="overflow-auto">
+      <table className="w-full border-collapse text-xs">
+        <thead>
+          <tr className="border-b border-border-default text-foreground-muted">
+            <th className="sticky left-0 z-10 bg-surface-primary px-2 py-1 text-left font-normal">达人</th>
+            <th className="px-2 py-1 text-left font-normal">平台</th>
+            {metricKeys.map((k) => (
+              <th key={k} className="px-2 py-1 text-right font-normal whitespace-nowrap">
+                {colLabel(k)}
+              </th>
+            ))}
+            <th className="px-2 py-1 text-center font-normal">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {creators.map((cr) => {
+            const existingKeys = (cr.stats ?? []).map((s) => s.key);
+            return (
+              <tr key={cr.id} className="border-b border-border-subtle hover:bg-surface-hover/50">
+                <td className="sticky left-0 z-10 bg-surface-primary px-2 py-1 text-left font-medium text-foreground-primary whitespace-nowrap">
+                  {cr.name}
+                  <span className="ml-1 text-[10px] font-normal text-foreground-muted">{cr.tier}</span>
+                </td>
+                <td className="px-2 py-1 text-left text-foreground-secondary whitespace-nowrap">{cr.platform}</td>
+                {metricKeys.map((mk) => {
+                  const si = (cr.stats ?? []).findIndex((s) => s.key === mk);
+                  const stat = si >= 0 ? cr.stats![si] : null;
+                  return (
+                    <td key={mk} className="px-1 py-0.5 text-right">
+                      {stat ? (
+                        <div className="flex items-center gap-0.5 justify-end">
+                          <input
+                            value={stat.value}
+                            onChange={(e) => onUpdateStat(section, cr.id, si, e.target.value)}
+                            className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-right text-xs"
+                          />
+                          <button
+                            onClick={() => onRemoveStat(section, cr.id, si)}
+                            className="text-[10px] text-foreground-muted hover:text-red"
+                            title="移除该指标"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-foreground-muted">—</span>
+                      )}
+                    </td>
+                  );
+                })}
+                <td className="px-2 py-1 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <AddStatInline
+                      existingKeys={existingKeys}
+                      onAdd={(key) => onAddStat(section, cr.id, key)}
+                    />
+                    <button
+                      onClick={() => onRemoveCreator(cr.id)}
+                      className="rounded px-1.5 py-0.5 text-[10px] text-foreground-muted hover:bg-red/10 hover:text-red"
+                    >
+                      移除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
+  );
+}
+
+/** 行内添加指标：紧凑下拉。 */
+function AddStatInline({
+  existingKeys,
+  onAdd,
+}: {
+  existingKeys: (string | undefined)[];
+  onAdd: (metricKey: string) => void;
+}) {
+  const available = CREATOR_METRIC_CATALOG.filter((m) => !existingKeys.includes(m.key));
+  if (available.length === 0) return null;
+  return (
+    <select
+      value=""
+      onChange={(e) => {
+        if (e.target.value) onAdd(e.target.value);
+      }}
+      className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] text-foreground-secondary"
+      title="添加指标"
+    >
+      <option value="">+ 指标</option>
+      {available.map((m) => (
+        <option key={m.key} value={m.key}>
+          {m.label}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -625,39 +691,4 @@ function buildDefaultStats(c: Creator): ReportCreator['stats'] {
     });
   }
   return stats;
-}
-
-/** 添加 KPI 行：下拉选择指标库中未添加的指标。 */
-function AddStatRow({
-  existingKeys,
-  onAdd,
-}: {
-  existingKeys: (string | undefined)[];
-  onAdd: (metricKey: string) => void;
-}) {
-  const available = CREATOR_METRIC_CATALOG.filter((m) => !existingKeys.includes(m.key));
-  const [value, setValue] = useState('');
-  if (available.length === 0) return null;
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] text-foreground-muted">+ Add metric</span>
-      <select
-        value={value}
-        onChange={(e) => {
-          if (e.target.value) {
-            onAdd(e.target.value);
-            setValue('');
-          }
-        }}
-        className="flex-1 rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs"
-      >
-        <option value="">Select metric…</option>
-        {available.map((m) => (
-          <option key={m.key} value={m.key}>
-            {m.label}（{m.placeholder}）
-          </option>
-        ))}
-      </select>
-    </div>
-  );
 }
