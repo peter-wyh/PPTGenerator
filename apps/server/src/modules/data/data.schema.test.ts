@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   campaignRecordDataSchema,
   creatorRecordDataSchema,
+  collaborationRecordDataSchema,
+  dataSchemaForKind,
   kindSchema,
   createDataSchema,
   importDataSchema,
@@ -96,5 +98,40 @@ describe('data.schema · campaignRecordDataSchema · creatorIds', () => {
   });
   it('无 creatorIds 仍通过(可选)', () => {
     expect(campaignRecordDataSchema.parse(validCampaign)).toEqual(validCampaign);
+  });
+});
+
+describe('data.schema · collaborationRecordDataSchema', () => {
+  const validCollab = {
+    id: 'collab:c1:cr1',
+    campaignId: 'c1',
+    creatorId: 'cr1',
+    deliverables: [
+      { contentType: 'post', screenshots: [{ src: 'a.jpg' }], metrics: [{ label: '播放', value: '1.2M' }] },
+      { contentType: 'reels', wordcloud: [{ text: '种草', weight: 80, sentiment: 'pos' }] },
+    ],
+  };
+  it('合法 collaboration 通过', () => {
+    expect(collaborationRecordDataSchema.parse(validCollab)).toEqual(validCollab);
+  });
+  it('kindSchema 接受 collaboration', () => {
+    expect(kindSchema.parse('collaboration')).toBe('collaboration');
+  });
+  it('dataSchemaForKind(collaboration) 返回 collaboration schema', () => {
+    expect(dataSchemaForKind('collaboration')).toBe(collaborationRecordDataSchema);
+  });
+  it('缺 id / campaignId / creatorId → 报错', () => {
+    const { id, ...noId } = validCollab;
+    expect(() => collaborationRecordDataSchema.parse(noId)).toThrow();
+    expect(() => collaborationRecordDataSchema.parse({ ...validCollab, campaignId: '' })).toThrow();
+    expect(() => collaborationRecordDataSchema.parse({ ...validCollab, creatorId: '' })).toThrow();
+  });
+  it('空 deliverables → 报错', () => {
+    expect(() => collaborationRecordDataSchema.parse({ ...validCollab, deliverables: [] })).toThrow();
+  });
+  it('未知 contentType → 报错', () => {
+    expect(() =>
+      collaborationRecordDataSchema.parse({ ...validCollab, deliverables: [{ contentType: 'bogus' }] }),
+    ).toThrow();
   });
 });
