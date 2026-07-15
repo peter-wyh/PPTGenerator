@@ -284,4 +284,22 @@ describe('KpiRowStyleField', () => {
     const data = useEditorStore.getState().currentComponents()[0].data as KpiBoardData;
     expect(data.valueColors?.[0]).toBe('brand');
   });
+
+  it('全局开关切换 showIcons', () => {
+    const store = useEditorStore.getState();
+    store.addComponent('kpi-board');
+    const id = store.currentComponents()[0].id;
+    store.select(id);
+    render(
+      <MemoryRouter>
+        <PropertyPanel />
+      </MemoryRouter>,
+    );
+    // 默认显示图标（showIcons 缺省 true）
+    const toggle = screen.getByRole('button', { name: '显示图标' });
+    fireEvent.click(toggle);
+    const data = useEditorStore.getState().currentComponents()[0].data as KpiBoardData;
+    expect(data.showIcons).toBe(false);
+    expect(screen.getByRole('button', { name: '已隐藏' })).toBeInTheDocument();
+  });
 });

@@ -29,6 +29,7 @@ import { FieldGroup } from './helpers';
 import { TableCellIconPicker, RichTextField } from './fields';
 import { SHAPE_OPTIONS } from './constants';
 import { KPI_COLOR_OPTIONS, KPI_COLOR_TOKENS } from '../kpiTokens';
+import { defaultIconFor } from '../kpiIcons';
 import { ImageInput } from '@/components/ImageInput';
 
 export function BusinessFields({ comp }: { comp: EditorComponent }) {
@@ -338,6 +339,7 @@ export function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
   const icons = data.icons ?? [];
   const valueColors = data.valueColors ?? [];
   const weight: IconWeight = data.iconWeight ?? 'regular';
+  const showIcons = data.showIcons !== false;
   const [pickingRow, setPickingRow] = useState<number | null>(null);
 
   function ensureLen<T>(arr: T[]): T[] {
@@ -358,10 +360,22 @@ export function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
 
   return (
     <FieldGroup title="卡片样式（每行）">
-      <div className="text-[11px] text-foreground-muted">图标仅在「卡片」变体下显示。</div>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-foreground-muted">图标仅在「卡片」变体下显示；关闭后统一不显示</span>
+        <button
+          type="button"
+          onClick={() => update('showIcons', !showIcons)}
+          className={`rounded border px-2 py-0.5 text-[11px] font-medium ${
+            showIcons ? 'border-foreground-primary text-foreground-primary' : 'border-border-default text-foreground-muted'
+          }`}
+        >
+          {showIcons ? '显示图标' : '已隐藏'}
+        </button>
+      </div>
       {rows.map((r, i) => {
         const iconKey = icons[i] ?? null;
-        const Icon = findIcon(iconKey ?? undefined)?.Comp;
+        const effectiveIcon = iconKey ?? defaultIconFor(r[0] ?? `行${i + 1}`);
+        const Icon = findIcon(effectiveIcon)?.Comp;
         const color = valueColors[i] ?? null;
         const direction: KpiTrendDirection = directions[i] ?? 'positive';
         return (
@@ -372,7 +386,7 @@ export function KpiRowStyleField({ comp }: { comp: EditorComponent }) {
               title={iconKey ? (findIcon(iconKey)?.label ?? '选图标') : '选图标'}
               className="flex h-7 w-7 items-center justify-center rounded border border-border-default hover:bg-surface-hover"
             >
-              {Icon ? <Icon size={16} /> : <span className="text-[10px] text-foreground-muted">+</span>}
+              {Icon ? <Icon size={16} weight={weight} /> : <span className="text-[10px] text-foreground-muted">+</span>}
             </button>
             {iconKey && (
               <button
