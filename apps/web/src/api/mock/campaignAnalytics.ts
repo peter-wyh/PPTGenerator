@@ -9,7 +9,7 @@ import type {
   CampaignWeeklyTrendPoint,
 } from '@mediakit/shared';
 import { getRevenueTimeline, getCampaignSummary } from './affiliate';
-import { getCreatorPerformances, getPlacementTypeSummaries } from './creatorPerformance';
+import { getCreatorPerformances, getPlacementTypeSummaries, rollupCampaignMetrics } from './creatorPerformance';
 
 /* 可调阈值 */
 const LOW_CVR = 2; // % ：低于此且高曝光 → 高流量低转化
@@ -131,15 +131,28 @@ export function getCampaignInsights(campaignId: string): CampaignInsight[] {
 
 /** 组合：每日趋势 + 周趋势 + 新老客 + 洞察。 */
 export function getCampaignAnalytics(campaignId: string): CampaignAnalytics {
+  // 日序列形状来自 affiliate 时间线（weekday/正弦波），但口径归一到 campaign 的 CPS 合并值：
+  // Σrevenue = campaign GMV、Σspend = campaign Spend，使 ROAS 与 KPI 看板（rollupCampaignMetrics）同口径。
   const raw = getRevenueTimeline(campaignId);
-  const trend: CampaignTrendPoint[] = raw.map((p) => ({
-    date: p.date,
-    revenue: p.revenue,
-    spend: p.spend,
-    commission: p.commission,
-    orders: p.orders,
-    roas: p.spend > 0 ? round2(p.revenue / p.spend) : 0,
-  }));
+  const metrics = rollupCampaignMetrics(campaignId);
+  const targetGmv = num(metrics.find((m) => m.label === 'GMV')?.value ?? '0');
+  const targetSpend = num(metrics.find((m) => m.label === 'Spend')?.value ?? '0');
+  const sumRev = raw.reduce((s, p) => s + p.revenue, 0) || 1;
+  const sumSpend = raw.reduce((s, p) => s + p.spend, 0) || 1;
+  const fr = targetGmv / sumRev; // revenue 口径缩放
+  const fs = targetSpend / sumSpend; // spend 口径缩放
+  const trend: CampaignTrendPoint[] = raw.map((p) => {
+    const revenue = Math.round(p.revenue * fr);
+    const spend = Math.round(p.spend * fs);
+    return {
+      date: p.date,
+      revenue,
+      spend,
+      commission: Math.round(p.commission * fr),
+      orders: Math.max(1, Math.round(p.orders * fr)),
+      roas: spend > 0 ? round2(revenue / spend) : 0,
+    };
+  });
   const summary = getCampaignSummary(campaignId);
   return {
     trend,

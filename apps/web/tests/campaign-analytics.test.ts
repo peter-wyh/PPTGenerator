@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { CampaignAnalytics, CampaignInsight } from '@mediakit/shared';
-import { getCreatorPerformances, getPlacementTypeSummaries } from '@/api/mock/creatorPerformance';
+import { getCreatorPerformances, getPlacementTypeSummaries, rollupCampaignMetrics } from '@/api/mock/creatorPerformance';
 import { getCampaignAnalytics, getCampaignInsights, rollupWeekly } from '@/api/mock/campaignAnalytics';
 import { reportCampaignFrom } from '@/api/campaigns';
 import { MOCK_CAMPAIGNS } from '@/api/mock/campaigns';
@@ -93,6 +93,20 @@ describe('getCampaignAnalytics', () => {
   });
   it('确定性：同 id 两次调用 deep-equal', () => {
     expect(getCampaignAnalytics(CID)).toEqual(getCampaignAnalytics(CID));
+  });
+  it('trend 口径与 campaign 指标一致：Σrevenue≈GMV、Σspend≈Spend、period roas≈ROAS', () => {
+    const a = getCampaignAnalytics(CID);
+    const metrics = rollupCampaignMetrics(CID);
+    const n = (s: string) => Number.parseFloat(s.replace(/[^0-9.]/g, '')) || 0;
+    const gmv = n(metrics.find((m) => m.label === 'GMV')!.value);
+    const spend = n(metrics.find((m) => m.label === 'Spend')!.value);
+    const roas = n(metrics.find((m) => m.label === 'ROAS')!.value);
+    const sumRev = a.trend.reduce((s, p) => s + p.revenue, 0);
+    const sumSpend = a.trend.reduce((s, p) => s + p.spend, 0);
+    // Σ 与 campaign 合并指标同口径（日级 round 误差 < 1%）。
+    expect(sumRev / gmv).toBeCloseTo(1, 2);
+    expect(sumSpend / spend).toBeCloseTo(1, 2);
+    expect(sumRev / sumSpend).toBeCloseTo(roas, 1);
   });
 });
 
