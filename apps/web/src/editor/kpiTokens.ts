@@ -12,14 +12,15 @@ export const KPI_COLOR_TOKENS: Record<KpiColorToken, { fg: string; softBg: strin
   warning: { fg: 'var(--yellow)', softBg: 'color-mix(in srgb, var(--yellow) 12%, transparent)' },
   danger: { fg: 'var(--red)', softBg: 'color-mix(in srgb, var(--red) 12%, transparent)' },
   info: { fg: 'var(--blue)', softBg: 'color-mix(in srgb, var(--blue) 12%, transparent)' },
+  black: { fg: '#000000', softBg: 'color-mix(in srgb, #000000 12%, transparent)' },
+  white: { fg: '#fff', softBg: 'color-mix(in srgb, #fff 12%, transparent)' },
+  brand: { fg: 'var(--color-primary)', softBg: 'color-mix(in srgb, var(--color-primary) 12%, transparent)' },
 };
 
 export const KPI_COLOR_OPTIONS: { token: KpiColorToken; label: string }[] = [
-  { token: 'primary', label: '默认' },
-  { token: 'success', label: '绿' },
-  { token: 'warning', label: '橙' },
-  { token: 'danger', label: '红' },
-  { token: 'info', label: '蓝' },
+  { token: 'black', label: '黑色' },
+  { token: 'white', label: '白色' },
+  { token: 'brand', label: '品牌色' },
 ];
 
 export function resolveKpiColor(token?: KpiColorToken | null) {

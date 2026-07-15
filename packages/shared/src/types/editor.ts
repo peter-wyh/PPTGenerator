@@ -553,7 +553,9 @@ export interface PackageCardData {
  * 约定列顺序 [指标, 数值, 对比]；对比为 "+15%"/"-2%" 文本，渲染层按首字符上色。
  */
 export type KpiBoardVariant = 'grid' | 'row' | 'compact' | 'card' | 'gradient' | 'minimal' | 'flat';
-export type KpiColorToken = 'primary' | 'success' | 'warning' | 'danger' | 'info';
+export type KpiColorToken =
+  | 'primary' | 'success' | 'warning' | 'danger' | 'info'
+  | 'black' | 'white' | 'brand';
 /** 环比方向：positive=升为好（默认） / inverse=降为好（CPA/CPC/退款率等逆向指标）。 */
 export type KpiTrendDirection = 'positive' | 'inverse';
 
