@@ -315,7 +315,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
           ['Impressions', '4.2M', '+6%'],
         ],
         icons: ['currency', 'currency', 'target', 'eye', 'cart', 'percent', 'currency', 'currency', 'eye'],
-        valueColors: ['success', 'success', 'info', 'warning', 'success', 'info', 'primary', 'warning', 'info'],
+        valueColors: [null, null, null, null, null, null, null, null, null],
         compareLabel: 'vs last period',
       };
     case 'meta-strip':
