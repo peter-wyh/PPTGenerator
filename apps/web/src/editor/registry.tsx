@@ -60,6 +60,7 @@ import {
   ReportWorkScreenshotImporter,
   ReportWorkMetricsImporter,
   ReportCommentWordcloudImporter,
+  ReportWorkAudienceImporter,
   ChartImportButton,
   KpiBoardImporter,
   CampaignReportImporter,
@@ -650,6 +651,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: CreatorWorkMetrics,
     defaultSize: DEFAULT_SIZES['creator-work-metrics'],
     defaultData: () => getDefaultData('creator-work-metrics'),
+    dataSource: { modes: ['manual', 'project'], projectImporter: ReportWorkAudienceImporter },
     variants: [
       { id: 'grid', label: '网格' },
       { id: 'strip', label: '横向条' },

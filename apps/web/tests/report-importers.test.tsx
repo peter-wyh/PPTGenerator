@@ -6,7 +6,11 @@ import { collaborationId } from '@mediakit/shared';
 
 vi.mock('@/api/collaborations', () => ({ getCollaboration: vi.fn() }));
 import { getCollaboration } from '@/api/collaborations';
-import { ReportWorkMetricsImporter, ReportCommentWordcloudImporter } from '@/editor/property-panel/importers';
+import {
+  ReportWorkMetricsImporter,
+  ReportCommentWordcloudImporter,
+  ReportWorkAudienceImporter,
+} from '@/editor/property-panel/importers';
 
 const emptyProject = {
   id: 'p',
@@ -74,5 +78,31 @@ describe('ReportCommentWordcloudImporter', () => {
       words: { text: string; weight: number; sentiment: string }[];
     };
     expect(data.words).toEqual([{ text: '种草', weight: 80, sentiment: 'pos' }]);
+  });
+});
+
+describe('ReportWorkAudienceImporter', () => {
+  it('imports chosen deliverable audience into comp.data.audience', async () => {
+    const store = useEditorStore.getState();
+    store.setReportData({
+      campaign: { id: 'camp-1', name: 'C' } as never,
+      creators: [{ id: 'cre-1', name: 'Mia' } as never],
+    });
+    store.addComponent('creator-work-metrics');
+    const comp = store.currentComponents()[0];
+    const audCollab: CollaborationData = {
+      id: collaborationId('camp-1', 'cre-1'),
+      campaignId: 'camp-1',
+      creatorId: 'cre-1',
+      deliverables: [{ contentType: 'post', audience: { genderSplit: [{ label: '女', value: 70 }] } }],
+    };
+    vi.mocked(getCollaboration).mockResolvedValueOnce(audCollab);
+    render(<ReportWorkAudienceImporter comp={comp} />);
+    await waitFor(() => expect(screen.getByText('导入画像')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('导入画像'));
+    const data = useEditorStore.getState().currentComponents()[0].data as {
+      audience: { genderSplit: { label: string; value: number }[] };
+    };
+    expect(data.audience.genderSplit).toEqual([{ label: '女', value: 70 }]);
   });
 });

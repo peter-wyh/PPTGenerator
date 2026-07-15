@@ -986,3 +986,18 @@ export function ReportCommentWordcloudImporter({ comp }: { comp: EditorComponent
     />
   );
 }
+
+/** creator-work-metrics：从达人合作 deliverable 一键导入受众画像（一次性拷贝）。 */
+export function ReportWorkAudienceImporter({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  return (
+    <DeliverablePicker
+      pickLabel="导入画像"
+      onPick={(d) => {
+        updateComponentData(comp.id, { audience: d.audience });
+        commit();
+      }}
+    />
+  );
+}
