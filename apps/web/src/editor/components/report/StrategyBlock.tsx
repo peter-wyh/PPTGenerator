@@ -105,13 +105,13 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
         const content = r[2] ?? '';
         const Icon = findIcon(iconKey)?.Comp;
         return (
-          <div key={i} className="flex flex-col gap-1 skin-card skin-pad-sm">
-            <div className="flex items-center gap-1.5">
+          <div key={i} className="flex flex-col skin-card skin-pad-sm">
+            <div className="flex items-center gap-1.5 py-2">
               {Icon && <Icon size={16} className="text-primary" />}
               <span className="text-sm font-bold uppercase tracking-wide text-foreground-primary">{title}</span>
             </div>
             <div
-              className="text-sm leading-relaxed text-foreground-secondary [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2.5 [&_p:last-child]:mb-0"
+              className="border-t border-border-subtle pt-3 text-sm leading-relaxed text-foreground-secondary [&_ol]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:my-1.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2.5 [&_p:last-child]:mb-0"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(content) }}
             />
           </div>

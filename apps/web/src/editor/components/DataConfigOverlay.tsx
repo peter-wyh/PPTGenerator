@@ -33,6 +33,8 @@ export function DataConfigOverlay({ onClose }: Props) {
 
   // 项目业务线（只读；用于过滤 campaign 下拉）。存量项目无业务线 → 显示全部。
   const projectBusinessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+  // 项目创建时绑定的上游 campaign（从 projectMeta.campaignId 读取）。
+  const projectIdCampaign = useEditorStore((s) => s.projectMeta?.campaignId);
 
   function handleSave() {
     commitReportData(reportData);
@@ -60,12 +62,36 @@ export function DataConfigOverlay({ onClose }: Props) {
     setCampaigns(null);
     setCampaignFailed(false);
     listCampaigns()
-      .then((list) => alive && setCampaigns(list))
+      .then((list) => {
+        if (!alive) return;
+        setCampaigns(list);
+        // 自动回显：reportData.campaign 为空但项目绑定了 campaign → 自动选中并加载达人。
+        const hasReport = !!useEditorStore.getState().reportData.campaign;
+        const targetId = projectIdCampaign;
+        if (!hasReport && targetId) {
+          const c = list.find((x) => x.id === targetId);
+          if (c) {
+            const rc: ReportCampaign = {
+              id: c.id,
+              name: c.name,
+              advertiser: c.advertiser,
+              platform: c.platform,
+              platforms: c.platforms,
+              startDate: c.startDate,
+              endDate: c.endDate,
+              budget: c.budget,
+              status: c.status,
+              metrics: c.metrics,
+            };
+            setLocalReportData((prev) => ({ ...prev, campaign: rc }));
+          }
+        }
+      })
       .catch(() => alive && setCampaignFailed(true));
     return () => {
       alive = false;
     };
-  }, []);
+  }, [projectIdCampaign]);
 
   // ---- Campaign 达人列表（随 campaign 切换动态加载）----
   const [campaignCreators, setCampaignCreators] = useState<Creator[] | null>(null);
@@ -82,7 +108,27 @@ export function DataConfigOverlay({ onClose }: Props) {
     setCcFailed(false);
     setCampaignCreators(null);
     listCampaignCreators(selectedCampaignId)
-      .then((list) => alive && setCampaignCreators(list))
+      .then((list) => {
+        if (!alive) return;
+        setCampaignCreators(list);
+        // 自动回显：如果 reportData.campaignCreators 为空（首次打开），自动全选该 campaign 的合作达人。
+        const existing = useEditorStore.getState().reportData.campaignCreators;
+        if ((!existing || existing.length === 0) && list.length > 0) {
+          const autoSelected: ReportCreator[] = list.map((c) => ({
+            id: c.id,
+            name: c.name,
+            handle: c.handle,
+            platform: c.platform,
+            tier: c.tier,
+            followers: c.followers,
+            engagement: c.engagement,
+            category: c.category,
+            region: c.region,
+            stats: buildDefaultStats(c),
+          }));
+          setLocalReportData((prev) => ({ ...prev, campaignCreators: autoSelected }));
+        }
+      })
       .catch(() => alive && setCcFailed(true))
       .finally(() => alive && setCcLoading(false));
     return () => {
