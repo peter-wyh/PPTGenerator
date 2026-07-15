@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useEditorStore } from '@/editor/store';
-import type { CollaborationData } from '@mediakit/shared';
+import type { CollaborationData, CollaborationDeliverable } from '@mediakit/shared';
 import { collaborationId } from '@mediakit/shared';
 
 vi.mock('@/api/collaborations', () => ({ getCollaboration: vi.fn() }));
@@ -10,6 +10,7 @@ import {
   ReportWorkMetricsImporter,
   ReportCommentWordcloudImporter,
   ReportWorkAudienceImporter,
+  buildWorksTable,
 } from '@/editor/property-panel/importers';
 
 const emptyProject = {
@@ -104,5 +105,39 @@ describe('ReportWorkAudienceImporter', () => {
       audience: { genderSplit: { label: string; value: number }[] };
     };
     expect(data.audience.genderSplit).toEqual([{ label: '女', value: 70 }]);
+  });
+});
+
+describe('buildWorksTable', () => {
+  const deliverables: CollaborationDeliverable[] = [
+    {
+      contentType: 'post',
+      screenshots: [{ src: 'p.jpg' }],
+      metrics: [{ label: '曝光', value: '1.2M' }, { label: '点赞', value: '86K' }],
+      audience: { genderSplit: [{ label: '女', value: 70 }] },
+    },
+    {
+      contentType: 'reels',
+      screenshots: [{ src: 'r.jpg' }],
+      metrics: [{ label: '曝光', value: '500K' }],
+      audience: { genderSplit: [{ label: '男', value: 60 }] },
+    },
+  ];
+  it('headers = 封面/类型 + 首个 deliverable 的 metric labels', () => {
+    expect(buildWorksTable(deliverables).headers).toEqual(['封面', '类型', '曝光', '点赞']);
+  });
+  it('rows 每行 = 封面/类型/metric值（按 label，缺失→空），与 deliverables 同序同长', () => {
+    const { rows } = buildWorksTable(deliverables);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual(['p.jpg', 'post', '1.2M', '86K']);
+    expect(rows[1]).toEqual(['r.jpg', 'reels', '500K', '']);
+  });
+  it('insights 与 deliverables 同序同长，对齐 audience', () => {
+    const { insights } = buildWorksTable(deliverables);
+    expect(insights).toHaveLength(2);
+    expect(insights[0]).toEqual({ genderSplit: [{ label: '女', value: 70 }] });
+  });
+  it('无 audience 的 deliverable → insights[i] = {}', () => {
+    expect(buildWorksTable([{ contentType: 'post' }]).insights[0]).toEqual({});
   });
 });

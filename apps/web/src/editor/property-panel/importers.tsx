@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type {
+  CollaborationDeliverable,
   CreatorAvatarCardData,
   EditorComponent,
+  WorkAudienceInsight,
 } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
 import { campaignCreatorWorks, listPlacementTypeSummary, type CreatorWithWorks } from '@/api/creatorPerformance';
@@ -477,6 +479,22 @@ export function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
       </div>
     </FieldGroup>
   );
+}
+
+/** 把一个达人的 deliverables 组装成对齐的 headers/rows/insights（每行一个作品类型）。 */
+export function buildWorksTable(deliverables: CollaborationDeliverable[]): {
+  headers: string[];
+  rows: string[][];
+  insights: WorkAudienceInsight[];
+} {
+  const metricLabels = (deliverables[0]?.metrics ?? []).map((m) => m.label);
+  const headers = ['封面', '类型', ...metricLabels];
+  const rows = deliverables.map((d) => {
+    const byLabel = new Map((d.metrics ?? []).map((m) => [m.label, m.value]));
+    return [d.screenshots?.[0]?.src ?? '', d.contentType, ...metricLabels.map((l) => byLabel.get(l) ?? '')];
+  });
+  const insights = deliverables.map((d) => d.audience ?? {});
+  return { headers, rows, insights };
 }
 
 /**
