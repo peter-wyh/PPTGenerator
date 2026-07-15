@@ -49,6 +49,8 @@ export interface Campaign {
   owner?: string;
   /** 投放表现指标（供业绩看板「从 Campaign 导入」）。 */
   metrics?: CampaignMetric[];
+  /** Campaign 分析包（趋势 / 新老客 / 洞察）。 */
+  analytics?: CampaignAnalytics;
   /** 参与 campaign 合作的达人 id 列表（数据管理库 Creator 记录 id;下钻解析用）。 */
   creatorIds?: string[];
 }
@@ -96,6 +98,8 @@ export interface ReportCampaign {
   budget?: string;
   status?: string;
   metrics?: CampaignMetric[];
+  /** Campaign 分析包（趋势 / 新老客 / 洞察）。 */
+  analytics?: CampaignAnalytics;
 }
 
 /**
@@ -508,4 +512,54 @@ export interface Product {
   spend?: string;
   /** 状态。 */
   status?: 'active' | 'paused' | 'sold-out';
+}
+
+/* ------------------------------ Campaign 分析数据 ------------------------------ */
+
+/** Campaign 大盘每日趋势（GMV + spend → ROAS）。 */
+export interface CampaignTrendPoint {
+  date: string;
+  revenue: number;
+  spend: number;
+  commission: number;
+  orders: number;
+  roas: number;
+}
+
+/** 每周 rollup 趋势点。 */
+export interface CampaignWeeklyTrendPoint {
+  week: string;
+  start: string;
+  revenue: number;
+  spend: number;
+  orders: number;
+  roas: number;
+}
+
+export type InsightKind =
+  | 'high-traffic-low-cvr'
+  | 'scale-opportunity'
+  | 'best-placement'
+  | 'best-creator'
+  | 'roas-warning';
+export type InsightSeverity = 'good' | 'warn' | 'opportunity';
+export type InsightSubject = 'campaign' | 'creator' | 'placement';
+
+export interface CampaignInsight {
+  kind: InsightKind;
+  severity: InsightSeverity;
+  subjectType: InsightSubject;
+  subjectId?: string;
+  subjectName: string;
+  metrics: { label: string; value: string }[];
+  rationale: string;
+  action: string;
+}
+
+/** Campaign 分析包（趋势 + 新老客 + 洞察）。 */
+export interface CampaignAnalytics {
+  trend: CampaignTrendPoint[];
+  weeklyTrend: CampaignWeeklyTrendPoint[];
+  customerSplit?: { newCustomers: number; returningCustomers: number; newCustomerRate: string };
+  insights: CampaignInsight[];
 }
