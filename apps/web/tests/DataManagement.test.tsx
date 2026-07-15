@@ -141,20 +141,30 @@ describe('DataManagement · Campaign drill-down', () => {
     perfMock.mockResolvedValue([]);
   });
 
-  it('展开 campaign 行 → 调 listCampaignCollaborators 并渲染合作达人', async () => {
+  it('点「查看达人」打开浮窗 → 调 listCampaignCollaborators 并渲染合作达人', async () => {
     collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
     renderPage();
     await screen.findByText('Campaign X');
-    await userEvent.click(screen.getByRole('button', { name: /Campaign X/ }));
+    await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
     await waitFor(() => expect(collaboratorsMock).toHaveBeenCalledWith('camp-x'));
     expect(await screen.findByText('@mia')).toBeInTheDocument();
+  });
+
+  it('查看达人浮窗:✕ 关闭后达人子表消失', async () => {
+    collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
+    renderPage();
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
+    expect(await screen.findByText('@mia')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '关闭' }));
+    await waitFor(() => expect(screen.queryByText('@mia')).not.toBeInTheDocument());
   });
 
   it('管理合作达人:勾选 + 保存 → dataApi.update 带 creatorIds(整记录重写)', async () => {
     listCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
     renderPage();
     await screen.findByText('Campaign X');
-    await userEvent.click(screen.getByRole('button', { name: /Campaign X/ }));
+    await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
     await screen.findByText('管理合作达人');
     await userEvent.click(screen.getByText('管理合作达人'));
     await userEvent.click(screen.getByLabelText(/Mia/));

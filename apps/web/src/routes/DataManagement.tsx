@@ -203,7 +203,7 @@ function CampaignList({
   onEdit: (r: DataRecordDTO) => void;
   onDelete: (id: string) => void;
 }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [drawerRecord, setDrawerRecord] = useState<DataRecordDTO<Campaign> | null>(null);
   if (loading) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
@@ -212,27 +212,22 @@ function CampaignList({
   }
   const heads = ['Campaign', 'Advertiser', 'Business Line', 'Platform', 'Period', 'Budget', 'Status', 'Owner', ''];
   return (
-    <div className="overflow-auto rounded-lg border border-border-default">
-      <table className="w-full min-w-[760px] border-collapse text-sm">
-        <thead>
-          <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
-            {heads.map((h, i) => (
-              <th key={i} className={`px-3 py-2 font-medium ${i === 0 ? '' : 'whitespace-nowrap'}`}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {records.map((r) => {
-            const d = r.data;
-            const open = expandedId === r.id;
-            return (
-              <Fragment key={r.id}>
-                <tr className="border-t border-border-subtle hover:bg-surface-hover/50">
-                  <td className="px-3 py-2 font-medium text-foreground-primary">
-                    <button className="text-left hover:underline" onClick={() => setExpandedId(open ? null : r.id)}>
-                      <span aria-hidden>{open ? '▾' : '▸'}</span> <span>{d.name}</span>
-                    </button>
-                  </td>
+    <>
+      <div className="overflow-auto rounded-lg border border-border-default">
+        <table className="w-full min-w-[760px] border-collapse text-sm">
+          <thead>
+            <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
+              {heads.map((h, i) => (
+                <th key={i} className={`px-3 py-2 font-medium ${i === 0 ? '' : 'whitespace-nowrap'}`}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((r) => {
+              const d = r.data;
+              return (
+                <tr key={r.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
+                  <td className="px-3 py-2 font-medium text-foreground-primary">{d.name}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.advertiser}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.businessLine}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.platform}</td>
@@ -242,23 +237,61 @@ function CampaignList({
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.ownerId}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
+                      <button onClick={() => setDrawerRecord(r)} className="text-xs text-accent-primary hover:underline">查看达人</button>
                       <button onClick={() => onEdit(r)} className="text-xs text-accent-primary hover:underline">编辑</button>
                       <button onClick={() => onDelete(r.id)} className="text-xs text-red hover:underline">删除</button>
                     </div>
                   </td>
                 </tr>
-                {open && (
-                  <tr>
-                    <td colSpan={heads.length} className="bg-surface-secondary px-4 py-3">
-                      <CollaboratorPanel record={r} />
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <CollaboratorDrawer record={drawerRecord} onClose={() => setDrawerRecord(null)} />
+    </>
+  );
+}
+
+/** 右侧滑出浮窗:承载达人合作详情(合作达人子表 + 管理)。浏览器右侧大浮窗,Esc/✕/点遮罩关闭。 */
+function CollaboratorDrawer({ record, onClose }: { record: DataRecordDTO<Campaign> | null; onClose: () => void }) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!record) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCloseRef.current();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [record]);
+  if (!record) return null;
+  return (
+    <div className="fixed inset-0 z-50 animate-fadeIn bg-black/40" onClick={onClose} role="presentation">
+      <aside
+        className="absolute right-0 top-0 flex h-full w-[640px] max-w-[92vw] animate-slideInRight flex-col bg-surface-primary shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="达人合作详情"
+      >
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
+          <div className="min-w-0">
+            <div className="font-headings text-sm font-semibold text-foreground-primary">达人合作详情</div>
+            <div className="truncate text-xs text-foreground-muted">{record.data.name}</div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="关闭"
+            className="ml-3 shrink-0 rounded p-1 text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
+          <CollaboratorPanel record={record} />
+        </div>
+      </aside>
     </div>
   );
 }
@@ -398,7 +431,7 @@ function ManageCollaboratorsModal({
     }
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
         className="flex max-h-[80vh] w-[480px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
