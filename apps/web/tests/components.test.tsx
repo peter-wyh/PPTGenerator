@@ -26,6 +26,7 @@ import {
   PieChartComponent,
   TableComponent,
   TextComponent,
+  TitleBlock,
 } from '@/editor/components/BasicComponents';
 
 describe('basic components render', () => {
@@ -125,5 +126,45 @@ describe('IndicatorCardComponent variants', () => {
       <IndicatorCardComponent data={{ ...base, variant: 'icon-bg' }} />
     );
     expect(container.querySelector('svg')).toBeTruthy();
+  });
+});
+
+describe('TitleBlock underline variant (色块下划线)', () => {
+  const base = { variant: 'underline' as const, text: '章节标题', subtitle: '副标题' };
+
+  // underline 变体里只有色块条带 inline backgroundColor；借此选中它。
+  const underlineBar = (container: HTMLElement) =>
+    container.querySelector('[style*="background-color"]') as HTMLElement;
+
+  it('色块条带为 20% 宽、6px 高、大圆角胶囊', () => {
+    const { container } = render(<TitleBlock data={base} />);
+    const bar = underlineBar(container);
+    expect(bar).toBeTruthy();
+    expect(bar.className).toContain('w-1/5');
+    expect(bar.className).toContain('h-1.5');
+    expect(bar.className).toContain('rounded-full');
+  });
+
+  it('色块条带与标题重叠且底对齐', () => {
+    const { container } = render(<TitleBlock data={base} />);
+    const bar = underlineBar(container);
+    // 绝对定位贴标题底部 → 底对齐，并落在文字之后实现重叠
+    expect(bar.className).toContain('absolute');
+    expect(bar.className).toContain('bottom-0');
+  });
+
+  it('颜色缺省为品牌色', () => {
+    const { container } = render(<TitleBlock data={base} />);
+    expect(underlineBar(container).style.backgroundColor).toBe('var(--color-primary)');
+  });
+
+  it('underlineColor=brand 显式品牌色', () => {
+    const { container } = render(<TitleBlock data={{ ...base, underlineColor: 'brand' }} />);
+    expect(underlineBar(container).style.backgroundColor).toBe('var(--color-primary)');
+  });
+
+  it('underlineColor=black 渲染为纯黑', () => {
+    const { container } = render(<TitleBlock data={{ ...base, underlineColor: 'black' }} />);
+    expect(underlineBar(container).style.backgroundColor).toBe('rgb(0, 0, 0)');
   });
 });

@@ -153,8 +153,10 @@ export interface TitleBlockData {
   subtitle?: string;
   /** 序号（numbered 样式用，如 "01"） */
   index?: string;
-  /** 主色（bar/underline/gradient/numbered 用） */
+  /** 主色（bar/gradient/numbered 用） */
   color?: string;
+  /** 下划线颜色（underline 样式）：品牌色 / 黑色；缺省品牌色 */
+  underlineColor?: 'brand' | 'black';
   /** 是否显示底部分割线 */
   divider?: boolean;
 }

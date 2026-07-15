@@ -465,6 +465,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
         text: '章节标题',
         subtitle: '副标题（可选）',
         color: 'auto',
+        underlineColor: 'brand',
         divider: true,
       };
     case 'campaign-analysis':

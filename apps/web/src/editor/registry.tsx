@@ -629,6 +629,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'subtitle', label: '副标题', kind: 'text' },
       { key: 'index', label: '序号', kind: 'text' },
       { key: 'color', label: '主色', kind: 'color' },
+      { key: 'underlineColor', label: '下划线颜色', kind: 'select', options: [{ value: 'brand', label: '品牌色' }, { value: 'black', label: '黑色' }] },
       { key: 'divider', label: '底部分割线', kind: 'select', options: [{ value: 'true', label: '显示' }, { value: 'false', label: '隐藏' }] },
     ],
   },

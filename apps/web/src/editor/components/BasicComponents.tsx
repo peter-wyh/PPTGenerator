@@ -441,8 +441,14 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
     case 'underline':
       inner = (
         <div className="min-w-0">
-          <div className="text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
-          <div className="mt-1.5 h-0.5 w-full rounded-full" style={{ backgroundColor: color }} />
+          <div className="relative">
+            {/* 色块条带：绝对定位贴标题底部 → 与标题底对齐并落在文字之后（重叠） */}
+            <div
+              className="absolute bottom-0 left-0 h-1.5 w-1/5 rounded-full"
+              style={{ backgroundColor: data.underlineColor === 'black' ? '#000000' : 'var(--color-primary)' }}
+            />
+            <div className="relative text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
+          </div>
           {subtitle && <div className="mt-1.5 text-sm text-foreground-muted">{subtitle}</div>}
         </div>
       );
