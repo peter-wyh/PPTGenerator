@@ -543,14 +543,22 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
       break;
 
     case 'block-underline':
-      // 色块下划线:粗体标题 + 贴文字宽度 60% 的粗彩色块(标记笔质感,无背景)。
-      // inline-block 让色块百分比基准=标题文字宽;h-2 比 underline/accent-underline 的细线明显更粗。
-      // 色块颜色跟随标题颜色（titleFg），不再使用独立 color 字段。
+      // 色块下划线:粗体标题 + 贴文字宽度 30% 的粗彩色块(标记笔质感),与标题字形底部重叠。
+      // leading-none 剔除字体行高 → 盒子贴合字形;色块 absolute bottom-0 落在字形底部、文字之后(标题 relative 盖在其上)实现重叠。
+      // inline-block 让色块百分比基准=标题文字宽;色块颜色=下划线颜色(underlineColor,缺省品牌色),与标题文字色(titleColor)解耦。
       inner = (
         <div className="min-w-0">
-          <div className="inline-block">
-            <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
-            <div className="mt-1 h-2 w-[60%] rounded-sm" style={{ backgroundColor: titleFg }} />
+          <div className="relative inline-block leading-none">
+            <div
+              className="absolute bottom-0 left-0 h-2 w-[30%] rounded-md"
+              style={{ backgroundColor: data.underlineColor === 'black' ? '#000000' : 'var(--color-primary)' }}
+            />
+            <div
+              className="relative text-foreground-primary"
+              style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}
+            >
+              {text}
+            </div>
           </div>
           {subtitle && <div className="mt-1 text-sm text-foreground-muted">{subtitle}</div>}
         </div>

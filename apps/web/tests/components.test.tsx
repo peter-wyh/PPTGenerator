@@ -170,28 +170,54 @@ describe('TitleBlock underline variant (色块下划线)', () => {
 });
 
 describe('title-block block-underline variant', () => {
-  it('色块颜色跟随标题颜色（默认黑色），宽≈标题文字 60%，粗标记笔质感', () => {
+  it('色块跟随下划线颜色（缺省品牌色）、宽≈标题文字 30%、粗标记笔、圆角 6px', () => {
     const { container } = render(
       <TitleBlock data={{ variant: 'block-underline', text: '区域销售' } as any} />,
     );
     expect(screen.getByText('区域销售')).toBeInTheDocument();
-    // 色块颜色 = titleFg（默认 #000000 → rgb(0, 0, 0)）
+    // 色块颜色 = underlineColor（缺省 'brand' → var(--color-primary)）
+    const bars = Array.from(container.querySelectorAll('div')).filter(
+      (d) => (d as HTMLElement).style.backgroundColor === 'var(--color-primary)',
+    );
+    expect(bars).toHaveLength(1); // 仅一条色块
+    expect(bars[0].className).toContain('w-[30%]'); // 宽≈标题文字 30%
+    expect(bars[0].className).toContain('h-2'); // 粗(标记笔质感)
+    expect(bars[0].className).toContain('rounded-md'); // 圆角 6px
+  });
+
+  it('色块与标题字形底部重叠（剔除字体行高）', () => {
+    const { container } = render(
+      <TitleBlock data={{ variant: 'block-underline', text: '区域销售' } as any} />,
+    );
+    const bar = Array.from(container.querySelectorAll('div')).find(
+      (d) => (d as HTMLElement).style.backgroundColor === 'var(--color-primary)',
+    ) as HTMLElement;
+    expect(bar).toBeTruthy();
+    // 绝对定位贴字形底部 + 标题容器 leading-none 剔除行高 → 色块落在实际字形上(重叠)
+    expect(bar.className).toContain('absolute');
+    expect(bar.className).toContain('bottom-0');
+    expect(bar.parentElement?.className).toContain('leading-none');
+  });
+
+  it('underlineColor=black 时色块为黑色（下划线颜色生效）', () => {
+    const { container } = render(
+      <TitleBlock data={{ variant: 'block-underline', text: '区域销售', underlineColor: 'black' } as any} />,
+    );
     const bars = Array.from(container.querySelectorAll('div')).filter(
       (d) => (d as HTMLElement).style.backgroundColor === 'rgb(0, 0, 0)',
     );
-    expect(bars).toHaveLength(1); // 仅一条色块
-    expect(bars[0].className).toContain('w-[60%]'); // 宽≈标题文字 60%
-    expect(bars[0].className).toContain('h-2'); // 粗(标记笔质感)
+    expect(bars).toHaveLength(1);
   });
-  it('titleColor=brand 时色块也跟随品牌色', () => {
+
+  it('色块与标题文字色解耦：titleColor=brand + underlineColor=black → 文字品牌、色块黑色', () => {
     const { container } = render(
-      <TitleBlock data={{ variant: 'block-underline', text: '区域销售', titleColor: 'brand' } as any} />,
+      <TitleBlock
+        data={{ variant: 'block-underline', text: '区域销售', titleColor: 'brand', underlineColor: 'black' } as any}
+      />,
     );
-    // 标题和色块都使用 var(--color-primary)
-    const titleEl = screen.getByText('区域销售');
-    expect((titleEl as HTMLElement).style.color).toBe('var(--color-primary)');
+    expect((screen.getByText('区域销售') as HTMLElement).style.color).toBe('var(--color-primary)'); // 文字品牌色
     const bars = Array.from(container.querySelectorAll('div')).filter(
-      (d) => (d as HTMLElement).style.backgroundColor === 'var(--color-primary)',
+      (d) => (d as HTMLElement).style.backgroundColor === 'rgb(0, 0, 0)', // 色块黑色(独立于文字)
     );
     expect(bars).toHaveLength(1);
   });
