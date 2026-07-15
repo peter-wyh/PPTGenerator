@@ -35,9 +35,10 @@ const SKIN_PRESET_OPTIONS: { value: SkinPreset; label: string }[] = [
   { value: 'elevated', label: '浮起' },
 ];
 
-const PRESET_PRIMARIES = [
-  '#ff5c00', '#2563eb', '#16a34a', '#9333ea', '#e11d48', '#0891b2', '#ca8a04', '#0a0a0a',
-];
+/** 从全局 STYLE_PRESETS 动态提取品牌色色板（去重）。 */
+const PRESET_PRIMARIES = Array.from(
+  new Set(STYLE_PRESETS.map((p) => p.theme.color.primary)),
+);
 
 /** 报告设置浮层：整体风格（预设 + 配色 + 字体 + 密度 + 圆角）+ 解析参考图占位。 */
 export function ReportSettingsOverlay({ onClose }: Props) {

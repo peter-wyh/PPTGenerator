@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorStore, type ResizeDir } from './store';
 import type { EditorComponent } from '@mediakit/shared';
 import { CanvasComponent } from './components/CanvasComponent';
@@ -165,7 +165,7 @@ export function Canvas() {
   }, []);
 
   /* ------------------------------ 交互入口 ----------------------------- */
-  function handleComponentMouseDown(e: React.MouseEvent, comp: EditorComponent) {
+  const handleComponentMouseDown = useCallback(function handleComponentMouseDown(e: React.MouseEvent, comp: EditorComponent) {
     if (e.button !== 0) return;
     const st = useEditorStore.getState();
     // 未选中且非 shift → 单选该组件；否则保留多选。
@@ -183,9 +183,9 @@ export function Canvas() {
     dragRef.current = { kind: 'move', mouseX: e.clientX, mouseY: e.clientY, comps };
     e.preventDefault();
     e.stopPropagation();
-  }
+  }, []);
 
-  function handleResizeStart(e: React.MouseEvent, comp: EditorComponent, dir: ResizeDir) {
+  const handleResizeStart = useCallback(function handleResizeStart(e: React.MouseEvent, comp: EditorComponent, dir: ResizeDir) {
     const st = useEditorStore.getState();
     st.select(comp.id);
     dragRef.current = {
@@ -196,26 +196,26 @@ export function Canvas() {
       id: comp.id,
       dir,
     };
-  }
+  }, []);
 
-  function handleContextMenu(e: React.MouseEvent, comp: EditorComponent) {
+  const handleContextMenu = useCallback(function handleContextMenu(e: React.MouseEvent, comp: EditorComponent) {
     e.preventDefault();
     e.stopPropagation();
     useEditorStore.getState().select(comp.id);
     setMenu({ x: e.clientX, y: e.clientY, compId: comp.id });
-  }
+  }, []);
 
-  function handleHoverCopy(comp: EditorComponent) {
+  const handleHoverCopy = useCallback(function handleHoverCopy(comp: EditorComponent) {
     const st = useEditorStore.getState();
     st.select(comp.id);
     st.duplicateSelected();
-  }
+  }, []);
 
-  function handleHoverDelete(comp: EditorComponent) {
+  const handleHoverDelete = useCallback(function handleHoverDelete(comp: EditorComponent) {
     const st = useEditorStore.getState();
     st.select(comp.id);
     st.deleteSelected();
-  }
+  }, []);
 
   const menuItems: (MenuItem | 'separator')[] = menu
     ? (() => {

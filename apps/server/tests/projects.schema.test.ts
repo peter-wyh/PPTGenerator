@@ -143,3 +143,21 @@ describe('projectMetaSchema — templateType / isDefault', () => {
     expect((out.meta as { isDefault?: boolean })?.isDefault).toBeUndefined();
   });
 });
+
+describe('projectThemeSchema skinPreset', () => {
+  it('合法 skinPreset 值通过校验', () => {
+    const r = createProjectSchema.safeParse({
+      name: 't',
+      meta: { theme: { skinPreset: 'flat', color: { primary: '#FF5C00' } } },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('非法 skinPreset 值被拒绝', () => {
+    const r = createProjectSchema.safeParse({
+      name: 't',
+      meta: { theme: { skinPreset: 'bogus' } },
+    });
+    expect(r.success).toBe(false);
+  });
+});

@@ -108,7 +108,10 @@ export interface PropertyField {
 }
 
 export interface BlockDef {
-  Component: FC<{ data: any }>;
+  // 异构 registry 边界：每个组件有各自的 data 类型（TextData / BarChartData …），
+  // registry 需统一存储。此处 any 是刻意为之——同 TypeScript 中 Map<string, FC> 的标准做法。
+  // 实际类型安全由各组件函数签名保证，ComponentRenderer 仅做分发。
+  Component: FC<{ data: any }>; // eslint-disable-next-line @typescript-eslint/no-explicit-any
   defaultSize: { w: number; h: number };
   defaultData: () => unknown;
   propertySchema: PropertyField[];

@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx';
+// xlsx (SheetJS) 库体积大（~400KB），仅在解析 .xlsx/.xls 时动态加载。
+// 顶层不再 import xlsx，改为 parseExcel 内部 dynamic import，Vite 会自动 code-split。
 
 /** 解析后的单个 sheet（无 id，仅供导入映射弹框临时使用）。 */
 export interface ParsedSheet {
@@ -62,8 +63,9 @@ export function parseCSV(text: string, name = 'CSV'): ParsedSheet {
   return fromMatrix(name, rows.map((r) => r.map((c) => c.trim())));
 }
 
-/** 解析 Excel ArrayBuffer，返回所有 sheet。 */
-export function parseExcel(buffer: ArrayBuffer, _name = 'Excel'): ParsedSheet[] {
+/** 解析 Excel ArrayBuffer，返回所有 sheet。xlsx 库按需动态导入。 */
+export async function parseExcel(buffer: ArrayBuffer, _name = 'Excel'): Promise<ParsedSheet[]> {
+  const XLSX = await import('xlsx');
   const wb = XLSX.read(buffer, { type: 'array' });
   return wb.SheetNames.map((sheetName) => {
     const matrix = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[sheetName], {

@@ -27,7 +27,7 @@ describe('CSV parser', () => {
 });
 
 describe('parseExcel', () => {
-  it('returns all sheets with their own names', () => {
+  it('returns all sheets with their own names', async () => {
     const ws1 = XLSX.utils.aoa_to_sheet([['月份', 'GMV'], ['1月', 120]]);
     const ws2 = XLSX.utils.aoa_to_sheet([['a', 'b'], ['1', 2]]);
     const wb = XLSX.utils.book_new();
@@ -35,7 +35,7 @@ describe('parseExcel', () => {
     XLSX.utils.book_append_sheet(wb, ws2, '其它');
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
 
-    const sheets = parseExcel(buf, 'file.xlsx');
+    const sheets = await parseExcel(buf, 'file.xlsx');
     expect(sheets).toHaveLength(2);
     expect(sheets[0].name).toBe('销售');
     expect(sheets[0].columns).toEqual(['月份', 'GMV']);

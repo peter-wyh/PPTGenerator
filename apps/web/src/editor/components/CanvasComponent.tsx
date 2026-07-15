@@ -1,5 +1,6 @@
+import { memo } from 'react';
 import type { ReactNode } from 'react';
-import type { EditorComponent } from '@mediakit/shared';
+import type { EditorComponent } from '@mediaket/shared';
 import type { ResizeDir } from '../store';
 import { ComponentRenderer } from './ComponentRenderer';
 
@@ -25,97 +26,108 @@ interface Props {
   children?: ReactNode;
 }
 
-export function CanvasComponent({
-  comp,
-  selected,
-  onMouseDown,
-  onResizeStart,
-  onContextMenu,
-  onHoverCopy,
-  onHoverDelete,
-}: Props) {
-  return (
-    <div
-      data-comp-id={comp.id}
-      className="group"
-      onMouseDown={(e) => onMouseDown(e, comp)}
-      onContextMenu={(e) => onContextMenu(e, comp)}
-      style={{
-        position: 'absolute',
-        left: comp.x,
-        top: comp.y,
-        width: comp.w,
-        height: comp.h,
-        cursor: comp.locked ? 'default' : 'move',
-        outline: selected ? '2px solid var(--accent-primary)' : 'none',
-        outlineOffset: 0,
-      }}
-    >
-      <div className="pointer-events-none h-full w-full overflow-hidden">
-        <ComponentRenderer comp={comp} />
-      </div>
-
-      {comp.locked && (
-        <div className="absolute right-1 top-1 rounded bg-black/40 px-1 text-[10px] text-white">🔒</div>
-      )}
-
-      {/* 悬浮快键：复制 / 删除 */}
-      {!comp.locked && (
-        <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100">
-          <button
-            title="复制"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onHoverCopy(comp);
-            }}
-            className="rounded bg-black/50 px-1 text-[10px] text-white hover:bg-black/70"
-          >
-            📋
-          </button>
-          <button
-            title="删除"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onHoverDelete(comp);
-            }}
-            className="rounded bg-black/50 px-1 text-[10px] text-white hover:bg-red"
-          >
-            ✕
-          </button>
+/**
+ * 画布上的单个组件实例。
+ *
+ * memo 自定义比较：仅比较 comp 引用 + selected 状态。
+ * 回调函数由 Canvas 用 useCallback 稳定化，不纳入比较。
+ * 这样拖拽组件 A 时，组件 B 的 CanvasComponent 因 comp 引用 + selected 不变而跳过渲染。
+ */
+export const CanvasComponent = memo(
+  function CanvasComponent({
+    comp,
+    selected,
+    onMouseDown,
+    onResizeStart,
+    onContextMenu,
+    onHoverCopy,
+    onHoverDelete,
+  }: Props) {
+    return (
+      <div
+        data-comp-id={comp.id}
+        className="group"
+        onMouseDown={(e) => onMouseDown(e, comp)}
+        onContextMenu={(e) => onContextMenu(e, comp)}
+        style={{
+          position: 'absolute',
+          left: comp.x,
+          top: comp.y,
+          width: comp.w,
+          height: comp.h,
+          cursor: comp.locked ? 'default' : 'move',
+          outline: selected ? '2px solid var(--accent-primary)' : 'none',
+          outlineOffset: 0,
+        }}
+      >
+        <div className="pointer-events-none h-full w-full overflow-hidden">
+          <ComponentRenderer comp={comp} />
         </div>
-      )}
 
-      {selected &&
-        !comp.locked &&
-        HANDLES.map((h) => (
-          <div
-            key={h.dir}
-            data-resize-dir={h.dir}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onResizeStart(e, comp, h.dir);
-            }}
-            style={{
-              position: 'absolute',
-              width: 8,
-              height: 8,
-              background: 'var(--surface-primary)',
-              border: '2px solid var(--accent-primary)',
-              borderRadius: 2,
-              cursor: h.cursor,
-              ...h.style,
-            }}
-          />
-        ))}
-    </div>
-  );
-}
+        {comp.locked && (
+          <div className="absolute right-1 top-1 rounded bg-black/40 px-1 text-[10px] text-white">🔒</div>
+        )}
+
+        {/* 悬浮快键：复制 / 删除 */}
+        {!comp.locked && (
+          <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100">
+            <button
+              title="Copy"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onHoverCopy(comp);
+              }}
+              className="rounded bg-black/50 px-1 text-[10px] text-white hover:bg-black/70"
+            >
+              📋
+            </button>
+            <button
+              title="Delete"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onHoverDelete(comp);
+              }}
+              className="rounded bg-black/50 px-1 text-[10px] text-white hover:bg-red"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {selected &&
+          !comp.locked &&
+          HANDLES.map((h) => (
+            <div
+              key={h.dir}
+              data-resize-dir={h.dir}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onResizeStart(e, comp, h.dir);
+              }}
+              style={{
+                position: 'absolute',
+                width: 8,
+                height: 8,
+                background: 'var(--surface-primary)',
+                border: '2px solid var(--accent-primary)',
+                borderRadius: 2,
+                cursor: h.cursor,
+                ...h.style,
+              }}
+            />
+          ))}
+      </div>
+    );
+  },
+  // 自定义比较：comp 引用 + selected 变化时才重渲染（忽略 callback 引用变化）。
+  (prev, next) => prev.comp === next.comp && prev.selected === next.selected,
+);
