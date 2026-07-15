@@ -59,6 +59,7 @@ import {
   ReportCreatorWorksImporter,
   ReportWorkScreenshotImporter,
   ReportWorkMetricsImporter,
+  ReportCommentWordcloudImporter,
   ChartImportButton,
   KpiBoardImporter,
   CampaignReportImporter,
@@ -586,6 +587,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: CommentWordcloud,
     defaultSize: DEFAULT_SIZES['comment-wordcloud'],
     defaultData: () => getDefaultData('comment-wordcloud'),
+    dataSource: { modes: ['manual', 'project'], projectImporter: ReportCommentWordcloudImporter },
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'subtitle', label: '副标题', kind: 'text' },

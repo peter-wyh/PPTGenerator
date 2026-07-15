@@ -971,3 +971,18 @@ export function ReportWorkMetricsImporter({ comp }: { comp: EditorComponent }) {
     />
   );
 }
+
+/** comment-wordcloud：从达人合作 deliverable 一键导入评论词云（一次性拷贝）。 */
+export function ReportCommentWordcloudImporter({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  return (
+    <DeliverablePicker
+      pickLabel="导入评论词云"
+      onPick={(d) => {
+        updateComponentData(comp.id, { words: d.wordcloud ?? [] });
+        commit();
+      }}
+    />
+  );
+}
