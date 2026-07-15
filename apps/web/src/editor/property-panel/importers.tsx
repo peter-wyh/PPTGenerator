@@ -41,6 +41,7 @@ function usePageCreator() {
 import type { ChartData } from '../datasource/resolve';
 import { parseFile } from '../datasource/parse';
 import { FieldGroup } from './helpers';
+import { DeliverablePicker } from './DeliverablePicker';
 
 export function CreatorLinkImporter({ comp }: { comp: EditorComponent }) {
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
@@ -953,5 +954,20 @@ export function CampaignReportImporter({ comp }: { comp: EditorComponent }) {
         ⚡ 导入 Campaign 数据
       </button>
     </FieldGroup>
+  );
+}
+
+/** work-metrics：从达人合作 deliverable 一键导入效果数据（一次性拷贝）。 */
+export function ReportWorkMetricsImporter({ comp }: { comp: EditorComponent }) {
+  const updateComponentData = useEditorStore((s) => s.updateComponentData);
+  const commit = useEditorStore((s) => s.commit);
+  return (
+    <DeliverablePicker
+      pickLabel="导入效果数据"
+      onPick={(d) => {
+        updateComponentData(comp.id, { metrics: d.metrics ?? [], workName: d.contentType });
+        commit();
+      }}
+    />
   );
 }

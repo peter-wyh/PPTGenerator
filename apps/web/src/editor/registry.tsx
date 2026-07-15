@@ -58,6 +58,7 @@ import {
   ReportCreatorListImporter,
   ReportCreatorWorksImporter,
   ReportWorkScreenshotImporter,
+  ReportWorkMetricsImporter,
   ChartImportButton,
   KpiBoardImporter,
   CampaignReportImporter,
@@ -573,6 +574,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     Component: WorkMetrics,
     defaultSize: DEFAULT_SIZES['work-metrics'],
     defaultData: () => getDefaultData('work-metrics'),
+    dataSource: { modes: ['manual', 'project'], projectImporter: ReportWorkMetricsImporter },
     propertySchema: [
       { key: 'title', label: '标题', kind: 'text' },
       { key: 'subtitle', label: '副标题', kind: 'text' },
