@@ -6,10 +6,11 @@ import type {
   PlacementPerformance,
   PlacementTypeSummary,
   PlacementTrendPoint,
+  PostDaily,
   PostEffect,
   PostFormat,
   WorkScreenshotItem,
-} from '@mediakit/shared';
+} from '@mediaket/shared';
 import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 import { CREATOR_META, type Tier } from './creators';
 
@@ -395,7 +396,27 @@ function buildDaily(
   }));
 }
 
-/* ------------------------------ Build single creator performance ------------------------------ */
+/** 生成单个作品 14 天每日数据（确定性 S 曲线，中峰偏高）。 */
+function buildPostDaily(startDate: string, totals: { impressions: number; eng: number }): PostDaily[] {
+  const DAYS = 14;
+  const weights = Array.from({ length: DAYS }, (_, i) => {
+    const t = i / (DAYS - 1);
+    return Math.sin(t * Math.PI) * 0.9 + 0.15 + 0.08 * ((i * 5) % 3);
+  });
+  const wSum = weights.reduce((a, b) => a + b, 0) || 1;
+  return weights.map((w, i) => {
+    const impr = (totals.impressions * w) / wSum;
+    const eng = (totals.eng * w) / wSum;
+    return {
+      date: addDays(startDate, i),
+      impressions: fmt(impr),
+      likes: fmt(eng * 0.56),
+      comments: fmt(eng * 0.11),
+      shares: fmt(eng * 0.18),
+      saves: fmt(eng * 0.15),
+    };
+  });
+}
 
 /** Placement raw values (for campaign-level rollup, avoids parsing formatted strings). */
 interface RawPlacement {
@@ -475,6 +496,7 @@ function buildPerformance(
       orders: fmt(Math.round(impr * 0.0015 + cIdx * 3)),
       cpm: `¥${(8 + cIdx * 2.5 + p).toFixed(2)}`,
       engagementRate: pct(er),
+      daily: buildPostDaily(addDays(profile.startDate, 2 + cIdx * 4 + p * 6), { impressions: impr, eng }),
     });
   }
 
@@ -817,6 +839,8 @@ export interface CreatorWorkPost {
   cpm: string;
   /** 互动率。 */
   engagementRate: string;
+  /** 每天效果数据（从发布日起 14 天）。 */
+  daily?: { date: string; impressions: string; likes: string; comments: string; shares: string; saves: string }[];
 }
 
 /** 合作方式枚举。 */
@@ -949,6 +973,7 @@ export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
       orders: post.orders ?? '0',
       cpm: post.cpm ?? '—',
       engagementRate: post.engagementRate,
+      daily: post.daily,
     })),
   }));
 }

@@ -218,6 +218,7 @@ export function DataConfigOverlay({ onClose }: Props) {
                       <div className="flex items-start gap-3">
                         <button
                           onClick={() => toggleCreator(c)}
+                          data-testid="toggle-creator"
                           className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs transition ${
                             visible
                               ? 'border-accent-primary bg-accent-primary text-white'
@@ -282,42 +283,89 @@ export function DataConfigOverlay({ onClose }: Props) {
 
 /* ============================ 子组件 ============================ */
 
-/** 达人作品列表：简洁卡片式展示作品数据（只读，不可编辑）。 */
+/** 达人作品列表：简洁卡片式展示作品数据（只读，不可编辑）。点击作品可展开每日数据。 */
 function CreatorPostList({ works }: { works: CreatorWorks }) {
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   return (
     <div className="space-y-1.5">
-      {works.posts.map((post, i) => (
-        <div key={i} className="flex items-center gap-3 rounded border border-border-subtle bg-surface-hover/30 px-2 py-1.5">
-          {/* 多截图缩略图 */}
-          <div className="flex gap-1">
-            {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
-              ss.src ? (
-                <img key={si} src={ss.src} alt={ss.caption || ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
-              ) : null
-            ))}
-          </div>
-          {/* 标题 + 平台 */}
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-medium text-foreground-primary" title={post.title}>
-              {post.title}
+      {works.posts.map((post, i) => {
+        const isOpen = expandedIdx === i;
+        const hasDaily = post.daily && post.daily.length > 0;
+        return (
+          <div key={i}>
+            <div
+              className={`flex items-center gap-3 rounded border bg-surface-hover/30 px-2 py-1.5 ${isOpen ? 'border-accent-primary/40' : 'border-border-subtle'}`}
+            >
+              <button
+                type="button"
+                disabled={!hasDaily}
+                onClick={() => setExpandedIdx(isOpen ? null : i)}
+                className={`shrink-0 text-xs ${hasDaily ? 'text-foreground-secondary hover:text-accent-primary' : 'text-border-default cursor-default'}`}
+                title={hasDaily ? '查看每日数据' : '无每日数据'}
+              >
+                {hasDaily ? (isOpen ? '▾' : '▸') : '•'}
+              </button>
+              {/* 多截图缩略图 */}
+              <div className="flex gap-1">
+                {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
+                  ss.src ? (
+                    <img key={si} src={ss.src} alt={ss.caption || ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
+                  ) : null
+                ))}
+              </div>
+              {/* 标题 + 平台 */}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-medium text-foreground-primary" title={post.title}>
+                  {post.title}
+                </div>
+                <div className="text-[10px] text-foreground-muted">
+                  {post.platform}
+                  {post.publishedAt ? ` · ${post.publishedAt}` : ''}
+                </div>
+              </div>
+              {/* 指标（只读） */}
+              <div className="flex shrink-0 items-center gap-2 text-[10px] text-foreground-muted tabular-nums">
+                <span title="曝光">👁 {post.impressions}</span>
+                <span title="点赞">👍 {post.likes}</span>
+                <span title="评论">💬 {post.comments}</span>
+                {post.shares && post.shares !== '0' && <span title="转发">↗ {post.shares}</span>}
+                {post.saves && post.saves !== '0' && <span title="收藏">⭐ {post.saves}</span>}
+                {post.orders && post.orders !== '0' && <span title="订单">📦 {post.orders}</span>}
+                {post.cpm && <span title="CPM">💰 {post.cpm}</span>}
+              </div>
             </div>
-            <div className="text-[10px] text-foreground-muted">
-              {post.platform}
-              {post.publishedAt ? ` · ${post.publishedAt}` : ''}
-            </div>
+            {/* 每日数据展开区 */}
+            {isOpen && hasDaily && (
+              <div className="mb-1 overflow-auto rounded-b border border-t-0 border-accent-primary/30 bg-surface-primary">
+                <table className="w-full text-[10px] tabular-nums">
+                  <thead>
+                    <tr className="bg-surface-hover text-foreground-muted">
+                      <th className="px-2 py-1 text-left font-medium">日期</th>
+                      <th className="px-2 py-1 text-right font-medium">曝光</th>
+                      <th className="px-2 py-1 text-right font-medium">点赞</th>
+                      <th className="px-2 py-1 text-right font-medium">评论</th>
+                      <th className="px-2 py-1 text-right font-medium">转发</th>
+                      <th className="px-2 py-1 text-right font-medium">收藏</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {post.daily!.map((d, di) => (
+                      <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
+                        <td className="whitespace-nowrap px-2 py-0.5">{d.date}</td>
+                        <td className="px-2 py-0.5 text-right">{d.impressions}</td>
+                        <td className="px-2 py-0.5 text-right">{d.likes}</td>
+                        <td className="px-2 py-0.5 text-right">{d.comments}</td>
+                        <td className="px-2 py-0.5 text-right">{d.shares}</td>
+                        <td className="px-2 py-0.5 text-right">{d.saves}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          {/* 指标（只读） */}
-          <div className="flex shrink-0 items-center gap-2 text-[10px] text-foreground-muted tabular-nums">
-            <span title="曝光">👁 {post.impressions}</span>
-            <span title="点赞">👍 {post.likes}</span>
-            <span title="评论">💬 {post.comments}</span>
-            {post.shares && post.shares !== '0' && <span title="转发">↗ {post.shares}</span>}
-            {post.saves && post.saves !== '0' && <span title="收藏">⭐ {post.saves}</span>}
-            {post.orders && post.orders !== '0' && <span title="订单">📦 {post.orders}</span>}
-            {post.cpm && <span title="CPM">💰 {post.cpm}</span>}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

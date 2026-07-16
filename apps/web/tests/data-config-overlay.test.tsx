@@ -127,7 +127,7 @@ describe('DataConfigOverlay — 纯显隐模式', () => {
     // 初始：store 有 3 个达人
     expect(useEditorStore.getState().reportData.campaignCreators?.length).toBe(3);
     // 隐藏达人B（第二个）
-    const checkBtns = container.querySelectorAll('button[title]');
+    const checkBtns = container.querySelectorAll('[data-testid="toggle-creator"]');
     fireEvent.click(checkBtns[1]);
     expect(useEditorStore.getState().reportData.campaignCreators?.length).toBe(2);
   });

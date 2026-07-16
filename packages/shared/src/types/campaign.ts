@@ -222,6 +222,24 @@ export interface PostEffect {
   cpm?: string;
   /** 互动率 = (赞+评+转+藏) / 曝光。 */
   engagementRate: string;
+  /** 每天效果明细（时间序列，从发布日起 N 天）。 */
+  daily?: PostDaily[];
+}
+
+/** 单个作品每天的效果数据。 */
+export interface PostDaily {
+  /** 日期 YYYY-MM-DD。 */
+  date: string;
+  /** 曝光。 */
+  impressions: string;
+  /** 点赞。 */
+  likes: string;
+  /** 评论。 */
+  comments: string;
+  /** 转发/分享。 */
+  shares: string;
+  /** 收藏。 */
+  saves: string;
 }
 
 /** 达人在某 campaign 下每天的效果数据（时间序列，供趋势/明细）。 */
