@@ -119,6 +119,10 @@ model BusinessLine {
   name       String
   logo       String?
   color      String?
+  /// design.md 文档内容（Markdown 原文）。
+  designMd   String?        @db.Text
+  /// design.md 上传附件 URL（如有）。
+  designMdUrl String?
   merchantId String?
   merchant   Merchant?       @relation(fields: [merchantId], references: [id])
   createdAt  DateTime       @default(now())

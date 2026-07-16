@@ -2,7 +2,7 @@
  * 业务线数据管理页面 —— 基于 lookup API 的 CRUD 列表。
  * 独立路由页面（/data/business-lines）。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { lookupApi, type BusinessLineDTO } from '@/api/lookup';
 import { ImageInput } from '@/components/ImageInput';
 
@@ -117,8 +117,11 @@ function BusinessLineFormModal({
   const [name, setName] = useState('');
   const [logo, setLogo] = useState('');
   const [color, setColor] = useState('');
+  const [designMd, setDesignMd] = useState('');
+  const [designMdUrl, setDesignMdUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const mdFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!businessLineId) return;
@@ -127,14 +130,26 @@ function BusinessLineFormModal({
       setName(bl.name);
       setLogo(bl.logo ?? '');
       setColor(bl.color ?? '');
+      setDesignMd(bl.designMd ?? '');
+      setDesignMdUrl(bl.designMdUrl ?? '');
     }).catch(() => setError('加载失败'));
   }, [businessLineId]);
+
+  function onMdFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => setDesignMd(String(reader.result ?? ''));
+    reader.readAsText(f);
+    setDesignMdUrl(f.name);
+    e.target.value = '';
+  }
 
   async function save() {
     if (!code.trim() || !name.trim()) { setError('编码和名称不能为空'); return; }
     setBusy(true); setError('');
     try {
-      const payload = { code: code.trim(), name: name.trim(), logo: logo.trim() || undefined, color: color.trim() || undefined };
+      const payload = { code: code.trim(), name: name.trim(), logo: logo.trim() || undefined, color: color.trim() || undefined, designMd: designMd.trim() || undefined, designMdUrl: designMdUrl.trim() || undefined };
       if (isEdit) {
         await lookupApi.updateBusinessLine(businessLineId!, payload);
       } else {
@@ -166,13 +181,41 @@ function BusinessLineFormModal({
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
             Logo
-            <ImageInput value={logo} onChange={setLogo} aspect={1} />
+            <ImageInput value={logo} onChange={setLogo} />
           </label>
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
             配色（hex）
             <input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#2563eb" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
           </label>
         </div>
+
+        {/* design.md 文档 */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-foreground-secondary">design.md 文档</span>
+            <div className="flex items-center gap-2">
+              {designMdUrl && (
+                <span className="text-[11px] text-foreground-muted">{designMdUrl}</span>
+              )}
+              <button
+                type="button"
+                onClick={() => mdFileRef.current?.click()}
+                className="rounded border border-border-default px-2 py-0.5 text-xs text-foreground-secondary hover:bg-surface-hover"
+              >
+                上传 .md
+              </button>
+              <input ref={mdFileRef} type="file" accept=".md,.markdown,.txt" onChange={onMdFile} className="hidden" />
+            </div>
+          </div>
+          <textarea
+            value={designMd}
+            onChange={(e) => setDesignMd(e.target.value)}
+            placeholder="粘贴或上传 design.md 内容…"
+            rows={5}
+            className="w-full rounded border border-border-default bg-surface-primary px-2 py-1.5 font-mono text-xs text-foreground-primary"
+          />
+        </div>
+
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>
           <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">{isEdit ? '更新' : '创建'}</button>

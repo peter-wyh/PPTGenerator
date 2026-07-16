@@ -59,11 +59,11 @@ export const businessLineService = {
     return prisma.businessLine.findUnique({ where: { code } });
   },
 
-  async create(data: { code: string; name: string; logo?: string; color?: string; merchantId?: string }) {
+  async create(data: { code: string; name: string; logo?: string; color?: string; merchantId?: string; designMd?: string; designMdUrl?: string }) {
     return prisma.businessLine.create({ data });
   },
 
-  async update(id: string, data: Partial<{ code: string; name: string; logo: string; color: string; merchantId: string }>) {
+  async update(id: string, data: Partial<{ code: string; name: string; logo: string; color: string; merchantId: string; designMd: string; designMdUrl: string }>) {
     await this.getOrThrow(id);
     return prisma.businessLine.update({ where: { id }, data });
   },

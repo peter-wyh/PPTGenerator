@@ -466,6 +466,12 @@ export interface BusinessLine {
   name: string;
   /** Logo URL。 */
   logo?: string;
+  /** 品牌色 hex。 */
+  color?: string;
+  /** design.md 文档内容（Markdown 原文）。 */
+  designMd?: string;
+  /** design.md 上传附件 URL（如有）。 */
+  designMdUrl?: string;
 }
 
 /** 商家（独立列表 MERCHANTS 的条目；广告主通过 merchantId 引用）。 */
