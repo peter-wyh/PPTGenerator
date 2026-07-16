@@ -64,11 +64,11 @@ const CREATORS: SeedCreator[] = [
 /** Campaign → Creator associations from CAMPAIGN_PROFILE.creators[] */
 const CAMPAIGN_CREATORS: Record<string, string[]> = {
   'camp-glowlab-q4': ['cre-mia', 'cre-sofia', 'cre-tom', 'cre-iris', 'cre-ava', 'cre-jamie', 'cre-nora', 'cre-priya', 'cre-yuki', 'cre-marcus'],
-  'camp-lumiere-launch': ['cre-stella', 'cre-nora', 'cre-iris', 'cre-mia', 'cre-ava', 'cre-priya'],
-  'camp-nova-home-618': ['cre-yuki', 'cre-ava', 'cre-marcus', 'cre-jamie', 'cre-priya'],
-  'camp-motion-spring': ['cre-marcus', 'cre-leo', 'cre-tom', 'cre-stella'],
-  'camp-everyday-bf': ['cre-mia', 'cre-leo', 'cre-nora', 'cre-yuki', 'cre-stella'],
-  'camp-wander-summer': ['cre-yuki', 'cre-leo', 'cre-nora', 'cre-stella', 'cre-marcus'],
+  'camp-lumiere-launch': ['cre-jamie', 'cre-mia', 'cre-sofia', 'cre-nora', 'cre-iris', 'cre-ava', 'cre-kenji', 'cre-priya', 'cre-marcus', 'cre-yuki'],
+  'camp-nova-home-618': ['cre-ava', 'cre-nora', 'cre-sofia', 'cre-iris', 'cre-yuki', 'cre-mia', 'cre-tom', 'cre-priya', 'cre-jamie', 'cre-kenji'],
+  'camp-motion-spring': ['cre-leo', 'cre-mia', 'cre-tom', 'cre-marcus', 'cre-ava', 'cre-kenji', 'cre-priya', 'cre-yuki', 'cre-jamie', 'cre-nora'],
+  'camp-everyday-bf': ['cre-mia', 'cre-sofia', 'cre-tom', 'cre-nora', 'cre-leo', 'cre-ava', 'cre-jamie', 'cre-iris', 'cre-marcus', 'cre-priya', 'cre-kenji', 'cre-yuki'],
+  'camp-wander-summer': ['cre-leo', 'cre-ava', 'cre-nora', 'cre-marcus', 'cre-yuki', 'cre-mia', 'cre-priya', 'cre-tom', 'cre-iris', 'cre-kenji'],
 };
 
 // ─── Main ────────────────────────────────────────────────────────────────────

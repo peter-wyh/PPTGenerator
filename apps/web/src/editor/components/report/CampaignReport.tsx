@@ -23,13 +23,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useChartColors } from './shared';
-
-const STATUS_STYLES: Record<string, string> = {
-  good: 'skin-dot-good',
-  warn: 'skin-dot-warn',
-  bad: 'skin-dot-bad',
-};
+import { useChartColors, STATUS_DOT_STYLES } from './shared';
 
 /* ============================ Campaign Summary ============================ */
 
@@ -220,7 +214,7 @@ export function PublisherTable({ data }: { data: PublisherTableData }) {
             {rows.map((r, i) => (
               <tr key={i} className="border-b border-border-primary/50">
                 <td className="py-1 pr-2">
-                  <span className={`inline-block h-2 w-2 rounded-full ${STATUS_STYLES[r.status]}`} />
+                  <span className={`inline-block h-2 w-2 rounded-full ${STATUS_DOT_STYLES[r.status]}`} />
                 </td>
                 {cols.map((c) => (
                   <td key={c.key} className={`py-1 pr-2 ${c.key === 'publisher' ? 'font-medium text-foreground-primary' : 'text-foreground-secondary'}`}>

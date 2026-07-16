@@ -12,6 +12,16 @@ export function useChartColors(): string[] {
 /** 向后兼容：静态导出（仅给非 React 上下文使用；React 组件优先用 useChartColors）。 */
 export const CAMPAIGN_COLORS = ['var(--color-primary)', 'var(--blue)', 'var(--green)', 'var(--purple)', 'var(--yellow)', 'var(--purple)'];
 
+/**
+ * good/warn/bad 状态 → 主题色圆点 class（skin-dot-* 由皮肤主题定义）。
+ * 多个 report 表格组件共用，单一定义在此避免重复。
+ */
+export const STATUS_DOT_STYLES: Record<string, string> = {
+  good: 'skin-dot-good',
+  warn: 'skin-dot-warn',
+  bad: 'skin-dot-bad',
+};
+
 /** Renders an <img> if url present, else a placeholder with the first character of label. */
 export function ImgOrPlaceholder({ url, label, cls }: { url: string; label: string; cls?: string }) {
   if (url) {
