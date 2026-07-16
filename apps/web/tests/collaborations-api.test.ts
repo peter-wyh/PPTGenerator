@@ -29,7 +29,7 @@ const collab: CollaborationData = {
   deliverables: [
     {
       contentType: 'post',
-      screenshots: [{ type: 'image', url: 'https://example.com/1.jpg' }],
+      screenshots: [{ src: 'https://example.com/1.jpg' }],
       metrics: [{ label: 'Impressions', value: '50K' }],
     },
   ],

@@ -13,7 +13,7 @@ const MODULE_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 /** gender 大数字配色兜底(粉/蓝/紫),item 自带 color 优先。 */
-const GENDER_COLORS = ['var(--color-primary)', '#3B82F6', '#8B5CF6'];
+const GENDER_COLORS = ['var(--color-primary)', 'var(--blue)', 'var(--purple)'];
 
 function ModuleCard({ module }: { module: AudienceModule }) {
   const items = module.items ?? [];

@@ -7,9 +7,9 @@ import type { PlacementWideTableData, PlacementTypeSummaryData } from '@mediakit
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
 
 const STATUS_STYLES: Record<string, string> = {
-  good: 'bg-green-500',
-  warn: 'bg-yellow-500',
-  bad: 'bg-red-500',
+  good: 'skin-dot-good',
+  warn: 'skin-dot-warn',
+  bad: 'skin-dot-bad',
 };
 
 /* ============================ Placement Wide Table ============================ */

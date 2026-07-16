@@ -26,9 +26,9 @@ import {
 import { useChartColors } from './shared';
 
 const STATUS_STYLES: Record<string, string> = {
-  good: 'bg-green-500',
-  warn: 'bg-yellow-500',
-  bad: 'bg-red-500',
+  good: 'skin-dot-good',
+  warn: 'skin-dot-warn',
+  bad: 'skin-dot-bad',
 };
 
 /* ============================ Campaign Summary ============================ */
@@ -55,7 +55,7 @@ export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
               <div className="text-[10px] text-foreground-muted">{m.label}</div>
               <div className="text-base font-bold text-foreground-primary">{m.value}</div>
               {m.compare && (
-                <div className={`text-[10px] font-medium ${isNegative ? 'text-red-500' : isPositive ? 'text-green-500' : 'text-foreground-muted'}`}>
+                <div className={`text-[10px] font-medium ${isNegative ? 'skin-text-negative' : isPositive ? 'skin-text-positive' : 'text-foreground-muted'}`}>
                   {m.compare}
                 </div>
               )}
@@ -143,8 +143,8 @@ export function RevenueTimelineChart({ data }: { data: RevenueTimelineData }) {
   const seriesConfig: Record<string, { color: string; label: string }> = {
     revenue: { color: colors[0] ?? 'var(--color-primary)', label: 'Revenue' },
     spend: { color: colors[1] ?? 'var(--color-secondary)', label: 'Spend' },
-    commission: { color: colors[2] ?? '#888', label: 'Commission' },
-    orders: { color: colors[3] ?? '#aaa', label: 'Orders' },
+    commission: { color: colors[2] ?? 'var(--foreground-muted)', label: 'Commission' },
+    orders: { color: colors[3] ?? 'var(--foreground-secondary)', label: 'Orders' },
   };
 
   return (

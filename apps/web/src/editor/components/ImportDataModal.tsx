@@ -159,7 +159,7 @@ export function ImportDataModal({ file, chartType, prevTitle, onConfirm, onCance
             </div>
 
             {nonNumeric > 0 && (
-              <p className="text-xs text-amber-600">{nonNumeric} 个单元格非数值，已按 0 计算</p>
+              <p className="text-xs skin-text-warning">{nonNumeric} 个单元格非数值，已按 0 计算</p>
             )}
             {tooManyBars && (
               <p className="text-xs text-foreground-muted">数据超过 20 行，柱状图将只取前 20 行。</p>

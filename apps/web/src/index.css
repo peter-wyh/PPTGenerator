@@ -28,6 +28,18 @@
   --blue: #3b82f6;
   --yellow: #f59e0b;
   --purple: #8b5cf6;
+
+  /* 语义色（组件统一消费，取代 Tailwind bg-green-500 等） */
+  --color-success: var(--green);
+  --color-danger: var(--red);
+  --color-warning: var(--yellow);
+  --color-info: var(--blue);
+  --color-success-bg: color-mix(in srgb, var(--green) 15%, transparent);
+  --color-danger-bg: color-mix(in srgb, var(--red) 15%, transparent);
+  --color-warning-bg: color-mix(in srgb, var(--yellow) 15%, transparent);
+  --color-info-bg: color-mix(in srgb, var(--blue) 15%, transparent);
+
+  --shadow-card: 0 1px 2px rgba(0,0,0,.05);
   --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.03), 0 12px 32px rgba(0, 0, 0, 0.06);
 }
 
@@ -113,3 +125,19 @@ mark {
 .skin-gradient-brand {
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
 }
+
+/* 状态色指示点（表格状态列 / 进度条等）。 */
+.skin-dot-good   { background: var(--color-success); }
+.skin-dot-warn   { background: var(--color-warning); }
+.skin-dot-bad    { background: var(--color-danger); }
+.skin-dot-info   { background: var(--color-info); }
+
+/* 状态色文字（趋势箭头 / 标签）。 */
+.skin-text-positive { color: var(--color-success); }
+.skin-text-negative { color: var(--color-danger); }
+.skin-text-warning  { color: var(--color-warning); }
+
+/* 状态色背景（弱化底色卡片）。 */
+.skin-bg-good   { background: var(--color-success-bg); }
+.skin-bg-warn   { background: var(--color-warning-bg); }
+.skin-bg-bad    { background: var(--color-danger-bg); }

@@ -13,9 +13,9 @@ import type {
 } from '@mediakit/shared';
 
 const STATUS_STYLES: Record<string, string> = {
-  good: 'bg-green-500',
-  warn: 'bg-yellow-500',
-  bad: 'bg-red-500',
+  good: 'skin-dot-good',
+  warn: 'skin-dot-warn',
+  bad: 'skin-dot-bad',
 };
 
 /* ============================ Device Breakdown ============================ */
@@ -32,7 +32,7 @@ export function DeviceBreakdownView({ data }: { data: DeviceBreakdownData }) {
             <div className="text-lg font-bold text-foreground-primary">{d.share}</div>
             <div className="text-[10px] text-foreground-secondary">{d.revenue}</div>
             <div className="text-[9px] text-foreground-muted">{d.sessions} sessions</div>
-            <span className={`text-[9px] font-medium ${d.trend.startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>{d.trend}</span>
+            <span className={`text-[9px] font-medium ${d.trend.startsWith('-') ? 'skin-text-negative' : 'skin-text-positive'}`}>{d.trend}</span>
           </div>
         ))}
       </div>
