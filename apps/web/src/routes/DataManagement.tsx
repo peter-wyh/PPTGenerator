@@ -1,9 +1,10 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode, type ChangeEvent } from 'react';
-import type { Campaign, Creator } from '@mediakit/shared';
+import type { Campaign, CampaignMetric, Creator } from '@mediakit/shared';
 import { MOCK_CAMPAIGNS } from '@/api/mock/campaigns';
 import { MOCK_CREATORS } from '@/api/mock/creators';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { listCampaignCollaborators, listCreators, listCampaignCreators } from '@/api/creators';
+import { campaignsApi } from '@/api/campaignsApi';
 import { DataTable } from '@/components/DataTable';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 import { CreatorDetailDrawer } from '@/editor/components/CreatorDetailDrawer';
@@ -93,7 +94,7 @@ function DataPanel({ kind }: { kind: DataKind }) {
   const rows: ReactNode[][] = records.map((r) => {
     const d = r.data as Campaign & Creator;
     if (kind === 'campaign') {
-      return [d.name, d.advertiser, d.businessLine, d.platform, `${d.startDate} ~ ${d.endDate}`, d.budget, d.status ?? '—', r.ownerId, actions(r)];
+      return [d.name, d.advertiser, d.businessLine, d.platform, `${d.startDate} ~ ${d.endDate}`, d.budget, d.status ?? '—', d.owner ?? '—', actions(r)];
     }
     return [
       (
@@ -211,6 +212,29 @@ function DataPanel({ kind }: { kind: DataKind }) {
   );
 }
 
+/** Campaign 持久化 metrics → 列表 Stats 列展示的核心指标(至多 3 项)。 */
+const CAMPAIGN_STATS_PRIORITY = ['GMV', 'ROAS', 'Spend'];
+function pickCampaignStats(metrics?: CampaignMetric[]): CampaignMetric[] {
+  if (!metrics?.length) return [];
+  const picked: CampaignMetric[] = [];
+  const used = new Set<string>();
+  for (const label of CAMPAIGN_STATS_PRIORITY) {
+    const m = metrics.find((x) => x.label === label);
+    if (m && !used.has(label)) {
+      picked.push(m);
+      used.add(label);
+    }
+    if (picked.length >= 3) return picked;
+  }
+  for (const m of metrics) {
+    if (used.has(m.label)) continue;
+    picked.push(m);
+    used.add(m.label);
+    if (picked.length >= 3) break;
+  }
+  return picked;
+}
+
 /** Campaign 可展开列表:行展开 → 合作达人子表;每行带 编辑/删除。 */
 function CampaignList({
   records,
@@ -230,11 +254,11 @@ function CampaignList({
   if (records.length === 0) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">No data</p>;
   }
-  const heads = ['Campaign', 'Advertiser', 'Business Line', 'Platform', 'Period', 'Budget', 'Status', 'Owner', ''];
+  const heads = ['ID', 'Campaign', 'Advertiser', 'Business Line', 'Platform', 'Period', 'Budget', 'Stats', 'Status', 'Owner', ''];
   return (
     <>
       <div className="overflow-auto rounded-lg border border-border-default">
-        <table className="w-full min-w-[760px] border-collapse text-sm">
+        <table className="w-full min-w-[920px] border-collapse text-sm">
           <thead>
             <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
               {heads.map((h, i) => (
@@ -245,16 +269,37 @@ function CampaignList({
           <tbody>
             {records.map((r) => {
               const d = r.data;
+              const stats = pickCampaignStats(d.metrics);
               return (
                 <tr key={r.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{d.id}</td>
                   <td className="px-3 py-2 font-medium text-foreground-primary">{d.name}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.advertiser}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.businessLine}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.platform}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.startDate} ~ {d.endDate}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.budget}</td>
+                  <td className="px-3 py-2">
+                    {stats.length === 0 ? (
+                      <span className="text-foreground-muted">—</span>
+                    ) : (
+                      <div className="whitespace-nowrap text-xs">
+                        <div className="font-medium text-foreground-secondary">{stats[0].label} {stats[0].value}</div>
+                        {stats.length > 1 && (
+                          <div className="text-foreground-muted">
+                            {stats.slice(1).map((m, i) => (
+                              <Fragment key={m.label}>
+                                {i > 0 && ' · '}
+                                <span>{m.label} {m.value}</span>
+                              </Fragment>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.status ?? '—'}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.ownerId}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.owner ?? '—'}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
                       <button onClick={() => setDrawerRecord(r)} className="text-xs text-accent-primary hover:underline">查看达人</button>
@@ -423,10 +468,10 @@ function CollaboratorPanel({ record }: { record: DataRecordDTO<Campaign> }) {
   );
 }
 
-/** 管理合作达人:多选达人库 → 整记录重写 creatorIds(服务端 update 校验全量 data)。 */
+/** 管理合作达人:多选达人库 → diff 写 CampaignCreator 中间表。 */
 function ManageCollaboratorsModal({
   campaignId,
-  campaignData,
+  campaignData: _campaignData,
   currentIds,
   onClose,
   onSaved,
@@ -446,7 +491,31 @@ function ManageCollaboratorsModal({
   async function save() {
     setBusy(true);
     try {
-      await dataApi.update(campaignId, { ...campaignData, creatorIds: selected });
+      // Phase 4: 写 CampaignCreator 中间表（diff: 新增 / 删除）
+      const toAdd = selected.filter((id) => !currentIds.includes(id));
+      const toRemove = currentIds.filter((id) => !selected.includes(id));
+
+      // 新增 links
+      await Promise.all(
+        toAdd.map((creatorId) =>
+          campaignsApi.upsertLink({ campaignId, creatorId }).catch(() => {}),
+        ),
+      );
+
+      // 删除 links（需先查 link id）
+      if (toRemove.length > 0) {
+        try {
+          const links = await campaignsApi.listLinks(campaignId);
+          await Promise.all(
+            links
+              .filter((l) => toRemove.includes(l.creatorId))
+              .map((l) => campaignsApi.removeLink(l.id).catch(() => {})),
+          );
+        } catch {
+          // ignore
+        }
+      }
+
       onSaved();
     } finally {
       setBusy(false);

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { DataManagement } from '@/routes/DataManagement';
 
-const { listMock, removeMock, importManyMock, clearMock, updateMock, collaboratorsMock, listCreatorsMock, listCampaignCreatorsMock, perfMock } = vi.hoisted(() => ({
+const { listMock, removeMock, importManyMock, clearMock, updateMock, collaboratorsMock, listCreatorsMock, listCampaignCreatorsMock, perfMock, upsertLinkMock, listLinksMock, removeLinkMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   removeMock: vi.fn(),
   importManyMock: vi.fn(),
@@ -14,6 +14,9 @@ const { listMock, removeMock, importManyMock, clearMock, updateMock, collaborato
   listCreatorsMock: vi.fn(),
   listCampaignCreatorsMock: vi.fn(),
   perfMock: vi.fn(),
+  upsertLinkMock: vi.fn(),
+  listLinksMock: vi.fn(),
+  removeLinkMock: vi.fn(),
 }));
 
 vi.mock('@/api/dataLibrary', () => ({
@@ -32,6 +35,14 @@ vi.mock('@/api/creators', () => ({
   listCampaignCollaborators: (id: string) => collaboratorsMock(id),
   listCreators: () => listCreatorsMock(),
   listCampaignCreators: (id: string) => listCampaignCreatorsMock(id),
+}));
+
+vi.mock('@/api/campaignsApi', () => ({
+  campaignsApi: {
+    upsertLink: (data: unknown) => upsertLinkMock(data),
+    listLinks: (id: string) => listLinksMock(id),
+    removeLink: (id: string) => removeLinkMock(id),
+  },
 }));
 
 vi.mock('@/api/creatorPerformance', () => ({
@@ -194,8 +205,9 @@ describe('DataManagement · Campaign drill-down', () => {
     await waitFor(() => expect(screen.queryByText('@mia')).not.toBeInTheDocument());
   });
 
-  it('管理合作达人:勾选 + 保存 → dataApi.update 带 creatorIds(整记录重写)', async () => {
+  it('管理合作达人:勾选 + 保存 → campaignsApi.upsertLink（中间表 diff 写入）', async () => {
     listCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
+    upsertLinkMock.mockResolvedValue({ id: 'link-1', campaignId: 'camp-x', creatorId: 'cre-mia' });
     renderPage();
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
@@ -203,7 +215,7 @@ describe('DataManagement · Campaign drill-down', () => {
     await userEvent.click(screen.getByText('管理合作达人'));
     await userEvent.click(screen.getByLabelText(/Mia/));
     await userEvent.click(screen.getByText('保存'));
-    await waitFor(() => expect(updateMock).toHaveBeenCalledWith('camp-x', { ...campaign, creatorIds: ['cre-mia'] }));
+    await waitFor(() => expect(upsertLinkMock).toHaveBeenCalledWith({ campaignId: 'camp-x', creatorId: 'cre-mia' }));
   });
 
   it('导入示例数据:Campaign 派生 creatorIds', async () => {
@@ -215,5 +227,49 @@ describe('DataManagement · Campaign drill-down', () => {
     await waitFor(() => expect(importManyMock).toHaveBeenCalled());
     const [, itemsArg] = importManyMock.mock.calls[0] as [string, unknown[]];
     expect((itemsArg[0] as { creatorIds: string[] }).creatorIds).toEqual(['cre-mia']);
+  });
+});
+
+describe('DataManagement · Campaign Stats 列', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    removeMock.mockResolvedValue(undefined);
+    importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
+  });
+
+  it('按优先级 GMV/ROAS/Spend 展示至多 3 项指标,优先级外的指标不显示', async () => {
+    const rec = {
+      id: 'camp-y', kind: 'CAMPAIGN', ownerId: 'u', createdAt: '', updatedAt: '',
+      data: {
+        ...campaign,
+        id: 'camp-y',
+        name: 'Campaign Y',
+        metrics: [
+          { label: 'GMV', value: '$1.2M', compare: '+18%' },
+          { label: 'Clicks', value: '45K', compare: '+5%' },
+          { label: 'ROAS', value: '4.2', compare: '+0.6' },
+          { label: 'Spend', value: '$128K', compare: '-5%' },
+          { label: 'Conversions', value: '1.2K', compare: '+9%' },
+        ],
+      },
+    };
+    listMock.mockResolvedValue([rec]);
+    renderPage();
+    await screen.findByText('Campaign Y');
+    expect(screen.getByText('GMV $1.2M')).toBeInTheDocument();
+    expect(screen.getByText('ROAS 4.2')).toBeInTheDocument();
+    expect(screen.getByText('Spend $128K')).toBeInTheDocument();
+    // 优先级外的 Clicks / Conversions 不展示
+    expect(screen.queryByText('Clicks 45K')).not.toBeInTheDocument();
+    expect(screen.queryByText('Conversions 1.2K')).not.toBeInTheDocument();
+  });
+
+  it('无 metrics 的 campaign,Stats 列显示 —', async () => {
+    // owner 给值、status 为 Active,排除其它 — 来源,使唯一 — 来自 Stats 列
+    listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: { ...campaign, owner: 'alex' }, createdAt: '', updatedAt: '' }]);
+    renderPage();
+    await screen.findByText('Campaign X');
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText(/GMV|ROAS|Spend/)).not.toBeInTheDocument();
   });
 });

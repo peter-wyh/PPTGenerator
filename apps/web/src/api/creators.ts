@@ -61,11 +61,27 @@ export async function listCampaignCreators(campaignId: string): Promise<Creator[
 }
 
 /**
- * 取某 campaign 的合作达人列表（按 campaign.creatorIds 从达人库解析）。
- * 孤儿 id（达人已删 / 404）静默跳过。导入 campaign 无 creatorIds → 返回空。
- * 与 listCampaignCreators（creatorPerformance mock 派生，服务 demo 效果展开）解耦。
+ * 取某 campaign 的合作达人列表。
+ * Phase 2+: 优先从 CampaignCreator 中间表查询，fallback 旧 creatorIds 路径。
  */
 export async function listCampaignCollaborators(campaignId: string): Promise<Creator[]> {
+  // 1. 新表：从 CampaignCreator 中间表拉关联 creator
+  try {
+    const dtos = await campaignsApi.listLinks(campaignId);
+    if (dtos.length > 0) {
+      const creators: Creator[] = [];
+      for (const link of dtos) {
+        if (link.creator) {
+          creators.push(dtoToCreator(link.creator));
+        }
+      }
+      if (creators.length > 0) return creators;
+    }
+  } catch {
+    // fall through
+  }
+
+  // 2. 旧路径：从 campaign.creatorIds 逐个查 dataApi
   const campaign = await getCampaign(campaignId);
   const ids = campaign?.creatorIds ?? [];
   if (ids.length === 0) return [];
