@@ -831,7 +831,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                     <input
                       value={theme.branding?.title ?? ''}
                       onChange={(e) => updateBranding('title', e.target.value || undefined)}
-                      placeholder="如 GlowLab"
+                      placeholder="如 品牌名称"
                       className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
                     />
                   </div>

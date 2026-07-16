@@ -12,8 +12,8 @@ export const KPI_COLOR_TOKENS: Record<KpiColorToken, { fg: string; softBg: strin
   warning: { fg: 'var(--yellow)', softBg: 'color-mix(in srgb, var(--yellow) 12%, transparent)' },
   danger: { fg: 'var(--red)', softBg: 'color-mix(in srgb, var(--red) 12%, transparent)' },
   info: { fg: 'var(--blue)', softBg: 'color-mix(in srgb, var(--blue) 12%, transparent)' },
-  black: { fg: '#000000', softBg: 'color-mix(in srgb, #000000 12%, transparent)' },
-  white: { fg: '#fff', softBg: 'color-mix(in srgb, #fff 12%, transparent)' },
+  black: { fg: 'var(--color-neutral-text)', softBg: 'color-mix(in srgb, var(--color-neutral-text) 12%, transparent)' },
+  white: { fg: 'var(--color-neutral-bg)', softBg: 'color-mix(in srgb, var(--color-neutral-bg) 12%, transparent)' },
   brand: { fg: 'var(--color-primary)', softBg: 'color-mix(in srgb, var(--color-primary) 12%, transparent)' },
 };
 

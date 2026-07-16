@@ -11,12 +11,15 @@ describe('kpiTokens', () => {
     }
   });
 
-  it('黑/白/品牌色 token 映射到既有约定的 CSS 值', () => {
-    expect(KPI_COLOR_TOKENS.black.fg).toBe('#000000');
-    expect(KPI_COLOR_TOKENS.white.fg).toBe('#fff');
+  it('黑/白/品牌色 token 映射到主题 CSS 变量（不再写死 hex）', () => {
+    expect(KPI_COLOR_TOKENS.black.fg).toBe('var(--color-neutral-text)');
+    expect(KPI_COLOR_TOKENS.white.fg).toBe('var(--color-neutral-bg)');
     expect(KPI_COLOR_TOKENS.brand.fg).toBe('var(--color-primary)');
     for (const token of ['black', 'white', 'brand'] as const) {
       expect(KPI_COLOR_TOKENS[token].softBg).toMatch(/color-mix/);
+      // 全部走 CSS 变量，不应残留写死的 hex
+      expect(KPI_COLOR_TOKENS[token].fg).not.toMatch(/^#/);
+      expect(KPI_COLOR_TOKENS[token].softBg).not.toMatch(/#[0-9a-fA-F]{3,6}/);
     }
   });
 

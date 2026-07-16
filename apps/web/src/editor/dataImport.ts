@@ -61,8 +61,8 @@ export function downloadTemplate(kind: DataKind): void {
   const header = fields.join(',');
   const example =
     kind === 'campaign'
-      ? 'camp-example,示例 Campaign,GlowLab,FT,TikTok,2026-01-01,2026-01-31,$100K,Active,alex,cre-mia;cre-sofia'
-      : 'cre-example,Mia Chen,@mia,TikTok,mega,1.28M,8.7%,Beauty,US,';
+      ? 'camp-example,示例 Campaign,示例品牌,FT,TikTok,2026-01-01,2026-01-31,$100K,Active,alex,cre-mia;cre-sofia'
+      : 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,';
   const csv = `${header}\n${example}\n`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);

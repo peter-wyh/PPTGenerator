@@ -785,8 +785,6 @@ export function CampaignReportImporter({ comp }: { comp: EditorComponent }) {
       >
         <option value="">选择 Campaign…</option>
         {boundCampaign && <option value={boundCampaign.id}>{boundCampaign.name}</option>}
-        <option value="camp-glowlab-q4">GlowLab Q4</option>
-        <option value="camp-finetech-q3">FineTech Q3</option>
       </select>
       <button
         onClick={apply}
