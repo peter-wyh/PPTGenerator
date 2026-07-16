@@ -14,6 +14,7 @@ const CampaignPage = lazy(() => import('./routes/CampaignPage').then((m) => ({ d
 const CreatorPage = lazy(() => import('./routes/CreatorPage').then((m) => ({ default: m.CreatorPage })));
 const AdvertiserPage = lazy(() => import('./routes/AdvertiserPage').then((m) => ({ default: m.AdvertiserPage })));
 const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m) => ({ default: m.BusinessLinePage })));
+const CampaignCollabPage = lazy(() => import('./routes/CampaignCollabPage').then((m) => ({ default: m.CampaignCollabPage })));
 
 function RouteFallback() {
   return (
@@ -38,6 +39,7 @@ export function App() {
             <Route path="/data" element={<DataManagement />}>
               <Route index element={<CampaignPage />} />
               <Route path="campaigns" element={<CampaignPage />} />
+              <Route path="campaign-collabs" element={<CampaignCollabPage />} />
               <Route path="creators" element={<CreatorPage />} />
               <Route path="advertisers" element={<AdvertiserPage />} />
               <Route path="business-lines" element={<BusinessLinePage />} />
