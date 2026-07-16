@@ -44,7 +44,7 @@ export const BUSINESS_GROUPS: BusinessGroup[] = [
         desc: '章节导航',
         title: 'PROJECT ROADMAP',
         meta: '品牌诊断 → 策略路径 → 内容执行 → 增长复盘',
-        details: [],
+        details: ['公司概览', '服务与案例', '合作案例', 'Campaign 结案'],
       },
     ],
   },

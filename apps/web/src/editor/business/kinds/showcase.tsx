@@ -5,24 +5,30 @@ import {
   INK,
   Label,
   mono,
+  splitStat,
   Title,
   type RenderCtx,
 } from '../shared';
-
-const CASE_BG = 'https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=900&q=85';
 
 /* -------------------------- case-showcase ----------------------- */
 export function renderCaseShowcase(ctx: RenderCtx): React.ReactNode {
   const { item, title, meta, details, variant } = ctx;
   if (variant === 'results') {
+    const hero = details[3] ? splitStat(details[3]) : details[0] ? splitStat(details[0]) : null;
     return (
       <Base variant={variant}>
         <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '1fr 1.1fr' }}>
           <div style={{ padding: 22, background: ACCENT, color: 'var(--foreground-inverse)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.8px', opacity: 0.75 }}>CASE RESULT</div>
-            <div style={{ marginTop: 'auto', ...mono, fontWeight: 800, fontSize: 43 }}>138%</div>
-            <div style={{ fontSize: 13, marginTop: 5 }}>GMV target achieved</div>
-            <div style={{ fontSize: 10, lineHeight: 1.5, opacity: 0.8, marginTop: 10 }}>70 位 TikTok 创作者共同完成 30 天上市增长。</div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.8px', opacity: 0.75 }}>{item.name.toUpperCase()}</div>
+            {hero ? (
+              <>
+                <div style={{ marginTop: 'auto', ...mono, fontWeight: 800, fontSize: 43 }}>{hero.value}</div>
+                <div style={{ fontSize: 13, marginTop: 5 }}>{hero.label}</div>
+              </>
+            ) : (
+              <div style={{ marginTop: 'auto', ...mono, fontWeight: 800, fontSize: 43, opacity: 0.4 }}>—</div>
+            )}
+            <div style={{ fontSize: 10, lineHeight: 1.5, opacity: 0.8, marginTop: 10 }}>{details[1] || details[0] || ''}</div>
           </div>
           <div style={{ padding: 18, display: 'flex', flexDirection: 'column' }}>
             <Label item={item} />
@@ -43,15 +49,15 @@ export function renderCaseShowcase(ctx: RenderCtx): React.ReactNode {
         <div
           style={{
             position: 'relative',
-            background: `linear-gradient(145deg,color-mix(in srgb, var(--color-primary) 15%, transparent),color-mix(in srgb, var(--color-primary) 52%, transparent)),url(${CASE_BG}) center/cover`,
+            background: `linear-gradient(145deg,color-mix(in srgb, var(--color-primary) 15%, transparent),color-mix(in srgb, var(--color-primary) 52%, transparent))`,
             borderRadius: 8,
             padding: 13,
             overflow: 'hidden',
           }}
         >
-          <div style={{ position: 'relative', color: 'var(--foreground-inverse)', fontSize: 10, fontWeight: 700, letterSpacing: '.7px' }}>CASE STUDY · BEAUTY</div>
+          <div style={{ position: 'relative', color: 'var(--foreground-inverse)', fontSize: 10, fontWeight: 700, letterSpacing: '.7px' }}>{item.name.toUpperCase()}</div>
           <Title text={title} size={20} color="var(--foreground-inverse)" style={{ position: 'relative', marginTop: 8, maxWidth: '78%', textShadow: '0 1px 12px rgba(0,0,0,.24)' }} />
-          <div style={{ position: 'absolute', left: 12, bottom: 13, color: 'var(--foreground-inverse)', fontSize: 10 }}>品牌 × 内容 × 增长</div>
+          {details[0] && <div style={{ position: 'absolute', left: 12, bottom: 13, color: 'var(--foreground-inverse)', fontSize: 10 }}>{details[0]}</div>}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <Label item={item} />

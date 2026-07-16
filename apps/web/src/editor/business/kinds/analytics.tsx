@@ -2,7 +2,6 @@ import {
   ACCENT,
   BAR_FADE,
   Base,
-  Chips,
   Label,
   Title,
   type RenderCtx,
@@ -51,7 +50,6 @@ export function renderFunnel(ctx: RenderCtx): React.ReactNode {
 /* ------------------------------ report -------------------------- */
 export function renderReport(ctx: RenderCtx): React.ReactNode {
   const { item, title, meta, details, variant } = ctx;
-  const summary = ['本期达成 112%', '环比 +18.4%', '下期动作 3 项'];
   return (
     <Base variant={variant}>
       <div style={{ padding: 18, height: '100%', display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 15 }}>
@@ -59,12 +57,9 @@ export function renderReport(ctx: RenderCtx): React.ReactNode {
           <Label item={item} />
           <Title text={title} style={{ marginTop: 5 }} />
           <div style={{ fontSize: 10, color: 'var(--foreground-muted)', marginTop: 5 }}>{meta}</div>
-          <div style={{ marginTop: 16, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <Chips list={details.slice(0, 3)} />
-          </div>
         </div>
         <div style={{ borderLeft: '1px solid var(--border-default)', paddingLeft: 14, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}>
-          {summary.map((s, i) => (
+          {details.map((s, i) => (
             <div key={i} style={{ fontSize: 11, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? ACCENT : 'var(--foreground-secondary)' }}>
               {s}
             </div>
@@ -77,8 +72,8 @@ export function renderReport(ctx: RenderCtx): React.ReactNode {
 
 /* ------------------------------ global -------------------------- */
 export function renderGlobal(ctx: RenderCtx): React.ReactNode {
-  const { item, title, meta, variant } = ctx;
-  const chips = ['12 市场', '6 办公室', '1000+ 达人'];
+  const { item, title, meta, details, variant } = ctx;
+  const chips = details;
   const dots = [
     { left: '22%', top: '26%' },
     { left: '78%', top: '40%' },

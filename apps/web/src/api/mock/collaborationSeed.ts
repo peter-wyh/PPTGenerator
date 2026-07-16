@@ -26,17 +26,43 @@ interface MetricSpec {
 
 
 
-const PLATFORM_CONTENT_MAP: Record<string, ContentType[]> = {
-  TikTok: ['reels', 'image'],
-  Instagram: ['post', 'reels', 'story'],
-  YouTube: ['video'],
-  Twitter: ['post'],
-  Facebook: ['post', 'live'],
-  Douyin: ['reels', 'image'],
-  RED: ['post', 'image'],
-  Weibo: ['post', 'live'],
-  Bilibili: ['video'],
+/**
+ * 平台 → 该平台支持的作品类型 + 对应合作方式名称。
+ * 基于真实平台能力校准：
+ *
+ * | 平台       | 作品类型                     | 合作方式中文名          |
+ * | ---------- | --------------------------- | --------------------- |
+ * | TikTok     | 短视频 (video)、图文 (image) | Spark Ads / Content    |
+ * | Instagram  | 帖子 (post)、Reels、Story    | Content / Affiliate    |
+ * | YouTube    | 长视频 (video)               | Long-form Review      |
+ * | Douyin     | 短视频 (video)、图文 (image) | 星图/内容推广           |
+ * | RED        | 图文笔记 (post)、视频 (video)| 种草/合作笔记           |
+ * | Weibo      | 微博 (post)、直播 (live)     | 微博推广/直播带货       |
+ * | Bilibili   | 视频 (video)                 | 合约推广/商单           |
+ * | Twitter/X  | 推文 (post)                  | 推广合作                |
+ * | Facebook   | 帖子 (post)、直播 (live)     | 品牌内容/直播           |
+ */
+interface PlatformSpec {
+  /** 该平台可用的作品类型。 */
+  contentTypes: ContentType[];
+  /** 合作方式中文名（用于显示，如合作方式列）。 */
+  collabLabel: string;
+  /** 合作方式英文名（对应 CAMPAIGN_PROFILE.platforms[].collaborationType）。 */
+  collabTypeEn: string[];
+}
+
+const PLATFORM_SPECS: Record<string, PlatformSpec> = {
+  TikTok:    { contentTypes: ['video', 'image'], collabLabel: 'Spark Ads / 内容合作', collabTypeEn: ['Spark Ads', 'Content'] },
+  Instagram: { contentTypes: ['post', 'reels', 'story'], collabLabel: '品牌内容 / 联盟带货', collabTypeEn: ['Content', 'Affiliate'] },
+  YouTube:   { contentTypes: ['video'], collabLabel: '长视频评测 / 品牌合作', collabTypeEn: ['Long-form Review', 'Content'] },
+  Douyin:    { contentTypes: ['video', 'image'], collabLabel: '星图/内容推广', collabTypeEn: ['Content', 'Spark Ads'] },
+  RED:       { contentTypes: ['post', 'video'], collabLabel: '种草笔记 / 品牌合作', collabTypeEn: ['Content', 'Affiliate'] },
+  Weibo:     { contentTypes: ['post', 'live'], collabLabel: '微博推广 / 直播带货', collabTypeEn: ['Content', 'Affiliate'] },
+  Bilibili:  { contentTypes: ['video'], collabLabel: '商单推广 / B站合作', collabTypeEn: ['Long-form Review', 'Content'] },
+  Twitter:   { contentTypes: ['post'], collabLabel: '推广合作', collabTypeEn: ['Content'] },
+  Facebook:  { contentTypes: ['post', 'live'], collabLabel: '品牌内容 / 直播', collabTypeEn: ['Content', 'Affiliate'] },
 };
+
 
 /** 全部可用指标定义。 */
 const ALL_METRICS: Record<string, MetricSpec> = {
@@ -52,31 +78,97 @@ const ALL_METRICS: Record<string, MetricSpec> = {
 
 /**
  * 按平台 × 作品类型返回该组合下适用的指标列表。
- * 电商/带货平台（小红书、抖音）→ 含 orders + cpm
- * 视频平台（YouTube/Bilibili）→ 含 views + saves，不含 orders
- * 图文平台（Instagram/Twitter）→ 含 saves，不含 orders
+ *
+ * **真实平台校准**：
+ *
+ * | 平台       | Views | Likes | Comments | Shares | Saves | Orders | CPM | EngRate |
+ * | ---------- | ----- | ----- | -------- | ------ | ----- | ------ | --- | ------- |
+ * | TikTok     |  ✅   |  ✅   |    ✅    |  ✅    |  ✅   |  ✅    | ✅  |   ✅    |
+ * | Douyin     |  ✅   |  ✅   |    ✅    |  ✅    |  ✅   |  ✅    | ✅  |   ✅    |
+ * | Instagram  |  ✅   |  ✅   |    ✅    |  —     |  ✅   |  ✅*   | ✅  |   ✅    |
+ * | Instagram Story | ✅ | ✅ |   —    |  —     |  —    |  —     | —   |   ✅    |
+ * | YouTube    |  ✅   |  ✅   |    ✅    |  —     |  —    |  ✅*   | ✅  |   ✅    |
+ * | RED/小红书 |  ✅   |  ✅   |    ✅    |  —     |  ✅   |  ✅    | ✅  |   ✅    |
+ * | Weibo      |  ✅   |  ✅   |    ✅    |  ✅    |  —    |  ✅    | ✅  |   ✅    |
+ * | Weibo Live |  ✅   |  ✅   |    ✅    |  ✅    |  —    |  ✅    | ✅  |   ✅    |
+ * | Bilibili   |  ✅   |  ✅   |    ✅    |  —     |  ✅   |  ✅*   | ✅  |   ✅    |
+ * | Twitter/X  |  ✅   |  ✅   |    ✅    |  ✅    |  —    |  —     | —   |   ✅    |
+ * | Facebook   |  ✅   |  ✅   |    ✅    |  ✅    |  —    |  ✅*   | ✅  |   ✅    |
+ * | Facebook Live | ✅ | ✅ |   ✅    |  —     |  —    |  ✅    | ✅  |   ✅    |
+ *
+ * 注：✅* = 仅在 affiliate/带货合作时有此指标。
+ * Instagram 没有原生 Shares（通过 DM 分享不算公开数据），用 Saves 替代。
+ * YouTube 没有 Shares（分享是私密的），也没有原生 Saves（Playlist 替代）。
+ * Story 类型数据维度较少（通常只有浏览量和少量互动）。
  */
 function metricsForPlatform(platform: string, contentType: ContentType): MetricSpec[] {
-  const base: MetricSpec[] = [ALL_METRICS.views, ALL_METRICS.likes, ALL_METRICS.comments, ALL_METRICS.shares];
   const p = platform.toLowerCase();
+  const viewsLikes = [ALL_METRICS.views, ALL_METRICS.likes, ALL_METRICS.engRate];
 
-  // 小红书 / 抖音 / TikTok → 带货属性，加 orders + cpm + saves
-  if (p === 'red' || p === '小红书' || p === 'douyin' || p === '抖音' || p === 'tiktok') {
-    return [...base, ALL_METRICS.saves, ALL_METRICS.orders, ALL_METRICS.cpm, ALL_METRICS.engRate];
+  // ─── TikTok（短视频+图文，数据维度最全）───
+  if (p === 'tiktok') {
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares, ALL_METRICS.saves, ALL_METRICS.orders, ALL_METRICS.cpm];
   }
-  // YouTube / Bilibili → 视频平台，加 saves
-  if (p === 'youtube' || p === 'bilibili') {
-    return [...base, ALL_METRICS.saves, ALL_METRICS.engRate];
+
+  // ─── 抖音 Douyin（与 TikTok 类似）───
+  if (p === 'douyin' || p === '抖音') {
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares, ALL_METRICS.saves, ALL_METRICS.orders, ALL_METRICS.cpm];
   }
-  // Instagram / Facebook / 微博 → 社交图文，加 saves
-  if (contentType === 'post' || contentType === 'image' || contentType === 'story') {
-    return [...base, ALL_METRICS.saves, ALL_METRICS.engRate];
+
+  // ─── Instagram ───
+  if (p === 'instagram') {
+    if (contentType === 'story') {
+      // Story 数据维度最少：仅 Views + Likes + EngRate
+      return [ALL_METRICS.views, ALL_METRICS.likes, ALL_METRICS.engRate];
+    }
+    // post / reels：有 Comments + Saves，无 Shares，affiliate 可有 Orders
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.saves, ALL_METRICS.orders, ALL_METRICS.cpm];
   }
-  // 直播 → 加 orders
-  if (contentType === 'live') {
-    return [...base, ALL_METRICS.orders, ALL_METRICS.cpm, ALL_METRICS.engRate];
+
+  // ─── YouTube ───
+  if (p === 'youtube') {
+    // video：有 Comments，无 Shares/Saves，affiliate 可有 Orders
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.orders, ALL_METRICS.cpm];
   }
-  return [...base, ALL_METRICS.engRate];
+
+  // ─── Bilibili ───
+  if (p === 'bilibili') {
+    // video：有 Comments + Saves（收藏/投币），无 Shares，可能有 Orders
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.saves, ALL_METRICS.orders, ALL_METRICS.cpm];
+  }
+
+  // ─── 小红书 RED ───
+  if (p === 'red' || p === '小红书') {
+    // post / video：有 Comments + Saves（收藏核心指标），无 Shares，有 Orders + CPM（种草转化）
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.saves, ALL_METRICS.orders, ALL_METRICS.cpm];
+  }
+
+  // ─── 微博 Weibo ───
+  if (p === 'weibo' || p === '微博') {
+    // post：有 Comments + Shares（转发是微博核心），无 Saves
+    // live：加 Orders
+    if (contentType === 'live') {
+      return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares, ALL_METRICS.orders, ALL_METRICS.cpm];
+    }
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares, ALL_METRICS.orders, ALL_METRICS.cpm];
+  }
+
+  // ─── Twitter/X ───
+  if (p === 'twitter' || p === 'x') {
+    // post：有 Comments + Shares（Retweet），无 Saves，无 Orders（非电商）
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares];
+  }
+
+  // ─── Facebook ───
+  if (p === 'facebook') {
+    if (contentType === 'live') {
+      return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares, ALL_METRICS.orders, ALL_METRICS.cpm];
+    }
+    return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares, ALL_METRICS.orders, ALL_METRICS.cpm];
+  }
+
+  // ─── 默认 fallback ───
+  return [...viewsLikes, ALL_METRICS.comments, ALL_METRICS.shares];
 }
 
 /** 从 post 标题派生确定性词云（demo）。 */
@@ -233,10 +325,15 @@ export function buildSeedCollaboration(campaignId: string, creatorId: string): C
   return { id: collaborationId(campaignId, creatorId), campaignId, creatorId, deliverables };
 }
 
-/** 平台名 → ContentType 映射。 */
+/** 平台名 → 默认 ContentType 映射（第一个 post 如果无法推断 contentType 时的 fallback）。 */
 function platformToContentType(platform: string): ContentType {
-  const map = PLATFORM_CONTENT_MAP[platform];
-  return map?.[0] ?? 'post';
+  const spec = PLATFORM_SPECS[platform];
+  return spec?.contentTypes[0] ?? 'post';
+}
+
+/** 平台 → 合作方式中文名。 */
+export function platformCollabLabel(platform: string): string {
+  return PLATFORM_SPECS[platform]?.collabLabel ?? '合作';
 }
 
 /** 幂等导入一个 campaign 所有合作达人的演示合作记录（按确定性 id upsert）。 */
