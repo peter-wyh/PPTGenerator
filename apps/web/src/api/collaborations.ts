@@ -6,7 +6,21 @@ import { collaborationId, type CollaborationData, type CollaborationDeliverable 
  * Phase 3: 优先从独立表 /api/v1/campaigns/.../collaboration 读写；失败回退 DataRecord。
  */
 
-/** 读取一个 (campaign, creator) 的合作记录；不存在返回 null。 */
+/** 判断 deliverables 是否有实质内容（不只是 contentType 空壳）。 */
+function hasRichData(deliverables: CollaborationDeliverable[]): boolean {
+  if (deliverables.length === 0) return false;
+  return deliverables.some(
+    (d) =>
+      (d.screenshots && d.screenshots.length > 0) ||
+      (d.metrics && d.metrics.length > 0) ||
+      (d.audience && d.wordcloud && d.wordcloud.length > 0),
+  );
+}
+
+/**
+ * 读取一个 (campaign, creator) 的合作记录；不存在或仅含空壳 deliverables 返回 null。
+ * 空壳数据（seed 写入的 contentType-only）不返回，让调用方走 buildSeedCollaboration 生成丰富 fallback。
+ */
 export async function getCollaboration(
   campaignId: string,
   creatorId: string,
@@ -15,12 +29,16 @@ export async function getCollaboration(
   try {
     const dto = await campaignsApi.getCollaboration(campaignId, creatorId);
     if (dto) {
-      return {
-        id: collaborationId(campaignId, creatorId),
-        campaignId,
-        creatorId,
-        deliverables: dto.deliverables as CollaborationDeliverable[],
-      };
+      const deliverables = dto.deliverables as CollaborationDeliverable[];
+      // seed 写入的空壳数据（只有 contentType，无 screenshots/metrics）视为无数据
+      if (hasRichData(deliverables)) {
+        return {
+          id: collaborationId(campaignId, creatorId),
+          campaignId,
+          creatorId,
+          deliverables,
+        };
+      }
     }
   } catch {
     // fall through
@@ -28,10 +46,13 @@ export async function getCollaboration(
   // 2. 回退 DataRecord
   try {
     const r = await dataApi.get<CollaborationData>(collaborationId(campaignId, creatorId));
-    return r.data;
+    if (r.data && hasRichData(r.data.deliverables)) {
+      return r.data;
+    }
   } catch {
-    return null;
+    // not found
   }
+  return null;
 }
 
 /** 保存合作记录：Phase 4 后只写新表。 */
