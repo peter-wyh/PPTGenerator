@@ -217,7 +217,9 @@ export function CampaignCollabPage() {
                                 {shots.length > 0 ? (
                                   <div className="flex gap-0.5">
                                     {shots.map((s, si) => (
-                                      <img key={si} src={s.src} alt={s.caption ?? ''} title={s.caption ?? ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
+                                      <a key={si} href={s.url ?? s.src} target="_blank" rel="noopener noreferrer" title={s.caption ?? ''}>
+                                        <img src={s.src} alt={s.caption ?? ''} className="h-8 w-8 rounded border border-border-subtle object-cover hover:opacity-80" />
+                                      </a>
                                     ))}
                                   </div>
                                 ) : (
@@ -498,7 +500,9 @@ function DeliverableCard({
             {screenshots.map((s, i) => (
               <div key={i} className="flex items-center gap-1">
                 {s.src ? (
-                  <img src={s.src} alt={s.caption ?? ''} title={s.caption ?? ''} className="h-12 w-12 rounded border border-border-subtle object-cover" />
+                  <a href={s.url ?? s.src} target="_blank" rel="noopener noreferrer" title={s.caption ?? ''}>
+                    <img src={s.src} alt={s.caption ?? ''} className="h-12 w-12 rounded border border-border-subtle object-cover hover:opacity-80" />
+                  </a>
                 ) : (
                   <div className="h-12 w-12 rounded bg-surface-hover flex items-center justify-center text-[8px] text-foreground-muted">N/A</div>
                 )}

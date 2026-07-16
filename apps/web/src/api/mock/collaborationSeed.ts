@@ -95,6 +95,17 @@ function hashStr(s: string): number {
   return Math.abs(h);
 }
 
+/** 解析 compact 格式数字（如 "1.2M" → 1200000, "45K" → 45000）。 */
+function parseCompact(s: string): number {
+  if (!s) return 0;
+  const n = parseFloat(s.replace(/,/g, ''));
+  if (isNaN(n)) return 0;
+  const last = s.trim().slice(-1).toUpperCase();
+  if (last === 'M') return Math.round(n * 1_000_000);
+  if (last === 'K') return Math.round(n * 1_000);
+  return n;
+}
+
 /**
  * 从 creatorPerformance mock 为 (campaign, creator) 组装一条合作记录。
  * 根据 campaign 的 platforms 配置 + 确定性哈希选取 1~3 种 contentType 组合，
@@ -139,22 +150,28 @@ export function buildSeedCollaboration(campaignId: string, creatorId: string): C
 
   for (let i = 0; i < chosenCombo.length; i++) {
     const contentType = chosenCombo[i];
-    const post = posts[i % Math.max(posts.length, 1)];
+    // 每个 deliverable 分配 1~3 个 post 的截图（轮转取，尽量不重复）
+    const shotsPerDel = Math.min(3, Math.max(1, Math.ceil(posts.length / chosenCombo.length)));
+    const assignedPosts: typeof posts = [];
+    for (let s = 0; s < shotsPerDel; s++) {
+      const pi = (i * shotsPerDel + s) % Math.max(posts.length, 1);
+      if (posts[pi]) assignedPosts.push(posts[pi]);
+    }
 
     deliverables.push({
       contentType,
-      screenshots: post
-        ? [{ src: post.cover, caption: post.title }]
+      screenshots: assignedPosts.length > 0
+        ? assignedPosts.map((p) => ({ src: p.cover, caption: p.title, url: p.url }))
         : [{ src: '', caption: '' }],
-      metrics: post
+      metrics: assignedPosts[0]
         ? [
-            { label: 'Views', value: post.impressions },
-            { label: 'Likes', value: post.likes },
-            { label: 'Comments', value: post.comments },
-            { label: 'Shares', value: post.shares },
+            { label: 'Views', value: assignedPosts.reduce((sum, p) => sum + parseCompact(p.impressions), 0).toLocaleString('en-US') },
+            { label: 'Likes', value: assignedPosts.reduce((sum, p) => sum + parseCompact(p.likes), 0).toLocaleString('en-US') },
+            { label: 'Comments', value: assignedPosts.reduce((sum, p) => sum + parseCompact(p.comments), 0).toLocaleString('en-US') },
+            { label: 'Shares', value: assignedPosts.reduce((sum, p) => sum + parseCompact(p.shares), 0).toLocaleString('en-US') },
           ]
         : [{ label: 'Views', value: '0' }],
-      wordcloud: seedWordcloud(post?.title ?? '', i),
+      wordcloud: seedWordcloud(assignedPosts[0]?.title ?? '', i),
       audience: seedAudience(i),
     });
   }

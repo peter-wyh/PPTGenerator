@@ -793,6 +793,7 @@ export interface CreatorWorkPost {
   creatorName: string;
   title: string;
   cover: string;
+  url: string;
   platform: string;
   publishedAt: string;
   impressions: string;
@@ -920,6 +921,7 @@ export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
       creatorName: p.creatorName,
       title: post.title,
       cover: post.cover ?? '',
+      url: post.url ?? '',
       platform: post.platform,
       publishedAt: post.publishedAt,
       impressions: post.impressions,

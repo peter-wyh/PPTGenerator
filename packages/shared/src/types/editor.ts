@@ -725,6 +725,8 @@ export type WorkScreenshotMosaicLayout =
 export interface WorkScreenshotItem {
   src: string;
   caption?: string;
+  /** 作品原帖链接（可选，用于跳转到社交平台）。 */
+  url?: string;
   /** 是否隐藏说明文字（默认 false=显示）。隐藏后保留数据，仅渲染层不显示。 */
   captionHidden?: boolean;
 }

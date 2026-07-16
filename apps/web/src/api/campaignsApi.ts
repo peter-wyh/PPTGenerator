@@ -77,6 +77,7 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     engagement: dto.engagement,
     category: dto.category,
     region: dto.region,
+    avatar: dto.avatar ?? undefined,
     metrics: dto.metrics as Creator['metrics'] ?? [],
   };
 }
