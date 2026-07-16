@@ -1,0 +1,74 @@
+import type { Request, Response } from 'express';
+import { campaignService, creatorService, campaignCreatorService } from './campaigns.service';
+import { asyncHandler } from '../../utils/asyncHandler';
+import type { AuthPayload } from '../../types/express';
+
+function userId(req: Request): string {
+  return (req.user as AuthPayload).id;
+}
+
+export const campaignController = {
+  // ─── Campaign ──────────────────────────────────────────────────────────────
+  list: asyncHandler(async (req: Request, res: Response) => {
+    const q = req.query as { businessLineId?: string; advertiserId?: string; businessLineCode?: string; status?: string };
+    res.json({ campaigns: await campaignService.list({ ownerId: userId(req), ...q }) });
+  }),
+
+  get: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ campaign: await campaignService.getOrThrow(req.params.id, userId(req)) });
+  }),
+
+  create: asyncHandler(async (req: Request, res: Response) => {
+    res.status(201).json({ campaign: await campaignService.create(userId(req), req.body) });
+  }),
+
+  update: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ campaign: await campaignService.update(req.params.id, userId(req), req.body) });
+  }),
+
+  remove: asyncHandler(async (req: Request, res: Response) => {
+    await campaignService.remove(req.params.id, userId(req));
+    res.status(204).end();
+  }),
+
+  // ─── Creator ───────────────────────────────────────────────────────────────
+  listCreators: asyncHandler(async (req: Request, res: Response) => {
+    const q = req.query as { platform?: string; tier?: string; category?: string; search?: string };
+    res.json({ creators: await creatorService.list({ ownerId: userId(req), ...q }) });
+  }),
+
+  getCreator: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ creator: await creatorService.getOrThrow(req.params.id, userId(req)) });
+  }),
+
+  createCreator: asyncHandler(async (req: Request, res: Response) => {
+    res.status(201).json({ creator: await creatorService.create(userId(req), req.body) });
+  }),
+
+  updateCreator: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ creator: await creatorService.update(req.params.id, userId(req), req.body) });
+  }),
+
+  removeCreator: asyncHandler(async (req: Request, res: Response) => {
+    await creatorService.remove(req.params.id, userId(req));
+    res.status(204).end();
+  }),
+
+  // ─── CampaignCreator ───────────────────────────────────────────────────────
+  listLinks: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ campaignCreators: await campaignCreatorService.listByCampaign(req.params.campaignId, userId(req)) });
+  }),
+
+  upsertLink: asyncHandler(async (req: Request, res: Response) => {
+    res.status(201).json({ campaignCreator: await campaignCreatorService.upsert(req.body, userId(req)) });
+  }),
+
+  updateLink: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ campaignCreator: await campaignCreatorService.update(req.params.id, userId(req), req.body) });
+  }),
+
+  removeLink: asyncHandler(async (req: Request, res: Response) => {
+    await campaignCreatorService.remove(req.params.id, userId(req));
+    res.status(204).end();
+  }),
+};

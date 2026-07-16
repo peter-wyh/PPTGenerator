@@ -24,6 +24,8 @@ model User {
   projects     Project[]
   templates    Template[]
   dataRecords  DataRecord[]
+  campaigns    Campaign[]
+  creators     Creator[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -123,6 +125,7 @@ model BusinessLine {
   updatedAt  DateTime       @updatedAt
 
   advertisers Advertiser[]
+  campaigns   Campaign[]
 
   @@index([merchantId])
 }
@@ -141,4 +144,108 @@ model Advertiser {
 
   @@index([businessLineId])
   @@index([merchantId])
+  campaigns   Campaign[]
+}
+
+// ─── Phase 2: Campaign / Creator / CampaignCreator ──────────────────────────
+// 核心业务实体独立成表,支持结构化查询 + 外键关联。
+// DataRecord 保留作为扩展/兼容层,旧数据迁移后可废弃。
+
+/// 投放活动。
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String
+  /// 主平台 (TikTok / Instagram / YouTube ...)。
+  platform  String
+  /// 开始日期 YYYY-MM-DD。
+  startDate String
+  /// 结束日期 YYYY-MM-DD。
+  endDate   String
+  /// 预算(含货币符号,如 "$300K")。
+  budget    String
+  /// 状态:Active / Completed / Planning。
+  status    String?
+  /// 负责人(owner)。
+  owner     String?
+
+  /// 关联业务线(结构化 FK;兼容旧数据可空)。
+  businessLineId String?
+  businessLine   BusinessLine? @relation(fields: [businessLineId], references: [id])
+  /// 关联广告主(结构化 FK;兼容旧数据可空)。
+  advertiserId String?
+  advertiser   Advertiser?   @relation(fields: [advertiserId], references: [id])
+
+  /// 旧数据兼容:businessLine / advertiser 的字符串值(如 'FT' / 'GlowLab')。
+  /// 迁移后优先用 FK;保留此字段用于旧项目 meta 回读。
+  businessLineCode String?
+  advertiserName   String?
+
+  /// 结构化指标 + 分析包 (值少/结构多变,保留 JSON)。
+  metrics   Json?
+  analytics Json?
+
+  ownerId   String
+  creator   User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaignCreators CampaignCreator[]
+
+  @@index([ownerId])
+  @@index([businessLineId])
+  @@index([advertiserId])
+}
+
+/// 达人库（全局达人主表）。
+model Creator {
+  id         String   @id
+  name       String
+  handle     String
+  platform   String
+  /// 层级:mega / macro / micro。
+  tier       String
+  followers  String
+  engagement String
+  category   String
+  region     String
+  avatar     String?
+
+  /// 频道 KPI 指标 + 受众画像 + 作品集 (结构多变,保留 JSON)。
+  metrics    Json?
+  audience   Json?
+  works      Json?
+
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaignCreators CampaignCreator[]
+
+  @@index([ownerId])
+  @@index([platform])
+  @@index([tier])
+}
+
+/// Campaign ↔ Creator 多对多中间表 + 合作概要。
+model CampaignCreator {
+  id          String   @id @default(cuid())
+  campaignId  String
+  creatorId   String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  /// 合作概要(可选,从旧 mock 数据补全)。
+  collabType  String?
+  status      String?
+  contentType String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([campaignId, creatorId])
+  @@index([campaignId])
+  @@index([creatorId])
 }

@@ -1,19 +1,42 @@
 /**
  * 上游达人（Creator / Influencer）接口。
- * 真实环境对接达人库/CRM；数据管理库（`/api/v1/data`）提供可导入的达人库。
+ * Phase 2: 优先从独立表 /api/v1/campaigns/creators 拉取；失败回退 DataRecord。
  * metrics 为达人自身频道 KPI（Avg Reach/Impressions/Follower Growth/CPM）。
  */
-import type { Creator } from '@mediakit/shared';
+import type { Creator } from '@mediaket/shared';
 import { dataApi, type DataRecordDTO } from './dataLibrary';
 import { listCreatorPerformance } from './creatorPerformance';
 import { getCampaign } from './campaigns';
+import { campaignsApi, dtoToCreator } from './campaignsApi';
 
 export type { Creator };
 
-/** 从数据管理库拉取达人列表。 */
+/** 从独立表或数据管理库拉取达人列表。 */
 export async function listCreators(): Promise<Creator[]> {
+  try {
+    const dtos = await campaignsApi.listCreators();
+    if (dtos.length > 0) return dtos.map(dtoToCreator);
+  } catch {
+    // fall through to DataRecord
+  }
   const records = await dataApi.list<Creator>('creator');
   return records.map((r) => r.data);
+}
+
+/** 按 id 取单个达人。 */
+export async function getCreator(id: string): Promise<Creator | undefined> {
+  try {
+    const dto = await campaignsApi.getCreator(id);
+    return dtoToCreator(dto);
+  } catch {
+    // fall through
+  }
+  try {
+    const record = await dataApi.get<Creator>(id);
+    return record.data;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
