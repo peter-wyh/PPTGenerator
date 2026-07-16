@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { campaignService, creatorService, campaignCreatorService } from './campaigns.service';
+import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService } from './campaigns.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
 
@@ -70,5 +70,40 @@ export const campaignController = {
   removeLink: asyncHandler(async (req: Request, res: Response) => {
     await campaignCreatorService.remove(req.params.id, userId(req));
     res.status(204).end();
+  }),
+
+  // ─── Performance ───────────────────────────────────────────────────────────
+  getPerformance: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId, creatorId } = req.params;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const perf = await performanceService.getByCampaignCreator(linkId);
+    res.json({ performance: perf });
+  }),
+
+  upsertPerformance: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId, creatorId } = req.params;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const perf = await performanceService.upsert({ campaignCreatorId: linkId, ...req.body });
+    res.status(201).json({ performance: perf });
+  }),
+
+  // ─── Collaboration ─────────────────────────────────────────────────────────
+  getCollaboration: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId, creatorId } = req.params;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const collab = await collaborationService.getByCampaignCreator(linkId);
+    res.json({ collaboration: collab });
+  }),
+
+  upsertCollaboration: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId, creatorId } = req.params;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const legacyId = `collab:${campaignId}:${creatorId}`;
+    const collab = await collaborationService.upsert({
+      campaignCreatorId: linkId,
+      legacyId,
+      ...req.body,
+    });
+    res.status(201).json({ collaboration: collab });
   }),
 };

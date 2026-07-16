@@ -91,6 +91,25 @@ export interface CampaignCreatorDTO {
   creator?: CreatorDTO;
 }
 
+// ─── Performance / Collaboration DTO ─────────────────────────────────────────
+
+export interface PerformanceDTO {
+  id: string;
+  campaignCreatorId: string;
+  summary: Record<string, unknown>;
+  posts?: unknown[] | null;
+  daily?: unknown[] | null;
+  placements?: unknown[] | null;
+  cps?: Record<string, unknown> | null;
+}
+
+export interface CollaborationDTO {
+  id: string;
+  campaignCreatorId: string;
+  deliverables: unknown[];
+  legacyId: string | null;
+}
+
 // ─── API ─────────────────────────────────────────────────────────────────────
 
 export const campaignsApi = {
@@ -130,4 +149,24 @@ export const campaignsApi = {
   updateLink: (id: string, data: { collabType?: string; status?: string; contentType?: string }) =>
     api.patch<{ campaignCreator: CampaignCreatorDTO }>(`/campaigns/links/${id}`, data).then((r) => r.data.campaignCreator),
   removeLink: (id: string) => api.delete(`/campaigns/links/${id}`),
+
+  // Performance (by campaignId + creatorId)
+  getPerformance: (campaignId: string, creatorId: string) =>
+    api
+      .get<{ performance: PerformanceDTO | null }>(`/campaigns/${campaignId}/creators/${creatorId}/performance`)
+      .then((r) => r.data.performance),
+  upsertPerformance: (campaignId: string, creatorId: string, data: Partial<PerformanceDTO>) =>
+    api
+      .put<{ performance: PerformanceDTO }>(`/campaigns/${campaignId}/creators/${creatorId}/performance`, data)
+      .then((r) => r.data.performance),
+
+  // Collaboration (by campaignId + creatorId)
+  getCollaboration: (campaignId: string, creatorId: string) =>
+    api
+      .get<{ collaboration: CollaborationDTO | null }>(`/campaigns/${campaignId}/creators/${creatorId}/collaboration`)
+      .then((r) => r.data.collaboration),
+  upsertCollaboration: (campaignId: string, creatorId: string, data: { deliverables: unknown }) =>
+    api
+      .put<{ collaboration: CollaborationDTO }>(`/campaigns/${campaignId}/creators/${creatorId}/collaboration`, data)
+      .then((r) => r.data.collaboration),
 };

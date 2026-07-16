@@ -245,7 +245,54 @@ model CampaignCreator {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  performance   CreatorPerformance?
+  collaboration Collaboration?
+
   @@unique([campaignId, creatorId])
   @@index([campaignId])
   @@index([creatorId])
+}
+
+// ─── Phase 3: CreatorPerformance / Collaboration ────────────────────────────
+// 达人执行效果 + 合作详情独立成表。
+// 均挂在 CampaignCreator 下 (1:1)，通过 campaignCreatorId 关联。
+// deliverables / daily / placements / cps 等子数据结构多变，保留 JSON。
+
+/// 达人执行效果（1:1 挂在 CampaignCreator 下）。
+model CreatorPerformance {
+  id                String          @id @default(cuid())
+  campaignCreatorId String          @unique
+  campaignCreator   CampaignCreator @relation(fields: [campaignCreatorId], references: [id], onDelete: Cascade)
+
+  /// 汇总概要（posts / totalImpressions / totalEngagement / avgEngagementRate）。
+  summary           Json
+  /// 帖子效果明细（PostEffect[]）。
+  posts             Json?
+  /// 每天效果时间序列（CreatorDaily[]）。
+  daily             Json?
+  /// 投放位带货明细（PlacementPerformance[]）。
+  placements        Json?
+  /// CPS 带货汇总（CreatorCps）。
+  cps               Json?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+/// 合作详情（1:1 挂在 CampaignCreator 下）。
+model Collaboration {
+  id                String          @id @default(cuid())
+  campaignCreatorId String          @unique
+  campaignCreator   CampaignCreator @relation(fields: [campaignCreatorId], references: [id], onDelete: Cascade)
+
+  /// 作品类型列表（CollaborationDeliverable[]，含 screenshots/metrics/audience/wordcloud）。
+  deliverables      Json
+
+  /// 旧 DataRecord 兼容 id（collab:campaignId:creatorId），用于迁移期间双通道。
+  legacyId          String?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([legacyId])
 }

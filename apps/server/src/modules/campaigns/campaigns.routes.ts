@@ -39,4 +39,11 @@ router.post('/links', validate({ body: createCampaignCreatorSchema }), campaignC
 router.patch('/links/:id', validate({ params: idParamSchema, body: updateCampaignCreatorSchema }), campaignController.updateLink);
 router.delete('/links/:id', validate({ params: idParamSchema }), campaignController.removeLink);
 
+// ─── Performance / Collaboration ─────────────────────────────────────────────
+// 路由: /:campaignId/creators/:creatorId/performance | /collaboration
+router.get('/:campaignId/creators/:creatorId/performance', campaignController.getPerformance);
+router.put('/:campaignId/creators/:creatorId/performance', campaignController.upsertPerformance);
+router.get('/:campaignId/creators/:creatorId/collaboration', campaignController.getCollaboration);
+router.put('/:campaignId/creators/:creatorId/collaboration', campaignController.upsertCollaboration);
+
 export const campaignsRoutes = router;

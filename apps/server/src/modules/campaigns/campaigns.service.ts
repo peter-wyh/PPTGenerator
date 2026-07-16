@@ -138,3 +138,73 @@ export const campaignCreatorService = {
     await prisma.campaignCreator.delete({ where: { id } });
   },
 };
+
+// ─── CreatorPerformance ──────────────────────────────────────────────────────
+
+export const performanceService = {
+  /** 按 (campaignId, creatorId) 查找 CampaignCreator，返回其 id。 */
+  async resolveLinkId(campaignId: string, creatorId: string, ownerId: string): Promise<string> {
+    await campaignService.getOrThrow(campaignId, ownerId);
+    const link = await prisma.campaignCreator.findUnique({
+      where: { campaignId_creatorId: { campaignId, creatorId } },
+    });
+    if (!link) throw ApiError.notFound('CampaignCreator not found for this campaign+creator');
+    return link.id;
+  },
+
+  async getByCampaignCreator(linkId: string) {
+    return prisma.creatorPerformance.findUnique({ where: { campaignCreatorId: linkId } });
+  },
+
+  async upsert(data: {
+    campaignCreatorId: string;
+    summary: object;
+    posts?: object;
+    daily?: object;
+    placements?: object;
+    cps?: object;
+  }) {
+    return prisma.creatorPerformance.upsert({
+      where: { campaignCreatorId: data.campaignCreatorId },
+      create: data,
+      update: {
+        summary: data.summary,
+        ...(data.posts !== undefined && { posts: data.posts }),
+        ...(data.daily !== undefined && { daily: data.daily }),
+        ...(data.placements !== undefined && { placements: data.placements }),
+        ...(data.cps !== undefined && { cps: data.cps }),
+      },
+    });
+  },
+
+  async remove(linkId: string) {
+    await prisma.creatorPerformance.delete({ where: { campaignCreatorId: linkId } }).catch(() => {});
+  },
+};
+
+// ─── Collaboration ───────────────────────────────────────────────────────────
+
+export const collaborationService = {
+  async getByCampaignCreator(linkId: string) {
+    return prisma.collaboration.findUnique({ where: { campaignCreatorId: linkId } });
+  },
+
+  async getByLegacyId(legacyId: string) {
+    return prisma.collaboration.findFirst({ where: { legacyId } });
+  },
+
+  async upsert(data: { campaignCreatorId: string; deliverables: object; legacyId?: string }) {
+    return prisma.collaboration.upsert({
+      where: { campaignCreatorId: data.campaignCreatorId },
+      create: data,
+      update: {
+        deliverables: data.deliverables,
+        ...(data.legacyId !== undefined && { legacyId: data.legacyId }),
+      },
+    });
+  },
+
+  async remove(linkId: string) {
+    await prisma.collaboration.delete({ where: { campaignCreatorId: linkId } }).catch(() => {});
+  },
+};
