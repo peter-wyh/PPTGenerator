@@ -119,8 +119,8 @@ model BusinessLine {
   name       String
   logo       String?
   color      String?
-  merchantId String
-  merchant   Merchant       @relation(fields: [merchantId], references: [id])
+  merchantId String?
+  merchant   Merchant?       @relation(fields: [merchantId], references: [id])
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 

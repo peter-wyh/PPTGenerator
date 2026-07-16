@@ -1,5 +1,5 @@
 /**
- * Campaign 合作列表页 —— 展示所有 Campaign × Creator 合作关系。
+ * Campaign 合作列表页 —— 展示所有 Campaign × Creator 合作关系 + 达人详情数据。
  * 独立路由页面（/data/campaign-collabs）。
  */
 import { Fragment, useCallback, useEffect, useState } from 'react';
@@ -20,6 +20,7 @@ export function CampaignCollabPage() {
   const [rows, setRows] = useState<CollabRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCampaign, setFilterCampaign] = useState('');
+  const [filterCreator, setFilterCreator] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
@@ -56,6 +57,7 @@ export function CampaignCollabPage() {
 
   const filtered = rows.filter((r) => {
     if (filterCampaign && !r.campaign.name.toLowerCase().includes(filterCampaign.toLowerCase())) return false;
+    if (filterCreator && !r.creator.name.toLowerCase().includes(filterCreator.toLowerCase())) return false;
     if (filterStatus && (r.status ?? '—') !== filterStatus) return false;
     return true;
   });
@@ -65,6 +67,8 @@ export function CampaignCollabPage() {
   if (loading) {
     return <p className="text-sm text-foreground-muted">加载合作列表…</p>;
   }
+
+  const heads = ['#', 'Campaign', '达人', '平台', '层级', '粉丝', '互动率', '合作方式', '状态', ''];
 
   return (
     <div>
@@ -77,7 +81,13 @@ export function CampaignCollabPage() {
             placeholder="搜索 Campaign…"
             value={filterCampaign}
             onChange={(e) => setFilterCampaign(e.target.value)}
-            className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary placeholder:text-foreground-muted w-44"
+            className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary placeholder:text-foreground-muted w-36"
+          />
+          <input
+            placeholder="搜索达人…"
+            value={filterCreator}
+            onChange={(e) => setFilterCreator(e.target.value)}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary placeholder:text-foreground-muted w-36"
           />
           <select
             value={filterStatus}
@@ -96,11 +106,11 @@ export function CampaignCollabPage() {
         <p className="text-sm text-foreground-muted">暂无合作关系数据。</p>
       ) : (
         <div className="overflow-auto rounded-lg border border-border-default">
-          <table className="w-full min-w-[800px] border-collapse text-sm">
+          <table className="w-full min-w-[1000px] border-collapse text-sm">
             <thead>
               <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
-                {['#', 'Campaign', '达人', '平台', '合作方式', '内容类型', '状态', ''].map((h, i) => (
-                  <th key={i} className={`px-3 py-2 font-medium whitespace-nowrap ${i === 0 ? 'sticky left-0 z-10 bg-surface-hover' : ''} ${i === 8 ? 'sticky right-0 z-10 bg-surface-hover text-right' : ''}`}>{h}</th>
+                {heads.map((h, i) => (
+                  <th key={i} className={`px-3 py-2 font-medium whitespace-nowrap ${i === 0 ? 'sticky left-0 z-10 bg-surface-hover' : ''} ${i === heads.length - 1 ? 'sticky right-0 z-10 bg-surface-hover text-right' : ''}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -111,10 +121,10 @@ export function CampaignCollabPage() {
                   <Fragment key={r.linkId}>
                     <tr className="border-t border-border-subtle hover:bg-surface-hover/50">
                       <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
-                      <td className="px-3 py-2 font-medium text-foreground-primary">{r.campaign.name}</td>
+                      <td className="whitespace-nowrap px-3 py-2 font-medium text-foreground-primary">{r.campaign.name}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <CreatorAvatar name={r.creator.name} avatar={undefined} size={24} />
+                          <CreatorAvatar name={r.creator.name} avatar={r.creator.avatar} size={24} />
                           <div>
                             <div className="font-medium text-foreground-primary">{r.creator.name}</div>
                             <div className="text-xs text-foreground-muted">{r.creator.handle}</div>
@@ -122,8 +132,10 @@ export function CampaignCollabPage() {
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.creator.platform}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.creator.tier}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.creator.followers}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.creator.engagement}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.collabType ?? '—'}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.contentType ?? '—'}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{r.status ?? '—'}</td>
                       <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 text-right hover:bg-surface-hover/50">
                         <button
@@ -136,7 +148,7 @@ export function CampaignCollabPage() {
                     </tr>
                     {open && (
                       <tr>
-                        <td colSpan={9} className="bg-surface-primary px-4 py-3">
+                        <td colSpan={heads.length} className="bg-surface-primary px-4 py-3">
                           <CollabDetail row={r} onUpdate={() => setExpandedRow(null)} />
                         </td>
                       </tr>
@@ -152,12 +164,15 @@ export function CampaignCollabPage() {
   );
 }
 
-/** 展开行：合作详情 + 可编辑字段 */
+/** 展开行：达人完整信息 + 合作字段编辑 */
 function CollabDetail({ row, onUpdate }: { row: CollabRow; onUpdate: () => void }) {
   const [collabType, setCollabType] = useState(row.collabType ?? '');
   const [status, setStatus] = useState(row.status ?? '');
   const [contentType, setContentType] = useState(row.contentType ?? '');
   const [busy, setBusy] = useState(false);
+
+  const creator = row.creator;
+  const metrics = creator.metrics ?? [];
 
   async function save() {
     setBusy(true);
@@ -176,33 +191,75 @@ function CollabDetail({ row, onUpdate }: { row: CollabRow; onUpdate: () => void 
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4 text-xs">
-      <div>
-        <div className="mb-1 text-foreground-muted">Campaign</div>
-        <div className="font-medium text-foreground-primary">{row.campaign.name}</div>
-        <div className="text-foreground-secondary">{row.campaign.businessLine} · {row.campaign.platform}</div>
+    <div className="grid grid-cols-12 gap-4 text-xs">
+      {/* 左侧：达人详情（占 7 列） */}
+      <div className="col-span-7">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">达人信息</div>
+        <div className="grid grid-cols-3 gap-px rounded-lg overflow-hidden border border-border-subtle">
+          {([
+            ['Platform', creator.platform],
+            ['Tier', creator.tier],
+            ['Followers', creator.followers],
+            ['Engagement', creator.engagement],
+            ['Category', creator.category],
+            ['Region', creator.region],
+          ] as const).map(([label, value]) => (
+            <div key={label} className="bg-surface-primary p-2.5">
+              <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{label}</div>
+              <div className="text-sm font-medium text-foreground-primary">{value || '—'}</div>
+            </div>
+          ))}
+        </div>
+        {/* 频道 KPI */}
+        {metrics.length > 0 && (
+          <div className="mt-3">
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
+            <div className="grid grid-cols-3 gap-2">
+              {metrics.map((m, i) => (
+                <div key={`${m.label}-${i}`} className="rounded-md border border-border-subtle p-2.5">
+                  <div className="text-[10px] text-foreground-muted">{m.label}</div>
+                  <div className="text-sm font-semibold text-foreground-primary">{m.value}</div>
+                  {m.compare && (
+                    <div className="text-[10px] text-foreground-secondary">{m.compare}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      <div>
-        <div className="mb-1 text-foreground-muted">达人</div>
-        <div className="font-medium text-foreground-primary">{row.creator.name}</div>
-        <div className="text-foreground-secondary">{row.creator.handle} · {row.creator.tier} · {row.creator.followers}</div>
+
+      {/* 中间：Campaign 信息（占 2 列） */}
+      <div className="col-span-2">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">Campaign</div>
+        <div className="rounded-lg border border-border-subtle p-3 space-y-1.5">
+          <div className="font-medium text-foreground-primary">{row.campaign.name}</div>
+          <div className="text-foreground-secondary">{row.campaign.businessLine}</div>
+          <div className="text-foreground-secondary">{row.campaign.platform}</div>
+          <div className="text-foreground-secondary">{row.campaign.startDate} ~ {row.campaign.endDate}</div>
+        </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-1 text-foreground-secondary">
-          合作方式
-          <input value={collabType} onChange={(e) => setCollabType(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-0.5 text-foreground-primary" />
-        </label>
-        <label className="flex items-center gap-1 text-foreground-secondary">
-          内容类型
-          <input value={contentType} onChange={(e) => setContentType(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-0.5 text-foreground-primary" />
-        </label>
-        <label className="flex items-center gap-1 text-foreground-secondary">
-          状态
-          <input value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-0.5 text-foreground-primary" />
-        </label>
-        <button disabled={busy} onClick={() => void save()} className="mt-1 self-start rounded bg-accent-primary px-3 py-1 text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">
-          保存
-        </button>
+
+      {/* 右侧：合作字段编辑（占 3 列） */}
+      <div className="col-span-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">合作设置</div>
+        <div className="rounded-lg border border-border-subtle p-3 space-y-2">
+          <label className="flex flex-col gap-0.5 text-foreground-secondary">
+            <span className="text-[10px]">合作方式</span>
+            <input value={collabType} onChange={(e) => setCollabType(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary" />
+          </label>
+          <label className="flex flex-col gap-0.5 text-foreground-secondary">
+            <span className="text-[10px]">内容类型</span>
+            <input value={contentType} onChange={(e) => setContentType(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary" />
+          </label>
+          <label className="flex flex-col gap-0.5 text-foreground-secondary">
+            <span className="text-[10px]">状态</span>
+            <input value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary" />
+          </label>
+          <button disabled={busy} onClick={() => void save()} className="mt-2 w-full rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">
+            保存
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ interface BusinessLineSeed {
   name: string;
   logo?: string;
   color?: string;
-  merchantId: string;
+  merchantId?: string;
 }
 
 interface AdvertiserSeed {
@@ -41,12 +41,12 @@ const MERCHANTS: MerchantSeed[] = [
 ];
 
 const BUSINESS_LINES: BusinessLineSeed[] = [
-  { code: 'FT', name: 'FineTech',    logo: 'https://placehold.co/120x120/2563eb/ffffff?text=FT', color: '#2563eb', merchantId: 'm1' },
-  { code: 'SM', name: 'SocialMove',  logo: 'https://placehold.co/120x120/16a34a/ffffff?text=SM', color: '#16a34a', merchantId: 'm2' },
-  { code: 'CX', name: 'CosmeX',      logo: 'https://placehold.co/120x120/db2777/ffffff?text=CX', color: '#db2777', merchantId: 'm3' },
-  { code: 'DG', name: 'DigitalGo',   logo: 'https://placehold.co/120x120/ea580c/ffffff?text=DG', color: '#ea580c', merchantId: 'm4' },
-  { code: 'KN', name: 'KitchenNest', logo: 'https://placehold.co/120x120/9333ea/ffffff?text=KN', color: '#9333ea', merchantId: 'm5' },
-  { code: 'DM', name: 'DreamMart',   logo: 'https://placehold.co/120x120/0891b2/ffffff?text=DM', color: '#0891b2', merchantId: 'm6' },
+  { code: 'FT', name: 'FineTech',    logo: 'https://placehold.co/120x120/2563eb/ffffff?text=FT', color: '#2563eb' },
+  { code: 'SM', name: 'SocialMove',  logo: 'https://placehold.co/120x120/16a34a/ffffff?text=SM', color: '#16a34a' },
+  { code: 'CX', name: 'CosmeX',      logo: 'https://placehold.co/120x120/db2777/ffffff?text=CX', color: '#db2777' },
+  { code: 'DG', name: 'DigitalGo',   logo: 'https://placehold.co/120x120/ea580c/ffffff?text=DG', color: '#ea580c' },
+  { code: 'KN', name: 'KitchenNest', logo: 'https://placehold.co/120x120/9333ea/ffffff?text=KN', color: '#9333ea' },
+  { code: 'DM', name: 'DreamMart',   logo: 'https://placehold.co/120x120/0891b2/ffffff?text=DM', color: '#0891b2' },
 ];
 
 const ADVERTISERS: AdvertiserSeed[] = [
@@ -56,6 +56,11 @@ const ADVERTISERS: AdvertiserSeed[] = [
   { name: 'MOTION',      logo: 'https://placehold.co/120x120/dc2626/ffffff?text=MO', businessLineCode: 'DG', merchantId: 'm4' },
   { name: 'EVERYDAY',    logo: 'https://placehold.co/120x120/65a30d/ffffff?text=EV', businessLineCode: 'KN', merchantId: 'm5' },
   { name: 'WANDER',      logo: 'https://placehold.co/120x120/0d9488/ffffff?text=WA', businessLineCode: 'DM', merchantId: 'm6' },
+  // 同一品牌跨业务线合作
+  { name: 'GlowLab Pro', logo: 'https://placehold.co/120x120/2563eb/ffffff?text=GL+', businessLineCode: 'DG', merchantId: 'm1' },
+  { name: 'LUMIÈRE Home', logo: 'https://placehold.co/120x120/1e293b/ffffff?text=LU+', businessLineCode: 'KN', merchantId: 'm2' },
+  { name: 'MOTION Beauty', logo: 'https://placehold.co/120x120/dc2626/ffffff?text=MO+', businessLineCode: 'CX', merchantId: 'm4' },
+  { name: 'WANDER Fitness', logo: 'https://placehold.co/120x120/0d9488/ffffff?text=WA+', businessLineCode: 'SM', merchantId: 'm6' },
 ];
 
 async function main() {
@@ -73,8 +78,8 @@ async function main() {
   for (const bl of BUSINESS_LINES) {
     await prisma.businessLine.upsert({
       where: { code: bl.code },
-      update: { name: bl.name, logo: bl.logo, color: bl.color, merchantId: bl.merchantId },
-      create: bl,
+      update: { name: bl.name, logo: bl.logo, color: bl.color, merchantId: bl.merchantId ?? null },
+      create: { code: bl.code, name: bl.name, logo: bl.logo, color: bl.color, merchantId: bl.merchantId ?? null },
     });
     console.log(`  ✓ BusinessLine: ${bl.code} (${bl.name})`);
   }

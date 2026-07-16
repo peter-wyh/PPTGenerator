@@ -15,7 +15,7 @@ export const createBusinessLineSchema = z.object({
   name: z.string().min(1).max(100),
   logo: z.string().max(2048).optional(),
   color: z.string().max(20).optional(),
-  merchantId: z.string().min(1),
+  merchantId: z.string().optional(),
 });
 
 export const updateBusinessLineSchema = createBusinessLineSchema.partial();

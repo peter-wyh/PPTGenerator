@@ -59,7 +59,7 @@ export const businessLineService = {
     return prisma.businessLine.findUnique({ where: { code } });
   },
 
-  async create(data: { code: string; name: string; logo?: string; color?: string; merchantId: string }) {
+  async create(data: { code: string; name: string; logo?: string; color?: string; merchantId?: string }) {
     return prisma.businessLine.create({ data });
   },
 

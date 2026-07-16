@@ -27,7 +27,8 @@ export function BusinessLinePage() {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
 
-  const heads = ['#', '编码', '名称', '品牌(Merchant)', '配色', '广告主数', ''];
+  const heads = ['#', 'Logo', '编码', '名称', '配色', '广告主数', ''];
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-2">
@@ -46,9 +47,17 @@ export function BusinessLinePage() {
             {list.map((bl, idx) => (
               <tr key={bl.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
+                <td className="whitespace-nowrap px-3 py-2">
+                  {bl.logo ? (
+                    <img src={bl.logo} alt={bl.name} className="h-8 w-8 rounded-md border border-border-subtle object-cover" />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface-hover text-[10px] font-bold text-foreground-muted">
+                      {bl.code.toUpperCase()}
+                    </div>
+                  )}
+                </td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{bl.code}</td>
                 <td className="px-3 py-2 font-medium text-foreground-primary">{bl.name}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{bl.merchant?.name ?? '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {bl.color ? (
                     <span className="inline-flex items-center gap-1.5">
@@ -105,7 +114,7 @@ function BusinessLineFormModal({
   const isEdit = !!businessLineId;
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
-  const [merchantId, setMerchantId] = useState('');
+  const [logo, setLogo] = useState('');
   const [color, setColor] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -115,7 +124,7 @@ function BusinessLineFormModal({
     lookupApi.getBusinessLine(businessLineId).then((bl) => {
       setCode(bl.code);
       setName(bl.name);
-      setMerchantId(bl.merchantId ?? '');
+      setLogo(bl.logo ?? '');
       setColor(bl.color ?? '');
     }).catch(() => setError('加载失败'));
   }, [businessLineId]);
@@ -124,7 +133,7 @@ function BusinessLineFormModal({
     if (!code.trim() || !name.trim()) { setError('编码和名称不能为空'); return; }
     setBusy(true); setError('');
     try {
-      const payload = { code: code.trim(), name: name.trim(), merchantId, color: color.trim() || undefined };
+      const payload = { code: code.trim(), name: name.trim(), logo: logo.trim() || undefined, color: color.trim() || undefined };
       if (isEdit) {
         await lookupApi.updateBusinessLine(businessLineId!, payload);
       } else {
@@ -155,8 +164,11 @@ function BusinessLineFormModal({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            Merchant ID
-            <input value={merchantId} onChange={(e) => setMerchantId(e.target.value)} placeholder="留空则不关联" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
+            Logo URL
+            <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://..." className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
+            {logo && (
+              <img src={logo} alt="preview" className="mt-1 h-10 w-10 rounded-md border border-border-subtle object-cover" />
+            )}
           </label>
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
             配色（hex）

@@ -9,7 +9,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     delete: vi.fn(),
   },
-  project: { create: vi.fn() },
+  project: { create: vi.fn(), findUnique: vi.fn() },
 }));
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
@@ -254,5 +254,83 @@ describe('projects.service · createFromTemplate', () => {
     await projectsService.createFromTemplate('u_bd', 'tpl_1', '  我的报告  ');
     const { data } = prismaMock.project.create.mock.calls[0][0] as { data: Record<string, unknown> };
     expect(data.name).toBe('我的报告'); // trim
+  });
+});
+
+describe('templates.service · createFromProjectPage（页面存为模板）', () => {
+  it('保留页面背景(bgColor/bgGradient/bgImage)与 titleOverridden，清除绑定并换新 id', async () => {
+    const srcPage = {
+      id: 'pg_src',
+      name: '封面',
+      pageType: 'cover',
+      bgColor: '#112233',
+      bgGradient: {
+        type: 'linear',
+        angle: 90,
+        stops: [
+          { color: '#000000', position: 0 },
+          { color: '#ffffff', position: 100 },
+        ],
+      },
+      bgImage: 'https://example.com/cover.png',
+      titleComponentId: 'cmp_title',
+      titleOverridden: true,
+      campaignId: 'camp_src', // 应清除
+      creatorId: 'cre_src', // 应清除
+      components: [
+        { id: 'cmp_title', type: 'title', data: { text: '自定义标题', campaignId: 'camp_src' } },
+      ],
+    };
+    prismaMock.project.findUnique.mockResolvedValue({
+      id: 'prj_1',
+      width: 1280,
+      height: 720,
+      pages: [srcPage],
+    });
+    prismaMock.template.create.mockResolvedValue(makeTemplate());
+
+    await templatesService.createFromProjectPage('u_admin', {
+      projectId: 'prj_1',
+      pageId: 'pg_src',
+      name: '封面模板',
+    });
+
+    const { data } = prismaMock.template.create.mock.calls[0][0] as { data: Record<string, unknown> };
+    const savedPage = (data.pages as unknown as Record<string, unknown>[])[0];
+
+    // 背景三件套必须保留（回归：旧实现字段白名单漏拷）
+    expect(savedPage.bgColor).toBe('#112233');
+    expect(savedPage.bgGradient).toEqual(srcPage.bgGradient);
+    expect(savedPage.bgImage).toBe('https://example.com/cover.png');
+    // 标题定制标记保留（否则下次加载会被 refreshReportTitle 覆盖）
+    expect(savedPage.titleOverridden).toBe(true);
+    expect(savedPage.titleComponentId).toBe('cmp_title');
+    // 换新 id，不复用源页 id
+    expect(savedPage.id).not.toBe('pg_src');
+    expect(typeof savedPage.id).toBe('string');
+    // 页面级绑定清除
+    expect('campaignId' in savedPage).toBe(false);
+    expect('creatorId' in savedPage).toBe(false);
+    // 组件级绑定清除、文本保留
+    const savedComp = (savedPage.components as unknown as Record<string, unknown>[])[0];
+    const compData = savedComp.data as Record<string, unknown>;
+    expect(compData.text).toBe('自定义标题');
+    expect('campaignId' in compData).toBe(false);
+  });
+
+  it('项目不存在 → 404', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(null);
+    await expect(
+      templatesService.createFromProjectPage('u_admin', { projectId: 'nope', pageId: 'x', name: 't' }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(prismaMock.template.create).not.toHaveBeenCalled();
+  });
+
+  it('页面不存在于项目 → 404', async () => {
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'prj_1', width: 1280, height: 720, pages: [] });
+    await expect(
+      templatesService.createFromProjectPage('u_admin', { projectId: 'prj_1', pageId: 'missing', name: 't' }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(prismaMock.template.create).not.toHaveBeenCalled();
   });
 });

@@ -27,14 +27,15 @@ export function AdvertiserPage() {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
 
-  const heads = ['#', '广告主', '业务线', '品牌', ''];
+  const heads = ['#', 'Logo', '广告主', '业务线', '品牌(Merchant)', ''];
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-2">
         <button onClick={() => setAdding(true)} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary">新增广告主</button>
       </div>
       <div className="overflow-auto rounded-lg border border-border-default">
-        <table className="w-full min-w-[600px] border-collapse text-sm">
+        <table className="w-full min-w-[700px] border-collapse text-sm">
           <thead>
             <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
               {heads.map((h, i) => (
@@ -46,6 +47,15 @@ export function AdvertiserPage() {
             {list.map((a, idx) => (
               <tr key={a.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
+                <td className="whitespace-nowrap px-3 py-2">
+                  {a.logo ? (
+                    <img src={a.logo} alt={a.name} className="h-8 w-8 rounded-md border border-border-subtle object-cover" />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface-hover text-[10px] font-bold text-foreground-muted">
+                      {a.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </td>
                 <td className="px-3 py-2 font-medium text-foreground-primary">{a.name}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{a.businessLine?.name ?? '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{a.merchant?.name ?? '—'}</td>
@@ -93,15 +103,16 @@ function AdvertiserFormModal({
 }) {
   const isEdit = !!advertiserId;
   const [name, setName] = useState('');
+  const [logo, setLogo] = useState('');
   const [businessLineId, setBusinessLineId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  // 编辑模式：加载现有数据
   useEffect(() => {
     if (!advertiserId) return;
     lookupApi.getAdvertiser(advertiserId).then((a) => {
       setName(a.name);
+      setLogo(a.logo ?? '');
       setBusinessLineId(a.businessLineId ?? '');
     }).catch(() => setError('加载失败'));
   }, [advertiserId]);
@@ -110,10 +121,11 @@ function AdvertiserFormModal({
     if (!name.trim()) { setError('名称不能为空'); return; }
     setBusy(true); setError('');
     try {
+      const payload = { name: name.trim(), logo: logo.trim() || undefined, businessLineId };
       if (isEdit) {
-        await lookupApi.updateAdvertiser(advertiserId!, { name: name.trim(), businessLineId });
+        await lookupApi.updateAdvertiser(advertiserId!, payload);
       } else {
-        await lookupApi.createAdvertiser({ name: name.trim(), businessLineId });
+        await lookupApi.createAdvertiser(payload);
       }
       onSaved();
     } catch (e: unknown) {
@@ -133,8 +145,15 @@ function AdvertiserFormModal({
           <input value={name} onChange={(e) => setName(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+          Logo URL
+          <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://..." className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
+          {logo && (
+            <img src={logo} alt="preview" className="mt-1 h-10 w-10 rounded-md border border-border-subtle object-cover" />
+          )}
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
           业务线 ID
-          <input value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} placeholder="留空则不关联" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
+          <input value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} placeholder="关联业务线（必填）" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
         </label>
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>

@@ -14,7 +14,7 @@ export interface MerchantDTO extends Merchant {
 
 export interface BusinessLineDTO extends BusinessLine {
   id: string;
-  merchantId: string;
+  merchantId?: string;
   color?: string;
   merchant?: { id: string; name: string };
   _count?: { advertisers: number };
@@ -48,7 +48,7 @@ export const lookupApi = {
       .then((r) => r.data.businessLines),
   getBusinessLine: (id: string) =>
     api.get<{ businessLine: BusinessLineDTO }>(`/lookup/business-lines/${id}`).then((r) => r.data.businessLine),
-  createBusinessLine: (data: { code: string; name: string; logo?: string; color?: string; merchantId: string }) =>
+  createBusinessLine: (data: { code: string; name: string; logo?: string; color?: string; merchantId?: string }) =>
     api.post<{ businessLine: BusinessLineDTO }>('/lookup/business-lines', data).then((r) => r.data.businessLine),
   updateBusinessLine: (id: string, data: Partial<{ code: string; name: string; logo: string; color: string; merchantId: string }>) =>
     api.patch<{ businessLine: BusinessLineDTO }>(`/lookup/business-lines/${id}`, data).then((r) => r.data.businessLine),
