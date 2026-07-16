@@ -181,10 +181,10 @@ export function getDefaultData(type: ComponentType): ComponentData {
         insights: [
           {
             topCities: [
-              { label: 'New York', value: 23, color: 'auto' },
-              { label: 'Los Angeles', value: 18, color: 'auto' },
-              { label: 'Chicago', value: 12, color: 'auto' },
-              { label: 'Houston', value: 9, color: 'auto' },
+              { label: '地区一', value: 23, color: 'auto' },
+              { label: '地区二', value: 18, color: 'auto' },
+              { label: '地区三', value: 12, color: 'auto' },
+              { label: '地区四', value: 9, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 72, color: 'auto' },
@@ -209,9 +209,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Houston', value: 21, color: 'auto' },
-              { label: 'Miami', value: 16, color: 'auto' },
-              { label: 'Seattle', value: 11, color: 'auto' },
+              { label: '地区一', value: 21, color: 'auto' },
+              { label: '地区二', value: 16, color: 'auto' },
+              { label: '地区三', value: 11, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 85, color: 'auto' },
@@ -235,8 +235,8 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Austin', value: 19, color: 'auto' },
-              { label: 'Denver', value: 14, color: 'auto' },
+              { label: '地区一', value: 19, color: 'auto' },
+              { label: '地区二', value: 14, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 68, color: 'auto' },
@@ -385,8 +385,8 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'creator-fan-gender':
       return {
         title: 'Fan Gender Breakdown',
-        subtitle: 'Female-led',
-        center: 'Female 62%',
+        subtitle: '',
+        center: '--',
         slices: [
           { label: 'Female', value: 62, color: 'auto' },
           { label: 'Male', value: 36, color: 'auto' },
@@ -411,7 +411,7 @@ export function getDefaultData(type: ComponentType): ComponentData {
     case 'creator-fan-age':
       return {
         title: 'Fan Age Groups',
-        subtitle: '25–34 is the core group',
+        subtitle: '',
         bars: [
           { label: '<18', value: 8, color: 'auto' },
           { label: '18-24', value: 28, color: 'auto' },
@@ -570,9 +570,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
         insights: [
           {
             topCities: [
-              { label: 'New York', value: 23, color: 'auto' },
-              { label: 'Los Angeles', value: 18, color: 'auto' },
-              { label: 'Chicago', value: 12, color: 'auto' },
+              { label: '地区一', value: 23, color: 'auto' },
+              { label: '地区二', value: 18, color: 'auto' },
+              { label: '地区三', value: 12, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 72, color: 'auto' },
@@ -591,9 +591,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Houston', value: 21, color: 'auto' },
-              { label: 'Miami', value: 16, color: 'auto' },
-              { label: 'Seattle', value: 11, color: 'auto' },
+              { label: '地区一', value: 21, color: 'auto' },
+              { label: '地区二', value: 16, color: 'auto' },
+              { label: '地区三', value: 11, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 85, color: 'auto' },
@@ -612,9 +612,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Austin', value: 19, color: 'auto' },
-              { label: 'Denver', value: 14, color: 'auto' },
-              { label: 'Boston', value: 10, color: 'auto' },
+              { label: '地区一', value: 19, color: 'auto' },
+              { label: '地区二', value: 14, color: 'auto' },
+              { label: '地区三', value: 10, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 68, color: 'auto' },
@@ -633,9 +633,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'San Francisco', value: 20, color: 'auto' },
-              { label: 'Portland', value: 15, color: 'auto' },
-              { label: 'Phoenix', value: 9, color: 'auto' },
+              { label: '地区一', value: 20, color: 'auto' },
+              { label: '地区二', value: 15, color: 'auto' },
+              { label: '地区三', value: 9, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 76, color: 'auto' },
@@ -654,9 +654,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Dallas', value: 22, color: 'auto' },
-              { label: 'Atlanta', value: 17, color: 'auto' },
-              { label: 'Orlando', value: 8, color: 'auto' },
+              { label: '地区一', value: 22, color: 'auto' },
+              { label: '地区二', value: 17, color: 'auto' },
+              { label: '地区三', value: 8, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 91, color: 'auto' },
@@ -675,9 +675,9 @@ export function getDefaultData(type: ComponentType): ComponentData {
           },
           {
             topCities: [
-              { label: 'Nashville', value: 18, color: 'auto' },
-              { label: 'Charlotte', value: 13, color: 'auto' },
-              { label: 'Las Vegas', value: 7, color: 'auto' },
+              { label: '地区一', value: 18, color: 'auto' },
+              { label: '地区二', value: 13, color: 'auto' },
+              { label: '地区三', value: 7, color: 'auto' },
             ],
             genderSplit: [
               { label: 'F', value: 70, color: 'auto' },

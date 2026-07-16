@@ -1,15 +1,7 @@
-import { Fragment, useEffect, useState } from 'react';
-import type {
-  Campaign,
-  CampaignMetric,
-  ReportCampaign,
-  ReportCreator,
-  ReportDataContext,
-} from '@mediakit/shared';
-import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
+import { useEffect, useState } from 'react';
+import type { ReportCreator, ReportDataContext } from '@mediaket/shared';
 import { useEditorStore } from '../store';
-import { listCampaigns, reportCampaignFrom } from '../../api/campaigns';
-import { listCreators, listCampaignCreators, fetchCampaignCreatorWorks, type Creator } from '../../api/creators';
+import { listCampaignCreators, fetchCampaignCreatorWorks, type Creator } from '../../api/creators';
 import type { CreatorWorkPost } from '../../api/mock/creatorPerformance';
 
 /** 达人作品集合（fetchCampaignCreatorWorks 返回类型）。 */
@@ -20,284 +12,112 @@ interface Props {
 }
 
 /**
- * 报告数据配置浮层（两大分类）：
+ * 数据配置浮层（纯显隐模式）：
  *
- * ① Campaign — 绑定 Campaign + 查看该 campaign 下参与合作的达人
- * ② Creator Library — 从达人库独立选择达人
+ * 数据来源完全取自数据库——不再支持手动配置/编辑 KPI。
+ * 用户唯一可操作：勾选达人显/隐。
  *
- * 选中的数据存入 store.reportData（随 projectMeta.reportData 持久化），
- * 各业务组件属性面板可一键从 reportData 取数填充。
+ * 数据链路：
+ * 1. 从 projectMeta.campaignId 读取绑定的 Campaign ID
+ * 2. 从 DB 加载该 Campaign 下所有达人 + 作品数据
+ * 3. 默认全选（全部可见），用户可取消勾选
+ * 4. 勾选状态写入 store.reportData.campaignCreators（供编辑器各组件取数）
  */
 export function DataConfigOverlay({ onClose }: Props) {
-  // Draft 模式：本地拷贝 reportData，点击保存才提交到 store。
-  const commitReportData = useEditorStore((s) => s.setReportData);
-  const [reportData, setLocalReportData] = useState<ReportDataContext>(() => useEditorStore.getState().reportData);
-  // 同名函数替换 store 的 setReportData，所有下游代码零改动。
-  const setReportData = (data: ReportDataContext) => setLocalReportData(data);
-
-  // 项目业务线（只读；用于过滤 campaign 下拉）。存量项目无业务线 → 显示全部。
-  const projectBusinessLine = useEditorStore((s) => s.projectMeta?.businessLine);
-  // 项目创建时绑定的上游 campaign（从 projectMeta.campaignId 读取）。
+  const setReportData = useEditorStore((s) => s.setReportData);
+  const reportData = useEditorStore((s) => s.reportData);
   const projectIdCampaign = useEditorStore((s) => s.projectMeta?.campaignId);
+  const campaignName = useEditorStore((s) => s.reportData?.campaign?.name);
 
-  function handleSave() {
-    commitReportData(reportData);
-    onClose();
-  }
+  // DB 数据：Campaign 下全部达人 + 作品
+  const [allCreators, setAllCreators] = useState<Creator[] | null>(null);
+  const [allWorks, setAllWorks] = useState<CreatorWorks[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // 显隐集合（隐藏的达人 ID；默认空 = 全部可见）
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => {
+    const existing = reportData.campaignCreators ?? [];
+    const all = useEditorStore.getState().reportData;
+    // 已有的 campaignCreators id 集合
+    const existingIds = new Set(existing.map((c) => c.id));
+    void all;
+    return existingIds; // 暂存，加载后对比决定
+  });
 
-  const [activeTab, setActiveTab] = useState<'campaign' | 'library'>('campaign');
-
-  // ---- Campaign 列表 ----
-  const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
-  const [campaignFailed, setCampaignFailed] = useState(false);
-  const selectedCampaignId = reportData.campaign?.id ?? '';
-
-  // 按项目业务线过滤；无业务线（存量项目）显示全部；已绑定 campaign 即便不在过滤内也保留
-  const visibleCampaigns =
-    campaigns?.filter((c) => !projectBusinessLine || c.businessLine === projectBusinessLine) ?? [];
-  const boundMissing =
-    selectedCampaignId && !visibleCampaigns.some((c) => c.id === selectedCampaignId)
-      ? campaigns?.find((c) => c.id === selectedCampaignId) ?? null
-      : null;
-  const dropdownCampaigns = boundMissing ? [boundMissing, ...visibleCampaigns] : visibleCampaigns;
+  const campaignId = projectIdCampaign ?? '';
 
   useEffect(() => {
-    let alive = true;
-    setCampaigns(null);
-    setCampaignFailed(false);
-    listCampaigns()
-      .then((list) => {
-        if (!alive) return;
-        setCampaigns(list);
-        // 自动回显：reportData.campaign 为空但项目绑定了 campaign → 自动选中并加载达人。
-        const hasReport = !!useEditorStore.getState().reportData.campaign;
-        const targetId = projectIdCampaign;
-        if (!hasReport && targetId) {
-          const c = list.find((x) => x.id === targetId);
-          if (c) {
-            const rc: ReportCampaign = {
-              id: c.id,
-              name: c.name,
-              advertiser: c.advertiser,
-              platform: c.platform,
-              platforms: c.platforms,
-              startDate: c.startDate,
-              endDate: c.endDate,
-              budget: c.budget,
-              status: c.status,
-              metrics: c.metrics,
-            };
-            setLocalReportData((prev) => ({ ...prev, campaign: rc }));
-          }
-        }
-      })
-      .catch(() => alive && setCampaignFailed(true));
-    return () => {
-      alive = false;
-    };
-  }, [projectIdCampaign]);
-
-  // ---- Campaign 达人列表（随 campaign 切换动态加载）----
-  const [campaignCreators, setCampaignCreators] = useState<Creator[] | null>(null);
-  const [ccLoading, setCcLoading] = useState(false);
-  const [ccFailed, setCcFailed] = useState(false);
-  // ---- 达人合作作品列表（与 campaignCreators 同时加载，走后端 collaboration 数据）----
-  const [creatorWorks, setCreatorWorks] = useState<CreatorWorks[] | null>(null);
-
-  useEffect(() => {
-    if (!selectedCampaignId) {
-      setCampaignCreators(null);
-      setCreatorWorks(null);
+    if (!campaignId) {
+      setAllCreators(null);
+      setAllWorks(null);
       return;
     }
     let alive = true;
-    setCcLoading(true);
-    setCcFailed(false);
-    setCampaignCreators(null);
-    setCreatorWorks(null);
+    setLoading(true);
+    setFailed(false);
+    setAllCreators(null);
+    setAllWorks(null);
     Promise.all([
-      listCampaignCreators(selectedCampaignId),
-      fetchCampaignCreatorWorks(selectedCampaignId),
+      listCampaignCreators(campaignId),
+      fetchCampaignCreatorWorks(campaignId),
     ])
       .then(([list, works]) => {
         if (!alive) return;
-        setCampaignCreators(list);
-        setCreatorWorks(works);
-        // 自动回显：如果 reportData.campaignCreators 为空（首次打开），自动全选该 campaign 的合作达人。
+        setAllCreators(list);
+        setAllWorks(works);
+
+        // 首次打开：默认全选
         const existing = useEditorStore.getState().reportData.campaignCreators;
-        if ((!existing || existing.length === 0) && list.length > 0) {
-          const autoSelected: ReportCreator[] = list.map((c) => ({
-            id: c.id,
-            name: c.name,
-            handle: c.handle,
-            platform: c.platform,
-            tier: c.tier,
-            followers: c.followers,
-            engagement: c.engagement,
-            category: c.category,
-            region: c.region,
-            avatar: c.avatar,
-            stats: buildDefaultStats(c),
-            audience: c.audience,
-          }));
-          setLocalReportData((prev) => ({ ...prev, campaignCreators: autoSelected }));
+        if (!existing || existing.length === 0) {
+          syncToStore(list, new Set()); // 全选
+          setHiddenIds(new Set());
+        } else {
+          // 从已有 reportData 反推隐藏列表
+          const existingIds = new Set(existing.map((c) => c.id));
+          const hidden = new Set<string>();
+          for (const c of list) {
+            if (!existingIds.has(c.id)) hidden.add(c.id);
+          }
+          setHiddenIds(hidden);
         }
       })
-      .catch(() => alive && setCcFailed(true))
-      .finally(() => alive && setCcLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [selectedCampaignId]);
+      .catch(() => alive && setFailed(true))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [campaignId]);
 
-  // ---- 达人库列表 ----
-  const [allCreators, setAllCreators] = useState<Creator[] | null>(null);
-  const [creatorFailed, setCreatorFailed] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    setAllCreators(null);
-    setCreatorFailed(false);
-    listCreators()
-      .then((list) => alive && setAllCreators(list))
-      .catch(() => alive && setCreatorFailed(true));
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  /* ============ Campaign 绑定 ============ */
-
-  function selectCampaign(id: string) {
-    const c = campaigns?.find((x) => x.id === id);
-    if (!c) return;
-    const rc = reportCampaignFrom(c);
-    // 切换 Campaign 时清空旧的 campaign 达人选择
-    setReportData({ ...reportData, campaign: rc, campaignCreators: [] });
-  }
-
-  function clearCampaign() {
-    setReportData({ ...reportData, campaign: null, campaignCreators: [] });
-  }
-
-  /* ============ Campaign 达人增删 ============ */
-
-  function toggleCampaignCreator(c: Creator) {
-    const existing = reportData.campaignCreators ?? [];
-    const idx = existing.findIndex((x) => x.id === c.id);
-    let next: ReportCreator[];
-    if (idx >= 0) {
-      next = existing.filter((_, i) => i !== idx);
-    } else {
-      const stats = buildDefaultStats(c);
-      next = [
-        ...existing,
-        {
-          id: c.id,
-          name: c.name,
-          handle: c.handle,
-          platform: c.platform,
-          tier: c.tier,
-          followers: c.followers,
-          engagement: c.engagement,
-          category: c.category,
-          region: c.region,
-          avatar: c.avatar,
-          stats,
-          audience: c.audience,
-        },
-      ];
-    }
-    setReportData({ ...reportData, campaignCreators: next });
-  }
-
-  /* ============ 达人库达人增删 ============ */
-
+  /** 切换达人显隐，实时同步到 store。 */
   function toggleCreator(c: Creator) {
-    const existing = reportData.creators ?? [];
-    const idx = existing.findIndex((x) => x.id === c.id);
-    let next: ReportCreator[];
-    if (idx >= 0) {
-      next = existing.filter((_, i) => i !== idx);
-    } else {
-      const stats = buildDefaultStats(c);
-      next = [
-        ...existing,
-        {
-          id: c.id,
-          name: c.name,
-          handle: c.handle,
-          platform: c.platform,
-          tier: c.tier,
-          followers: c.followers,
-          engagement: c.engagement,
-          category: c.category,
-          region: c.region,
-          avatar: c.avatar,
-          stats,
-          audience: c.audience,
-        },
-      ];
-    }
-    setReportData({ ...reportData, creators: next });
+    const next = new Set(hiddenIds);
+    if (next.has(c.id)) next.delete(c.id);
+    else next.add(c.id);
+    setHiddenIds(next);
+    if (allCreators) syncToStore(allCreators, next);
   }
 
-  /* ============ 达人 KPI 编辑（两类共用）============ */
-
-  function updateCreatorStat(
-    section: 'campaignCreators' | 'creators',
-    creatorId: string,
-    statIndex: number,
-    value: string,
-  ) {
-    const list = [...(reportData[section] ?? [])];
-    const ci = list.findIndex((x) => x.id === creatorId);
-    if (ci < 0) return;
-    const creator = { ...list[ci] };
-    const stats = [...(creator.stats ?? [])];
-    if (stats[statIndex]) {
-      stats[statIndex] = { ...stats[statIndex], value };
-      creator.stats = stats;
-      list[ci] = creator;
-      setReportData({ ...reportData, [section]: list });
-    }
+  /** 将可见达人列表写入 store.reportData.campaignCreators。 */
+  function syncToStore(list: Creator[], hidden: Set<string>) {
+    const visible: ReportCreator[] = list
+      .filter((c) => !hidden.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        handle: c.handle,
+        platform: c.platform,
+        tier: c.tier,
+        followers: c.followers,
+        engagement: c.engagement,
+        category: c.category,
+        region: c.region,
+        avatar: c.avatar,
+        audience: c.audience,
+      }));
+    const rd = useEditorStore.getState().reportData;
+    const next: ReportDataContext = { ...rd, campaignCreators: visible };
+    setReportData(next);
   }
 
-  function removeCreatorStat(
-    section: 'campaignCreators' | 'creators',
-    creatorId: string,
-    statIndex: number,
-  ) {
-    const list = [...(reportData[section] ?? [])];
-    const ci = list.findIndex((x) => x.id === creatorId);
-    if (ci < 0) return;
-    const creator = { ...list[ci] };
-    creator.stats = (creator.stats ?? []).filter((_, i) => i !== statIndex);
-    list[ci] = creator;
-    setReportData({ ...reportData, [section]: list });
-  }
-
-  function addCreatorStat(
-    section: 'campaignCreators' | 'creators',
-    creatorId: string,
-    metricKey: string,
-  ) {
-    const metric = CREATOR_METRIC_CATALOG.find((m) => m.key === metricKey);
-    if (!metric) return;
-    const list = [...(reportData[section] ?? [])];
-    const ci = list.findIndex((x) => x.id === creatorId);
-    if (ci < 0) return;
-    const creator = { ...list[ci] };
-    creator.stats = [
-      ...(creator.stats ?? []),
-      { key: metric.key, label: metric.label, value: '', color: metric.color },
-    ];
-    list[ci] = creator;
-    setReportData({ ...reportData, [section]: list });
-  }
-
-  const selectedCampaignCreators = reportData.campaignCreators ?? [];
-  const selectedCreators = reportData.creators ?? [];
+  const visibleCount = allCreators ? allCreators.length - hiddenIds.size : 0;
 
   return (
     <div
@@ -305,12 +125,20 @@ export function DataConfigOverlay({ onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="flex max-h-[90vh] w-[720px] flex-col gap-4 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        className="flex max-h-[90vh] w-[760px] flex-col overflow-hidden rounded-xl bg-surface-primary shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <div className="font-headings text-base font-semibold text-foreground-primary">
-            Report Data
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
+          <div>
+            <div className="font-headings text-base font-semibold text-foreground-primary">
+              数据配置
+            </div>
+            {campaignName && (
+              <div className="text-xs text-foreground-muted">
+                {campaignName} · 数据源：数据库
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -320,245 +148,131 @@ export function DataConfigOverlay({ onClose }: Props) {
           </button>
         </div>
 
-        {/* ===== Tab 切换 ===== */}
-        <div className="flex gap-2">
-          <TabButton
-            active={activeTab === 'campaign'}
-            onClick={() => setActiveTab('campaign')}
-          >
-            Campaign & Creators
-          </TabButton>
-          <TabButton
-            active={activeTab === 'library'}
-            onClick={() => setActiveTab('library')}
-          >
-            Creator Library
-          </TabButton>
-        </div>
+        {/* Body */}
+        <div className="flex-1 overflow-auto p-5">
+          {!campaignId && (
+            <p className="text-sm text-foreground-muted">
+              当前项目未绑定 Campaign，无法加载数据。
+            </p>
+          )}
 
-        {/* ===== Tab 1: Campaign + 合作达人 ===== */}
-        {activeTab === 'campaign' && (
-          <div className="space-y-4">
-            {/* Campaign 选择 */}
-            <section className="rounded-lg border border-border-default p-3">
-              <h3 className="mb-2 text-sm font-semibold text-foreground-primary">Campaign</h3>
+          {campaignId && loading && (
+            <p className="text-sm text-foreground-muted">加载中…</p>
+          )}
 
-              {campaignFailed && (
-                <p className="text-xs text-red">Failed to load campaigns.</p>
-              )}
-              {!campaigns && !campaignFailed && (
-                <p className="text-xs text-foreground-muted">Loading…</p>
-              )}
+          {campaignId && failed && (
+            <p className="text-sm text-red">数据加载失败，请检查后端服务。</p>
+          )}
 
-              {campaigns && (
-                <>
-                  <select
-                    value={selectedCampaignId}
-                    onChange={(e) =>
-                      e.target.value ? selectCampaign(e.target.value) : clearCampaign()
-                    }
-                    className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-sm"
+          {campaignId && !loading && !failed && allCreators && allCreators.length === 0 && (
+            <p className="text-sm text-foreground-muted">
+              该 Campaign 下暂无达人数据。
+            </p>
+          )}
+
+          {campaignId && !loading && !failed && allCreators && allCreators.length > 0 && (
+            <div className="space-y-4">
+              {/* 概要 */}
+              <div className="flex items-center justify-between rounded-lg border border-border-default bg-surface-hover/50 px-3 py-2">
+                <span className="text-xs text-foreground-secondary">
+                  共 {allCreators.length} 位达人 · 显示 {visibleCount} 位 · 隐藏 {hiddenIds.size} 位
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setHiddenIds(new Set());
+                      syncToStore(allCreators, new Set());
+                    }}
+                    className="rounded border border-border-default px-2 py-0.5 text-[11px] text-foreground-secondary hover:bg-surface-hover"
                   >
-                    <option value="">— No campaign —</option>
-                    {dropdownCampaigns.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}（{c.advertiser}）
-                      </option>
-                    ))}
-                  </select>
+                    全部显示
+                  </button>
+                  <button
+                    onClick={() => {
+                      const all = new Set(allCreators.map((c) => c.id));
+                      setHiddenIds(all);
+                      syncToStore(allCreators, all);
+                    }}
+                    className="rounded border border-border-default px-2 py-0.5 text-[11px] text-foreground-secondary hover:bg-surface-hover"
+                  >
+                    全部隐藏
+                  </button>
+                </div>
+              </div>
 
-                  {reportData.campaign && (
-                    <div className="mt-2 rounded border border-border-default p-2">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="text-xs text-foreground-muted">
-                          Campaign metrics (for KPI board import)
-                        </span>
-                        <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
-                          {reportData.campaign.status}
-                        </span>
+              {/* 达人列表（显隐勾选） */}
+              <div className="space-y-2">
+                {allCreators.map((c) => {
+                  const visible = !hiddenIds.has(c.id);
+                  const works = allWorks?.find((w) => w.creatorId === c.id);
+                  return (
+                    <div
+                      key={c.id}
+                      className={`rounded-lg border p-3 transition ${
+                        visible
+                          ? 'border-border-default bg-surface-primary'
+                          : 'border-border-subtle bg-surface-hover/30 opacity-60'
+                      }`}
+                    >
+                      {/* 达人信息行 */}
+                      <div className="flex items-start gap-3">
+                        <button
+                          onClick={() => toggleCreator(c)}
+                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs transition ${
+                            visible
+                              ? 'border-accent-primary bg-accent-primary text-white'
+                              : 'border-border-default text-transparent hover:border-foreground-muted'
+                          }`}
+                          title={visible ? '点击隐藏' : '点击显示'}
+                        >
+                          ✓
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground-primary">{c.name}</span>
+                            <span className="text-[10px] text-foreground-muted">
+                              {c.platform} · {c.tier}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-foreground-muted">
+                            {c.handle && `@${c.handle}`}
+                            {c.handle && ' · '}
+                            {c.category}
+                            {c.category && ' · '}
+                            {c.region}
+                          </div>
+                          <div className="text-[11px] text-foreground-secondary">
+                            粉丝 {c.followers} · 互动率 {c.engagement}
+                          </div>
+                        </div>
+                        {works && works.posts.length > 0 && (
+                          <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted">
+                            {works.posts.length} 条作品
+                          </span>
+                        )}
                       </div>
-                      {(reportData.campaign.metrics ?? []).length > 0 ? (
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-foreground-muted">
-                              <th className="text-left font-normal">Metric</th>
-                              <th className="text-right font-normal">Value</th>
-                              <th className="text-right font-normal">Compare</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(reportData.campaign.metrics ?? []).map((mm: CampaignMetric) => (
-                              <tr key={mm.label}>
-                                <td className="text-left">{mm.label}</td>
-                                <td className="text-right">{mm.value}</td>
-                                <td
-                                  className="text-right"
-                                  style={{
-                                    color: mm.compare.trim().startsWith('-')
-                                      ? 'var(--color-danger, #dc2626)'
-                                      : 'var(--color-success, #16a34a)',
-                                  }}
-                                >
-                                  {mm.compare}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <p className="text-xs text-foreground-muted">No metrics</p>
+
+                      {/* 作品预览（仅可见达人展示） */}
+                      {visible && works && works.posts.length > 0 && (
+                        <div className="mt-2 border-t border-border-subtle pt-2">
+                          <CreatorPostList works={works} />
+                        </div>
                       )}
                     </div>
-                  )}
-                </>
-              )}
-            </section>
-
-            {/* Campaign 合作达人 */}
-            {selectedCampaignId && (
-              <section className="rounded-lg border border-border-default p-3">
-                <h3 className="mb-2 text-sm font-semibold text-foreground-primary">
-                  Campaign Creators
-                </h3>
-
-                {ccFailed && (
-                  <p className="text-xs text-red">Failed to load creators.</p>
-                )}
-                {ccLoading && (
-                  <p className="text-xs text-foreground-muted">Loading…</p>
-                )}
-
-                {campaignCreators && campaignCreators.length === 0 && (
-                  <p className="text-xs text-foreground-muted">
-                    No creators found in this campaign.
-                  </p>
-                )}
-
-                {campaignCreators && campaignCreators.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {campaignCreators.map((c) => {
-                      const active = selectedCampaignCreators.some((x) => x.id === c.id);
-                      return (
-                        <button
-                          key={c.id}
-                          onClick={() => toggleCampaignCreator(c)}
-                          className={
-                            active
-                              ? 'rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white'
-                              : 'rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover'
-                          }
-                        >
-                          {c.name}
-                          <span className="ml-1 text-[10px] opacity-70">
-                            {c.platform} · {c.tier}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* 已选达人详情 + KPI 表格编辑 */}
-                {selectedCampaignCreators.length > 0 && (
-                  <div className="mt-3">
-                    <CreatorTable
-                      creators={selectedCampaignCreators}
-                      section="campaignCreators"
-                      onUpdateStat={updateCreatorStat}
-                      onRemoveStat={removeCreatorStat}
-                      onAddStat={addCreatorStat}
-                      onRemoveCreator={(creatorId) => {
-                        const orig = campaignCreators?.find((x) => x.id === creatorId);
-                        if (orig) toggleCampaignCreator(orig);
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* 达人合作作品 + 数据指标 */}
-                {creatorWorks && creatorWorks.length > 0 && (
-                  <div className="mt-3">
-                    <h4 className="mb-2 text-xs font-semibold text-foreground-primary">
-                      Creator Posts（合作作品及效果数据）
-                    </h4>
-                    <CreatorWorksTable works={creatorWorks} />
-                  </div>
-                )}
-              </section>
-            )}
-          </div>
-        )}
-
-        {/* ===== Tab 2: 达人库 ===== */}
-        {activeTab === 'library' && (
-          <section className="rounded-lg border border-border-default p-3">
-            <h3 className="mb-2 text-sm font-semibold text-foreground-primary">
-              Creator Library
-            </h3>
-
-            {creatorFailed && (
-              <p className="text-xs text-red">Failed to load creators.</p>
-            )}
-            {!allCreators && !creatorFailed && (
-              <p className="text-xs text-foreground-muted">Loading…</p>
-            )}
-
-            {allCreators && (
-              <div className="flex flex-wrap gap-1.5">
-                {allCreators.map((c) => {
-                  const active = selectedCreators.some((x) => x.id === c.id);
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => toggleCreator(c)}
-                      className={
-                        active
-                          ? 'rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white'
-                          : 'rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover'
-                      }
-                    >
-                      {c.name}
-                      <span className="ml-1 text-[10px] opacity-70">
-                        {c.platform} · {c.tier}
-                      </span>
-                    </button>
                   );
                 })}
               </div>
-            )}
+            </div>
+          )}
+        </div>
 
-            {/* 已选达人详情 + KPI 表格编辑 */}
-            {selectedCreators.length > 0 && (
-              <div className="mt-3">
-                <CreatorTable
-                  creators={selectedCreators}
-                  section="creators"
-                  onUpdateStat={updateCreatorStat}
-                  onRemoveStat={removeCreatorStat}
-                  onAddStat={addCreatorStat}
-                  onRemoveCreator={(creatorId) => {
-                    const orig = allCreators?.find((x) => x.id === creatorId);
-                    if (orig) toggleCreator(orig);
-                  }}
-                />
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* 底部操作栏 */}
-        <div className="flex justify-end gap-2">
+        {/* Footer */}
+        <div className="flex justify-end border-t border-border-default px-5 py-3">
           <button
             onClick={onClose}
-            className="rounded border border-border-default px-4 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
+            className="rounded bg-accent-primary px-6 py-1.5 text-sm text-white hover:bg-accent-secondary"
           >
-            取消
-          </button>
-          <button
-            onClick={handleSave}
-            className="rounded bg-accent-primary px-4 py-1.5 text-sm text-white hover:bg-accent-secondary"
-          >
-            保存
+            完成
           </button>
         </div>
       </div>
@@ -568,381 +282,42 @@ export function DataConfigOverlay({ onClose }: Props) {
 
 /* ============================ 子组件 ============================ */
 
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+/** 达人作品列表：简洁卡片式展示作品数据（只读，不可编辑）。 */
+function CreatorPostList({ works }: { works: CreatorWorks }) {
   return (
-    <button
-      onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-        active
-          ? 'bg-accent-primary text-white'
-          : 'text-foreground-secondary hover:bg-surface-hover'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** 达人数据可编辑表格：行=达人，列=KPI 指标，单元格直接编辑。 */
-function CreatorTable({
-  creators,
-  section,
-  onUpdateStat,
-  onRemoveStat,
-  onAddStat,
-  onRemoveCreator,
-}: {
-  creators: ReportCreator[];
-  section: 'campaignCreators' | 'creators';
-  onUpdateStat: (section: 'campaignCreators' | 'creators', creatorId: string, statIndex: number, value: string) => void;
-  onRemoveStat: (section: 'campaignCreators' | 'creators', creatorId: string, statIndex: number) => void;
-  onAddStat: (section: 'campaignCreators' | 'creators', creatorId: string, metricKey: string) => void;
-  onRemoveCreator: (creatorId: string) => void;
-}) {
-  if (creators.length === 0) return null;
-
-  // 收集所有出现过的 metric key（保持插入顺序）作为动态列。
-  const metricKeys: string[] = [];
-  const keySet = new Set<string>();
-  for (const cr of creators) {
-    for (const s of cr.stats ?? []) {
-      const k = s.key;
-      if (k && !keySet.has(k)) {
-        keySet.add(k);
-        metricKeys.push(k);
-      }
-    }
-  }
-
-  const colLabel = (key: string) =>
-    CREATOR_METRIC_CATALOG.find((m) => m.key === key)?.label ?? key;
-
-  return (
-    <div className="overflow-auto">
-      <table className="w-full border-collapse text-xs">
-        <thead>
-          <tr className="border-b border-border-default text-foreground-muted">
-            <th className="sticky left-0 z-10 bg-surface-primary px-2 py-1 text-left font-normal">达人</th>
-            <th className="px-2 py-1 text-left font-normal">平台</th>
-            {metricKeys.map((k) => (
-              <th key={k} className="px-2 py-1 text-right font-normal whitespace-nowrap">
-                {colLabel(k)}
-              </th>
+    <div className="space-y-1.5">
+      {works.posts.map((post, i) => (
+        <div key={i} className="flex items-center gap-3 rounded border border-border-subtle bg-surface-hover/30 px-2 py-1.5">
+          {/* 多截图缩略图 */}
+          <div className="flex gap-1">
+            {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
+              ss.src ? (
+                <img key={si} src={ss.src} alt={ss.caption || ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
+              ) : null
             ))}
-            <th className="px-2 py-1 text-center font-normal">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {creators.map((cr) => {
-            const existingKeys = (cr.stats ?? []).map((s) => s.key);
-            return (
-              <tr key={cr.id} className="border-b border-border-subtle hover:bg-surface-hover/50">
-                <td className="sticky left-0 z-10 bg-surface-primary px-2 py-1 text-left font-medium text-foreground-primary whitespace-nowrap">
-                  {cr.name}
-                  <span className="ml-1 text-[10px] font-normal text-foreground-muted">{cr.tier}</span>
-                </td>
-                <td className="px-2 py-1 text-left text-foreground-secondary whitespace-nowrap">{cr.platform}</td>
-                {metricKeys.map((mk) => {
-                  const si = (cr.stats ?? []).findIndex((s) => s.key === mk);
-                  const stat = si >= 0 ? cr.stats![si] : null;
-                  return (
-                    <td key={mk} className="px-1 py-0.5 text-right">
-                      {stat ? (
-                        <div className="flex items-center gap-0.5 justify-end">
-                          <input
-                            value={stat.value}
-                            onChange={(e) => onUpdateStat(section, cr.id, si, e.target.value)}
-                            className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-right text-xs"
-                          />
-                          <button
-                            onClick={() => onRemoveStat(section, cr.id, si)}
-                            className="text-[10px] text-foreground-muted hover:text-red"
-                            title="移除该指标"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-foreground-muted">—</span>
-                      )}
-                    </td>
-                  );
-                })}
-                <td className="px-2 py-1 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <AddStatInline
-                      existingKeys={existingKeys}
-                      onAdd={(key) => onAddStat(section, cr.id, key)}
-                    />
-                    <button
-                      onClick={() => onRemoveCreator(cr.id)}
-                      className="rounded px-1.5 py-0.5 text-[10px] text-foreground-muted hover:bg-red/10 hover:text-red"
-                    >
-                      移除
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/** 行内添加指标：紧凑下拉。 */
-function AddStatInline({
-  existingKeys,
-  onAdd,
-}: {
-  existingKeys: (string | undefined)[];
-  onAdd: (metricKey: string) => void;
-}) {
-  const available = CREATOR_METRIC_CATALOG.filter((m) => !existingKeys.includes(m.key));
-  if (available.length === 0) return null;
-  return (
-    <select
-      value=""
-      onChange={(e) => {
-        if (e.target.value) onAdd(e.target.value);
-      }}
-      className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] text-foreground-secondary"
-      title="添加指标"
-    >
-      <option value="">+ 指标</option>
-      {available.map((m) => (
-        <option key={m.key} value={m.key}>
-          {m.label}
-        </option>
+          </div>
+          {/* 标题 + 平台 */}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-xs font-medium text-foreground-primary" title={post.title}>
+              {post.title}
+            </div>
+            <div className="text-[10px] text-foreground-muted">
+              {post.platform}
+              {post.publishedAt ? ` · ${post.publishedAt}` : ''}
+            </div>
+          </div>
+          {/* 指标（只读） */}
+          <div className="flex shrink-0 items-center gap-2 text-[10px] text-foreground-muted tabular-nums">
+            <span title="曝光">👁 {post.impressions}</span>
+            <span title="点赞">👍 {post.likes}</span>
+            <span title="评论">💬 {post.comments}</span>
+            {post.shares && post.shares !== '0' && <span title="转发">↗ {post.shares}</span>}
+            {post.saves && post.saves !== '0' && <span title="收藏">⭐ {post.saves}</span>}
+            {post.orders && post.orders !== '0' && <span title="订单">📦 {post.orders}</span>}
+            {post.cpm && <span title="CPM">💰 {post.cpm}</span>}
+          </div>
+        </div>
       ))}
-    </select>
-  );
-}
-
-/** 从上游 Creator 构造默认 KPI 统计条（followers + engagement）。 */
-function buildDefaultStats(c: Creator): ReportCreator['stats'] {
-  const stats: NonNullable<ReportCreator['stats']> = [];
-  const followersMetric = CREATOR_METRIC_CATALOG.find((m) => m.key === 'followers');
-  const engagementMetric = CREATOR_METRIC_CATALOG.find((m) => m.key === 'engagement');
-  if (followersMetric) {
-    stats.push({
-      key: followersMetric.key,
-      label: followersMetric.label,
-      value: c.followers,
-      color: followersMetric.color,
-      selected: true,
-    });
-  }
-  if (engagementMetric) {
-    stats.push({
-      key: engagementMetric.key,
-      label: engagementMetric.label,
-      value: c.engagement,
-      color: engagementMetric.color,
-      selected: true,
-    });
-  }
-  return stats;
-}
-
-/** 达人合作作品表格：按达人分组，展示每条作品的曝光/互动/互动率等指标。 */
-function CreatorWorksTable({ works }: { works: CreatorWorks[] }) {
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const totalPosts = works.reduce((sum, w) => sum + w.posts.length, 0);
-
-  function toggle(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  return (
-    <div className="overflow-auto rounded border border-border-default">
-      <table className="w-full border-collapse text-xs">
-        <thead>
-          <tr className="border-b border-border-default bg-surface-hover text-foreground-muted">
-            <th className="px-2 py-1 text-left font-normal">达人</th>
-            <th className="px-2 py-1 text-left font-normal">平台</th>
-            <th className="px-2 py-1 text-center font-normal">作品</th>
-            <th className="px-2 py-1 text-right font-normal">总曝光</th>
-            <th className="px-2 py-1 text-right font-normal">总互动</th>
-            <th className="px-2 py-1 text-right font-normal">平均互动率</th>
-            <th className="px-2 py-1 text-right font-normal">总收藏</th>
-            <th className="px-2 py-1 text-right font-normal">总订单</th>
-            <th className="px-2 py-1 text-center font-normal">展开</th>
-          </tr>
-        </thead>
-        <tbody>
-          {works.map((cw) => {
-            const isOpen = expanded.has(cw.creatorId);
-            const totalImpressions = cw.posts.reduce(
-              (s, p) => s + Number(p.impressions.replace(/[^0-9.]/g, '')) || 0,
-              0,
-            );
-            const totalEngagement = cw.posts.reduce((s, p) => {
-              const likes = Number(p.likes.replace(/[^0-9.]/g, '')) || 0;
-              const comments = Number(p.comments.replace(/[^0-9.]/g, '')) || 0;
-              const shares = Number(p.shares.replace(/[^0-9.]/g, '')) || 0;
-              const saves = Number(p.saves.replace(/[^0-9.]/g, '')) || 0;
-              return s + likes + comments + shares + saves;
-            }, 0);
-            const totalSaves = cw.posts.reduce(
-              (s, p) => s + Number(p.saves.replace(/[^0-9.]/g, '')) || 0,
-              0,
-            );
-            const totalOrders = cw.posts.reduce(
-              (s, p) => s + Number(p.orders.replace(/[^0-9.]/g, '')) || 0,
-              0,
-            );
-            const avgEngRate =
-              cw.posts.length > 0
-                ? cw.posts.reduce((s, p) => {
-                    const r = Number(p.engagementRate.replace(/[^0-9.]/g, '')) || 0;
-                    return s + r;
-                  }, 0) / cw.posts.length
-                : 0;
-            return (
-              <Fragment key={cw.creatorId}>
-                <tr className="border-b border-border-subtle hover:bg-surface-hover/50">
-                  <td className="px-2 py-1 text-left font-medium text-foreground-primary whitespace-nowrap">
-                    {cw.creatorName}
-                    <span className="ml-1 text-[10px] font-normal text-foreground-muted">{cw.tier}</span>
-                  </td>
-                  <td className="px-2 py-1 text-left text-foreground-secondary whitespace-nowrap">{cw.platform}</td>
-                  <td className="px-2 py-1 text-center text-foreground-secondary">{cw.posts.length}</td>
-                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
-                    {totalImpressions.toLocaleString()}
-                  </td>
-                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
-                    {totalEngagement.toLocaleString()}
-                  </td>
-                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
-                    {avgEngRate.toFixed(1)}%
-                  </td>
-                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
-                    {totalSaves.toLocaleString()}
-                  </td>
-                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
-                    {totalOrders.toLocaleString()}
-                  </td>
-                  <td className="px-2 py-1 text-center">
-                    <button
-                      onClick={() => toggle(cw.creatorId)}
-                      className="text-[10px] text-accent-primary hover:underline"
-                    >
-                      {isOpen ? '收起' : `查看 ${cw.posts.length} 条`}
-                    </button>
-                  </td>
-                </tr>
-                {isOpen && (
-                  <tr className="border-b border-border-subtle bg-accent-primary/5">
-                    <td colSpan={9} className="px-3 py-2">
-                      <div className="space-y-1 text-[11px]">
-                        {cw.posts.map((post, pi) => (
-                          <div key={pi} className="flex items-center gap-3 border-b border-border-subtle pb-1 last:border-0">
-                            {/* 多截图缩略图 */}
-                            <div className="flex gap-1">
-                              {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
-                                ss.src ? (
-                                  <img key={si} src={ss.src} alt={ss.caption || ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
-                                ) : null
-                              ))}
-                            </div>
-                            <span className="font-medium text-foreground-primary">{post.title}</span>
-                            <span className="text-foreground-muted">Impr: {post.impressions}</span>
-                            <span className="text-foreground-muted">Likes: {post.likes}</span>
-                            <span className="text-foreground-muted">Comments: {post.comments}</span>
-                            <span className="text-foreground-muted">Shares: {post.shares}</span>
-                            <span className="text-foreground-muted">Saves: {post.saves}</span>
-                            {post.orders && post.orders !== '0' && (
-                              <span className="text-foreground-muted">Orders: {post.orders}</span>
-                            )}
-                            {post.cpm && (
-                              <span className="text-foreground-muted">CPM: {post.cpm}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {isOpen &&
-                  cw.posts.map((post) => (
-                    <tr key={post.postId} className="border-b border-border-subtle bg-surface-hover/30">
-                      <td className="px-2 py-1 pl-6 text-left text-foreground-secondary" colSpan={2}>
-                        <div className="flex items-center gap-2">
-                          {/* 多截图缩略图 */}
-                          <div className="flex gap-0.5">
-                            {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
-                              ss.src ? (
-                                <img
-                                  key={si}
-                                  src={ss.src}
-                                  alt={ss.caption || ''}
-                                  className="h-8 w-8 flex-shrink-0 rounded object-cover"
-                                />
-                              ) : null
-                            ))}
-                            {(post.screenshots ?? []).length > 3 && (
-                              <span className="flex h-8 w-6 items-center justify-center text-[10px] text-foreground-muted">+{(post.screenshots ?? []).length - 3}</span>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="truncate text-foreground-primary" title={post.title}>
-                              {post.title}
-                            </div>
-                            <div className="text-[10px] text-foreground-muted">
-                              {post.platform} · {post.publishedAt}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 text-center text-foreground-muted">
-                        <span className="text-[10px]">{post.screenshots?.length ?? 1}张截图</span>
-                      </td>
-                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.impressions}</td>
-                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">
-                        {(
-                          (Number(post.likes.replace(/[^0-9.]/g, '')) || 0) +
-                          (Number(post.comments.replace(/[^0-9.]/g, '')) || 0) +
-                          (Number(post.shares.replace(/[^0-9.]/g, '')) || 0) +
-                          (Number(post.saves.replace(/[^0-9.]/g, '')) || 0)
-                        ).toLocaleString()}
-                      </td>
-                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.engagementRate}</td>
-                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.saves}</td>
-                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.orders}</td>
-                      <td className="px-2 py-1 text-center">
-                        <div className="flex flex-col items-end gap-0.5 text-[10px] text-foreground-muted">
-                          <span>👍 {post.likes}</span>
-                          <span>💬 {post.comments}</span>
-                          <span>↗ {post.shares}</span>
-                          <span>⭐ {post.saves}</span>
-                          {post.cpm && <span>💰 {post.cpm}</span>}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="border-t border-border-default px-2 py-1 text-[10px] text-foreground-muted">
-        共 {works.length} 位达人 · {totalPosts} 条合作作品
-      </div>
     </div>
   );
 }
