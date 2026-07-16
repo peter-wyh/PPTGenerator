@@ -267,26 +267,26 @@ export const templatesService = {
     const srcPage = projectPages.find((p) => p.id === input.pageId);
     if (!srcPage) throw ApiError.notFound('Page not found in project');
 
-    // 复制页面作为模板页（保留组件布局/样式，清除运行时绑定标记）
-    const tplPage: Page = {
-      id: randomUUID(),
-      name: srcPage.name,
-      pageType: srcPage.pageType,
-      titleComponentId: srcPage.titleComponentId,
-      components: (srcPage.components ?? []).map((c) => {
-        // 浅拷贝组件，清除数据绑定字段（creatorId/campaignId 等）
-        const clone = { ...c } as Record<string, unknown>;
-        delete clone.creatorId;
-        delete clone.campaignId;
-        if (clone.data && typeof clone.data === 'object') {
-          const data = { ...(clone.data as Record<string, unknown>) };
-          delete data.creatorId;
-          delete data.campaignId;
-          clone.data = data;
-        }
-        return clone as unknown as Page['components'][number];
-      }),
-    };
+    // 复制源页为模板页：展开保留全部字段（背景 bgColor/bgGradient/bgImage、
+    // titleOverridden、titleComponentId 等），仅清除运行时数据绑定（campaignId/creatorId）
+    // 并换新 id。此前用「字段白名单」拷贝会漏掉背景与 titleOverridden → 保存为模板后丢失。
+    const tplPage: Page = { ...srcPage };
+    delete tplPage.campaignId;
+    delete tplPage.creatorId;
+    tplPage.id = randomUUID();
+    tplPage.components = (srcPage.components ?? []).map((c) => {
+      // 浅拷贝组件，清除数据绑定字段（creatorId/campaignId 等）
+      const clone = { ...c } as Record<string, unknown>;
+      delete clone.creatorId;
+      delete clone.campaignId;
+      if (clone.data && typeof clone.data === 'object') {
+        const data = { ...(clone.data as Record<string, unknown>) };
+        delete data.creatorId;
+        delete data.campaignId;
+        clone.data = data;
+      }
+      return clone as unknown as Page['components'][number];
+    });
 
     const data: Prisma.TemplateCreateInput = {
       owner: { connect: { id: ownerId } },

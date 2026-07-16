@@ -7,19 +7,13 @@ import { CampaignPage } from '@/routes/CampaignPage';
 import { CreatorPage } from '@/routes/CreatorPage';
 import { DataManagement } from '@/routes/DataManagement';
 
-const { listMock, removeMock, importManyMock, clearMock, updateMock, collaboratorsMock, listCreatorsMock, listCampaignCreatorsMock, perfMock, upsertLinkMock, listLinksMock, removeLinkMock } = vi.hoisted(() => ({
+const { listMock, removeMock, importManyMock, clearMock, updateMock, listCampaignCreatorsMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   removeMock: vi.fn(),
   importManyMock: vi.fn(),
   clearMock: vi.fn(),
   updateMock: vi.fn(),
-  collaboratorsMock: vi.fn(),
-  listCreatorsMock: vi.fn(),
   listCampaignCreatorsMock: vi.fn(),
-  perfMock: vi.fn(),
-  upsertLinkMock: vi.fn(),
-  listLinksMock: vi.fn(),
-  removeLinkMock: vi.fn(),
 }));
 
 vi.mock('@/api/dataLibrary', () => ({
@@ -35,8 +29,8 @@ vi.mock('@/api/dataLibrary', () => ({
 }));
 
 vi.mock('@/api/creators', () => ({
-  listCampaignCollaborators: (id: string) => collaboratorsMock(id),
-  listCreators: () => listCreatorsMock(),
+  listCampaignCollaborators: vi.fn(),
+  listCreators: vi.fn(),
   listCampaignCreators: (id: string) => listCampaignCreatorsMock(id),
 }));
 
@@ -47,10 +41,10 @@ vi.mock('@/api/campaignsApi', () => ({
     create: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
-    upsertLink: (data: unknown) => upsertLinkMock(data),
+    upsertLink: vi.fn(),
     updateLink: vi.fn(),
-    listLinks: (id: string) => listLinksMock(id),
-    removeLink: (id: string) => removeLinkMock(id),
+    listLinks: (id: string) => Promise.resolve([]),
+    removeLink: vi.fn(),
     getPerformance: vi.fn(),
     upsertPerformance: vi.fn(),
     getCollaboration: vi.fn(),
@@ -66,7 +60,15 @@ vi.mock('@/api/campaignsApi', () => ({
 }));
 
 vi.mock('@/api/creatorPerformance', () => ({
-  listCreatorPerformance: (id: string) => perfMock(id),
+  listCreatorPerformance: vi.fn(),
+}));
+
+vi.mock('@/components/CollaborationDetail', () => ({
+  CollaborationDetail: () => <div>MockCollaborationDetail</div>,
+}));
+
+vi.mock('@/editor/components/CreatorMultiSelect', () => ({
+  CreatorMultiSelect: () => <div>MockCreatorMultiSelect</div>,
 }));
 
 /** 公共路由包装（含 DataManagement 左右布局 + 子路由） */
@@ -76,6 +78,7 @@ function renderWithDataLayout(initialEntry: string) {
       <Routes>
         <Route path="/data" element={<DataManagement />}>
           <Route path="campaigns" element={<CampaignPage />} />
+          <Route path="campaign-collabs" element={<div>CollabPage</div>} />
           <Route path="creators" element={<CreatorPage />} />
         </Route>
       </Routes>
@@ -154,6 +157,15 @@ describe('CampaignPage', () => {
     await userEvent.click(seedBtn);
     await waitFor(() => expect(importManyMock).toHaveBeenCalledWith('campaign', expect.any(Array)));
   });
+
+  it('「查看达人」跳转到合作列表页', async () => {
+    listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
+    renderWithDataLayout('/data/campaigns');
+    await screen.findByText('Campaign X');
+    await userEvent.click(screen.getByText('查看达人'));
+    // 路由跳转到合作列表页
+    expect(await screen.findByText('CollabPage')).toBeInTheDocument();
+  });
 });
 
 describe('CreatorPage', () => {
@@ -194,63 +206,6 @@ describe('CreatorPage', () => {
     await screen.findByText('Mia Chen');
     await userEvent.click(screen.getByText('编辑'));
     expect(screen.queryByText('频道 KPI')).not.toBeInTheDocument();
-  });
-});
-
-describe('CampaignPage · drill-down', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
-    removeMock.mockResolvedValue(undefined);
-    importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
-    updateMock.mockResolvedValue({ id: 'camp-x' });
-    collaboratorsMock.mockResolvedValue([]);
-    listCreatorsMock.mockResolvedValue([]);
-    listCampaignCreatorsMock.mockResolvedValue([]);
-    perfMock.mockResolvedValue([]);
-  });
-
-  it('点「查看达人」打开浮窗 → 调 listCampaignCollaborators 并渲染合作达人', async () => {
-    collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
-    renderWithDataLayout('/data/campaigns');
-    await screen.findByText('Campaign X');
-    await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
-    await waitFor(() => expect(collaboratorsMock).toHaveBeenCalledWith('camp-x'));
-    expect(await screen.findByText('@mia')).toBeInTheDocument();
-  });
-
-  it('查看达人浮窗:✕ 关闭后达人子表消失', async () => {
-    collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
-    renderWithDataLayout('/data/campaigns');
-    await screen.findByText('Campaign X');
-    await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
-    expect(await screen.findByText('@mia')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: '关闭' }));
-    await waitFor(() => expect(screen.queryByText('@mia')).not.toBeInTheDocument());
-  });
-
-  it('管理合作达人:勾选 + 保存 → campaignsApi.upsertLink（中间表 diff 写入）', async () => {
-    listCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
-    upsertLinkMock.mockResolvedValue({ id: 'link-1', campaignId: 'camp-x', creatorId: 'cre-mia' });
-    renderWithDataLayout('/data/campaigns');
-    await screen.findByText('Campaign X');
-    await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
-    await screen.findByText('管理合作达人');
-    await userEvent.click(screen.getByText('管理合作达人'));
-    await userEvent.click(screen.getByLabelText(/Mia/));
-    await userEvent.click(screen.getByText('保存'));
-    await waitFor(() => expect(upsertLinkMock).toHaveBeenCalledWith({ campaignId: 'camp-x', creatorId: 'cre-mia' }));
-  });
-
-  it('导入示例数据:Campaign 派生 creatorIds', async () => {
-    listMock.mockResolvedValue([]); // 空库才显示「导入示例数据」
-    listCampaignCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: '', region: '', metrics: [] }]);
-    renderWithDataLayout('/data/campaigns');
-    await screen.findByText('导入示例数据');
-    await userEvent.click(screen.getByText('导入示例数据'));
-    await waitFor(() => expect(importManyMock).toHaveBeenCalled());
-    const [, itemsArg] = importManyMock.mock.calls[0] as [string, unknown[]];
-    expect((itemsArg[0] as { creatorIds: string[] }).creatorIds).toEqual(['cre-mia']);
   });
 });
 
@@ -296,6 +251,24 @@ describe('CampaignPage · Stats 列', () => {
   });
 });
 
+describe('CampaignPage · 导入示例数据', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listMock.mockResolvedValue([]);
+    importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
+  });
+
+  it('导入示例数据:Campaign 派生 creatorIds', async () => {
+    listCampaignCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: '', region: '', metrics: [] }]);
+    renderWithDataLayout('/data/campaigns');
+    await screen.findByText('导入示例数据');
+    await userEvent.click(screen.getByText('导入示例数据'));
+    await waitFor(() => expect(importManyMock).toHaveBeenCalled());
+    const [, itemsArg] = importManyMock.mock.calls[0] as [string, unknown[]];
+    expect((itemsArg[0] as { creatorIds: string[] }).creatorIds).toEqual(['cre-mia']);
+  });
+});
+
 describe('DataManagement 侧栏导航', () => {
   it('左侧菜单显示 Campaign / 达人库 / 广告主 / 业务线', async () => {
     renderWithDataLayout('/data/campaigns');
@@ -307,7 +280,6 @@ describe('DataManagement 侧栏导航', () => {
 
   it('Campaign 子菜单可展开，显示「Campaign 列表」和「合作列表」', async () => {
     renderWithDataLayout('/data/campaigns');
-    // 默认展开（因为初始路由匹配 campaigns）
     expect(screen.getByText('Campaign 列表')).toBeInTheDocument();
     expect(screen.getByText('合作列表')).toBeInTheDocument();
   });
