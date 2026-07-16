@@ -113,8 +113,7 @@ export function CampaignCollabPage() {
   const heads = [
     '#', 'Campaign', '达人', 'Handle', '平台', '层级',
     '粉丝', '互动率', '类目', '地区',
-    '合作方式', '作品截图', 'Views', 'Likes', 'Comments', 'Shares',
-    '近90天作品', '互动中位数',
+    '合作方式', '作品(截图+数据)', '',
     '状态', '',
   ];
 
@@ -160,7 +159,7 @@ export function CampaignCollabPage() {
         <p className="text-sm text-foreground-muted">暂无合作关系数据。</p>
       ) : (
         <div className="overflow-auto rounded-lg border border-border-default">
-          <table className="w-full min-w-[1700px] border-collapse text-xs">
+          <table className="w-full min-w-[1400px] border-collapse text-xs">
             <thead>
               <tr className="bg-surface-hover text-left text-[10px] text-foreground-muted">
                 {heads.map((h, i) => (
@@ -172,8 +171,9 @@ export function CampaignCollabPage() {
               {filtered.map((r, idx) => {
                 const agg = aggregateMetrics(r.collabData?.deliverables);
                 const collabLabel = r.collabData ? collaborationLabel(r.collabData) : (r.collabType ?? '—');
-                // 收集所有截图（取前 3 张）
-                const allScreenshots = (r.collabData?.deliverables ?? []).flatMap((d) => d.screenshots ?? []).filter((s) => s.src).slice(0, 3);
+                const deliverables = r.collabData?.deliverables ?? [];
+                // 每个 deliverable 的单项指标
+                const perDel = deliverables.map((d) => aggregateMetrics([d]));
                 return (
                   <tr key={r.linkId} className="border-t border-border-subtle hover:bg-surface-hover/50">
                     <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 font-mono text-[10px] tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
@@ -193,24 +193,56 @@ export function CampaignCollabPage() {
                     <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.category || '—'}</td>
                     <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.region || '—'}</td>
                     <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{collabLabel}</td>
-                    {/* 作品截图缩略 */}
-                    <td className="px-2 py-2">
-                      {allScreenshots.length === 0 ? (
+                    {/* 作品列：每个作品一行（截图 + type + 单品数据） */}
+                    <td className="px-2 py-2 min-w-[320px]">
+                      {deliverables.length === 0 ? (
                         <span className="text-foreground-muted">—</span>
                       ) : (
-                        <div className="flex gap-1">
-                          {allScreenshots.map((s, i) => (
-                            <img key={i} src={s.src} alt={s.caption ?? ''} title={s.caption ?? ''} className="h-9 w-9 rounded border border-border-subtle object-cover" />
-                          ))}
+                        <div className="flex flex-col gap-1.5">
+                          {/* 汇总行 */}
+                          <div className="flex items-center gap-2 rounded bg-surface-hover px-1.5 py-1">
+                            <span className="text-[9px] text-foreground-muted">合计({deliverables.length}作品)</span>
+                            <MetricBadge label="Views" value={agg.views} />
+                            <MetricBadge label="Likes" value={agg.likes} />
+                            <MetricBadge label="Comments" value={agg.comments} />
+                            <MetricBadge label="Shares" value={agg.shares} />
+                          </div>
+                          {/* 每个作品一行 */}
+                          {deliverables.map((del, di) => {
+                            const shots = (del.screenshots ?? []).filter((s) => s.src).slice(0, 2);
+                            const m = perDel[di];
+                            return (
+                              <div key={`${del.contentType}-${di}`} className="flex items-center gap-2 rounded border border-border-subtle px-1.5 py-1">
+                                {/* 截图 */}
+                                {shots.length > 0 ? (
+                                  <div className="flex gap-0.5">
+                                    {shots.map((s, si) => (
+                                      <img key={si} src={s.src} alt={s.caption ?? ''} title={s.caption ?? ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="flex h-8 w-8 items-center justify-center rounded bg-surface-hover text-[8px] text-foreground-muted">N/A</div>
+                                )}
+                                {/* type pill */}
+                                <span className="rounded bg-surface-hover px-1 py-0.5 text-[10px] text-foreground-secondary">{del.contentType}</span>
+                                {/* 单品指标 */}
+                                <MetricBadge label="Views" value={m.views} dim />
+                                <MetricBadge label="Likes" value={m.likes} dim />
+                                <MetricBadge label="Comments" value={m.comments} dim />
+                                <MetricBadge label="Shares" value={m.shares} dim />
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.views}</td>
-                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.likes}</td>
-                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.comments}</td>
-                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.shares}</td>
-                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{r.creator.recentPostsCount ?? '—'}</td>
-                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{r.creator.engagementMedian ?? '—'}</td>
+                    {/* 达人补充数据 */}
+                    <td className="px-2 py-2 whitespace-nowrap text-foreground-secondary">
+                      <div className="text-[10px]">
+                        <div><span className="text-foreground-muted">近90天</span> {r.creator.recentPostsCount ?? '—'}</div>
+                        <div><span className="text-foreground-muted">互动中位</span> {r.creator.engagementMedian ?? '—'}</div>
+                      </div>
+                    </td>
                     <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.status ?? '—'}</td>
                     <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 text-right hover:bg-surface-hover/50">
                       <button onClick={() => setDrawerRow(r)} className="text-[10px] text-accent-primary hover:underline">详情</button>
@@ -608,6 +640,18 @@ function DeliverableCard({
         </div>
       )}
     </div>
+  );
+}
+
+/* ============================= 小组件 ============================= */
+
+/** 指标 badge：label + value，dim 模式用淡色 */
+function MetricBadge({ label, value, dim }: { label: string; value: string; dim?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-0.5 whitespace-nowrap text-[10px] tabular-nums ${dim ? 'text-foreground-secondary' : 'font-medium text-foreground-primary'}`}>
+      <span className="text-foreground-muted">{label}</span>
+      <span>{value}</span>
+    </span>
   );
 }
 
