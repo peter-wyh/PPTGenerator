@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { lookupApi, type BusinessLineDTO } from '@/api/lookup';
+import { ImageInput } from '@/components/ImageInput';
 
 export function BusinessLinePage() {
   const [list, setList] = useState<BusinessLineDTO[]>([]);
@@ -164,11 +165,8 @@ function BusinessLineFormModal({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            Logo URL
-            <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://..." className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
-            {logo && (
-              <img src={logo} alt="preview" className="mt-1 h-10 w-10 rounded-md border border-border-subtle object-cover" />
-            )}
+            Logo
+            <ImageInput value={logo} onChange={setLogo} aspect={1} />
           </label>
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
             配色（hex）
