@@ -29,7 +29,7 @@ export function CreatorPage() {
   const jsonRef = useRef<HTMLInputElement>(null);
 
   const empty = !loading && records.length === 0;
-  const headers = ['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement', 'Category', 'Region', ''];
+  const headers = ['Creator', 'Handle', 'Platform', 'Tier', 'Followers', 'Engagement', 'Category', 'Region', '近90天作品', '互动中位数', ''];
 
   const actions = (r: DataRecordDTO): ReactNode => (
     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
@@ -44,10 +44,17 @@ export function CreatorPage() {
       (
         <div key="n" className="flex items-center gap-2">
           <CreatorAvatar name={d.name} avatar={d.avatar} size={28} />
-          <span>{d.name}</span>
+          <div className="min-w-0">
+            <div>{d.name}</div>
+            {d.profileUrl && (
+              <a href={d.profileUrl} target="_blank" rel="noopener noreferrer" className="block truncate text-[10px] text-accent-primary hover:underline">{d.profileUrl}</a>
+            )}
+          </div>
         </div>
       ),
-      d.handle, d.platform, d.tier, d.followers, d.engagement, d.category, d.region, actions(r),
+      d.handle, d.platform, d.tier, d.followers, d.engagement, d.category, d.region,
+      d.recentPostsCount ?? '—', d.engagementMedian ?? '—',
+      actions(r),
     ];
   });
 

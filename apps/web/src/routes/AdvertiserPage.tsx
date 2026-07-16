@@ -3,7 +3,8 @@
  * 独立路由页面（/data/advertisers）。
  */
 import { useCallback, useEffect, useState } from 'react';
-import { lookupApi, type AdvertiserDTO } from '@/api/lookup';
+import { lookupApi, type AdvertiserDTO, type BusinessLineDTO, type MerchantDTO } from '@/api/lookup';
+import { ImageInput } from '@/components/ImageInput';
 
 export function AdvertiserPage() {
   const [list, setList] = useState<AdvertiserDTO[]>([]);
@@ -49,7 +50,7 @@ export function AdvertiserPage() {
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {a.logo ? (
-                    <img src={a.logo} alt={a.name} className="h-8 w-8 rounded-md border border-border-subtle object-cover" />
+                    <img src={a.logo} alt={a.name} className="max-h-8 rounded-md border border-border-subtle object-contain" />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface-hover text-[10px] font-bold text-foreground-muted">
                       {a.name.slice(0, 2).toUpperCase()}
@@ -105,8 +106,18 @@ function AdvertiserFormModal({
   const [name, setName] = useState('');
   const [logo, setLogo] = useState('');
   const [businessLineId, setBusinessLineId] = useState('');
+  const [merchantId, setMerchantId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  // 加载业务线和商家列表（供下拉选择）
+  const [businessLines, setBusinessLines] = useState<BusinessLineDTO[]>([]);
+  const [merchants, setMerchants] = useState<MerchantDTO[]>([]);
+
+  useEffect(() => {
+    lookupApi.listBusinessLines().then(setBusinessLines).catch(() => {});
+    lookupApi.listMerchants().then(setMerchants).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!advertiserId) return;
@@ -114,14 +125,21 @@ function AdvertiserFormModal({
       setName(a.name);
       setLogo(a.logo ?? '');
       setBusinessLineId(a.businessLineId ?? '');
+      setMerchantId(a.merchant?.id ?? '');
     }).catch(() => setError('加载失败'));
   }, [advertiserId]);
 
   async function save() {
     if (!name.trim()) { setError('名称不能为空'); return; }
+    if (!businessLineId) { setError('请选择业务线'); return; }
     setBusy(true); setError('');
     try {
-      const payload = { name: name.trim(), logo: logo.trim() || undefined, businessLineId };
+      const payload = {
+        name: name.trim(),
+        logo: logo.trim() || undefined,
+        businessLineId,
+        merchantId: merchantId || undefined,
+      };
       if (isEdit) {
         await lookupApi.updateAdvertiser(advertiserId!, payload);
       } else {
@@ -137,24 +155,48 @@ function AdvertiserFormModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={onCancel}>
-      <div className="flex w-[400px] flex-col gap-3 rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex w-[440px] flex-col gap-3 rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="font-headings text-sm font-semibold text-foreground-primary">{isEdit ? '编辑广告主' : '新增广告主'}</div>
         {error && <p className="text-xs text-red">{error}</p>}
+
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
           名称
           <input value={name} onChange={(e) => setName(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
         </label>
+
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-          Logo URL
-          <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://..." className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
-          {logo && (
-            <img src={logo} alt="preview" className="mt-1 h-10 w-10 rounded-md border border-border-subtle object-cover" />
-          )}
+          Logo
+          <ImageInput value={logo} onChange={setLogo} />
         </label>
+
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-          业务线 ID
-          <input value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} placeholder="关联业务线（必填）" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
+          业务线
+          <select
+            value={businessLineId}
+            onChange={(e) => setBusinessLineId(e.target.value)}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary"
+          >
+            <option value="">请选择业务线…</option>
+            {businessLines.map((bl) => (
+              <option key={bl.id} value={bl.id}>{bl.name}（{bl.code}）</option>
+            ))}
+          </select>
         </label>
+
+        <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+          品牌 (Merchant)
+          <select
+            value={merchantId}
+            onChange={(e) => setMerchantId(e.target.value)}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary"
+          >
+            <option value="">请选择品牌…</option>
+            {merchants.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </label>
+
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>
           <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">{isEdit ? '更新' : '创建'}</button>

@@ -64,7 +64,7 @@ export function ImageInput({ value, onChange, aspect }: Props) {
       {(value || error) && (
         <div className="flex items-center gap-2">
           {value && (
-            <img src={value} alt="" className="h-10 w-10 rounded border border-border-subtle object-cover" draggable={false} />
+            <img src={value} alt="" className="max-h-16 rounded border border-border-subtle object-contain" draggable={false} />
           )}
           {error && <span className="text-[11px] text-red">{error}</span>}
         </div>

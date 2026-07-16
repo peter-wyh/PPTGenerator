@@ -67,8 +67,14 @@ export interface Creator {
   engagement: string;
   category: string;
   region: string;
+  /** 达人主页链接 URL。 */
+  profileUrl?: string;
   /** 达人头像 URL。 */
   avatar?: string;
+  /** 近 90 天新发作品数。 */
+  recentPostsCount?: number;
+  /** 近 90 天互动中位数。 */
+  engagementMedian?: string;
   /** 达人自身频道 KPI 指标（Avg Reach/Impressions/Follower Growth/CPM）。 */
   metrics: CampaignMetric[];
   /** 受众画像(性别/年龄/城市)。 */

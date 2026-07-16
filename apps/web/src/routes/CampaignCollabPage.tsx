@@ -114,6 +114,7 @@ export function CampaignCollabPage() {
     '#', 'Campaign', '达人', 'Handle', '平台', '层级',
     '粉丝', '互动率', '类目', '地区',
     '合作方式', '作品截图', 'Views', 'Likes', 'Comments', 'Shares',
+    '近90天作品', '互动中位数',
     '状态', '',
   ];
 
@@ -208,6 +209,8 @@ export function CampaignCollabPage() {
                     <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.likes}</td>
                     <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.comments}</td>
                     <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.shares}</td>
+                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{r.creator.recentPostsCount ?? '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{r.creator.engagementMedian ?? '—'}</td>
                     <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.status ?? '—'}</td>
                     <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 text-right hover:bg-surface-hover/50">
                       <button onClick={() => setDrawerRow(r)} className="text-[10px] text-accent-primary hover:underline">详情</button>
@@ -314,7 +317,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
           {/* 达人信息卡 */}
           <div className="mb-4">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">达人信息</div>
-            <div className="grid grid-cols-4 gap-px rounded-lg overflow-hidden border border-border-subtle">
+            <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-border-subtle">
               {([
                 ['Platform', creator.platform],
                 ['Tier', creator.tier],
@@ -322,6 +325,8 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                 ['Engagement', creator.engagement],
                 ['Category', creator.category],
                 ['Region', creator.region],
+                ['近90天作品', String(creator.recentPostsCount ?? '—')],
+                ['互动中位数', creator.engagementMedian ?? '—'],
                 ['合作方式', collaborationLabel(collabData)],
                 ['状态', row.status ?? '—'],
               ] as const).map(([label, value]) => (
