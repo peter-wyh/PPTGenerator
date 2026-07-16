@@ -152,8 +152,8 @@ export interface ProjectMeta {
   /** 选中的上游 campaign id（campaign 类型场景）。 */
   campaignId?: string;
   campaignInfo?: CampaignInfo;
-  /** 样式类型：'ppt' = 多页 PPT 模式，'single' = 单页面模式。 */
-  styleType?: 'ppt' | 'single';
+  /** 样式类型：'ppt' = 多页 PPT 模式，'single' = 单页面模式，'ai-html' = AI 生成 HTML（跳转外部编辑器）。 */
+  styleType?: 'ppt' | 'single' | 'ai-html';
   /** 报告主题（品牌色等）。 */
   theme?: ProjectTheme;
   /** 报告全局数据上下文（Campaign + 达人），「数据配置」面板编辑，随项目保存。 */

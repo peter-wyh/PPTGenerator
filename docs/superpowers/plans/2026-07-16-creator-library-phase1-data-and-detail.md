@@ -10,9 +10,12 @@
 
 ## 约定(测试与类型检查命令)
 
-- **web 单测**(记忆 [[web-vitest-run-from-root]]):`apps/web/node_modules/.bin/vitest run <file>`
-- **server 单测**:`apps/server/node_modules/.bin/vitest run <file>`
-- **类型检查**:`pnpm -r typecheck`(若失效用各 app 的 `tsc --noEmit`)
+> **关键**:cwd 必须设到对应 app(`pnpm -C <app>`),否则 vitest 找不到 `apps/web/vite.config.ts` 的 `@/` alias → import 失败。**绝不用 `npx prisma`**(会拉最新 prisma 7.x,有 breaking change);项目 pin 的是 prisma 5.22.0,必须用 `pnpm -C apps/server exec prisma`。
+
+- **web 单测**:`pnpm -C apps/web exec vitest run <file>`(记忆 [[web-vitest-run-from-root]])
+- **server 单测**:`pnpm -C apps/server exec vitest run <file>`
+- **类型检查(分 app)**:`pnpm -C apps/web exec tsc --noEmit` 和 `pnpm -C apps/server exec tsc --noEmit`
+- **prisma 命令**:`pnpm -C apps/server exec prisma <generate|migrate ...> --schema prisma/schema.prisma`(从 apps/server cwd,--schema 相对它)
 - **提交**(记忆 [[ide-resets-git-index]]):`git add` + `git commit` 必须在**同一 bash 块**(原子),避免 IDE 清空 index;**只 add 本任务相关文件**,绝不 add 整个脏文件
 - 测试断言遵守 [[web-chart-test-convention]]:jsdom 下只断言 shell 文本
 - 不动 `ComponentType` 持久化 schema([[component-type-is-persisted-schema]])
@@ -113,7 +116,7 @@ export interface CreatorWorkAttribution {
 
 - [ ] **Step 5: 类型检查**
 
-Run: `pnpm -r typecheck`
+Run: `pnpm -C apps/web exec tsc --noEmit && pnpm -C apps/server exec tsc --noEmit`
 Expected: PASS(纯加法,全可选;无消费方破坏)
 
 - [ ] **Step 6: Commit**
@@ -188,7 +191,7 @@ describe('creatorRecordDataSchema rich fields', () => {
 
 - [ ] **Step 2: 运行测试确认失败**
 
-Run: `apps/server/node_modules/.bin/vitest run src/modules/data/data.schema.test.ts`
+Run: `pnpm -C apps/server exec vitest run src/modules/data/data.schema.test.ts`
 Expected: FAIL(`bio`/`tags`/`contact`/`rate` 与作品新字段尚未在 schema 中 → parse 结果无这些键,断言失败)
 
 - [ ] **Step 3: 实现画像 sub-schema + 扩展 `creatorRecordDataSchema`**
@@ -241,7 +244,7 @@ const creatorRateSchema = z.object({
 
 - [ ] **Step 4: 运行测试确认通过**
 
-Run: `apps/server/node_modules/.bin/vitest run src/modules/data/data.schema.test.ts`
+Run: `pnpm -C apps/server exec vitest run src/modules/data/data.schema.test.ts`
 Expected: PASS(3 用例全过)
 
 - [ ] **Step 5: Commit**
@@ -380,12 +383,12 @@ describe('dtoToCreator maps rich fields', () => {
 
 - [ ] **Step 7: 运行测试确认通过**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/creators-seed.test.ts`
+Run: `pnpm -C apps/web exec vitest run tests/creators-seed.test.ts`
 Expected: PASS
 
 - [ ] **Step 8: 类型检查**
 
-Run: `pnpm -r typecheck`
+Run: `pnpm -C apps/web exec tsc --noEmit && pnpm -C apps/server exec tsc --noEmit`
 Expected: PASS
 
 - [ ] **Step 9: Commit**
@@ -436,7 +439,7 @@ describe('MOCK_CREATORS rich profile', () => {
 
 - [ ] **Step 2: 运行测试确认失败**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/creators-seed.test.ts`
+Run: `pnpm -C apps/web exec vitest run tests/creators-seed.test.ts`
 Expected: FAIL(`bio`/`tags`/`contact`/`rate` 尚未生成 → undefined)
 
 - [ ] **Step 3: 实现 4 个确定性生成器**
@@ -524,7 +527,7 @@ export function buildRate(meta: Omit<Creator, 'metrics'>, index: number): NonNul
 
 - [ ] **Step 5: 运行测试确认通过**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/creators-seed.test.ts`
+Run: `pnpm -C apps/web exec vitest run tests/creators-seed.test.ts`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -567,7 +570,7 @@ describe('MOCK_CREATORS works rich fields', () => {
 
 - [ ] **Step 2: 运行测试确认失败**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/creators-seed.test.ts`
+Run: `pnpm -C apps/web exec vitest run tests/creators-seed.test.ts`
 Expected: FAIL(作品无 `contentType` 等 → undefined,断言失败)
 
 - [ ] **Step 3: 扩展 `buildWorks` 返回对象**
@@ -607,12 +610,12 @@ Expected: FAIL(作品无 `contentType` 等 → undefined,断言失败)
 
 - [ ] **Step 4: 运行测试确认通过**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/creators-seed.test.ts`
+Run: `pnpm -C apps/web exec vitest run tests/creators-seed.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: 类型检查**
 
-Run: `pnpm -r typecheck`
+Run: `pnpm -C apps/web exec tsc --noEmit && pnpm -C apps/server exec tsc --noEmit`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -664,7 +667,7 @@ describe('creator import bio/tags', () => {
 
 - [ ] **Step 2: 运行测试确认失败**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/dataImport.test.ts`
+Run: `pnpm -C apps/web exec vitest run tests/dataImport.test.ts`
 Expected: FAIL(`CREATOR_FIELDS` 不含 `bio`/`tags` → 取不到值)
 
 - [ ] **Step 3: `CREATOR_FIELDS` 加 bio/tags**
@@ -700,7 +703,7 @@ export const CREATOR_FIELDS = ['id', 'name', 'handle', 'platform', 'tier', 'foll
 
 - [ ] **Step 6: 运行测试确认通过**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/dataImport.test.ts`
+Run: `pnpm -C apps/web exec vitest run tests/dataImport.test.ts`
 Expected: PASS
 
 - [ ] **Step 7: Commit**
@@ -763,7 +766,7 @@ describe('CreatorDetailDrawer rich profile', () => {
 
 - [ ] **Step 2: 运行测试确认失败**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/CreatorDetailDrawer.test.tsx`
+Run: `pnpm -C apps/web exec vitest run tests/CreatorDetailDrawer.test.tsx`
 Expected: FAIL(浮窗未渲染 bio/tags/rate/contact)
 
 - [ ] **Step 3: 头部加 bio + tags chips**
@@ -847,7 +850,7 @@ function ContactRow({ label, value }: { label: string; value: string }) {
 
 - [ ] **Step 6: 运行测试确认通过**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/CreatorDetailDrawer.test.tsx`
+Run: `pnpm -C apps/web exec vitest run tests/CreatorDetailDrawer.test.tsx`
 Expected: PASS
 
 - [ ] **Step 7: Commit**
@@ -903,7 +906,7 @@ describe('CreatorDetailDrawer audience/works/stats', () => {
 
 - [ ] **Step 2: 运行测试确认失败**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/CreatorDetailDrawer.test.tsx`
+Run: `pnpm -C apps/web exec vitest run tests/CreatorDetailDrawer.test.tsx`
 Expected: FAIL(未渲染 audience/works/stats)
 
 - [ ] **Step 3: 在频道 KPI 分区后追加三个分区**
@@ -997,15 +1000,15 @@ function SliceGroup({ title, slices }: { title: string; slices: { label: string;
 
 - [ ] **Step 5: 运行测试确认通过**
 
-Run: `apps/web/node_modules/.bin/vitest run tests/CreatorDetailDrawer.test.tsx`
+Run: `pnpm -C apps/web exec vitest run tests/CreatorDetailDrawer.test.tsx`
 Expected: PASS
 
 - [ ] **Step 6: 全量回归 + 类型检查**
 
 Run:
 ```
-apps/web/node_modules/.bin/vitest run tests/CreatorDetailDrawer.test.tsx tests/creators-seed.test.ts tests/dataImport.test.ts
-pnpm -r typecheck
+pnpm -C apps/web exec vitest run tests/CreatorDetailDrawer.test.tsx tests/creators-seed.test.ts tests/dataImport.test.ts
+pnpm -C apps/web exec tsc --noEmit && pnpm -C apps/server exec tsc --noEmit
 ```
 Expected: 全 PASS
 
@@ -1021,7 +1024,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ## Phase 1 验收清单
 
-- [ ] `pnpm -r typecheck` 通过
+- [ ] `pnpm -C apps/web exec tsc --noEmit && pnpm -C apps/server exec tsc --noEmit` 通过
 - [ ] server `data.schema.test.ts` 全过(画像 + 作品 Zod)
 - [ ] web `creators-seed.test.ts` 全过(种子画像 + 作品 + dtoToCreator)
 - [ ] web `dataImport.test.ts` 全过(bio/tags)

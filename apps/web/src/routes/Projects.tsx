@@ -14,6 +14,16 @@ export function Projects() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 分类 tab
+  type StyleTab = 'all' | 'ppt' | 'single' | 'ai-html';
+  const [activeTab, setActiveTab] = useState<StyleTab>('all');
+  const TAB_LABELS: Record<StyleTab, string> = {
+    all: '全部',
+    ppt: 'PPT 多页',
+    single: '单页面',
+    'ai-html': 'AI HTML',
+  };
+
   // 新建项目弹窗
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -39,6 +49,7 @@ export function Projects() {
 
   const filtered = projects.filter(
     (p) =>
+      (activeTab === 'all' || (p.meta?.styleType ?? 'ppt') === activeTab) &&
       (!filterBL || p.meta?.businessLine === filterBL) &&
       (!filterScenario || p.meta?.scenario === filterScenario),
   );
@@ -131,7 +142,7 @@ export function Projects() {
       {/* 左侧侧栏 */}
       <aside className="flex w-52 shrink-0 flex-col border-r border-border-default bg-surface-primary">
         <div className="px-4 py-4">
-          <h1 className="font-headings text-lg font-semibold text-foreground-primary">我的项目</h1>
+          <h1 className="font-headings text-lg font-semibold text-foreground-primary">我的报告</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
             管理 · 筛选 · 创建报告项目
           </p>
@@ -184,6 +195,33 @@ export function Projects() {
 
       {/* 右侧内容区 */}
       <main className="min-w-0 flex-1 overflow-auto p-6">
+        {/* 分类 Tab */}
+        {!loading && projects.length > 0 && (
+          <div className="mb-4 flex gap-1 border-b border-border-default">
+            {(['all', 'ppt', 'single', 'ai-html'] as const).map((t) => {
+              const count = t === 'all'
+                ? projects.length
+                : projects.filter((p) => (p.meta?.styleType ?? 'ppt') === t).length;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setActiveTab(t)}
+                  className={`relative px-4 py-2 text-sm font-medium transition ${
+                    activeTab === t
+                      ? 'text-accent-primary'
+                      : 'text-foreground-secondary hover:text-foreground-primary'
+                  }`}
+                >
+                  {TAB_LABELS[t]}
+                  <span className="ml-1.5 text-[11px] text-foreground-muted">{count}</span>
+                  {activeTab === t && (
+                    <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent-primary" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {loading ? (
           <p className="text-sm text-foreground-muted">加载中…</p>
         ) : projects.length === 0 ? (
@@ -196,6 +234,7 @@ export function Projects() {
               <thead>
                 <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
                   <th className="px-3 py-2 font-medium">项目名称</th>
+                  <th className="px-3 py-2 font-medium">样式</th>
                   <th className="px-3 py-2 font-medium">业务线</th>
                   <th className="px-3 py-2 font-medium">场景</th>
                   <th className="px-3 py-2 font-medium">广告主</th>
@@ -217,6 +256,17 @@ export function Projects() {
                         {p.name}
                       </button>
                     </td>
+                    <td className="px-3 py-2 text-foreground-secondary">
+                      <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                        (p.meta?.styleType ?? 'ppt') === 'ai-html'
+                          ? 'bg-purple-100 text-purple-700'
+                          : (p.meta?.styleType ?? 'ppt') === 'single'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {TAB_LABELS[(p.meta?.styleType ?? 'ppt') as StyleTab]}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.businessLine ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{scenarioText(p.meta)}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.advertiser ?? '—'}</td>
@@ -226,11 +276,17 @@ export function Projects() {
                     <td className="px-3 py-2 text-foreground-muted">{new Date(p.updatedAt).toLocaleDateString()}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       <button
-                        onClick={() => navigate(`/projects/${p.id}`)}
+                        onClick={() => {
+                          if (p.meta?.styleType === 'ai-html') {
+                            window.open('https://grapes-editor.g2h3.com/', '_blank');
+                            return;
+                          }
+                          navigate(`/projects/${p.id}`);
+                        }}
                         className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
-                        title="进入可视化编辑器"
+                        title={p.meta?.styleType === 'ai-html' ? '打开 GrapesJS 编辑器' : '进入可视化编辑器'}
                       >
-                        可视化编辑
+                        {p.meta?.styleType === 'ai-html' ? 'GrapesJS' : '可视化编辑'}
                       </button>
                       <button
                         onClick={() => { setEditError(null); setEditing(p); }}

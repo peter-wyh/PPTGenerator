@@ -67,7 +67,7 @@ export function CreateProjectDialog({
   const [scenario, setScenario] = useState<Scenario | ''>('');
   const [scenarioSub, setScenarioSub] = useState<ScenarioSub>('weekly');
   const [creator, setCreator] = useState('');
-  const [styleType, setStyleType] = useState<'ppt' | 'single'>('ppt');
+  const [styleType, setStyleType] = useState<'ppt' | 'single' | 'ai-html'>('ppt');
 
   // campaign（上游 mock）
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -108,7 +108,7 @@ export function CreateProjectDialog({
     setScenario((m?.scenario ?? '') as Scenario | '');
     setScenarioSub(m?.scenarioSub ?? 'weekly');
     setCreator(m?.creator ?? '');
-    setStyleType((m?.styleType as 'ppt' | 'single') ?? 'ppt');
+    setStyleType((m?.styleType as 'ppt' | 'single' | 'ai-html') ?? 'ppt');
     setBusinessLine(m?.businessLine ?? '');
     setCampaignId(m?.campaignId ?? '');
     setBusinessLine(m?.businessLine ?? '');
@@ -232,6 +232,32 @@ export function CreateProjectDialog({
             autoFocus
             required
           />
+
+          {/* 样式类型（第一步选择，决定后续流程） */}
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">样式类型</span>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'ppt' as const, label: 'PPT 多页', hint: '多页幻灯片报告' },
+                { id: 'single' as const, label: '单页面', hint: '单页长图 / 海报' },
+                { id: 'ai-html' as const, label: 'AI 生成 HTML', hint: '跳转 GrapesJS 编辑器' },
+              ].map((s) => (
+                <button
+                  type="button"
+                  key={s.id}
+                  onClick={() => setStyleType(s.id)}
+                  className={`rounded-lg border px-3 py-2 text-left transition ${
+                    styleType === s.id
+                      ? 'border-accent-primary bg-accent-primary/5'
+                      : 'border-border-default hover:bg-surface-hover'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-foreground-primary">{s.label}</div>
+                  <div className="text-[11px] text-foreground-muted">{s.hint}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* 场景（驱动后续表单） */}
           <label className="block text-sm text-foreground-secondary">
@@ -379,31 +405,6 @@ export function CreateProjectDialog({
               </select>
             </label>
           )}
-
-          {/* 样式类型 */}
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">样式类型</span>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: 'ppt' as const, label: 'PPT 多页', hint: '多页幻灯片报告' },
-                { id: 'single' as const, label: '单页面', hint: '单页长图 / 海报' },
-              ].map((s) => (
-                <button
-                  type="button"
-                  key={s.id}
-                  onClick={() => setStyleType(s.id)}
-                  className={`rounded-lg border px-3 py-2 text-left transition ${
-                    styleType === s.id
-                      ? 'border-accent-primary bg-accent-primary/5'
-                      : 'border-border-default hover:bg-surface-hover'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-foreground-primary">{s.label}</div>
-                  <div className="text-[11px] text-foreground-muted">{s.hint}</div>
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* 创建人（通用） */}
           <label className="block text-sm text-foreground-secondary">

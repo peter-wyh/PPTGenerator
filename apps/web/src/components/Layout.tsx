@@ -42,7 +42,7 @@ export function Layout({ children }: LayoutProps) {
             onClick={() => navigate('/projects')}
             className={navBtn(location.pathname === '/projects')}
           >
-            我的项目
+            我的报告
           </button>
           <button
             onClick={() => navigate('/data/campaigns')}
