@@ -11,12 +11,7 @@ import type {
   SearchTermTableData,
   HourlyHeatmapData,
 } from '@mediakit/shared';
-
-const STATUS_STYLES: Record<string, string> = {
-  good: 'skin-dot-good',
-  warn: 'skin-dot-warn',
-  bad: 'skin-dot-bad',
-};
+import { STATUS_DOT_STYLES } from './shared';
 
 /* ============================ Device Breakdown ============================ */
 
@@ -60,7 +55,7 @@ export function ContentTopicView({ data }: { data: ContentTopicPerformanceData }
           <tbody>
             {items.map((it, i) => (
               <tr key={i} className="border-b border-border-primary/50">
-                <td className="py-1 pr-2"><span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_STYLES[it.status]}`} /></td>
+                <td className="py-1 pr-2"><span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT_STYLES[it.status]}`} /></td>
                 <td className="py-1 pr-2 font-medium text-foreground-primary">{it.topic}</td>
                 <td className="py-1 pr-2 text-foreground-secondary">{it.posts}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.impressions}</td>
@@ -96,7 +91,7 @@ export function SearchTermTableView({ data }: { data: SearchTermTableData }) {
           <tbody>
             {items.map((it, i) => (
               <tr key={i} className="border-b border-border-primary/50">
-                <td className="py-1 pr-2"><span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_STYLES[it.status]}`} /></td>
+                <td className="py-1 pr-2"><span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT_STYLES[it.status]}`} /></td>
                 <td className="py-1 pr-2 font-medium text-foreground-primary">{it.term}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.clicks}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.conversions}</td>

@@ -19,6 +19,10 @@ export interface CollaborationDeliverable {
   audience?: WorkAudienceInsight;
   /** 评论词云。 */
   wordcloud?: CommentWordItem[];
+  /** 作品发布日期（ISO YYYY-MM-DD）。 */
+  publishedAt?: string;
+  /** 发布平台（TikTok / Instagram / 小红书 等）。 */
+  platform?: string;
 }
 
 /** 一条合作记录的 data 载荷。id 作 DataRecord 主键 = collaborationId(campaignId, creatorId)。 */

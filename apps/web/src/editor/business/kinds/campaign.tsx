@@ -11,20 +11,46 @@ import {
   type RenderCtx,
 } from '../shared';
 
-const AVATAR = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=480&q=85';
+/** 中性达人头像占位（取 title 首字母），不再依赖写死的外部图片 URL。 */
+function AvatarPlaceholder({ title, size }: { title: string; size: number }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'color-mix(in srgb, var(--color-primary) 14%, white)',
+        color: 'var(--color-primary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 700,
+        fontSize: Math.round(size * 0.4),
+      }}
+    >
+      {(title || '?').trim().slice(0, 1).toUpperCase() || '?'}
+    </div>
+  );
+}
 
 /* ------------------------ campaign-overview ---------------------- */
 export function renderCampaignOverview(ctx: RenderCtx): React.ReactNode {
   const { item, title, meta, details, variant } = ctx;
   if (variant === 'stats') {
+    const hero = details[0] ? splitStat(details[0]) : null;
     return (
       <Base variant={variant}>
         <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '1.05fr 1fr' }}>
           <div style={{ padding: 20, background: INK, color: 'var(--foreground-inverse)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 10, letterSpacing: '.8px', opacity: 0.65 }}>CAMPAIGN HERO METRIC</div>
-            <div style={{ marginTop: 'auto', ...mono, fontWeight: 800, fontSize: 38 }}>12.6M</div>
-            <div style={{ fontSize: 12, marginTop: 4 }}>Campaign impressions</div>
-            <div style={{ fontSize: 10, opacity: 0.65, marginTop: 9 }}>+26% vs. original target</div>
+            <div style={{ fontSize: 10, letterSpacing: '.8px', opacity: 0.65 }}>{item.name.toUpperCase()} · 核心指标</div>
+            {hero ? (
+              <>
+                <div style={{ marginTop: 'auto', ...mono, fontWeight: 800, fontSize: 38 }}>{hero.value}</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>{hero.label}</div>
+              </>
+            ) : (
+              <div style={{ marginTop: 'auto', ...mono, fontWeight: 800, fontSize: 38, opacity: 0.4 }}>—</div>
+            )}
           </div>
           <div style={{ padding: 18, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, alignContent: 'center' }}>
             {details.slice(1).map((x, i) => {
@@ -76,14 +102,11 @@ export function renderCreatorProfile(ctx: RenderCtx): React.ReactNode {
       <Base variant={variant}>
         <div style={{ height: '100%', display: 'grid', gridTemplateRows: '112px 1fr' }}>
           <div style={{ padding: '16px 20px', background: INK, color: 'var(--foreground-inverse)', display: 'flex', alignItems: 'center', gap: 15 }}>
-            <img src={AVATAR} alt="" style={{ width: 68, height: 68, borderRadius: '50%', objectFit: 'cover' }} />
+            <AvatarPlaceholder title={title} size={68} />
             <div>
               <Title text={title} size={23} color="var(--foreground-inverse)" />
               <div style={{ fontSize: 10, opacity: 0.7, marginTop: 3 }}>{meta}</div>
-              <div style={{ fontSize: 9, color: 'color-mix(in srgb, var(--color-secondary) 50%, white)', marginTop: 7 }}>TIKTOK · {details[0]}</div>
-            </div>
-            <div style={{ marginLeft: 'auto', ...mono, fontWeight: 700, fontSize: 11, color: 'color-mix(in srgb, var(--color-secondary) 50%, white)', textAlign: 'right' }}>
-              TOP<br />PERFORMER
+              {details[0] && <div style={{ fontSize: 9, color: 'color-mix(in srgb, var(--color-secondary) 50%, white)', marginTop: 7 }}>{details[0]}</div>}
             </div>
           </div>
           <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9 }}>
@@ -91,8 +114,7 @@ export function renderCreatorProfile(ctx: RenderCtx): React.ReactNode {
               if (i === 3)
                 return (
                   <div key={i} style={{ borderLeft: `2px solid ${STAT_COLORS[3]}`, paddingLeft: 8 }}>
-                    <div style={{ ...mono, fontWeight: 700, fontSize: 17 }}>18–34</div>
-                    <div style={{ fontSize: 9, color: 'var(--foreground-muted)', marginTop: 4 }}>Women · US / UK</div>
+                    <div style={{ ...mono, fontWeight: 700, fontSize: 15, lineHeight: 1.15 }}>{x}</div>
                   </div>
                 );
               const p = x.split(' ');
@@ -112,8 +134,8 @@ export function renderCreatorProfile(ctx: RenderCtx): React.ReactNode {
   return (
     <Base variant={variant}>
       <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '150px 1fr 205px', background: 'var(--foreground-inverse)' }}>
-        <div style={{ position: 'relative', background: 'color-mix(in srgb, var(--color-primary) 8%, white)', overflow: 'hidden' }}>
-          <img src={AVATAR} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+        <div style={{ position: 'relative', background: 'color-mix(in srgb, var(--color-primary) 8%, white)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <AvatarPlaceholder title={title} size={84} />
         </div>
         <div style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -122,8 +144,9 @@ export function renderCreatorProfile(ctx: RenderCtx): React.ReactNode {
           </div>
           <div style={{ fontSize: 11, color: 'var(--foreground-secondary)', marginTop: 3 }}>{meta}</div>
           <div style={{ marginTop: 13, display: 'flex', gap: 6 }}>
-            <span style={{ background: 'var(--foreground-primary)', color: 'var(--foreground-inverse)', fontSize: 9, fontWeight: 700, padding: '5px 8px', borderRadius: 4 }}>TIKTOK</span>
-            <span style={{ background: 'color-mix(in srgb, var(--color-primary) 8%, white)', color: 'var(--color-primary)', fontSize: 9, fontWeight: 700, padding: '5px 8px', borderRadius: 4 }}>{details[0]}</span>
+            {details[0] && (
+              <span style={{ background: 'color-mix(in srgb, var(--color-primary) 8%, white)', color: 'var(--color-primary)', fontSize: 9, fontWeight: 700, padding: '5px 8px', borderRadius: 4 }}>{details[0]}</span>
+            )}
           </div>
           <div style={{ marginTop: 'auto', fontSize: 10, color: 'var(--foreground-muted)', lineHeight: 1.5 }}>Audience profile: {details[4]}</div>
         </div>

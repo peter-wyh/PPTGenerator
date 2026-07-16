@@ -216,6 +216,10 @@ export interface PostEffect {
   shares: string;
   /** 收藏。 */
   saves: string;
+  /** 订单量（电商/带货类，非带货为空）。 */
+  orders?: string;
+  /** 千次展示成本（CPM，¥）。 */
+  cpm?: string;
   /** 互动率 = (赞+评+转+藏) / 曝光。 */
   engagementRate: string;
 }

@@ -5,12 +5,7 @@
  */
 import type { PlacementWideTableData, PlacementTypeSummaryData } from '@mediakit/shared';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
-
-const STATUS_STYLES: Record<string, string> = {
-  good: 'skin-dot-good',
-  warn: 'skin-dot-warn',
-  bad: 'skin-dot-bad',
-};
+import { STATUS_DOT_STYLES } from './shared';
 
 /* ============================ Placement Wide Table ============================ */
 
@@ -33,7 +28,7 @@ export function PlacementWideTableView({ data }: { data: PlacementWideTableData 
             {rows.map((r, i) => (
               <tr key={i} className="border-b border-border-primary/50">
                 <td className="py-1 pr-2">
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_STYLES[r.status]}`} />
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT_STYLES[r.status]}`} />
                 </td>
                 <td className="py-1 pr-2 font-medium text-foreground-primary">{r.placement}</td>
                 <td className="py-1 pr-2 text-foreground-secondary">{r.publisher}</td>

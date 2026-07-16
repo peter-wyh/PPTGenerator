@@ -15,6 +15,7 @@ vi.mock('@/api/campaigns', () => ({
 vi.mock('@/api/creators', () => ({
   listCreators: () => Promise.resolve([]),
   listCampaignCreators: () => Promise.resolve([]),
+  fetchCampaignCreatorWorks: () => Promise.resolve([]),
 }));
 
 const noop = () => {};

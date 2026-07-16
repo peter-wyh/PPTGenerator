@@ -169,11 +169,8 @@ export function CampaignCollabPage() {
             </thead>
             <tbody>
               {filtered.map((r, idx) => {
-                const agg = aggregateMetrics(r.collabData?.deliverables);
                 const collabLabel = r.collabData ? collaborationLabel(r.collabData) : (r.collabType ?? '—');
                 const deliverables = r.collabData?.deliverables ?? [];
-                // 每个 deliverable 的单项指标
-                const perDel = deliverables.map((d) => aggregateMetrics([d]));
                 return (
                   <tr key={r.linkId} className="border-t border-border-subtle hover:bg-surface-hover/50">
                     <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 font-mono text-[10px] tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
@@ -201,16 +198,18 @@ export function CampaignCollabPage() {
                         <div className="flex flex-col gap-1.5">
                           {/* 汇总行 */}
                           <div className="flex items-center gap-2 rounded bg-surface-hover px-1.5 py-1">
-                            <span className="text-[9px] text-foreground-muted">合计({deliverables.length}作品)</span>
-                            <MetricBadge label="Views" value={agg.views} />
-                            <MetricBadge label="Likes" value={agg.likes} />
-                            <MetricBadge label="Comments" value={agg.comments} />
-                            <MetricBadge label="Shares" value={agg.shares} />
+                            <span className="text-[9px] text-foreground-muted">合计({deliverables.length}类型)</span>
+                            {(() => {
+                              const agg = aggregateAllMetrics(deliverables);
+                              return agg.map(([label, value]) => (
+                                <MetricBadge key={label} label={label} value={value} />
+                              ));
+                            })()}
                           </div>
                           {/* 每个作品一行 */}
                           {deliverables.map((del, di) => {
-                            const shots = (del.screenshots ?? []).filter((s) => s.src).slice(0, 2);
-                            const m = perDel[di];
+                            const shots = (del.screenshots ?? []).filter((s) => s.src).slice(0, 3);
+                            const delMetrics = del.metrics ?? [];
                             return (
                               <div key={`${del.contentType}-${di}`} className="flex items-center gap-2 rounded border border-border-subtle px-1.5 py-1">
                                 {/* 截图 */}
@@ -225,13 +224,17 @@ export function CampaignCollabPage() {
                                 ) : (
                                   <div className="flex h-8 w-8 items-center justify-center rounded bg-surface-hover text-[8px] text-foreground-muted">N/A</div>
                                 )}
-                                {/* type pill */}
-                                <span className="rounded bg-surface-hover px-1 py-0.5 text-[10px] text-foreground-secondary">{del.contentType}</span>
-                                {/* 单品指标 */}
-                                <MetricBadge label="Views" value={m.views} dim />
-                                <MetricBadge label="Likes" value={m.likes} dim />
-                                <MetricBadge label="Comments" value={m.comments} dim />
-                                <MetricBadge label="Shares" value={m.shares} dim />
+                                {/* type pill + 发布时间 */}
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="rounded bg-surface-hover px-1 py-0.5 text-[10px] text-foreground-secondary">{del.contentType}</span>
+                                  {del.publishedAt && (
+                                    <span className="text-[8px] text-foreground-muted">{del.publishedAt}</span>
+                                  )}
+                                </div>
+                                {/* 动态指标（按平台×类型差异化） */}
+                                {delMetrics.map((m, mi) => (
+                                  <MetricBadge key={mi} label={m.label} value={m.value} dim />
+                                ))}
                               </div>
                             );
                           })}
@@ -477,6 +480,9 @@ function DeliverableCard({
           <span className="rounded bg-surface-hover px-1.5 py-0.5 font-medium text-foreground-primary">{contentType}</span>
         )}
         <span className="text-foreground-muted text-[10px]">#{index + 1}</span>
+        {deliverable.publishedAt && (
+          <span className="text-foreground-muted text-[10px]">{deliverable.publishedAt}</span>
+        )}
         {firstLink && !editing && (
           <a href={firstLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline">↗ 作品链接</a>
         )}
@@ -661,37 +667,28 @@ function MetricBadge({ label, value, dim }: { label: string; value: string; dim?
 
 /* ============================= 工具函数 ============================= */
 
-/** 从所有 deliverables 的 metrics 中累加 Views/Likes/Comments/Shares */
-function aggregateMetrics(deliverables?: CollaborationDeliverable[]): { views: string; likes: string; comments: string; shares: string } {
-  if (!deliverables?.length) return { views: '—', likes: '—', comments: '—', shares: '—' };
+/** 从所有 deliverables 的 metrics 中按 label 聚合（动态支持所有指标）。 */
+function aggregateAllMetrics(deliverables?: CollaborationDeliverable[]): [string, string][] {
+  if (!deliverables?.length) return [];
 
   const sum = new Map<string, number>();
   for (const del of deliverables) {
     for (const m of del.metrics ?? []) {
-      const label = m.label.toLowerCase();
       const num = parseMetricValue(m.value);
       if (num === null) continue;
-      const key = label.includes('view') || label.includes('曝光') || label.includes('impr') ? 'views'
-        : label.includes('like') || label.includes('点赞') ? 'likes'
-        : label.includes('comment') || label.includes('评论') ? 'comments'
-        : label.includes('share') || label.includes('分享') ? 'shares'
-        : label;
-      sum.set(key, (sum.get(key) ?? 0) + num);
+      sum.set(m.label, (sum.get(m.label) ?? 0) + num);
     }
   }
 
   const fmt = (v: number) => {
     if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M';
     if (v >= 1_000) return (v / 1_000).toFixed(1) + 'K';
-    return String(v);
+    return String(Math.round(v));
   };
 
-  return {
-    views: sum.has('views') ? fmt(sum.get('views')!) : '—',
-    likes: sum.has('likes') ? fmt(sum.get('likes')!) : '—',
-    comments: sum.has('comments') ? fmt(sum.get('comments')!) : '—',
-    shares: sum.has('shares') ? fmt(sum.get('shares')!) : '—',
-  };
+  return [...sum.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, value]) => [label, fmt(value)]);
 }
 
 /** 解析 metric value 字符串为数字（支持 "1.2M" / "45K" / "12,345" / "1234"） */

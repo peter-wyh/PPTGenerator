@@ -472,6 +472,8 @@ function buildPerformance(
       comments: fmt(eng * 0.11),
       shares: fmt(eng * 0.18),
       saves: fmt(eng * 0.15),
+      orders: fmt(Math.round(impr * 0.0015 + cIdx * 3)),
+      cpm: `¥${(8 + cIdx * 2.5 + p).toFixed(2)}`,
       engagementRate: pct(er),
     });
   }
@@ -792,14 +794,28 @@ export interface CreatorWorkPost {
   creatorId: string;
   creatorName: string;
   title: string;
+  /** 作品截图列表（一个作品可有多张截图）。 */
+  screenshots: { src: string; caption?: string; url?: string }[];
   cover: string;
   url: string;
   platform: string;
+  /** 作品发布日期（ISO YYYY-MM-DD）。 */
   publishedAt: string;
+  /** 浏览量（曝光）。 */
   impressions: string;
+  /** 点赞量。 */
   likes: string;
+  /** 评论量。 */
   comments: string;
+  /** 转发量。 */
   shares: string;
+  /** 收藏量。 */
+  saves: string;
+  /** 订单量（电商/带货类）。 */
+  orders: string;
+  /** 千次展示成本。 */
+  cpm: string;
+  /** 互动率。 */
   engagementRate: string;
 }
 
@@ -920,6 +936,7 @@ export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
       creatorId: p.creatorId,
       creatorName: p.creatorName,
       title: post.title,
+      screenshots: [{ src: post.cover ?? '', caption: post.title }],
       cover: post.cover ?? '',
       url: post.url ?? '',
       platform: post.platform,
@@ -928,6 +945,9 @@ export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
       likes: post.likes,
       comments: post.comments,
       shares: post.shares,
+      saves: post.saves ?? `${Math.round((Number((post.likes ?? '0').replace(/[^0-9.]/g, '')) || 0) * 0.3).toLocaleString()}`,
+      orders: post.orders ?? '0',
+      cpm: post.cpm ?? '—',
       engagementRate: post.engagementRate,
     })),
   }));

@@ -9,8 +9,11 @@ import type {
 import { CREATOR_METRIC_CATALOG } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import { listCampaigns, reportCampaignFrom } from '../../api/campaigns';
-import { listCreators, listCampaignCreators, type Creator } from '../../api/creators';
-import { campaignCreatorWorks, type CreatorWithWorks } from '../../api/mock/creatorPerformance';
+import { listCreators, listCampaignCreators, fetchCampaignCreatorWorks, type Creator } from '../../api/creators';
+import type { CreatorWorkPost } from '../../api/mock/creatorPerformance';
+
+/** 达人作品集合（fetchCampaignCreatorWorks 返回类型）。 */
+type CreatorWorks = { creatorId: string; creatorName: string; platform: string; tier: string; posts: CreatorWorkPost[] };
 
 interface Props {
   onClose: () => void;
@@ -98,8 +101,8 @@ export function DataConfigOverlay({ onClose }: Props) {
   const [campaignCreators, setCampaignCreators] = useState<Creator[] | null>(null);
   const [ccLoading, setCcLoading] = useState(false);
   const [ccFailed, setCcFailed] = useState(false);
-  // ---- 达人合作作品列表（与 campaignCreators 同时加载）----
-  const [creatorWorks, setCreatorWorks] = useState<CreatorWithWorks[] | null>(null);
+  // ---- 达人合作作品列表（与 campaignCreators 同时加载，走后端 collaboration 数据）----
+  const [creatorWorks, setCreatorWorks] = useState<CreatorWorks[] | null>(null);
 
   useEffect(() => {
     if (!selectedCampaignId) {
@@ -112,12 +115,14 @@ export function DataConfigOverlay({ onClose }: Props) {
     setCcFailed(false);
     setCampaignCreators(null);
     setCreatorWorks(null);
-    listCampaignCreators(selectedCampaignId)
-      .then((list) => {
+    Promise.all([
+      listCampaignCreators(selectedCampaignId),
+      fetchCampaignCreatorWorks(selectedCampaignId),
+    ])
+      .then(([list, works]) => {
         if (!alive) return;
         setCampaignCreators(list);
-        // 同步加载达人合作作品（mock 数据，确定性）
-        setCreatorWorks(campaignCreatorWorks(selectedCampaignId));
+        setCreatorWorks(works);
         // 自动回显：如果 reportData.campaignCreators 为空（首次打开），自动全选该 campaign 的合作达人。
         const existing = useEditorStore.getState().reportData.campaignCreators;
         if ((!existing || existing.length === 0) && list.length > 0) {
@@ -750,7 +755,7 @@ function buildDefaultStats(c: Creator): ReportCreator['stats'] {
 }
 
 /** 达人合作作品表格：按达人分组，展示每条作品的曝光/互动/互动率等指标。 */
-function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
+function CreatorWorksTable({ works }: { works: CreatorWorks[] }) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const totalPosts = works.reduce((sum, w) => sum + w.posts.length, 0);
 
@@ -774,6 +779,8 @@ function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
             <th className="px-2 py-1 text-right font-normal">总曝光</th>
             <th className="px-2 py-1 text-right font-normal">总互动</th>
             <th className="px-2 py-1 text-right font-normal">平均互动率</th>
+            <th className="px-2 py-1 text-right font-normal">总收藏</th>
+            <th className="px-2 py-1 text-right font-normal">总订单</th>
             <th className="px-2 py-1 text-center font-normal">展开</th>
           </tr>
         </thead>
@@ -788,8 +795,17 @@ function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
               const likes = Number(p.likes.replace(/[^0-9.]/g, '')) || 0;
               const comments = Number(p.comments.replace(/[^0-9.]/g, '')) || 0;
               const shares = Number(p.shares.replace(/[^0-9.]/g, '')) || 0;
-              return s + likes + comments + shares;
+              const saves = Number(p.saves.replace(/[^0-9.]/g, '')) || 0;
+              return s + likes + comments + shares + saves;
             }, 0);
+            const totalSaves = cw.posts.reduce(
+              (s, p) => s + Number(p.saves.replace(/[^0-9.]/g, '')) || 0,
+              0,
+            );
+            const totalOrders = cw.posts.reduce(
+              (s, p) => s + Number(p.orders.replace(/[^0-9.]/g, '')) || 0,
+              0,
+            );
             const avgEngRate =
               cw.posts.length > 0
                 ? cw.posts.reduce((s, p) => {
@@ -815,6 +831,12 @@ function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
                   <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
                     {avgEngRate.toFixed(1)}%
                   </td>
+                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
+                    {totalSaves.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1 text-right text-foreground-secondary tabular-nums">
+                    {totalOrders.toLocaleString()}
+                  </td>
                   <td className="px-2 py-1 text-center">
                     <button
                       onClick={() => toggle(cw.creatorId)}
@@ -824,27 +846,34 @@ function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
                     </button>
                   </td>
                 </tr>
-                {isOpen && cw.collab && (
+                {isOpen && (
                   <tr className="border-b border-border-subtle bg-accent-primary/5">
-                    <td colSpan={7} className="px-3 py-2">
-                      <div className="grid grid-cols-4 gap-x-4 gap-y-1 text-[11px]">
-                        <div><span className="text-foreground-muted">合作方式：</span><span className="font-medium text-foreground-primary">{cw.collab.collabType}</span></div>
-                        <div><span className="text-foreground-muted">合作状态：</span><span className="font-medium text-foreground-primary">{cw.collab.status}</span></div>
-                        <div><span className="text-foreground-muted">内容形式：</span><span className="text-foreground-secondary">{cw.collab.contentType}</span></div>
-                        <div><span className="text-foreground-muted">合同金额：</span><span className="font-medium text-foreground-primary">{cw.collab.contractFee}</span></div>
-                        <div><span className="text-foreground-muted">投放周期：</span><span className="text-foreground-secondary">{cw.collab.period}</span></div>
-                        <div><span className="text-foreground-muted">预估曝光：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.estImpressions}</span></div>
-                        <div><span className="text-foreground-muted">实际曝光：</span><span className="font-medium text-foreground-primary tabular-nums">{cw.collab.actualImpressions}</span></div>
-                        <div><span className="text-foreground-muted">品牌提及：</span><span className="text-foreground-secondary">{cw.collab.brandMentions} 次</span></div>
-                        <div><span className="text-foreground-muted">CPE：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.cpe}</span></div>
-                        <div><span className="text-foreground-muted">CPM：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.cpm}</span></div>
-                        <div><span className="text-foreground-muted">ROI：</span><span className="font-medium text-accent-primary tabular-nums">{cw.collab.roi}</span></div>
-                        <div><span className="text-foreground-muted">链接点击：</span><span className="text-foreground-secondary tabular-nums">{cw.collab.linkClicks}</span></div>
-                        <div className="col-span-4 mt-1 border-t border-border-subtle pt-1">
-                          <span className="text-foreground-muted">评价：</span>
-                          <span className="text-foreground-secondary">{'★'.repeat(cw.collab.rating)}{'☆'.repeat(5 - cw.collab.rating)} </span>
-                          <span className="text-foreground-secondary">{cw.collab.comment}</span>
-                        </div>
+                    <td colSpan={9} className="px-3 py-2">
+                      <div className="space-y-1 text-[11px]">
+                        {cw.posts.map((post, pi) => (
+                          <div key={pi} className="flex items-center gap-3 border-b border-border-subtle pb-1 last:border-0">
+                            {/* 多截图缩略图 */}
+                            <div className="flex gap-1">
+                              {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
+                                ss.src ? (
+                                  <img key={si} src={ss.src} alt={ss.caption || ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
+                                ) : null
+                              ))}
+                            </div>
+                            <span className="font-medium text-foreground-primary">{post.title}</span>
+                            <span className="text-foreground-muted">Impr: {post.impressions}</span>
+                            <span className="text-foreground-muted">Likes: {post.likes}</span>
+                            <span className="text-foreground-muted">Comments: {post.comments}</span>
+                            <span className="text-foreground-muted">Shares: {post.shares}</span>
+                            <span className="text-foreground-muted">Saves: {post.saves}</span>
+                            {post.orders && post.orders !== '0' && (
+                              <span className="text-foreground-muted">Orders: {post.orders}</span>
+                            )}
+                            {post.cpm && (
+                              <span className="text-foreground-muted">CPM: {post.cpm}</span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </td>
                   </tr>
@@ -854,13 +883,22 @@ function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
                     <tr key={post.postId} className="border-b border-border-subtle bg-surface-hover/30">
                       <td className="px-2 py-1 pl-6 text-left text-foreground-secondary" colSpan={2}>
                         <div className="flex items-center gap-2">
-                          {post.cover && (
-                            <img
-                              src={post.cover}
-                              alt=""
-                              className="h-8 w-8 flex-shrink-0 rounded object-cover"
-                            />
-                          )}
+                          {/* 多截图缩略图 */}
+                          <div className="flex gap-0.5">
+                            {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
+                              ss.src ? (
+                                <img
+                                  key={si}
+                                  src={ss.src}
+                                  alt={ss.caption || ''}
+                                  className="h-8 w-8 flex-shrink-0 rounded object-cover"
+                                />
+                              ) : null
+                            ))}
+                            {(post.screenshots ?? []).length > 3 && (
+                              <span className="flex h-8 w-6 items-center justify-center text-[10px] text-foreground-muted">+{(post.screenshots ?? []).length - 3}</span>
+                            )}
+                          </div>
                           <div className="min-w-0">
                             <div className="truncate text-foreground-primary" title={post.title}>
                               {post.title}
@@ -871,21 +909,28 @@ function CreatorWorksTable({ works }: { works: CreatorWithWorks[] }) {
                           </div>
                         </div>
                       </td>
-                      <td className="px-2 py-1 text-center text-foreground-muted">—</td>
+                      <td className="px-2 py-1 text-center text-foreground-muted">
+                        <span className="text-[10px]">{post.screenshots?.length ?? 1}张截图</span>
+                      </td>
                       <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.impressions}</td>
                       <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">
                         {(
                           (Number(post.likes.replace(/[^0-9.]/g, '')) || 0) +
                           (Number(post.comments.replace(/[^0-9.]/g, '')) || 0) +
-                          (Number(post.shares.replace(/[^0-9.]/g, '')) || 0)
+                          (Number(post.shares.replace(/[^0-9.]/g, '')) || 0) +
+                          (Number(post.saves.replace(/[^0-9.]/g, '')) || 0)
                         ).toLocaleString()}
                       </td>
                       <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.engagementRate}</td>
+                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.saves}</td>
+                      <td className="px-2 py-1 text-right tabular-nums text-foreground-secondary">{post.orders}</td>
                       <td className="px-2 py-1 text-center">
                         <div className="flex flex-col items-end gap-0.5 text-[10px] text-foreground-muted">
                           <span>👍 {post.likes}</span>
                           <span>💬 {post.comments}</span>
                           <span>↗ {post.shares}</span>
+                          <span>⭐ {post.saves}</span>
+                          {post.cpm && <span>💰 {post.cpm}</span>}
                         </div>
                       </td>
                     </tr>

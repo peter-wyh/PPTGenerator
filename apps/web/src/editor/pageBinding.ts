@@ -1,4 +1,4 @@
-import type { Page, ReportCampaign, ReportCreator, ReportDataContext, WorkScreenshotItem, EditorComponent, ComponentData, DataSourceMode } from '@mediakit/shared';
+import type { Page, ReportCampaign, ReportCreator, ReportDataContext, EditorComponent, ComponentData, DataSourceMode } from '@mediaket/shared';
 import { pageCategory } from '@mediakit/shared';
 import { allReportCreators } from './store';
 import {
@@ -6,7 +6,7 @@ import {
   getGeoPerformance, getPlacementWideRows, getDeviceBreakdown, getContentTopics,
   getSearchTerms, getHourlyPerformance,
 } from '@/api/affiliate';
-import { listPlacementTypeSummary, campaignCreatorWorks } from '@/api/creatorPerformance';
+import { listPlacementTypeSummary } from '@/api/creatorPerformance';
 import { metricsToRows } from './campaignMetrics';
 
 /** 组件 → 绑定大类。未登记的组件不参与自动填充（查表得 undefined）。 */
@@ -175,7 +175,7 @@ const cap = (s?: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) 
 export function creatorPatch(
   compType: string,
   cr: ReportCreator,
-  campaignId: string,
+  _campaignId: string,
 ): Record<string, unknown> | null {
   switch (compType) {
     case 'creator-avatar-card':
@@ -221,26 +221,11 @@ export function creatorPatch(
         ],
       };
     }
-    case 'creator-works-list': {
-      const cw = campaignCreatorWorks(campaignId).find((c) => c.creatorId === cr.id);
-      if (!cw || cw.posts.length === 0) return null;
-      const headers = ['Cover', 'Title', 'Impressions', 'Likes', 'Comments', 'Shares', 'Eng. Rate'];
-      const rows = cw.posts.map((p) => [p.cover, p.title, p.impressions, p.likes, p.comments, p.shares, p.engagementRate]);
-      return { headers, rows, title: `${cw.creatorName} Works` };
-    }
-    case 'creator-works-table': {
-      const cw = campaignCreatorWorks(campaignId).find((c) => c.creatorId === cr.id);
-      if (!cw || cw.posts.length === 0) return null;
-      const headers = ['Cover', 'Title', 'Impr.', 'Likes', 'Comments', 'Shares', 'Eng. Rate'];
-      const rows = cw.posts.map((p) => [p.cover, p.title, p.impressions, p.likes, p.comments, p.shares, p.engagementRate]);
-      return { headers, rows, title: `${cw.creatorName} Works`, subtitle: 'Recent posts' };
-    }
-    case 'work-screenshot': {
-      const cw = campaignCreatorWorks(campaignId).find((c) => c.creatorId === cr.id);
-      if (!cw || cw.posts.length === 0) return null;
-      const images: WorkScreenshotItem[] = cw.posts.map((p) => ({ src: p.cover, caption: `${cw.creatorName} · ${p.title}` }));
-      return { images };
-    }
+    case 'creator-works-list':
+    case 'creator-works-table':
+    case 'work-screenshot':
+      // 作品数据不再走同步 mock——改为在属性面板的 importer 中异步从 DB 获取
+      return null;
     default:
       return null;
   }

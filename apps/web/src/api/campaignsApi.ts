@@ -7,6 +7,7 @@
  */
 import { api } from './client';
 import type { Campaign, Creator } from '@mediaket/shared';
+import { creatorAvatarUrl } from './creatorAvatar';
 
 // ─── DTO ─────────────────────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     engagement: dto.engagement,
     category: dto.category,
     region: dto.region,
-    avatar: dto.avatar ?? undefined,
+    avatar: dto.avatar ?? creatorAvatarUrl(dto.name),
     metrics: dto.metrics as Creator['metrics'] ?? [],
   };
 }
