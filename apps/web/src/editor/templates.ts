@@ -137,7 +137,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
       { name: 'Cover', templateId: 'cover-page' },
       { name: 'Performance Overview', templateId: 'report-monthly-overview' },
       { name: 'Channel Breakdown', templateId: 'report-channel' },
-      { name: 'Channel Posts', templateId: 'report-posts' },
+      { name: '渠道贴文', templateId: 'report-posts' },
       { name: 'DM Placements', templateId: 'report-placement' },
       { name: 'Partner Creators', templateId: 'creator-page' },
       { name: 'Packages', templateId: 'package-page' },
@@ -153,10 +153,10 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
       { name: 'Cover', templateId: 'cover-page' },
       { name: 'PART 1 · Performance', templateId: 'title' },
       { name: 'Performance Overview', templateId: 'report-monthly-overview' },
-      { name: 'Top Products', templateId: 'report-product' },
+      { name: '商品表现', templateId: 'report-product' },
       { name: 'Channel Performance', templateId: 'report-channel' },
       { name: 'Top Creator Collaboration', templateId: 'report-creator-collab' },
-      { name: 'Channel Posts', templateId: 'report-posts' },
+      { name: '渠道贴文', templateId: 'report-posts' },
       { name: 'DM Placements', templateId: 'report-placement' },
       { name: 'PART 2 · Optimization', templateId: 'title' },
       { name: 'Packages', templateId: 'package-page' },
@@ -228,11 +228,11 @@ export const TEMPLATES: Template[] = [
     pageType: 'title',
     components: () => {
       const title = t('text', 120, 200, 900, 120);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Report Title';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
       (title.data as { fontSize: number }).fontSize = 48;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const sub = t('text', 120, 340, 900, 60);
-      (sub.data as { content: string; fontSize: number }).content = 'Subtitle / Summary';
+      (sub.data as { content: string; fontSize: number }).content = '副标题 / 摘要';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
     },
@@ -245,7 +245,7 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const cards = [0, 1, 2].map((i) => {
         const c = t('indicator-card', 80 + i * 300, 80, 260, 110);
-        (c.data as { title: string; value: string }).title = `Metric ${i + 1}`;
+        (c.data as { title: string; value: string }).title = `指标 ${i + 1}`;
         (c.data as { value: string }).value = '---';
         return c;
       });
@@ -271,7 +271,7 @@ export const TEMPLATES: Template[] = [
     components: () => {
       // Top title
       const title = t('text', 80, 60, 900, 60);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Creator Intro';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '达人介绍';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       // In-page business components (each independently draggable/deletable — validates "in-page semantic block" granularity)
@@ -289,11 +289,11 @@ export const TEMPLATES: Template[] = [
     pageTitleIndex: 0,
     components: () => {
       const title = t('text', 120, 240, 1000, 120);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Report Title';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
       (title.data as { fontSize: number }).fontSize = 56;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const sub = t('text', 120, 380, 1000, 50);
-      (sub.data as { content: string; fontSize: number }).content = 'Subtitle / Date / Brand';
+      (sub.data as { content: string; fontSize: number }).content = '副标题 / 日期 / 品牌';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
     },
@@ -305,16 +305,16 @@ export const TEMPLATES: Template[] = [
     pageType: 'agenda',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Agenda';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '目录';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const tbl = t('table', 80, 140, 1120, 460);
-      (tbl.data as { headers: string[]; rows: string[][] }).headers = ['Section', 'Content'];
+      (tbl.data as { headers: string[]; rows: string[][] }).headers = ['章节', '内容'];
       (tbl.data as { rows: string[][] }).rows = [
-        ['01', '...'],
-        ['02', '...'],
-        ['03', '...'],
-        ['04', '...'],
+        ['', ''],
+        ['', ''],
+        ['', ''],
+        ['', ''],
       ];
       return [title, tbl];
     },
@@ -326,11 +326,11 @@ export const TEMPLATES: Template[] = [
     pageType: 'company',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'About Us';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '关于我们';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const intro = t('text', 80, 130, 1120, 80);
-      (intro.data as { content: string }).content = 'Company description...';
+      (intro.data as { content: string }).content = '';
       const wall = t('brand-wall', 80, 240, 1120, 360);
       return [title, intro, wall];
     },
@@ -342,7 +342,7 @@ export const TEMPLATES: Template[] = [
     pageType: 'package',
     components: () => {
       const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = 'Package Comparison';
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '套餐方案';
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const cardW = 360;
@@ -350,10 +350,9 @@ export const TEMPLATES: Template[] = [
       const startX = (1280 - (cardW * 3 + gap * 2)) / 2;
       const cards = [0, 1, 2].map((i) => {
         const c = t('package-card', Math.round(startX + i * (cardW + gap)), 150, cardW, 460);
-        const data = c.data as { name: string; highlighted: boolean };
+        const data = c.data as { highlighted: boolean };
         if (i === 1) {
           // Middle plan marked as recommended.
-          data.name = i === 1 ? 'Growth Booster' : data.name;
           data.highlighted = true;
         }
         return c;
@@ -368,10 +367,10 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-weekly-overview',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Weekly Status Update', 80, 50);
+      const title = titleAt('周报 · 业绩概览', 80, 50);
       const kpi = t('kpi-board', 80, 130, 1120, 200);
       const plan = t('text', 80, 360, 1120, 280);
-      (plan.data as { content: string; fontSize: number }).content = 'Next week plan...';
+      (plan.data as { content: string; fontSize: number }).content = '';
       (plan.data as { fontSize: number }).fontSize = 16;
       return [title, kpi, plan];
     },
@@ -383,13 +382,13 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-monthly-overview',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Performance Review', 80, 40);
+      const title = titleAt('月报 · 业绩概览', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
       const chart = t('bar-chart', 80, 300, 640, 240);
-      (chart.data as { title: string }).title = 'Sales Trend';
+      (chart.data as { title: string }).title = '';
       const timeline = t('timeline-compare', 760, 300, 440, 240);
       const insight = t('text', 80, 560, 1120, 80);
-      (insight.data as { content: string }).content = 'Key insight...';
+      (insight.data as { content: string }).content = '';
       return [title, kpi, chart, timeline, insight];
     },
   },
@@ -400,13 +399,13 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-channel',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Performance by Channels', 80, 40);
+      const title = titleAt('渠道表现', 80, 40);
       // Channel big numbers: reuse kpi-board (compact) to carry Engaged Publishers / Est Impression etc.
       const channelKpi = t('kpi-board', 80, 110, 1120, 90);
       (channelKpi.data as { variant: string }).variant = 'compact';
-      (channelKpi.data as { headers: string[] }).headers = ['Metric', 'Value', 'Compare'];
+      (channelKpi.data as { headers: string[] }).headers = ['指标', '数值', '对比'];
       const table = t('table', 80, 230, 1120, 320);
-      (table.data as { headers: string[] }).headers = ['Channel', 'Sales', 'Clicks', 'CVR', 'Publishers'];
+      (table.data as { headers: string[] }).headers = ['渠道', '销量', '点击', 'CVR', '发布者'];
       return [title, channelKpi, table];
     },
   },
@@ -417,12 +416,12 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-wrapup-review',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Campaign Review', 80, 40);
+      const title = titleAt('业绩复盘', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
       const timeline = t('timeline-compare', 80, 300, 1120, 220);
       (timeline.data as { variant: string }).variant = 'with-bar';
       const works = t('text', 80, 540, 1120, 100);
-      (works.data as { content: string }).content = 'Highlights & strategy...';
+      (works.data as { content: string }).content = '';
       return [title, kpi, timeline, works];
     },
   },
@@ -433,7 +432,7 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-product',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Top Products', 80, 40);
+      const title = titleAt('商品表现', 80, 40);
       const products = t('product-performance', 80, 110, 1120, 360);
       return [title, products];
     },
@@ -445,20 +444,20 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-creator-collab',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Top Influencer Collaboration', 80, 40);
+      const title = titleAt('达人合作详情', 80, 40);
       // Orchestrate the existing creator trio (validates cross-page reuse of business components).
       const avatar = t('creator-avatar-card', 80, 110, 440, 120);
       const stats = t('creator-stats-strip', 560, 110, 640, 120);
       const works = t('creator-works-list', 80, 250, 1120, 170);
       // 粉丝画像：性别占比 + 年龄段分布
       const fanGender = t('creator-fan-gender', 80, 440, 540, 220);
-      (fanGender.data as { title: string; subtitle: string }).title = 'Audience Gender';
-      (fanGender.data as { subtitle: string }).subtitle = 'Fan gender split';
+      (fanGender.data as { title: string; subtitle: string }).title = '';
+      (fanGender.data as { subtitle: string }).subtitle = '';
       const fanAge = t('creator-fan-age', 660, 440, 540, 220);
-      (fanAge.data as { title: string; subtitle: string }).title = 'Age Distribution';
-      (fanAge.data as { subtitle: string }).subtitle = 'Fan age range';
+      (fanAge.data as { title: string; subtitle: string }).title = '';
+      (fanAge.data as { subtitle: string }).subtitle = '';
       const note = t('text', 80, 680, 1120, 70);
-      (note.data as { content: string }).content = 'Change note...';
+      (note.data as { content: string }).content = '';
       return [title, avatar, stats, works, fanGender, fanAge, note];
     },
   },
@@ -469,7 +468,7 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-placement',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Placement Display', 80, 40);
+      const title = titleAt('广告位展示', 80, 40);
       const placement = t('placement-display', 80, 110, 1120, 320);
       (placement.data as { variant: string }).variant = 'with-text';
       return [title, placement];
@@ -482,7 +481,7 @@ export const TEMPLATES: Template[] = [
     pageType: 'report-posts',
     scenario: ['campaign-report'],
     components: () => {
-      const title = titleAt('Channel Posts', 80, 40);
+      const title = titleAt('渠道贴文', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
       return [title, posts];
     },
@@ -497,15 +496,15 @@ export const TEMPLATES: Template[] = [
     pageType: 'milestone',
     components: () =>
       tablePage(
-        'Company Milestones',
-        ['Year', 'Milestone'],
+        '公司里程碑',
+        ['年份', '里程碑'],
         [
-          ['...', '...'],
-          ['...', '...'],
-          ['...', '...'],
-          ['...', '...'],
+          ['', ''],
+          ['', ''],
+          ['', ''],
+          ['', ''],
         ],
-        'Milestone overview...',
+        '',
       ),
   },
   {
@@ -514,11 +513,11 @@ export const TEMPLATES: Template[] = [
     description: '标题 + 区域布局表格',
     pageType: 'global',
     components: () =>
-      tablePage('Global Business Network', ['Region', 'Offices', 'Creator Resources'], [
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
+      tablePage('全球布局', ['区域', '办公点', '达人资源'], [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
       ]),
   },
   {
@@ -527,11 +526,11 @@ export const TEMPLATES: Template[] = [
     description: '标题 + 团队构成表格',
     pageType: 'org',
     components: () =>
-      tablePage('Strategy × Creative × Ops × Data', ['Function', 'Share', 'Responsibility'], [
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
+      tablePage('组织架构', ['职能', '占比', '职责'], [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
       ]),
   },
   {
@@ -540,11 +539,11 @@ export const TEMPLATES: Template[] = [
     description: '标题 + 服务列表表格',
     pageType: 'service',
     components: () =>
-      tablePage('From Audience Insight to Business Growth', ['Service', 'Description'], [
-        ['...', '...'],
-        ['...', '...'],
-        ['...', '...'],
-        ['...', '...'],
+      tablePage('核心服务矩阵', ['服务', '描述'], [
+        ['', ''],
+        ['', ''],
+        ['', ''],
+        ['', ''],
       ]),
   },
   {
@@ -554,15 +553,15 @@ export const TEMPLATES: Template[] = [
     pageType: 'challenge',
     scenario: ['campaign-report', 'campaign-proposal'],
     components: () => {
-      const title = titleAt('Opportunities & Challenges', 80, 50);
+      const title = titleAt('机会与挑战', 80, 50);
       const swot = t('swot-matrix', 80, 130, 1120, 420);
       (swot.data as { variant: string; title: string }).variant = 'grid';
       (swot.data as { title: string }).title = '';
       (swot.data as { quadrants: { title: string; items: string[] }[] }).quadrants = [
-        { title: 'Opportunities', items: ['...'] },
-        { title: 'Strengths', items: ['...'] },
-        { title: 'Challenges', items: ['...'] },
-        { title: 'Threats', items: ['...'] },
+        { title: 'Opportunities', items: [] },
+        { title: 'Strengths', items: [] },
+        { title: 'Challenges', items: [] },
+        { title: 'Threats', items: [] },
       ];
       return [title, swot];
     },
@@ -574,11 +573,11 @@ export const TEMPLATES: Template[] = [
     pageType: 'process',
     scenario: ['campaign-report', 'campaign-proposal'],
     components: () =>
-      tablePage('4 Weeks from Brief to Launch', ['Step', 'Core Work', 'Goal'], [
-        ['1', '...', '...'],
-        ['2', '...', '...'],
-        ['3', '...', '...'],
-        ['4', '...', '...'],
+      tablePage('合作评估流程', ['步骤', '核心工作', '目标'], [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
       ]),
   },
   {
@@ -588,11 +587,11 @@ export const TEMPLATES: Template[] = [
     pageType: 'calendar',
     scenario: ['campaign-report', 'campaign-proposal'],
     components: () =>
-      tablePage('2026 Content Marketing Cadence', ['Milestone', 'Theme', 'Action'], [
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
+      tablePage('营销日历', ['节点', '主题', '动作'], [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
       ]),
   },
   {
@@ -602,11 +601,11 @@ export const TEMPLATES: Template[] = [
     pageType: 'campaign-plan',
     scenario: ['campaign-report', 'campaign-proposal'],
     components: () =>
-      tablePage('30-Day TikTok Growth Path', ['Stage', 'Action', 'Goal'], [
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
+      tablePage('投放计划', ['阶段', '动作', '目标'], [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
       ]),
   },
   {
@@ -615,17 +614,17 @@ export const TEMPLATES: Template[] = [
     description: '标题 + 成果卡片 + 案例作品 + 文案',
     pageType: 'case',
     components: () => {
-      const title = titleAt('Case Study', 80, 50);
+      const title = titleAt('案例展示', 80, 50);
       const cards = [0, 1, 2, 3].map((i) => {
         const c = t('indicator-card', 80 + i * 280, 130, 260, 90);
         const d = c.data as { title: string; value: string; colorTheme: string };
-        d.title = ['Impressions', 'GMV Achievement', 'Engagement Rate', 'Partner Creators'][i];
+        d.title = `指标 ${i + 1}`;
         d.value = '---';
         d.colorTheme = ['orange', 'green', 'blue', 'purple'][i];
         return c;
       });
       const works = t('creator-works-list', 80, 250, 1120, 200);
-      const narrative = textAt(80, 480, 1120, 100, 'Case narrative...');
+      const narrative = textAt(80, 480, 1120, 100, '');
       return [title, ...cards, works, narrative];
     },
   },
@@ -635,13 +634,13 @@ export const TEMPLATES: Template[] = [
     description: '标题 + 内容类型分布柱状图 + 明细表格',
     pageType: 'content-analysis',
     components: () => {
-      const title = titleAt('Content Performance & Conversion Analysis', 80, 50);
+      const title = titleAt('内容分析', 80, 50);
       const chart = t('bar-chart', 80, 130, 560, 260);
-      (chart.data as { title: string }).title = 'Content Type Distribution';
-      const tbl = tableAt(680, 130, 520, 260, ['Type', 'View Share', 'Top Keywords'], [
-        ['...', '...', '...'],
-        ['...', '...', '...'],
-        ['...', '...', '...'],
+      (chart.data as { title: string }).title = '';
+      const tbl = tableAt(680, 130, 520, 260, ['类型', '观看占比', '热门关键词'], [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
       ]);
       return [title, chart, tbl];
     },
@@ -653,9 +652,9 @@ export const TEMPLATES: Template[] = [
     pageType: 'funnel',
     scenario: ['campaign-report', 'campaign-proposal'],
     components: () => {
-      const title = titleAt('Content-Driven Conversion Funnel', 80, 50);
+      const title = titleAt('增长漏斗', 80, 50);
       const chart = t('bar-chart', 80, 130, 1120, 360);
-      (chart.data as { title: string }).title = 'From Impressions to Orders';
+      (chart.data as { title: string }).title = '';
       return [title, chart];
     },
   },
@@ -666,12 +665,12 @@ export const TEMPLATES: Template[] = [
     pageType: 'audience-portrait',
     scenario: ['media-kit'],
     components: () => {
-      const title = titleAt('Audience Profile', 80, 40);
+      const title = titleAt('粉丝画像', 80, 40);
       const profile = t('creator-audience-profile', 80, 110, 1120, 360);
       const interest = t('creator-fan-interest', 80, 490, 1120, 160);
-      (interest.data as { title: string }).title = 'Audience Interests';
+      (interest.data as { title: string }).title = '';
       const note = t('text', 80, 670, 1120, 70);
-      (note.data as { content: string }).content = 'Audience insight...';
+      (note.data as { content: string }).content = '';
       return [title, profile, interest, note];
     },
   },
@@ -682,14 +681,14 @@ export const TEMPLATES: Template[] = [
     pageType: 'account-overview',
     scenario: ['media-kit'],
     components: () => {
-      const title = titleAt('Account Overview', 80, 40);
+      const title = titleAt('账号数据概览', 80, 40);
       const stats = t('creator-stats-strip', 80, 110, 1120, 120);
       const c1 = t('indicator-card', 80, 250, 265, 130);
       const c2 = t('indicator-card', 365, 250, 265, 130);
       const c3 = t('indicator-card', 650, 250, 265, 130);
       const c4 = t('indicator-card', 935, 250, 265, 130);
       const growth = t('line-chart', 80, 400, 1120, 240);
-      (growth.data as { title: string }).title = 'Growth Trend';
+      (growth.data as { title: string }).title = '';
       return [title, stats, c1, c2, c3, c4, growth];
     },
   },
@@ -700,10 +699,10 @@ export const TEMPLATES: Template[] = [
     pageType: 'brand-collab',
     scenario: ['media-kit'],
     components: () => {
-      const title = titleAt('Brand Collaborations', 80, 40);
+      const title = titleAt('合作品牌', 80, 40);
       const wall = t('brand-wall', 80, 110, 1120, 420);
       const note = t('text', 80, 550, 1120, 70);
-      (note.data as { content: string }).content = 'Selected past collaborations...';
+      (note.data as { content: string }).content = '';
       return [title, wall, note];
     },
   },
@@ -817,9 +816,9 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     return comp;
   };
 
-  /** n 行 × cols 列的占位 rows（与通用 tablePage 占位一致）。 */
+  /** n 行 × cols 列的占位 rows（空字符串占位）。 */
   const ph = (cols: number, n = 4): string[][] =>
-    Array.from({ length: n }, () => Array.from({ length: cols }, () => '...'));
+    Array.from({ length: n }, () => Array.from({ length: cols }, () => ''));
 
   /** BL 风格的「标题 + 表格 (+ 简介)」页（milestone/global/org/service/process/calendar/campaign-plan 共用）。 */
   const blTablePage = (title: string, headers: string[], rows: string[][], intro?: string): EditorComponent[] => {
@@ -847,12 +846,12 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       const subY = titleY + 140;
       const title = t('text', mx + 20, titleY, cw - 40, 120);
       const td = title.data as { content: string; fontSize: number; fontWeight: number };
-      td.content = 'Report Title';
+      td.content = '报告标题';
       td.fontSize = style.code === 'FT' ? 52 : 56;
       td.fontWeight = 700;
       const sub = t('text', mx + 20, subY, cw - 40, 50);
       const sd = sub.data as { content: string; fontSize: number };
-      sd.content = `Subtitle / ${style.code} Brand`;
+      sd.content = '副标题 / 日期 / 品牌';
       sd.fontSize = 20;
       return [title, sub];
     },
@@ -874,7 +873,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       const cards = Array.from({ length: cols }, (_, i) => {
         const c = t('indicator-card', mx + i * (cW + gap), 80, cW, style.cardHeight);
         const d = c.data as { title: string; value: string };
-        d.title = `Metric ${i + 1}`;
+        d.title = `指标 ${i + 1}`;
         d.value = '---';
         return c;
       });
@@ -893,7 +892,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'creator',
     businessLine,
     components: () => {
-      const title = blTitle('Creator Spotlight', 60);
+      const title = blTitle('达人介绍', 60);
       // SM/CX: 大头像 + 社交指标；FT/DG/DM: 紧凑布局
       const avatarW = style.avatarVariant === 'vertical' ? 300 : 360;
       const avatarH = style.avatarVariant === 'vertical' ? 180 : 130;
@@ -914,9 +913,9 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
         const worksComp = t('creator-works-list', mx, worksY, cw, worksHeight);
         const fanGenderY = worksY + worksHeight + style.gapY;
         const fanGender = t('creator-fan-gender', mx, fanGenderY, Math.floor(cw / 2) - 10, 150);
-        (fanGender.data as { title: string }).title = 'Audience Gender';
+        (fanGender.data as { title: string }).title = '';
         const fanAge = t('creator-fan-age', mx + Math.floor(cw / 2) + 10, fanGenderY, Math.floor(cw / 2) - 10, 150);
-        (fanAge.data as { title: string }).title = 'Age Distribution';
+        (fanAge.data as { title: string }).title = '';
         return [title, avatar, stats, worksComp, fanGender, fanAge];
       }
 
@@ -933,7 +932,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-monthly-overview',
     businessLine,
     components: () => {
-      const title = blTitle('Performance Review', 40);
+      const title = blTitle('月报 · 业绩概览', 40);
       const kpiY = 110;
       const kpi = t('kpi-board', mx, kpiY, cw, style.kpiHeight);
 
@@ -943,12 +942,11 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
         // 左趋势图 + 右对比图 + 底部洞察
         const halfW = Math.floor(cw / 2) - 10;
         const chart1 = t('bar-chart', mx, chartY, halfW, 220);
-        (chart1.data as { title: string }).title = 'Sales Trend';
+        (chart1.data as { title: string }).title = '';
         const chart2 = t('timeline-compare', mx + halfW + 20, chartY, halfW, 220);
         const insightY = chartY + 240;
         const insight = t('text', mx, insightY, cw, 720 - insightY - 40);
-        (insight.data as { content: string; fontSize: number }).content =
-          'Insight: Data-dense review across multiple KPI dimensions.';
+        (insight.data as { content: string; fontSize: number }).content = '';
         (insight.data as { fontSize: number }).fontSize = 14;
         return [title, kpi, chart1, chart2, insight];
       }
@@ -956,12 +954,11 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       const chartW = style.largeVisual ? Math.floor(cw * 0.58) : Math.floor(cw * 0.57);
       const tlW = cw - chartW - 20;
       const chart = t('bar-chart', mx, chartY, chartW, 240);
-      (chart.data as { title: string }).title = 'Sales Trend';
+      (chart.data as { title: string }).title = '';
       const timeline = t('timeline-compare', mx + chartW + 20, chartY, tlW, 240);
       const insightY = chartY + 260;
       const insight = t('text', mx, insightY, cw, 720 - insightY - 40);
-      (insight.data as { content: string }).content =
-        'Insight: Performance review tailored to the business line strategy.';
+      (insight.data as { content: string }).content = '';
       return [title, kpi, chart, timeline, insight];
     },
   });
@@ -974,7 +971,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'funnel',
     businessLine,
     components: () => {
-      const title = blTitle('Conversion Funnel', 50);
+      const title = blTitle('增长漏斗', 50);
       // DM: 电商转化突出 ROAS，增加指标行
       if (style.code === 'DM') {
         // 顶部 ROAS 指标卡行
@@ -984,30 +981,18 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
         const roasCards = Array.from({ length: roasCols }, (_, i) => {
           const c = t('indicator-card', mx + i * (roasW + roasGap), 120, roasW, 80);
           const d = c.data as { title: string; value: string };
-          d.title = ['ROAS', 'CVR', 'CAC', 'AOV'][i];
-          d.value = ['4.2x', '3.8%', '$45', '$118'][i];
+          d.title = `指标 ${i + 1}`;
+          d.value = '---';
           return c;
         });
         const chartY = 220;
         const chart = t('bar-chart', mx, chartY, cw, 720 - chartY - 40);
-        (chart.data as { title: string }).title = 'From Impressions to Orders';
-        (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
-          { label: 'Impressions', value: 980, color: 'auto' },
-          { label: 'Clicks', value: 420, color: 'auto' },
-          { label: 'Add to Cart', value: 180, color: 'auto' },
-          { label: 'Orders', value: 72, color: 'auto' },
-        ];
+        (chart.data as { title: string }).title = '';
         return [title, ...roasCards, chart];
       }
 
       const chart = t('bar-chart', mx, 130, cw, 720 - 130 - 40);
-      (chart.data as { title: string }).title = 'From Impressions to Orders';
-      (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
-        { label: 'Impressions', value: 1260, color: 'auto' },
-        { label: 'Reach', value: 810, color: 'auto' },
-        { label: 'Interactions', value: 110, color: 'auto' },
-        { label: 'Orders', value: 84, color: 'auto' },
-      ];
+      (chart.data as { title: string }).title = '';
       return [title, chart];
     },
   });
@@ -1020,7 +1005,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'package',
     businessLine,
     components: () => {
-      const title = blTitle('Package Comparison', 60);
+      const title = blTitle('套餐方案', 60);
       // KN: 套餐卡片更大更柔和；DM: 紧凑
       const cardW = style.code === 'KN' ? 360 : style.cardWidth + 80;
       const gap = style.code === 'KN' ? 30 : 20;
@@ -1047,7 +1032,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'case',
     businessLine,
     components: () => {
-      const title = blTitle('Case Study', 50);
+      const title = blTitle('案例展示', 50);
       // CX: 大图突出；DG: 数据密集
       const cols = style.gapY < 50 ? 5 : 4;
       const gap = 16;
@@ -1058,7 +1043,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
         const d = c.data as { title: string; value: string };
         const labels = ['Impressions', 'GMV', 'Engagement', 'Creators', 'ROAS'];
         const values = ['12.6M', '138%', '8.7%', '70', '4.5x'];
-        d.title = labels[i] ?? `Metric ${i + 1}`;
+        d.title = labels[i] ?? '指标 ' + (i + 1);
         d.value = values[i] ?? '---';
         return c;
       });
@@ -1076,7 +1061,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-product',
     businessLine,
     components: () => {
-      const title = blTitle('Top Products', 40);
+      const title = blTitle('商品表现', 40);
 
       // DM: 增加顶部 ROAS 商品指标行
       if (style.code === 'DM') {
@@ -1109,7 +1094,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-creator-collab',
     businessLine,
     components: () => {
-      const title = blTitle('Top Influencer Collaboration', 40);
+      const title = blTitle('达人合作详情', 40);
       // avatar + stats 行：沿用通用布局的行高（120/170/220/70），仅按业务线切左右边距与头像/数据条变体，
       // 保证 720 画布内不溢出（业务线 gapY 在此密集页会撑高，故不代入）。
       const avatarW = style.avatarVariant === 'vertical' ? 320 : 440;
@@ -1122,13 +1107,13 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       // 粉丝画像：性别占比 + 年龄段分布
       const halfW = Math.floor(cw / 2) - 10;
       const fanGender = t('creator-fan-gender', mx, 440, halfW, 220);
-      (fanGender.data as { title: string; subtitle: string }).title = 'Audience Gender';
-      (fanGender.data as { subtitle: string }).subtitle = 'Fan gender split';
+      (fanGender.data as { title: string; subtitle: string }).title = '';
+      (fanGender.data as { subtitle: string }).subtitle = '';
       const fanAge = t('creator-fan-age', mx + halfW + 20, 440, halfW, 220);
-      (fanAge.data as { title: string; subtitle: string }).title = 'Age Distribution';
-      (fanAge.data as { subtitle: string }).subtitle = 'Fan age range';
+      (fanAge.data as { title: string; subtitle: string }).title = '';
+      (fanAge.data as { subtitle: string }).subtitle = '';
       const note = t('text', mx, 680, cw, 70);
-      (note.data as { content: string }).content = 'Change note...';
+      (note.data as { content: string }).content = '';
       return [title, avatar, stats, works, fanGender, fanAge, note];
     },
   });
@@ -1141,12 +1126,12 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-weekly-overview',
     businessLine,
     components: () => {
-      const title = blTitle('Weekly Status Update', 50);
+      const title = blTitle('周报 · 业绩概览', 50);
       const kpi = t('kpi-board', mx, 130, cw, style.kpiHeight);
       // 行间用紧凑固定间距（非 style.gapY），保证最大业务线画布内不溢出。
       const planY = 130 + style.kpiHeight + 20;
       const plan = t('text', mx, planY, cw, 720 - planY - 40);
-      (plan.data as { content: string; fontSize: number }).content = 'Next week plan...';
+      (plan.data as { content: string; fontSize: number }).content = '';
       (plan.data as { fontSize: number }).fontSize = 16;
       return [title, kpi, plan];
     },
@@ -1160,13 +1145,13 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-channel',
     businessLine,
     components: () => {
-      const title = blTitle('Performance by Channels', 40);
+      const title = blTitle('渠道表现', 40);
       const channelKpi = t('kpi-board', mx, 110, cw, 90);
       (channelKpi.data as { variant: string }).variant = 'compact';
-      (channelKpi.data as { headers: string[] }).headers = ['Metric', 'Value', 'Compare'];
+      (channelKpi.data as { headers: string[] }).headers = ['指标', '数值', '对比'];
       const tableY = 110 + 90 + 30;
       const table = t('table', mx, tableY, cw, 720 - tableY - 40);
-      (table.data as { headers: string[] }).headers = ['Channel', 'Sales', 'Clicks', 'CVR', 'Publishers'];
+      (table.data as { headers: string[] }).headers = ['渠道', '销量', '点击', 'CVR', '发布者'];
       return [title, channelKpi, table];
     },
   });
@@ -1179,14 +1164,14 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-wrapup-review',
     businessLine,
     components: () => {
-      const title = blTitle('Campaign Review', 40);
+      const title = blTitle('业绩复盘', 40);
       const kpi = t('kpi-board', mx, 110, cw, style.kpiHeight);
       const tlY = 110 + style.kpiHeight + 20;
       const timeline = t('timeline-compare', mx, tlY, cw, 220);
       (timeline.data as { variant: string }).variant = 'with-bar';
       const textY = tlY + 220 + 20;
       const works = t('text', mx, textY, cw, 720 - textY - 40);
-      (works.data as { content: string }).content = 'Highlights & strategy...';
+      (works.data as { content: string }).content = '';
       return [title, kpi, timeline, works];
     },
   });
@@ -1199,7 +1184,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-placement',
     businessLine,
     components: () => {
-      const title = blTitle('Placement Display', 40);
+      const title = blTitle('广告位展示', 40);
       const placement = t('placement-display', mx, 110, cw, 720 - 110 - 40);
       (placement.data as { variant: string }).variant = 'with-text';
       return [title, placement];
@@ -1214,7 +1199,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'report-posts',
     businessLine,
     components: () => {
-      const title = blTitle('Channel Posts', 40);
+      const title = blTitle('渠道贴文', 40);
       const posts = t('post-list', mx, 110, cw, 720 - 110 - 40);
       return [title, posts];
     },
@@ -1230,11 +1215,11 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     components: () => {
       const title = t('text', mx + 20, 200, cw - 40, 120);
       const td = title.data as { content: string; fontSize: number; fontWeight: number };
-      td.content = 'Report Title';
+      td.content = '报告标题';
       td.fontSize = 48;
       td.fontWeight = 700;
       const sub = t('text', mx + 20, 340, cw - 40, 60);
-      (sub.data as { content: string; fontSize: number }).content = 'Subtitle / Summary';
+      (sub.data as { content: string; fontSize: number }).content = '';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
     },
@@ -1258,10 +1243,10 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'agenda',
     businessLine,
     components: () => {
-      const title = blTitle('Agenda', 60);
+      const title = blTitle('目录', 60);
       const tbl = t('table', mx, 140, cw, 460);
       const td = tbl.data as { headers: string[]; rows: string[][] };
-      td.headers = ['Section', 'Content'];
+      td.headers = ['章节', '内容'];
       td.rows = [['01', '...'], ['02', '...'], ['03', '...'], ['04', '...']];
       return [title, tbl];
     },
@@ -1275,9 +1260,9 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'company',
     businessLine,
     components: () => {
-      const title = blTitle('About Us', 60);
+      const title = blTitle('关于我们', 60);
       const intro = t('text', mx, 130, cw, 80);
-      (intro.data as { content: string }).content = 'Company description...';
+      (intro.data as { content: string }).content = '';
       const wall = t('brand-wall', mx, 240, cw, 360);
       return [title, intro, wall];
     },
@@ -1290,7 +1275,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled milestones`,
     pageType: 'milestone',
     businessLine,
-    components: () => blTablePage('Company Milestones', ['Year', 'Milestone'], ph(2), 'Milestone overview...'),
+    components: () => blTablePage('公司里程碑', ['年份', '里程碑'], ph(2), ''),
   });
 
   /* -------- Global (全球布局) -------- */
@@ -1300,7 +1285,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled global network`,
     pageType: 'global',
     businessLine,
-    components: () => blTablePage('Global Business Network', ['Region', 'Offices', 'Creator Resources'], ph(3)),
+    components: () => blTablePage('全球布局', ['区域', '办公点', '达人资源'], ph(3)),
   });
 
   /* -------- Org (组织架构) -------- */
@@ -1311,7 +1296,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'org',
     businessLine,
     components: () =>
-      blTablePage('Strategy × Creative × Ops × Data', ['Function', 'Share', 'Responsibility'], ph(3)),
+      blTablePage('组织架构', ['职能', '占比', '职责'], ph(3)),
   });
 
   /* -------- Service (核心服务矩阵) -------- */
@@ -1321,7 +1306,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled service matrix`,
     pageType: 'service',
     businessLine,
-    components: () => blTablePage('From Audience Insight to Business Growth', ['Service', 'Description'], ph(2)),
+    components: () => blTablePage('核心服务矩阵', ['服务', '描述'], ph(2)),
   });
 
   /* -------- Process (合作评估流程) -------- */
@@ -1333,8 +1318,8 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     businessLine,
     components: () =>
       blTablePage(
-        '4 Weeks from Brief to Launch',
-        ['Step', 'Core Work', 'Goal'],
+        '合作评估流程',
+        ['步骤', '核心工作', '目标'],
         [['1', '...', '...'], ['2', '...', '...'], ['3', '...', '...'], ['4', '...', '...']],
       ),
   });
@@ -1346,7 +1331,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled content calendar`,
     pageType: 'calendar',
     businessLine,
-    components: () => blTablePage('2026 Content Marketing Cadence', ['Milestone', 'Theme', 'Action'], ph(3)),
+    components: () => blTablePage('营销日历', ['节点', '主题', '动作'], ph(3)),
   });
 
   /* -------- Campaign Plan (投放计划) -------- */
@@ -1356,7 +1341,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled campaign plan`,
     pageType: 'campaign-plan',
     businessLine,
-    components: () => blTablePage('30-Day TikTok Growth Path', ['Stage', 'Action', 'Goal'], ph(3)),
+    components: () => blTablePage('投放计划', ['阶段', '动作', '目标'], ph(3)),
   });
 
   /* -------- Challenge (机会与挑战) -------- */
@@ -1367,7 +1352,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'challenge',
     businessLine,
     components: () => {
-      const title = blTitle('Opportunities & Challenges', 50);
+      const title = blTitle('机会与挑战', 50);
       const swot = t('swot-matrix', mx, 130, cw, 420);
       const sd = swot.data as {
         variant: string;
@@ -1394,13 +1379,13 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'content-analysis',
     businessLine,
     components: () => {
-      const title = blTitle('Content Performance & Conversion Analysis', 50);
+      const title = blTitle('内容分析', 50);
       const chartW = Math.floor(cw * 0.5) - 10;
       const chart = t('bar-chart', mx, 130, chartW, 260);
-      (chart.data as { title: string }).title = 'Content Type Distribution';
+      (chart.data as { title: string }).title = '';
       const tbl = t('table', mx + chartW + 20, 130, cw - chartW - 20, 260);
       const td = tbl.data as { headers: string[]; rows: string[][] };
-      td.headers = ['Type', 'View Share', 'Top Keywords'];
+      td.headers = ['类型', '观看占比', '热门关键词'];
       td.rows = ph(3, 3);
       return [title, chart, tbl];
     },
