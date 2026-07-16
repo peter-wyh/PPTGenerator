@@ -10,6 +10,7 @@ import {
   TEMPLATE_TYPES,
 } from '@/projectsMeta';
 import { listCampaigns } from '@/api/campaigns';
+import { lookupApi } from '@/api/lookup';
 
 interface SizePreset {
   id: string;
@@ -79,6 +80,10 @@ export function CreateProjectDialog({
   const [templateType, setTemplateType] = useState<string>('');
   const [mkAdvertiser, setMkAdvertiser] = useState('');
 
+  // 查找表数据（从 API 拉取，失败时回退 mock 常量）
+  const [blOptions, setBlOptions] = useState<{ code: string; name: string }[]>(BUSINESS_LINES.map((b) => ({ code: b, name: b })));
+  const [advOptions, setAdvOptions] = useState<{ name: string }[]>(ADVERTISERS.map((a) => ({ name: a })));
+
   // 画布尺寸
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [custom, setCustom] = useState(false);
@@ -129,6 +134,25 @@ export function CreateProjectDialog({
         .finally(() => setCampaignsLoading(false));
     }
   }, [open, isCampaign, campaigns.length, campaignsLoading]);
+
+  // 拉取查找表数据（业务线/广告主），失败时保留 mock 回退。
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    Promise.allSettled([
+      lookupApi.listBusinessLines(),
+      lookupApi.listAdvertisers(),
+    ]).then(([blRes, advRes]) => {
+      if (cancelled) return;
+      if (blRes.status === 'fulfilled' && blRes.value.length > 0) {
+        setBlOptions(blRes.value.map((b) => ({ code: b.code, name: `${b.code} · ${b.name}` })));
+      }
+      if (advRes.status === 'fulfilled' && advRes.value.length > 0) {
+        setAdvOptions(advRes.value.map((a) => ({ name: a.name })));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [open]);
 
   if (!open) return null;
 
@@ -244,9 +268,9 @@ export function CreateProjectDialog({
               }}
             >
               <option value="">（请选择业务线）</option>
-              {BUSINESS_LINES.map((b) => (
-                <option key={b} value={b}>
-                  {b}
+              {blOptions.map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.name}
                 </option>
               ))}
             </select>
@@ -347,9 +371,9 @@ export function CreateProjectDialog({
               <span className="mb-1 block">广告主</span>
               <select className={selectCls} value={mkAdvertiser} onChange={(e) => setMkAdvertiser(e.target.value)}>
                 <option value="">（选填）</option>
-                {ADVERTISERS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
+                {advOptions.map((a) => (
+                  <option key={a.name} value={a.name}>
+                    {a.name}
                   </option>
                 ))}
               </select>

@@ -5,6 +5,7 @@ import { usersRoutes } from '../modules/users/users.routes';
 import { projectsRoutes } from '../modules/projects/projects.routes';
 import { templatesRoutes } from '../modules/templates/templates.routes';
 import { dataRoutes } from '../modules/data/data.routes';
+import { lookupRoutes } from '../modules/lookup/lookup.routes';
 import { shareRoutes } from '../modules/share/share.routes';
 import { uploadRoutes } from '../modules/upload/upload.routes';
 
@@ -18,5 +19,6 @@ apiRouter.use('/admin/users', usersRoutes);
 apiRouter.use('/projects', projectsRoutes);
 apiRouter.use('/templates', templatesRoutes);
 apiRouter.use('/data', dataRoutes);
+apiRouter.use('/lookup', lookupRoutes);
 apiRouter.use('/share', shareRoutes);
 apiRouter.use('/uploads', uploadRoutes);

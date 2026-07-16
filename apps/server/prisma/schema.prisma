@@ -94,3 +94,51 @@ enum DataRecordKind {
   CREATOR
   COLLABORATION
 }
+
+// ─── Phase 1: 结构化查找表 ─────────────────────────────────────────────────
+// 将 mock 常量提升为独立表,支持 CRUD 管理 + 结构化查询。
+
+/// 商家（母品牌/旗舰店）。
+model Merchant {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  logo      String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  businessLines BusinessLine[]
+  advertisers  Advertiser[]
+}
+
+/// 业务线（FT / SM / CX / DG / KN / DM）。
+model BusinessLine {
+  id         String         @id @default(cuid())
+  code       String         @unique
+  name       String
+  logo       String?
+  color      String?
+  merchantId String
+  merchant   Merchant       @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  advertisers Advertiser[]
+
+  @@index([merchantId])
+}
+
+/// 广告主（子品牌/投放主体）。
+model Advertiser {
+  id             String         @id @default(cuid())
+  name           String         @unique
+  logo           String?
+  businessLineId String
+  businessLine   BusinessLine   @relation(fields: [businessLineId], references: [id])
+  merchantId     String?
+  merchant       Merchant?      @relation(fields: [merchantId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([businessLineId])
+  @@index([merchantId])
+}
