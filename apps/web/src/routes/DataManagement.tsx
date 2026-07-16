@@ -254,7 +254,7 @@ function CampaignList({
   if (records.length === 0) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">No data</p>;
   }
-  const heads = ['ID', 'Campaign', 'Advertiser', 'Business Line', 'Platform', 'Period', 'Budget', 'Stats', 'Status', 'Owner', ''];
+  const heads = ['#', 'Campaign', 'Advertiser', 'Business Line', 'Platform', 'Period', 'Budget', 'Stats', 'Status', 'Owner', ''];
   return (
     <>
       <div className="overflow-auto rounded-lg border border-border-default">
@@ -262,17 +262,17 @@ function CampaignList({
           <thead>
             <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
               {heads.map((h, i) => (
-                <th key={i} className={`px-3 py-2 font-medium ${i === 0 ? '' : 'whitespace-nowrap'}`}>{h}</th>
+                <th key={i} className={`px-3 py-2 font-medium whitespace-nowrap ${i === 0 ? 'sticky left-0 z-10 bg-surface-hover' : ''} ${i === heads.length - 1 ? 'sticky right-0 z-10 bg-surface-hover text-right' : ''}`}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {records.map((r) => {
+            {records.map((r, idx) => {
               const d = r.data;
               const stats = pickCampaignStats(d.metrics);
               return (
                 <tr key={r.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{d.id}</td>
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
                   <td className="px-3 py-2 font-medium text-foreground-primary">{d.name}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.advertiser}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.businessLine}</td>
@@ -300,8 +300,8 @@ function CampaignList({
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.status ?? '—'}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.owner ?? '—'}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-2">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 text-right hover:bg-surface-hover/50">
+                    <div className="flex justify-end gap-2">
                       <button onClick={() => setDrawerRecord(r)} className="text-xs text-accent-primary hover:underline">查看达人</button>
                       <button onClick={() => onEdit(r)} className="text-xs text-accent-primary hover:underline">编辑</button>
                       <button onClick={() => onDelete(r.id)} className="text-xs text-red hover:underline">删除</button>
