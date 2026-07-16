@@ -39,3 +39,14 @@ describe('RecordFormModal · edit preserves non-form fields', () => {
     expect(payload.creatorIds).toEqual(['cre-mia']);
   });
 });
+
+describe('RecordFormModal · campaign id 不可编辑(服务端自增)', () => {
+  it('编辑模式下 campaign id 输入框 disabled', () => {
+    render(<RecordFormModal kind="campaign" record={record} onSaved={() => {}} onCancel={() => {}} />);
+    expect(screen.getByLabelText(/Campaign ID/)).toBeDisabled();
+  });
+  it('新增模式下 campaign id 输入框 disabled', () => {
+    render(<RecordFormModal kind="campaign" record={null} onSaved={() => {}} onCancel={() => {}} />);
+    expect(screen.getByLabelText(/Campaign ID/)).toBeDisabled();
+  });
+});

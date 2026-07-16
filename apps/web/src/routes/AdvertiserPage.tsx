@@ -1,0 +1,152 @@
+/**
+ * 广告主数据管理页面 —— 基于 lookup API 的 CRUD 列表。
+ * 独立路由页面（/data/advertisers）。
+ */
+import { useCallback, useEffect, useState } from 'react';
+import { lookupApi, type AdvertiserDTO } from '@/api/lookup';
+
+export function AdvertiserPage() {
+  const [list, setList] = useState<AdvertiserDTO[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      setList(await lookupApi.listAdvertisers());
+    } catch {
+      setList([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => { void reload(); }, [reload]);
+
+  if (loading) {
+    return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
+  }
+
+  const heads = ['#', '广告主', '业务线', '品牌', ''];
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <button onClick={() => setAdding(true)} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary">新增广告主</button>
+      </div>
+      <div className="overflow-auto rounded-lg border border-border-default">
+        <table className="w-full min-w-[600px] border-collapse text-sm">
+          <thead>
+            <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
+              {heads.map((h, i) => (
+                <th key={i} className={`px-3 py-2 font-medium whitespace-nowrap ${i === 0 ? 'sticky left-0 z-10 bg-surface-hover' : ''} ${i === heads.length - 1 ? 'sticky right-0 z-10 bg-surface-hover text-right' : ''}`}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((a, idx) => (
+              <tr key={a.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
+                <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
+                <td className="px-3 py-2 font-medium text-foreground-primary">{a.name}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{a.businessLine?.name ?? '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{a.merchant?.name ?? '—'}</td>
+                <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 text-right hover:bg-surface-hover/50">
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setEditingId(a.id)} className="text-xs text-accent-primary hover:underline">编辑</button>
+                    <button onClick={() => void removeAdvertiser(a.id, a.name)} className="text-xs text-red hover:underline">删除</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {list.length === 0 && (
+              <tr><td colSpan={heads.length} className="px-3 py-6 text-center text-sm text-foreground-muted">暂无广告主</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {adding && (
+        <AdvertiserFormModal
+          onSaved={async () => { setAdding(false); await reload(); }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
+      {editingId && (
+        <AdvertiserFormModal
+          advertiserId={editingId}
+          onSaved={async () => { setEditingId(null); await reload(); }}
+          onCancel={() => setEditingId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ========================= Form Modal ========================= */
+
+function AdvertiserFormModal({
+  advertiserId,
+  onSaved,
+  onCancel,
+}: {
+  advertiserId?: string;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const isEdit = !!advertiserId;
+  const [name, setName] = useState('');
+  const [businessLineId, setBusinessLineId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  // 编辑模式：加载现有数据
+  useEffect(() => {
+    if (!advertiserId) return;
+    lookupApi.getAdvertiser(advertiserId).then((a) => {
+      setName(a.name);
+      setBusinessLineId(a.businessLineId ?? '');
+    }).catch(() => setError('加载失败'));
+  }, [advertiserId]);
+
+  async function save() {
+    if (!name.trim()) { setError('名称不能为空'); return; }
+    setBusy(true); setError('');
+    try {
+      if (isEdit) {
+        await lookupApi.updateAdvertiser(advertiserId!, { name: name.trim(), businessLineId });
+      } else {
+        await lookupApi.createAdvertiser({ name: name.trim(), businessLineId });
+      }
+      onSaved();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={onCancel}>
+      <div className="flex w-[400px] flex-col gap-3 rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="font-headings text-sm font-semibold text-foreground-primary">{isEdit ? '编辑广告主' : '新增广告主'}</div>
+        {error && <p className="text-xs text-red">{error}</p>}
+        <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+          名称
+          <input value={name} onChange={(e) => setName(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+          业务线 ID
+          <input value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} placeholder="留空则不关联" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
+        </label>
+        <div className="flex justify-end gap-2">
+          <button onClick={onCancel} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>
+          <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">{isEdit ? '更新' : '创建'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function removeAdvertiser(id: string, name: string) {
+  if (!window.confirm(`确认删除广告主「${name}」?`)) return;
+  await lookupApi.removeAdvertiser(id);
+  window.location.reload();
+}

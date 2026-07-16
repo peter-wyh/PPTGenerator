@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
+import { CampaignPage } from '@/routes/CampaignPage';
+import { CreatorPage } from '@/routes/CreatorPage';
 import { DataManagement } from '@/routes/DataManagement';
 
 const { listMock, removeMock, importManyMock, clearMock, updateMock, collaboratorsMock, listCreatorsMock, listCampaignCreatorsMock, perfMock, upsertLinkMock, listLinksMock, removeLinkMock } = vi.hoisted(() => ({
@@ -49,10 +52,30 @@ vi.mock('@/api/creatorPerformance', () => ({
   listCreatorPerformance: (id: string) => perfMock(id),
 }));
 
-function renderPage() {
+/** 渲染 CampaignPage（需要路由上下文） */
+function renderCampaignPage() {
   return render(
-    <MemoryRouter>
-      <DataManagement />
+    <MemoryRouter initialEntries={['/data/campaigns']}>
+      <Routes>
+        <Route path="/data" element={<DataManagement />}>
+          <Route path="campaigns" element={<CampaignPage />} />
+          <Route path="creators" element={<CreatorPage />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+/** 渲染 CreatorPage（需要路由上下文） */
+function renderCreatorPage() {
+  return render(
+    <MemoryRouter initialEntries={['/data/creators']}>
+      <Routes>
+        <Route path="/data" element={<DataManagement />}>
+          <Route path="campaigns" element={<CampaignPage />} />
+          <Route path="creators" element={<CreatorPage />} />
+        </Route>
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -69,7 +92,7 @@ const campaign = {
   status: 'Active',
 };
 
-describe('DataManagement page', () => {
+describe('CampaignPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listMock.mockResolvedValue([]);
@@ -78,32 +101,23 @@ describe('DataManagement page', () => {
     clearMock.mockResolvedValue({ deleted: 0 });
   });
 
-  it('渲染标题 + 两个 Tab;Campaign Tab 列表来自 dataApi.list("campaign")', async () => {
+  it('Campaign 列表来自 dataApi.list("campaign")', async () => {
     listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
-    renderPage();
+    renderCampaignPage();
     expect(await screen.findByText('Campaign X')).toBeInTheDocument();
     expect(listMock).toHaveBeenCalledWith('campaign');
-    expect(screen.getByText('达人库')).toBeInTheDocument();
   });
 
   it('空库显示「导入示例数据」按钮;非空显示「清空」', async () => {
-    renderPage();
+    renderCampaignPage();
     expect(await screen.findByText('导入示例数据')).toBeInTheDocument();
     expect(screen.queryByText('清空')).not.toBeInTheDocument();
-  });
-
-  it('切到达人库 Tab → list("creator")', async () => {
-    listMock.mockResolvedValue([]);
-    renderPage();
-    await screen.findByText('导入示例数据');
-    await userEvent.click(screen.getByText('达人库'));
-    await waitFor(() => expect(listMock).toHaveBeenCalledWith('creator'));
   });
 
   it('删除按钮二次确认后调用 dataApi.remove', async () => {
     listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByText('删除'));
     await waitFor(() => expect(removeMock).toHaveBeenCalledWith('camp-x'));
@@ -113,7 +127,7 @@ describe('DataManagement page', () => {
   it('清空按钮二次确认后调用 dataApi.clear("campaign")', async () => {
     listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByText('清空'));
     await waitFor(() => expect(clearMock).toHaveBeenCalledWith('campaign'));
@@ -123,7 +137,7 @@ describe('DataManagement page', () => {
   it('删除取消(confirm=false)不调用 dataApi.remove', async () => {
     listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByText('删除'));
     expect(removeMock).not.toHaveBeenCalled();
@@ -132,10 +146,19 @@ describe('DataManagement page', () => {
 
   it('空库点「导入示例数据」→ dataApi.importMany("campaign", <array>)', async () => {
     listMock.mockResolvedValue([]);
-    renderPage();
+    renderCampaignPage();
     const seedBtn = await screen.findByText('导入示例数据');
     await userEvent.click(seedBtn);
     await waitFor(() => expect(importManyMock).toHaveBeenCalledWith('campaign', expect.any(Array)));
+  });
+});
+
+describe('CreatorPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listMock.mockResolvedValue([]);
+    removeMock.mockResolvedValue(undefined);
+    importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
   });
 
   it('达人库行点击 → 打开详情浮窗(KPI 区出现)', async () => {
@@ -150,8 +173,7 @@ describe('DataManagement page', () => {
     listMock.mockImplementation((k: string) =>
       k === 'creator' ? Promise.resolve([creatorRec]) : Promise.resolve([]),
     );
-    renderPage();
-    await userEvent.click(screen.getByText('达人库'));
+    renderCreatorPage();
     await screen.findByText('Mia Chen');
     await userEvent.click(screen.getByText('Mia Chen'));
     expect(await screen.findByText('频道 KPI')).toBeInTheDocument();
@@ -165,15 +187,14 @@ describe('DataManagement page', () => {
     listMock.mockImplementation((k: string) =>
       k === 'creator' ? Promise.resolve([creatorRec]) : Promise.resolve([]),
     );
-    renderPage();
-    await userEvent.click(screen.getByText('达人库'));
+    renderCreatorPage();
     await screen.findByText('Mia Chen');
     await userEvent.click(screen.getByText('编辑'));
     expect(screen.queryByText('频道 KPI')).not.toBeInTheDocument();
   });
 });
 
-describe('DataManagement · Campaign drill-down', () => {
+describe('CampaignPage · drill-down', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: campaign, createdAt: '', updatedAt: '' }]);
@@ -188,7 +209,7 @@ describe('DataManagement · Campaign drill-down', () => {
 
   it('点「查看达人」打开浮窗 → 调 listCampaignCollaborators 并渲染合作达人', async () => {
     collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
     await waitFor(() => expect(collaboratorsMock).toHaveBeenCalledWith('camp-x'));
@@ -197,7 +218,7 @@ describe('DataManagement · Campaign drill-down', () => {
 
   it('查看达人浮窗:✕ 关闭后达人子表消失', async () => {
     collaboratorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
     expect(await screen.findByText('@mia')).toBeInTheDocument();
@@ -208,7 +229,7 @@ describe('DataManagement · Campaign drill-down', () => {
   it('管理合作达人:勾选 + 保存 → campaignsApi.upsertLink（中间表 diff 写入）', async () => {
     listCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }]);
     upsertLinkMock.mockResolvedValue({ id: 'link-1', campaignId: 'camp-x', creatorId: 'cre-mia' });
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByRole('button', { name: '查看达人' }));
     await screen.findByText('管理合作达人');
@@ -221,7 +242,7 @@ describe('DataManagement · Campaign drill-down', () => {
   it('导入示例数据:Campaign 派生 creatorIds', async () => {
     listMock.mockResolvedValue([]); // 空库才显示「导入示例数据」
     listCampaignCreatorsMock.mockResolvedValue([{ id: 'cre-mia', name: 'Mia', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: '', region: '', metrics: [] }]);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('导入示例数据');
     await userEvent.click(screen.getByText('导入示例数据'));
     await waitFor(() => expect(importManyMock).toHaveBeenCalled());
@@ -230,7 +251,7 @@ describe('DataManagement · Campaign drill-down', () => {
   });
 });
 
-describe('DataManagement · Campaign Stats 列', () => {
+describe('CampaignPage · Stats 列', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     removeMock.mockResolvedValue(undefined);
@@ -254,7 +275,7 @@ describe('DataManagement · Campaign Stats 列', () => {
       },
     };
     listMock.mockResolvedValue([rec]);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign Y');
     expect(screen.getByText('GMV $1.2M')).toBeInTheDocument();
     expect(screen.getByText('ROAS 4.2')).toBeInTheDocument();
@@ -265,9 +286,8 @@ describe('DataManagement · Campaign Stats 列', () => {
   });
 
   it('无 metrics 的 campaign,Stats 列显示 —', async () => {
-    // owner 给值、status 为 Active,排除其它 — 来源,使唯一 — 来自 Stats 列
     listMock.mockResolvedValue([{ id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: { ...campaign, owner: 'alex' }, createdAt: '', updatedAt: '' }]);
-    renderPage();
+    renderCampaignPage();
     await screen.findByText('Campaign X');
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText(/GMV|ROAS|Spend/)).not.toBeInTheDocument();

@@ -10,6 +10,10 @@ const ProjectShell = lazy(() => import('./routes/ProjectShell').then((m) => ({ d
 const TemplateShell = lazy(() => import('./routes/TemplateShell').then((m) => ({ default: m.TemplateShell })));
 const SharePage = lazy(() => import('./routes/SharePage').then((m) => ({ default: m.SharePage })));
 const DataManagement = lazy(() => import('./routes/DataManagement').then((m) => ({ default: m.DataManagement })));
+const CampaignPage = lazy(() => import('./routes/CampaignPage').then((m) => ({ default: m.CampaignPage })));
+const CreatorPage = lazy(() => import('./routes/CreatorPage').then((m) => ({ default: m.CreatorPage })));
+const AdvertiserPage = lazy(() => import('./routes/AdvertiserPage').then((m) => ({ default: m.AdvertiserPage })));
+const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m) => ({ default: m.BusinessLinePage })));
 
 function RouteFallback() {
   return (
@@ -31,7 +35,13 @@ export function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/projects" element={<Projects />} />
             <Route path="/templates" element={<Templates />} />
-            <Route path="/data" element={<DataManagement />} />
+            <Route path="/data" element={<DataManagement />}>
+              <Route index element={<CampaignPage />} />
+              <Route path="campaigns" element={<CampaignPage />} />
+              <Route path="creators" element={<CreatorPage />} />
+              <Route path="advertisers" element={<AdvertiserPage />} />
+              <Route path="business-lines" element={<BusinessLinePage />} />
+            </Route>
           </Route>
           {/* 编辑器：沉浸式，无全局导航 */}
           <Route element={<ProtectedLayout bare />}>

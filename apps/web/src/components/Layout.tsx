@@ -45,8 +45,8 @@ export function Layout({ children }: LayoutProps) {
             我的项目
           </button>
           <button
-            onClick={() => navigate('/data')}
-            className={navBtn(location.pathname === '/data')}
+            onClick={() => navigate('/data/campaigns')}
+            className={navBtn(location.pathname.startsWith('/data'))}
           >
             数据管理
           </button>

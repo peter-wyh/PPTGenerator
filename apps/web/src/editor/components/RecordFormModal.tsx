@@ -49,9 +49,9 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
   const [vals, setVals] = useState<Record<string, string>>(() => {
     const o: Record<string, string> = {};
     for (const f of fields) o[f.key] = (initial[f.key] as string) ?? '';
-    if (!record) {
-      const prefix = kind === 'campaign' ? 'camp-' : 'cre-';
-      o.id = `${prefix}${crypto.randomUUID().slice(0, 8)}`;
+    // Campaign ID 由服务端自增,前端不生成;creator 仍随机生成。
+    if (!record && kind === 'creator') {
+      o.id = `cre-${crypto.randomUUID().slice(0, 8)}`;
     }
     return o;
   });
@@ -96,13 +96,16 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-2">
           {fields.map((f) => {
-            const autoId = f.key === 'id' && !record;
+            // Campaign ID 全程只读(服务端自增、不可编辑);creator ID 仅新增时自动生成。
+            const idReadOnly = f.key === 'id' && (kind === 'campaign' || !record);
+            const autoLabel = f.key === 'id' && !record;
             return (
               <label key={f.key} className="flex flex-col gap-1 text-xs text-foreground-secondary">
-                {f.label}{autoId ? '(自动)' : ''}
+                {f.label}{autoLabel ? '(自动)' : ''}
                 <input
                   value={vals[f.key] ?? ''}
-                  disabled={autoId}
+                  disabled={idReadOnly}
+                  placeholder={f.key === 'id' && kind === 'campaign' && !record ? '保存时自动生成' : undefined}
                   onChange={(e) => setVals((p) => ({ ...p, [f.key]: e.target.value }))}
                   className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary disabled:opacity-50"
                 />

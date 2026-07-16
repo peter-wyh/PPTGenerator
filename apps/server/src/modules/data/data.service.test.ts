@@ -37,7 +37,11 @@ function makeRecord(over: Record<string, unknown> = {}) {
   };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // campaign 自增:nextCampaignId 默认无已有记录 → '1'。
+  prismaMock.dataRecord.findMany.mockResolvedValue([]);
+});
 
 describe('dataService · list', () => {
   it('按 kind 查询,createdAt desc', async () => {
@@ -59,13 +63,21 @@ describe('dataService · getOrThrow', () => {
 });
 
 describe('dataService · create', () => {
-  it('合法 data → 创建,kind 大写、data 透传', async () => {
+  it('合法 data → 创建;campaign id 服务端自增(忽略客户端 id)', async () => {
     prismaMock.dataRecord.create.mockImplementation(({ data }) => Promise.resolve(makeRecord({ data: data.data })));
     await dataService.create('u1', 'campaign', validCampaign);
     const { data } = prismaMock.dataRecord.create.mock.calls[0][0] as { data: Record<string, unknown> };
     expect(data.kind).toBe('CAMPAIGN');
     expect(data.ownerId).toBe('u1');
-    expect((data.data as { id: string }).id).toBe('camp-x');
+    expect(data.id).toBe('1'); // PK = 自增 id
+    expect((data.data as { id: string }).id).toBe('1'); // data.id 同值,非客户端 camp-x
+  });
+  it('campaign 自增:取已有数字 id 最大值 +1(忽略非数字遗留 id)', async () => {
+    prismaMock.dataRecord.findMany.mockResolvedValue([{ id: '1' }, { id: '3' }, { id: 'camp-glowlab-q4' }]);
+    prismaMock.dataRecord.create.mockImplementation(({ data }) => Promise.resolve(makeRecord({ data: data.data })));
+    await dataService.create('u1', 'campaign', validCampaign);
+    const { data } = prismaMock.dataRecord.create.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect(data.id).toBe('4'); // max(1,3)=3 → 4;camp-glowlab-q4 忽略
   });
   it('非法 data(缺 name)→ 400', async () => {
     const { name, ...bad } = validCampaign;
@@ -123,6 +135,15 @@ describe('dataService · update', () => {
     await dataService.update('camp-x', { ...validCampaign, name: '改名' });
     const arg = prismaMock.dataRecord.update.mock.calls[0][0] as { where: { id: string }; data: { data: { name: string } } };
     expect(arg.where.id).toBe('camp-x');
+    expect(arg.data.data.name).toBe('改名');
+  });
+  it('campaign update:强制 data.id = 主键,客户端改 id 无效(不可编辑)', async () => {
+    prismaMock.dataRecord.findUnique.mockResolvedValue(makeRecord()); // 既有 PK = camp-x
+    prismaMock.dataRecord.update.mockImplementation(({ data }) => Promise.resolve(makeRecord({ data: data.data })));
+    await dataService.update('camp-x', { ...validCampaign, id: 'hacked', name: '改名' });
+    const arg = prismaMock.dataRecord.update.mock.calls[0][0] as { where: { id: string }; data: { data: { id: string; name: string } } };
+    expect(arg.where.id).toBe('camp-x');
+    expect(arg.data.data.id).toBe('camp-x'); // 不被 'hacked' 覆盖
     expect(arg.data.data.name).toBe('改名');
   });
   it('data 与记录 kind 不符(creator 数据塞 campaign 记录)→ 400', async () => {
