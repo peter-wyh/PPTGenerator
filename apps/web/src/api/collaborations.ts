@@ -1,6 +1,7 @@
 import { dataApi } from './dataLibrary';
 import { campaignsApi } from './campaignsApi';
 import { collaborationId, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
+import { buildSeedCollaboration } from './mock/collaborationSeed';
 
 /**
  * Phase 3: 优先从独立表 /api/v1/campaigns/.../collaboration 读写；失败回退 DataRecord。
@@ -20,19 +21,21 @@ function hasRichData(deliverables: CollaborationDeliverable[]): boolean {
 /**
  * 读取一个 (campaign, creator) 的合作记录；不存在或仅含空壳 deliverables 返回 null。
  * 空壳数据（seed 写入的 contentType-only）不返回，让调用方走 buildSeedCollaboration 生成丰富 fallback。
+ *
+ * **daily 补全**：DB 中旧记录可能缺少 daily 字段，用 seed 同位置 deliverable 的 daily 填充。
  */
 export async function getCollaboration(
   campaignId: string,
   creatorId: string,
 ): Promise<CollaborationData | null> {
+  let result: CollaborationData | null = null;
   // 1. 新表优先
   try {
     const dto = await campaignsApi.getCollaboration(campaignId, creatorId);
     if (dto) {
       const deliverables = dto.deliverables as CollaborationDeliverable[];
-      // seed 写入的空壳数据（只有 contentType，无 screenshots/metrics）视为无数据
       if (hasRichData(deliverables)) {
-        return {
+        result = {
           id: collaborationId(campaignId, creatorId),
           campaignId,
           creatorId,
@@ -44,15 +47,34 @@ export async function getCollaboration(
     // fall through
   }
   // 2. 回退 DataRecord
-  try {
-    const r = await dataApi.get<CollaborationData>(collaborationId(campaignId, creatorId));
-    if (r.data && hasRichData(r.data.deliverables)) {
-      return r.data;
+  if (!result) {
+    try {
+      const r = await dataApi.get<CollaborationData>(collaborationId(campaignId, creatorId));
+      if (r.data && hasRichData(r.data.deliverables)) {
+        result = r.data;
+      }
+    } catch {
+      // not found
     }
-  } catch {
-    // not found
   }
-  return null;
+
+  // 3. 如果 DB 有数据但 deliverable 缺少 daily，用 seed 补全
+  if (result && result.deliverables.some((d) => !d.daily || d.daily.length === 0)) {
+    try {
+      const seed = buildSeedCollaboration(campaignId, creatorId);
+      result = {
+        ...result,
+        deliverables: result.deliverables.map((d, i) => ({
+          ...d,
+          daily: (d.daily && d.daily.length > 0) ? d.daily : seed.deliverables[i]?.daily,
+        })),
+      };
+    } catch {
+      // seed 补全失败不影响主流程
+    }
+  }
+
+  return result;
 }
 
 /** 保存合作记录：Phase 4 后只写新表。 */
