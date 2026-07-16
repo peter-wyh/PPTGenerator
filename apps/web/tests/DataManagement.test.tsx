@@ -43,7 +43,7 @@ vi.mock('@/api/campaignsApi', () => ({
     remove: vi.fn(),
     upsertLink: vi.fn(),
     updateLink: vi.fn(),
-    listLinks: (id: string) => Promise.resolve([]),
+    listLinks: (_id: string) => Promise.resolve([]),
     removeLink: vi.fn(),
     getPerformance: vi.fn(),
     upsertPerformance: vi.fn(),

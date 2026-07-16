@@ -78,7 +78,7 @@ export function CampaignCollabPage() {
   useEffect(() => { void reload(); }, [reload]);
 
   const filtered = rows.filter((r) => {
-    if (filterCampaign && !r.campaign.name.toLowerCase().includes(filterCampaign.toLowerCase())) return false;
+    if (filterCampaign && !r.campaign.name.toLowerCase().includes(filterCampaign.toLowerCase()) && r.campaignId !== filterCampaign) return false;
     if (filterCreator && !r.creator.name.toLowerCase().includes(filterCreator.toLowerCase())) return false;
     if (filterStatus && (r.status ?? '—') !== filterStatus) return false;
     return true;
