@@ -29,10 +29,12 @@ export const projectsApi = {
   revokeShare: (id: string) => api.delete(`/projects/${id}/share`),
 
   // ---- M6 PDF 导出 ----
-  /** 导出 PDF：走带认证的 api（blob），返回 Blob。 */
+  /** 导出 PDF：走带认证的 api（blob），返回 Blob。
+   *  后端路由为 POST /projects/:id/export（export.routes.ts），用 POST 避免被缓存，
+   *  且导出有副作用（生成 share token + puppeteer 渲染）。format 走 query。 */
   exportPdf: (id: string) =>
     api
-      .get(`/projects/${id}/export`, { params: { format: 'pdf' }, responseType: 'blob' })
+      .post(`/projects/${id}/export`, undefined, { params: { format: 'pdf' }, responseType: 'blob' })
       .then((r) => r.data as Blob),
 };
 
