@@ -148,12 +148,12 @@ export function buildSeedCollaboration(campaignId: string, creatorId: string): C
         : [{ src: '', caption: '' }],
       metrics: post
         ? [
-            { label: '曝光', value: post.impressions },
-            { label: '点赞', value: post.likes },
-            { label: '评论', value: post.comments },
-            { label: '分享', value: post.shares },
+            { label: 'Views', value: post.impressions },
+            { label: 'Likes', value: post.likes },
+            { label: 'Comments', value: post.comments },
+            { label: 'Shares', value: post.shares },
           ]
-        : [{ label: '曝光', value: '0' }],
+        : [{ label: 'Views', value: '0' }],
       wordcloud: seedWordcloud(post?.title ?? '', i),
       audience: seedAudience(i),
     });

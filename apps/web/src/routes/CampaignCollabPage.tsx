@@ -3,16 +3,17 @@
  * 独立路由页面（/data/campaign-collabs）。
  * 支持 URL search params ?campaign=xxx 自动筛选。
  *
- * 表格行 = Campaign × Creator，达人信息/合作方式/作品类型/效果指标累加全部平铺在列中。
- * 点击行展开后显示每部作品的详细数据（CollaborationDetail）。
+ * 表格行 = Campaign × Creator，达人头像/合作方式/作品截图/效果指标累加全部平铺在列中。
+ * 点击「详情」打开右侧浮窗，展示每部作品的详细数据。
  */
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediaket/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
 import { collaborationLabel, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
 import { buildSeedCollaboration } from '@/api/mock/collaborationSeed';
+import { CreatorAvatar } from '@/components/CreatorAvatar';
 
 /* ============================= 类型 ============================= */
 
@@ -25,7 +26,6 @@ interface CollabRow {
   collabType: string | null;
   status: string | null;
   contentType: string | null;
-  /** 加载后填充 */
   collabData?: CollaborationData | null;
 }
 
@@ -42,8 +42,7 @@ export function CampaignCollabPage() {
   const [filterCampaign, setFilterCampaign] = useState(campaignFilterParam);
   const [filterCreator, setFilterCreator] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [editingLink, setEditingLink] = useState<string | null>(null);
+  const [drawerRow, setDrawerRow] = useState<CollabRow | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -54,7 +53,6 @@ export function CampaignCollabPage() {
     }
   }, [filterCampaign, setSearchParams]);
 
-  /** 加载所有 campaign × creator link + 每行的合作详情 */
   const reload = useCallback(async () => {
     setLoading(true);
     try {
@@ -63,7 +61,6 @@ export function CampaignCollabPage() {
       await Promise.all(
         campaigns.map(async (c) => {
           const links = await campaignsApi.listLinks(c.id);
-          // 并行加载每条 link 的合作详情
           const rowsWithCollab = await Promise.all(
             links.filter((l) => l.creator).map(async (link) => {
               let collabData: CollaborationData | null = null;
@@ -72,7 +69,7 @@ export function CampaignCollabPage() {
               } catch {
                 collabData = null;
               }
-              if (!collabData) {
+              if (!collabData || !collabData.deliverables?.length) {
                 collabData = buildSeedCollaboration(c.id, link.creatorId);
               }
               return {
@@ -116,7 +113,7 @@ export function CampaignCollabPage() {
   const heads = [
     '#', 'Campaign', '达人', 'Handle', '平台', '层级',
     '粉丝', '互动率', '类目', '地区',
-    '合作方式', '作品类型', 'Views', 'Likes', 'Comments', 'Shares',
+    '合作方式', '作品截图', 'Views', 'Likes', 'Comments', 'Shares',
     '状态', '',
   ];
 
@@ -162,7 +159,7 @@ export function CampaignCollabPage() {
         <p className="text-sm text-foreground-muted">暂无合作关系数据。</p>
       ) : (
         <div className="overflow-auto rounded-lg border border-border-default">
-          <table className="w-full min-w-[1600px] border-collapse text-xs">
+          <table className="w-full min-w-[1700px] border-collapse text-xs">
             <thead>
               <tr className="bg-surface-hover text-left text-[10px] text-foreground-muted">
                 {heads.map((h, i) => (
@@ -172,87 +169,84 @@ export function CampaignCollabPage() {
             </thead>
             <tbody>
               {filtered.map((r, idx) => {
-                const open = expandedRow === r.linkId;
-                const editing = editingLink === r.linkId;
                 const agg = aggregateMetrics(r.collabData?.deliverables);
-                const contentTypes = r.collabData?.deliverables.map((d) => d.contentType) ?? [];
                 const collabLabel = r.collabData ? collaborationLabel(r.collabData) : (r.collabType ?? '—');
+                // 收集所有截图（取前 3 张）
+                const allScreenshots = (r.collabData?.deliverables ?? []).flatMap((d) => d.screenshots ?? []).filter((s) => s.src).slice(0, 3);
                 return (
-                  <Fragment key={r.linkId}>
-                    <tr className={`border-t border-border-subtle hover:bg-surface-hover/50 ${open ? 'bg-surface-hover/20' : ''}`}>
-                      <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 font-mono text-[10px] tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
-                      <td className="whitespace-nowrap px-2 py-2 font-medium text-foreground-primary">{r.campaign.name}</td>
-                      <td className="whitespace-nowrap px-2 py-2 font-medium text-foreground-primary">{r.creator.name}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.handle}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.platform}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.tier}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.followers}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.engagement}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.category || '—'}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.region || '—'}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{collabLabel}</td>
-                      <td className="px-2 py-2">
-                        <div className="flex flex-wrap gap-1">
-                          {contentTypes.length === 0 ? (
-                            <span className="text-foreground-muted">—</span>
-                          ) : contentTypes.map((t, i) => (
-                            <span key={i} className="inline-block rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">{t}</span>
+                  <tr key={r.linkId} className="border-t border-border-subtle hover:bg-surface-hover/50">
+                    <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 font-mono text-[10px] tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
+                    <td className="whitespace-nowrap px-2 py-2 font-medium text-foreground-primary">{r.campaign.name}</td>
+                    {/* 达人带头像 */}
+                    <td className="whitespace-nowrap px-2 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <CreatorAvatar name={r.creator.name} avatar={r.creator.avatar} size={28} />
+                        <span className="font-medium text-foreground-primary">{r.creator.name}</span>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.handle}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.platform}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.tier}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.followers}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.engagement}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.category || '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.region || '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{collabLabel}</td>
+                    {/* 作品截图缩略 */}
+                    <td className="px-2 py-2">
+                      {allScreenshots.length === 0 ? (
+                        <span className="text-foreground-muted">—</span>
+                      ) : (
+                        <div className="flex gap-1">
+                          {allScreenshots.map((s, i) => (
+                            <img key={i} src={s.src} alt={s.caption ?? ''} title={s.caption ?? ''} className="h-9 w-9 rounded border border-border-subtle object-cover" />
                           ))}
                         </div>
-                      </td>
-                      <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.views}</td>
-                      <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.likes}</td>
-                      <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.comments}</td>
-                      <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.shares}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.status ?? '—'}</td>
-                      <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 text-right hover:bg-surface-hover/50">
-                        <button
-                          onClick={() => { setExpandedRow(open ? null : r.linkId); if (open) setEditingLink(null); }}
-                          className="text-[10px] text-accent-primary hover:underline"
-                        >
-                          {open ? '收起' : '详情'}
-                        </button>
-                      </td>
-                    </tr>
-                    {open && (
-                      <tr>
-                        <td colSpan={heads.length} className="bg-surface-primary px-4 py-3">
-                          <CollabExpandedRow
-                            row={r}
-                            editing={editing}
-                            onToggleEdit={() => setEditingLink(editing ? null : r.linkId)}
-                            onUpdate={() => { setExpandedRow(null); setEditingLink(null); setTick((t) => t + 1); }}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.views}</td>
+                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.likes}</td>
+                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.comments}</td>
+                    <td className="whitespace-nowrap px-2 py-2 tabular-nums text-foreground-secondary">{agg.shares}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.status ?? '—'}</td>
+                    <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 text-right hover:bg-surface-hover/50">
+                      <button onClick={() => setDrawerRow(r)} className="text-[10px] text-accent-primary hover:underline">详情</button>
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* 右侧浮窗 */}
+      {drawerRow && (
+        <CollabDrawer
+          row={drawerRow}
+          onClose={() => setDrawerRow(null)}
+          onUpdate={() => { setDrawerRow(null); setTick((t) => t + 1); }}
+        />
+      )}
     </div>
   );
 }
 
-/* ============================= 展开行 ============================= */
+/* ============================= 右侧浮窗 ============================= */
 
-function CollabExpandedRow({
-  row,
-  editing,
-  onToggleEdit,
-  onUpdate,
-}: {
-  row: CollabRow;
-  editing: boolean;
-  onToggleEdit: () => void;
-  onUpdate: () => void;
-}) {
+function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () => void; onUpdate: () => void }) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onCloseRef.current(); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const [collabData, setCollabData] = useState<CollaborationData>(row.collabData ?? buildSeedCollaboration(row.campaignId, row.creatorId));
   const [collabType, setCollabType] = useState(row.collabType ?? '');
   const [status, setStatus] = useState(row.status ?? '');
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const creator = row.creator;
@@ -261,12 +255,10 @@ function CollabExpandedRow({
   async function save() {
     setBusy(true);
     try {
-      // 保存 link 字段
       await campaignsApi.updateLink(row.linkId, {
         collabType: collabType || undefined,
         status: status || undefined,
       });
-      // 保存合作详情
       await saveCollaboration(collabData);
       onUpdate();
     } catch {
@@ -287,100 +279,124 @@ function CollabExpandedRow({
     patch((d) => ({ ...d, deliverables: [...d.deliverables, { contentType: 'post' }] }));
 
   return (
-    <div className="text-xs">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="font-semibold text-foreground-primary">
-          {row.creator.name} × {row.campaign.name}
-        </span>
-        <div className="flex gap-2">
-          {editing ? (
-            <>
-              <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">保存</button>
-              <button onClick={onToggleEdit} className="text-foreground-secondary hover:underline">取消</button>
-            </>
-          ) : (
-            <button onClick={onToggleEdit} className="text-accent-primary hover:underline">编辑</button>
-          )}
+    <div className="fixed inset-0 z-50 animate-fadeIn bg-black/40" onClick={onClose} role="presentation">
+      <aside
+        className="absolute right-0 top-0 flex h-full w-[680px] max-w-[92vw] animate-slideInRight flex-col bg-surface-primary shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="合作详情"
+      >
+        {/* 头部 */}
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <CreatorAvatar name={creator.name} avatar={creator.avatar} size={36} />
+            <div className="min-w-0">
+              <div className="font-headings text-sm font-semibold text-foreground-primary truncate">{creator.name}</div>
+              <div className="text-xs text-foreground-muted truncate">{row.campaign.name} · {creator.handle}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            {editing ? (
+              <>
+                <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">保存</button>
+                <button onClick={() => setEditing(false)} className="text-xs text-foreground-secondary hover:underline">取消</button>
+              </>
+            ) : (
+              <button onClick={() => setEditing(true)} className="text-xs text-accent-primary hover:underline">编辑</button>
+            )}
+            <button onClick={onClose} aria-label="关闭" className="rounded p-1 text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary">✕</button>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-12 gap-4">
-        {/* 左侧：达人频道 KPI（占 4 列） */}
-        <div className="col-span-4">
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
-          {metrics.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2">
-              {metrics.map((m, i) => (
-                <div key={`${m.label}-${i}`} className="rounded-md border border-border-subtle p-2">
-                  <div className="text-[10px] text-foreground-muted">{m.label}</div>
-                  <div className="text-sm font-semibold text-foreground-primary">{m.value}</div>
-                  {m.compare && <div className="text-[10px] text-foreground-secondary">{m.compare}</div>}
+        {/* 内容 */}
+        <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
+          {/* 达人信息卡 */}
+          <div className="mb-4">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">达人信息</div>
+            <div className="grid grid-cols-4 gap-px rounded-lg overflow-hidden border border-border-subtle">
+              {([
+                ['Platform', creator.platform],
+                ['Tier', creator.tier],
+                ['Followers', creator.followers],
+                ['Engagement', creator.engagement],
+                ['Category', creator.category],
+                ['Region', creator.region],
+                ['合作方式', collaborationLabel(collabData)],
+                ['状态', row.status ?? '—'],
+              ] as const).map(([label, value]) => (
+                <div key={label} className="bg-surface-primary p-2">
+                  <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{label}</div>
+                  <div className="text-xs font-medium text-foreground-primary truncate">{value || '—'}</div>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-foreground-muted">—</p>
-          )}
-        </div>
+          </div>
 
-        {/* 中间：Campaign 信息（占 3 列） */}
-        <div className="col-span-3">
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Campaign</div>
-          <div className="rounded-lg border border-border-subtle p-3 space-y-1.5">
-            <div className="font-medium text-foreground-primary">{row.campaign.name}</div>
-            <div className="text-foreground-secondary">{row.campaign.businessLine}</div>
-            <div className="text-foreground-secondary">{row.campaign.platform}</div>
-            <div className="text-foreground-secondary">{row.campaign.startDate} ~ {row.campaign.endDate}</div>
-            <div className="text-foreground-secondary">{row.campaign.budget}</div>
-          </div>
-          {/* 合作字段编辑 */}
-          <div className="mt-3 space-y-2">
-            {editing && (
-              <>
-                <label className="flex flex-col gap-0.5 text-foreground-secondary">
-                  <span className="text-[10px]">合作方式</span>
-                  <input value={collabType} onChange={(e) => setCollabType(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1" />
-                </label>
-                <label className="flex flex-col gap-0.5 text-foreground-secondary">
-                  <span className="text-[10px]">状态</span>
-                  <input value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1" />
-                </label>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* 右侧：作品明细（占 5 列） */}
-        <div className="col-span-5">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">作品明细</span>
-            {editing && (
-              <button onClick={addDeliverable} className="text-accent-primary hover:underline">+ 添加</button>
-            )}
-          </div>
-          {collabData.deliverables.length === 0 ? (
-            <p className="text-foreground-muted">未设置作品。</p>
-          ) : (
-            <div className="space-y-2 max-h-[50vh] overflow-auto">
-              {collabData.deliverables.map((del, i) => (
-                <DeliverableCard
-                  key={`${del.contentType}-${i}`}
-                  deliverable={del}
-                  index={i}
-                  editing={editing}
-                  onChange={(d) => setDeliverable(i, d)}
-                  onRemove={() => removeDeliverable(i)}
-                />
-              ))}
+          {/* 频道 KPI */}
+          {metrics.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
+              <div className="grid grid-cols-3 gap-2">
+                {metrics.map((m, i) => (
+                  <div key={`${m.label}-${i}`} className="rounded-md border border-border-subtle p-2.5">
+                    <div className="text-[10px] text-foreground-muted">{m.label}</div>
+                    <div className="text-sm font-semibold text-foreground-primary">{m.value}</div>
+                    {m.compare && <div className="text-[10px] text-foreground-secondary">{m.compare}</div>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
+          {/* 合作字段编辑 */}
+          {editing && (
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                合作方式
+                <input value={collabType} onChange={(e) => setCollabType(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1" />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                状态
+                <input value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1" />
+              </label>
+            </div>
+          )}
+
+          {/* 作品明细 */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">作品明细 · {collabData.deliverables.length}</span>
+              {editing && (
+                <button onClick={addDeliverable} className="text-xs text-accent-primary hover:underline">+ 添加作品</button>
+              )}
+            </div>
+            {collabData.deliverables.length === 0 ? (
+              <p className="text-xs text-foreground-muted">未设置作品。</p>
+            ) : (
+              <div className="space-y-3">
+                {collabData.deliverables.map((del, i) => (
+                  <DeliverableCard
+                    key={`${del.contentType}-${i}`}
+                    deliverable={del}
+                    index={i}
+                    editing={editing}
+                    onChange={(d) => setDeliverable(i, d)}
+                    onRemove={() => removeDeliverable(i)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </aside>
     </div>
   );
 }
 
 /* ============================= 作品卡片 ============================= */
+
+const CONTENT_TYPES: string[] = ['post', 'reels', 'video', 'image', 'live', 'story'];
 
 function DeliverableCard({
   deliverable,
@@ -396,21 +412,23 @@ function DeliverableCard({
   onRemove: () => void;
 }) {
   const { contentType, screenshots = [], metrics = [], audience, wordcloud = [] } = deliverable;
-  const CONTENT_TYPES: string[] = ['post', 'reels', 'video', 'image', 'live', 'story'];
 
   const patch = (p: Partial<CollaborationDeliverable>) => onChange({ ...deliverable, ...p });
   const setScreenshots = (s: typeof screenshots) => patch({ screenshots: s });
   const setMetrics = (m: typeof metrics) => patch({ metrics: m });
   const setWords = (w: typeof wordcloud) => patch({ wordcloud: w });
 
+  // 查找是否有链接型截图（src 是 URL）
+  const firstLink = screenshots.find((s) => s.src && s.src.startsWith('http'))?.src;
+
   return (
-    <div className="rounded border border-border-subtle p-3">
+    <div className="rounded-lg border border-border-subtle p-3">
       <div className="mb-2 flex items-center gap-2">
         {editing ? (
           <select
             value={contentType}
             onChange={(e) => patch({ contentType: e.target.value as CollaborationDeliverable['contentType'] })}
-            className="rounded border border-border-default px-1.5 py-0.5"
+            className="rounded border border-border-default px-1.5 py-0.5 text-xs"
           >
             {CONTENT_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
@@ -420,6 +438,9 @@ function DeliverableCard({
           <span className="rounded bg-surface-hover px-1.5 py-0.5 font-medium text-foreground-primary">{contentType}</span>
         )}
         <span className="text-foreground-muted text-[10px]">#{index + 1}</span>
+        {firstLink && !editing && (
+          <a href={firstLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline">↗ 作品链接</a>
+        )}
         {editing && (
           <button onClick={onRemove} className="ml-auto text-red hover:underline text-[10px]">移除</button>
         )}
@@ -440,15 +461,15 @@ function DeliverableCard({
             {screenshots.map((s, i) => (
               <div key={i} className="flex items-center gap-1">
                 {s.src ? (
-                  <img src={s.src} alt="" className="h-8 w-8 rounded object-cover" />
+                  <img src={s.src} alt={s.caption ?? ''} title={s.caption ?? ''} className="h-12 w-12 rounded border border-border-subtle object-cover" />
                 ) : (
-                  <div className="h-8 w-8 rounded bg-surface-hover flex items-center justify-center text-[8px] text-foreground-muted">N/A</div>
+                  <div className="h-12 w-12 rounded bg-surface-hover flex items-center justify-center text-[8px] text-foreground-muted">N/A</div>
                 )}
                 {editing && (
-                  <>
+                  <div className="flex flex-col gap-0.5">
                     <input
                       value={s.src}
-                      placeholder="URL"
+                      placeholder="图片 URL"
                       onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, src: e.target.value } : x)))}
                       className="w-28 rounded border border-border-default bg-surface-primary px-1 py-0.5"
                     />
@@ -456,10 +477,10 @@ function DeliverableCard({
                       value={s.caption ?? ''}
                       placeholder="说明"
                       onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, caption: e.target.value } : x)))}
-                      className="w-16 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                      className="w-28 rounded border border-border-default bg-surface-primary px-1 py-0.5"
                     />
-                    <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red">✕</button>
-                  </>
+                    <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red text-[10px]">✕ 删除</button>
+                  </div>
                 )}
               </div>
             ))}
@@ -485,13 +506,13 @@ function DeliverableCard({
                   value={m.label}
                   placeholder="指标"
                   onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)))}
-                  className="w-16 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                  className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5"
                 />
                 <input
                   value={m.value}
                   placeholder="数值"
                   onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, value: e.target.value } : x)))}
-                  className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                  className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5"
                 />
                 <button onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))} className="text-red">✕</button>
               </div>
@@ -515,7 +536,32 @@ function DeliverableCard({
             )}
           </div>
           <div className="flex flex-wrap gap-1">
-            {wordcloud.map((w, i) => (
+            {wordcloud.map((w, i) => editing ? (
+              <div key={i} className="flex items-center gap-0.5">
+                <input
+                  value={w.text}
+                  placeholder="词"
+                  onChange={(e) => setWords(wordcloud.map((x, idx) => (idx === i ? { ...x, text: e.target.value } : x)))}
+                  className="w-16 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                />
+                <input
+                  type="number"
+                  value={w.weight}
+                  onChange={(e) => setWords(wordcloud.map((x, idx) => (idx === i ? { ...x, weight: Number(e.target.value) } : x)))}
+                  className="w-12 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                />
+                <select
+                  value={w.sentiment}
+                  onChange={(e) => setWords(wordcloud.map((x, idx) => (idx === i ? { ...x, sentiment: e.target.value as typeof w.sentiment } : x)))}
+                  className="rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                >
+                  <option value="pos">pos</option>
+                  <option value="neg">neg</option>
+                  <option value="neutral">neutral</option>
+                </select>
+                <button onClick={() => setWords(wordcloud.filter((_, idx) => idx !== i))} className="text-red">✕</button>
+              </div>
+            ) : (
               <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] ${w.sentiment === 'pos' ? 'bg-green/10 text-green' : w.sentiment === 'neg' ? 'bg-red/10 text-red' : 'bg-surface-hover text-foreground-secondary'}`}>
                 {w.text} ({w.weight})
               </span>
@@ -525,13 +571,13 @@ function DeliverableCard({
       )}
 
       {/* 受众画像 */}
-      {audience && (
+      {audience && (audience.topCities?.length || audience.genderSplit?.length || audience.ageRange?.length) && (
         <div>
           <div className="text-[10px] text-foreground-secondary mb-1">受众画像</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {audience.topCities?.length ? (
               <div className="rounded bg-surface-hover p-1.5">
-                <div className="text-[9px] text-foreground-muted">城市</div>
+                <div className="text-[9px] text-foreground-muted mb-0.5">城市</div>
                 {audience.topCities.map((c, i) => (
                   <div key={i} className="text-[10px]"><span className="text-foreground-secondary">{c.label}</span> <span className="text-foreground-primary">{c.value}%</span></div>
                 ))}
@@ -539,7 +585,7 @@ function DeliverableCard({
             ) : null}
             {audience.genderSplit?.length ? (
               <div className="rounded bg-surface-hover p-1.5">
-                <div className="text-[9px] text-foreground-muted">性别</div>
+                <div className="text-[9px] text-foreground-muted mb-0.5">性别</div>
                 {audience.genderSplit.map((g, i) => (
                   <div key={i} className="text-[10px]"><span className="text-foreground-secondary">{g.label}</span> <span className="text-foreground-primary">{g.value}%</span></div>
                 ))}
@@ -547,7 +593,7 @@ function DeliverableCard({
             ) : null}
             {audience.ageRange?.length ? (
               <div className="rounded bg-surface-hover p-1.5">
-                <div className="text-[9px] text-foreground-muted">年龄</div>
+                <div className="text-[9px] text-foreground-muted mb-0.5">年龄</div>
                 {audience.ageRange.map((a, i) => (
                   <div key={i} className="text-[10px]"><span className="text-foreground-secondary">{a.label}</span> <span className="text-foreground-primary">{a.value}%</span></div>
                 ))}
@@ -572,11 +618,10 @@ function aggregateMetrics(deliverables?: CollaborationDeliverable[]): { views: s
       const label = m.label.toLowerCase();
       const num = parseMetricValue(m.value);
       if (num === null) continue;
-      // 合并同义标签
-      const key = label.includes('view') ? 'views'
-        : label.includes('like') ? 'likes'
-        : label.includes('comment') ? 'comments'
-        : label.includes('share') ? 'shares'
+      const key = label.includes('view') || label.includes('曝光') || label.includes('impr') ? 'views'
+        : label.includes('like') || label.includes('点赞') ? 'likes'
+        : label.includes('comment') || label.includes('评论') ? 'comments'
+        : label.includes('share') || label.includes('分享') ? 'shares'
         : label;
       sum.set(key, (sum.get(key) ?? 0) + num);
     }
