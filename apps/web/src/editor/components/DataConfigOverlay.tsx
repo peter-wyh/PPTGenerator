@@ -131,7 +131,9 @@ export function DataConfigOverlay({ onClose }: Props) {
             engagement: c.engagement,
             category: c.category,
             region: c.region,
+            avatar: c.avatar,
             stats: buildDefaultStats(c),
+            audience: c.audience,
           }));
           setLocalReportData((prev) => ({ ...prev, campaignCreators: autoSelected }));
         }
@@ -197,6 +199,7 @@ export function DataConfigOverlay({ onClose }: Props) {
           region: c.region,
           avatar: c.avatar,
           stats,
+          audience: c.audience,
         },
       ];
     }
@@ -227,6 +230,7 @@ export function DataConfigOverlay({ onClose }: Props) {
           region: c.region,
           avatar: c.avatar,
           stats,
+          audience: c.audience,
         },
       ];
     }
