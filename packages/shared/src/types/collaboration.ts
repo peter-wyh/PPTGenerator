@@ -4,6 +4,7 @@ import type {
   WorkMetricItem,
   WorkScreenshotItem,
 } from './editor';
+import type { PostDaily } from './campaign';
 
 /** 作品类型（合作方式的构成单元）。 */
 export type ContentType = 'post' | 'reels' | 'video' | 'image' | 'live' | 'story';
@@ -23,6 +24,8 @@ export interface CollaborationDeliverable {
   publishedAt?: string;
   /** 发布平台（TikTok / Instagram / 小红书 等）。 */
   platform?: string;
+  /** 每天效果明细（时间序列，从发布日起 N 天）。 */
+  daily?: PostDaily[];
 }
 
 /** 一条合作记录的 data 载荷。id 作 DataRecord 主键 = collaborationId(campaignId, creatorId)。 */

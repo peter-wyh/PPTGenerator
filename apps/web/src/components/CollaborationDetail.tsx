@@ -200,6 +200,42 @@ function DeliverableEditor({
         ))}
       </Section>
 
+      {/* 每日效果数据（只读展示） */}
+      {deliverable.daily && deliverable.daily.length > 0 && (
+        <div className="mb-1">
+          <div className="flex items-center gap-2 text-foreground-secondary">
+            <span>每日效果数据</span>
+            <span className="text-foreground-muted">({deliverable.daily.length} 天)</span>
+          </div>
+          <div className="ml-2 mt-0.5 max-h-32 overflow-auto rounded border border-border-subtle">
+            <table className="w-full text-[10px] tabular-nums">
+              <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                <tr>
+                  <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deliverable.daily.map((d, di) => (
+                  <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
+                    <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.impressions}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.likes}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.comments}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.shares}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.saves}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* 评论词云 */}
       <Section title="评论词云" editing={editing} onAdd={() => setWords([...wordcloud, { text: '', weight: 50, sentiment: 'neutral' }])}>
         {wordcloud.map((w, i) => (

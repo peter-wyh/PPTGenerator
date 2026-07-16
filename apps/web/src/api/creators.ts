@@ -99,6 +99,7 @@ export async function fetchCampaignCreatorWorks(
           orders: metric('Orders'),
           cpm: metric('CPM'),
           engagementRate: c.engagement,
+          daily: d.daily,
         };
       });
       return {

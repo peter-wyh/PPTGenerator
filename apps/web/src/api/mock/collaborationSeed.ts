@@ -3,6 +3,7 @@ import type {
   CollaborationDeliverable,
   CommentWordItem,
   ContentType,
+  PostDaily,
   WorkAudienceInsight,
   WorkMetricItem,
   WorkScreenshotItem,
@@ -302,6 +303,7 @@ export function buildSeedCollaboration(campaignId: string, creatorId: string): C
       audience: seedAudience(deliverableIdx),
       publishedAt: repPost.publishedAt || seedPublishedAt(deliverableIdx),
       platform,
+      daily: repPost.daily as PostDaily[] | undefined,
     });
     deliverableIdx++;
   }
