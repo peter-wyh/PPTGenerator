@@ -74,29 +74,49 @@ export function allReportCreators(reportData: ReportDataContext): ReportCreator[
 /**
  * 基于达人 ID 的确定性哈希生成 fallback audience 数据。
  * 用于补全旧项目达人缺失的受众画像。
+ *
+ * 使用双重哈希（高位+低位）产生足够分散的随机值，
+ * 确保不同达人之间的画像数据有明显差异。
  */
 function buildFallbackAudience(id: string): NonNullable<ReportCreator['audience']> {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0;
-  const jit = 0.7 + (Math.abs(h) % 60) / 100; // 0.70 ~ 1.30
-  const female = Math.round(52 * jit);
-  const ageBase = [
-    { label: '18-24', base: 22 },
-    { label: '25-34', base: 40 },
-    { label: '35-44', base: 25 },
-    { label: '45+', base: 13 },
+  // 双重哈希：取 ID 不同区段产生独立随机种子
+  let h1 = 0, h2 = 0;
+  for (let i = 0; i < id.length; i++) {
+    const ch = id.charCodeAt(i);
+    h1 = ((h1 << 5) - h1 + ch) | 0;
+    h2 = ((h2 << 7) - h2 + ch * 31) | 0;
+  }
+  const seed1 = Math.abs(h1);
+  const seed2 = Math.abs(h2);
+
+  // 性别：30%~80% 女性分布
+  const female = 30 + (seed1 % 51);
+  // 年龄分布基线（可被 seed2 偏移）
+  const ageBases = [
+    { label: '18-24', base: 15 + (seed2 % 20) },
+    { label: '25-34', base: 30 + (seed1 % 20) },
+    { label: '35-44', base: 15 + (seed2 % 18) },
+    { label: '45+', base: 8 + (seed1 % 15) },
   ];
-  const ageRaw = ageBase.map((a) => ({ label: a.label, v: a.base * jit }));
-  const ageSum = ageRaw.reduce((s, x) => s + x.v, 0) || 1;
-  const defaultCities = ['New York', 'Los Angeles', 'Chicago', 'Houston'];
-  const cityBase = [32, 27, 23, 18];
+  const ageSum = ageBases.reduce((s, x) => s + x.base, 0) || 1;
+  // 城市
+  const cityPool = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Miami', 'Seattle'];
+  const cityStart = seed1 % cityPool.length;
+  const cities = [0, 1, 2, 3].map((i) => cityPool[(cityStart + i) % cityPool.length]);
+  const cityBases = [
+    25 + (seed2 % 12),
+    18 + (seed1 % 10),
+    12 + (seed2 % 8),
+    8 + (seed1 % 7),
+  ];
+  const citySum = cityBases.reduce((s, x) => s + x, 0) || 1;
   return {
     genderSplit: [
-      { label: 'Female', value: Math.min(female, 100) },
-      { label: 'Male', value: Math.max(100 - female, 0) },
+      { label: 'Female', value: female },
+      { label: 'Male', value: 100 - female },
     ],
-    ageRange: ageRaw.map((a) => ({ label: a.label, value: Math.round((a.v / ageSum) * 100) })),
-    topCities: defaultCities.map((label, i) => ({ label, value: Math.round(cityBase[i] * jit) })),
+    ageRange: ageBases.map((a) => ({ label: a.label, value: Math.round((a.base / ageSum) * 100) })),
+    topCities: cities.map((label, i) => ({ label, value: Math.round((cityBases[i] / citySum) * 100) })),
   };
 }
 

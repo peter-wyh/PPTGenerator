@@ -186,7 +186,11 @@ export function creatorPatch(
         followers: cr.followers,
         engagement: cr.engagement,
         avatar: cr.avatar ?? '',
-        intro: cr.category ? `${cr.category} · ${cr.region ?? ''}`.trim() : '',
+        intro: [
+          cr.category,
+          cr.region,
+          cr.tier ? cap(cr.tier) : '',
+        ].filter(Boolean).join(' · '),
       };
     case 'meta-strip': {
       const rows: string[][] = [];

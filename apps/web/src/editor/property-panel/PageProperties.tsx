@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { Page, PageGradient, GradientStop, PageType } from '@mediakit/shared';
-import { pageCategory } from '@mediakit/shared';
+import type { Page, PageGradient, GradientStop, PageType, ReportCreator } from '@mediaket/shared';
+import { pageCategory } from '@mediaket/shared';
 import { useEditorStore, allReportCreators } from '../store';
 import { backgroundType, buildBackgroundTypePatch, type BackgroundType } from '../background';
 import { ImageInput } from '@/components/ImageInput';
 import { GRADIENT_ANGLE_PRESETS } from './constants';
 import { FieldGroup } from './helpers';
+import { listCampaignCreators } from '@/api/creators';
 
 export function PageProperties() {
   const page = useEditorStore((s) => s.currentPage());
@@ -372,9 +373,41 @@ function PageTypeSection({
 
   // Campaign 下达人列表（creator-collab 用）
   const campaignCreators = reportData?.campaignCreators ?? [];
-
   const currentType = page.pageType ?? '';
   const currentCat = pageCategory(page.pageType);
+  const setReportData = useEditorStore((s) => s.setReportData);
+  const [ccLoading, setCcLoading] = useState(false);
+
+  // creator-collab 页面且达人列表为空时，自动从后端加载 Campaign 下的达人
+  useEffect(() => {
+    if (currentCat !== 'creator-collab') return;
+    const campaignId = page.campaignId ?? boundCampaign?.id;
+    if (!campaignId || campaignCreators.length > 0 || ccLoading) return;
+    let alive = true;
+    setCcLoading(true);
+    listCampaignCreators(campaignId)
+      .then((list) => {
+        if (!alive || list.length === 0) return;
+        const reportCreators: ReportCreator[] = list.map((c) => ({
+          id: c.id,
+          name: c.name,
+          handle: c.handle,
+          platform: c.platform,
+          tier: c.tier,
+          followers: c.followers,
+          engagement: c.engagement,
+          category: c.category,
+          region: c.region,
+          avatar: c.avatar,
+          audience: c.audience,
+        }));
+        const rd = useEditorStore.getState().reportData;
+        setReportData({ ...rd, campaignCreators: reportCreators });
+      })
+      .catch(() => {})
+      .finally(() => alive && setCcLoading(false));
+    return () => { alive = false; };
+  }, [currentCat, page.campaignId, boundCampaign?.id, campaignCreators.length]);
 
   return (
     <FieldGroup title="页面类型">

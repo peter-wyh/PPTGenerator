@@ -220,25 +220,43 @@ export function buildAudience(
   meta: Omit<Creator, 'metrics'>,
   index: number,
 ): NonNullable<Creator['audience']> {
+  // 双种子确定性哈希：name + index 确保不同达人画像差异明显
+  let h1 = 0, h2 = 0;
+  const src = meta.name + ':' + meta.id;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src.charCodeAt(i);
+    h1 = ((h1 << 5) - h1 + ch) | 0;
+    h2 = ((h2 << 7) - h2 + ch * 31) | 0;
+  }
+  const s1 = Math.abs(h1), s2 = Math.abs(h2);
   const jit = CHANNEL_JITTER[index % CHANNEL_JITTER.length];
-  const female = Math.round(52 * jit);
-  const ageBase = [
-    { label: '18-24', base: 22 },
-    { label: '25-34', base: 40 },
-    { label: '35-44', base: 25 },
-    { label: '45+', base: 13 },
+
+  // 性别：30%~80% 女性
+  const female = Math.min(80, Math.max(30, Math.round(50 + (s1 % 35) - 17) * jit));
+  // 年龄分布：基线 + hash 偏移
+  const ageBases = [
+    { label: '18-24', base: 15 + (s2 % 18) },
+    { label: '25-34', base: 28 + (s1 % 18) },
+    { label: '35-44', base: 15 + (s2 % 15) },
+    { label: '45+', base: 8 + (s1 % 12) },
   ];
-  const ageRaw = ageBase.map((a) => ({ label: a.label, v: a.base * jit }));
-  const ageSum = ageRaw.reduce((s, x) => s + x.v, 0) || 1;
+  const ageSum = ageBases.reduce((s, x) => s + x.base, 0) || 1;
+  // 城市
   const cities = CITY_POOL[meta.region] ?? DEFAULT_CITIES;
-  const cityBase = [32, 27, 23, 18];
+  const cityBases = [
+    25 + (s2 % 12),
+    18 + (s1 % 10),
+    12 + (s2 % 8),
+    8 + (s1 % 7),
+  ];
+  const citySum = cityBases.reduce((s, x) => s + x, 0) || 1;
   return {
     genderSplit: [
       { label: 'Female', value: female },
       { label: 'Male', value: 100 - female },
     ],
-    ageRange: ageRaw.map((a) => ({ label: a.label, value: Math.round((a.v / ageSum) * 100) })),
-    topCities: cities.map((label, i) => ({ label, value: Math.round(cityBase[i] * jit) })),
+    ageRange: ageBases.map((a) => ({ label: a.label, value: Math.round((a.base / ageSum) * 100) })),
+    topCities: cities.map((label, i) => ({ label, value: Math.round((cityBases[i] / citySum) * 100) })),
   };
 }
 

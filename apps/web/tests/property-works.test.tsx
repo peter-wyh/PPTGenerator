@@ -45,7 +45,7 @@ describe('WorkScreenshotFields', () => {
         <PropertyPanel />
       </MemoryRouter>,
     );
-    expect(screen.getAllByPlaceholderText('说明').length).toBe(47); // default 47 images (camp-glowlab-q4, 10 creators)
+    expect(screen.getAllByPlaceholderText('说明').length).toBe(8); // default 8 张中性占位图
     expect(screen.getByRole('button', { name: /添加图片/ })).toBeInTheDocument();
   });
 
@@ -120,7 +120,7 @@ describe('WorkScreenshotFields', () => {
       </MemoryRouter>,
     );
 
-    // 默认 27 张 → 2大4小(需6)、阶梯(需7) 均可用
+    // 默认 8 张 → 2大4小(需6)、阶梯(需7) 均可用
     expect(screen.getByRole('button', { name: '2大4小' })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: '阶梯' })).not.toBeDisabled();
   });

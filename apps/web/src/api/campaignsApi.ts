@@ -80,6 +80,7 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     region: dto.region,
     avatar: dto.avatar ?? creatorAvatarUrl(dto.name),
     metrics: dto.metrics as Creator['metrics'] ?? [],
+    audience: dto.audience as Creator['audience'] ?? undefined,
   };
 }
 
