@@ -419,7 +419,8 @@ export function CreateProjectDialog({
             </select>
           </label>
 
-          {/* 画布尺寸 */}
+          {/* 画布尺寸（AI HTML 类型不需要设定尺寸） */}
+          {styleType !== 'ai-html' && (
           <div>
             <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">画布尺寸</span>
             <div className="grid grid-cols-2 gap-2">
@@ -462,6 +463,7 @@ export function CreateProjectDialog({
               </div>
             )}
           </div>
+          )}
 
           {error && <p className="text-sm text-red">{error}</p>}
         </div>

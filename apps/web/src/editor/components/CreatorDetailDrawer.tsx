@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Creator } from '@mediakit/shared';
+import type { Creator } from '@mediaket/shared';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 
 interface Props {
@@ -7,15 +7,13 @@ interface Props {
   onClose: () => void;
 }
 
-/** 达人详情右侧滑出浮窗:头像 + 基本字段网格 + 4 频道 KPI。数据全取自 Creator 记录(无额外请求)。 */
+/** 达人详情右侧滑出浮窗:头像 + 基本字段网格 + 频道 KPI + 受众画像 + 作品列表。 */
 export function CreatorDetailDrawer({ creator, onClose }: Props) {
   const [open, setOpen] = useState(false);
-  // 挂载后下一帧切 translate-x-0 → 滑入动画。
   useEffect(() => {
     const r = requestAnimationFrame(() => setOpen(true));
     return () => cancelAnimationFrame(r);
   }, []);
-  // Esc 关闭。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -33,8 +31,9 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
     ['Region', creator.region],
   ];
 
-  // CSV/XLSX 导入的 creator 不带 metrics(JSON 导入与 seed 才设),此处归一化防止 undefined.length 崩溃。
   const metrics = creator.metrics ?? [];
+  const works = creator.works ?? [];
+  const audience = creator.audience;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
@@ -45,7 +44,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         aria-modal="true"
         aria-label={creator.name}
       >
-        {/* 头部:大头像 + name + handle + 关闭 */}
+        {/* 头部 */}
         <div className="flex items-start gap-3 border-b border-border-subtle p-5">
           <CreatorAvatar name={creator.name} avatar={creator.avatar} size={64} />
           <div className="min-w-0 flex-1">
@@ -67,7 +66,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
           ))}
         </div>
 
-        {/* 频道 KPI(metrics 为空则隐藏) */}
+        {/* 频道 KPI */}
         {metrics.length > 0 && (
           <div className="p-5">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
@@ -79,6 +78,116 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* 受众画像 */}
+        {audience && (audience.genderSplit?.length || audience.ageRange?.length || audience.topCities?.length) ? (
+          <div className="border-t border-border-subtle p-5">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">受众画像</div>
+            <div className="space-y-3">
+              {/* 性别占比 */}
+              {audience.genderSplit?.length ? (
+                <div>
+                  <div className="mb-1 text-[11px] text-foreground-muted">性别分布</div>
+                  <div className="flex gap-1">
+                    {audience.genderSplit.map((g, i) => (
+                      <div key={i} className="flex-1 rounded bg-surface-hover px-2 py-1 text-center">
+                        <div className="text-xs font-medium text-foreground-primary">{g.value}%</div>
+                        <div className="text-[10px] text-foreground-muted">{g.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {/* 年龄段 */}
+              {audience.ageRange?.length ? (
+                <div>
+                  <div className="mb-1 text-[11px] text-foreground-muted">年龄分布</div>
+                  <div className="flex items-end gap-1">
+                    {audience.ageRange.map((a, i) => (
+                      <div key={i} className="flex-1 text-center">
+                        <div className="mx-auto rounded-t bg-accent-primary/30" style={{ height: `${a.value}px`, minHeight: '4px' }} />
+                        <div className="mt-0.5 text-[9px] text-foreground-muted">{a.label}</div>
+                        <div className="text-[9px] font-medium text-foreground-secondary">{a.value}%</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {/* 城市 TOP */}
+              {audience.topCities?.length ? (
+                <div>
+                  <div className="mb-1 text-[11px] text-foreground-muted">城市 TOP</div>
+                  <div className="flex flex-wrap gap-1">
+                    {audience.topCities.map((c, i) => (
+                      <span key={i} className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-foreground-secondary">
+                        {c.label} {c.value}%
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {/* 作品列表 */}
+        {works.length > 0 ? (
+          <div className="border-t border-border-subtle p-5">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+              作品列表 <span className="text-foreground-muted">({works.length})</span>
+            </div>
+            <div className="space-y-2">
+              {works.map((w, i) => {
+                return (
+                  <div key={w.id || i} className="rounded-lg border border-border-subtle bg-surface-hover/30">
+                    {/* 作品头部 */}
+                    <div className="flex items-start gap-2 p-2">
+                      {w.cover ? (
+                        <img src={w.cover} alt={w.title} className="h-10 w-10 shrink-0 rounded border border-border-subtle object-cover" />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-border-subtle bg-surface-hover text-foreground-muted text-[10px]">
+                          {w.platform?.slice(0, 2) || '—'}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs font-medium text-foreground-primary" title={w.title}>{w.title}</div>
+                        <div className="text-[10px] text-foreground-muted">
+                          {w.platform}
+                          {w.publishedAt ? ` · ${w.publishedAt}` : ''}
+                        </div>
+                        {/* 指标 */}
+                        <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-foreground-muted tabular-nums">
+                          {w.impressions && <span title="曝光">👁 {w.impressions}</span>}
+                          {w.likes && <span title="点赞">👍 {w.likes}</span>}
+                          {w.comments && <span title="评论">💬 {w.comments}</span>}
+                          {w.shares && w.shares !== '0' && <span title="转发">↗ {w.shares}</span>}
+                          {w.saves && w.saves !== '0' && <span title="收藏">⭐ {w.saves}</span>}
+                          {w.engagementRate && <span title="互动率">📊 {w.engagementRate}</span>}
+                        </div>
+                      </div>
+                      {w.url && (
+                        <a
+                          href={w.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 rounded p-1 text-foreground-muted hover:text-accent-primary"
+                          title="查看原贴"
+                        >
+                          ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="border-t border-border-subtle p-5">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">作品列表</div>
+            <div className="text-xs text-foreground-muted">暂无作品数据（需在数据管理-合作列表中关联 Campaign 后获取）</div>
           </div>
         )}
       </aside>

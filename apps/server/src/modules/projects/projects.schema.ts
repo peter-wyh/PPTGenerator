@@ -294,8 +294,8 @@ const projectMetaFields = {
   scenarioSub: z.enum(['weekly', 'monthly', 'wrap-up']).optional(),
   /** 模版类型：场景下细分，松字符串，取值由前端字典约束。 */
   templateType: z.string().max(40).optional(),
-  /** 样式类型：PPT 多页 / 单页面。 */
-  styleType: z.enum(['ppt', 'single-page']).optional(),
+  /** 样式类型：PPT 多页 / 单页面 / AI 生成 HTML。 */
+  styleType: z.enum(['ppt', 'single', 'ai-html']).optional(),
   advertiser: z.string().max(120).optional(),
   campaignId: z.string().max(120).optional(),
   campaignInfo: campaignInfoSchema,
