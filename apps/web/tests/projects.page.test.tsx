@@ -82,15 +82,15 @@ describe('Projects page', () => {
     ]);
     renderPage();
     await screen.findByText('A');
-    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(screen.getByText('3 / 3 个项目')).toBeInTheDocument();
 
     const combos = screen.getAllByRole('combobox'); // [业务线, 场景]
     await user.selectOptions(combos[0], 'FT');
-    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    expect(screen.getByText('2 / 3 个项目')).toBeInTheDocument();
     expect(screen.queryByText('B')).toBeNull();
 
     await user.selectOptions(combos[1], 'media-kit');
-    expect(screen.getByText('1 / 3')).toBeInTheDocument(); // FT ∩ media-kit = C
+    expect(screen.getByText('1 / 3 个项目')).toBeInTheDocument(); // FT ∩ media-kit = C
     expect(screen.getByText('C')).toBeInTheDocument();
     expect(screen.queryByText('A')).toBeNull();
   });

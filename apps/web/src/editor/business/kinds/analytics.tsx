@@ -38,7 +38,6 @@ export function renderFunnel(ctx: RenderCtx): React.ReactNode {
               }}
             >
               <span>{x}</span>
-              <span>{widths[i % 4]}%</span>
             </div>
           ))}
         </div>

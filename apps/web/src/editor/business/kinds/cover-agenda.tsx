@@ -25,8 +25,7 @@ export function renderCover(ctx: RenderCtx): React.ReactNode {
             </div>
           </div>
           <div style={{ background: ACCENT, color: 'var(--foreground-inverse)', borderRadius: 9, padding: 14, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 10, fontWeight: 700 }}>2026<br />Q4</span>
-            <span style={{ fontSize: 10, lineHeight: 1.4 }}>TikTok<br />Growth Plan</span>
+            {details[0] && <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.4 }}>{details[0]}</span>}
           </div>
         </div>
       </Base>
@@ -47,7 +46,7 @@ export function renderCover(ctx: RenderCtx): React.ReactNode {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: 1 }}>
           <span>{details[0] || ''}</span>
-          <span>2026 Q4</span>
+          <span />
         </div>
         <Title text={title} size={31} color="var(--foreground-inverse)" style={{ marginTop: 'auto', maxWidth: '75%', lineHeight: 1.04, fontWeight: 800 }} />
         <div style={{ fontSize: 12, opacity: 0.78, marginTop: 12 }}>{details[1] || meta}</div>
@@ -99,7 +98,6 @@ export function renderAgenda(ctx: RenderCtx): React.ReactNode {
 /* --------------------------- milestone -------------------------- */
 export function renderMilestone(ctx: RenderCtx): React.ReactNode {
   const { item, title, details, variant } = ctx;
-  const years = ['2019', '2022', '2024', '2026'];
   return (
     <Base variant={variant}>
       <div style={{ padding: 18, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -128,7 +126,7 @@ export function renderMilestone(ctx: RenderCtx): React.ReactNode {
                   background: i === details.length - 1 ? ACCENT : INK,
                 }}
               />
-              <div style={{ ...mono, fontWeight: 700, fontSize: 14 }}>{years[i] || ''}</div>
+              <div style={{ ...mono, fontWeight: 700, fontSize: 14 }}>{'0' + (i + 1)}</div>
               <div style={{ fontSize: 10, color: 'var(--foreground-secondary)', marginTop: 3 }}>{x}</div>
             </div>
           ))}

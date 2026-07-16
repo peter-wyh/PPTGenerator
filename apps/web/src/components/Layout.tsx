@@ -75,7 +75,7 @@ export function Layout({ children }: LayoutProps) {
           </Button>
         </div>
       </header>
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-hidden">{children}</main>
     </div>
   );
 }

@@ -74,7 +74,7 @@ export function renderCaseShowcase(ctx: RenderCtx): React.ReactNode {
 /* -------------------------- retrospective ----------------------- */
 export function renderRetrospective(ctx: RenderCtx): React.ReactNode {
   const { item, title, meta, details, variant } = ctx;
-  const eyebrows = ['保留', '优化', '推荐', '目标'];
+  const eyebrows = ['01', '02', '03', '04'];
   return (
     <Base variant={variant}>
       <div style={{ padding: 18, height: '100%', display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: 16 }}>

@@ -11,12 +11,7 @@ import {
 export function renderPackage(ctx: RenderCtx): React.ReactNode {
   const { item, title, meta, details, variant } = ctx;
   if (variant === 'table') {
-    const rows: [string, string, string, string][] = [
-      ['服务周期', '4 周', '6 周', '8 周'],
-      ['创作者数量', '20 位', '50 位', '80 位'],
-      ['媒体资源位', '—', '2 个', '4 个'],
-      ['套餐价格', '$30K', '$80K', '$150K'],
-    ];
+    const rows: [string, string, string, string][] = details.map((d) => [d, '--', '--', '--']);
     return (
       <Base variant={variant}>
         <div style={{ padding: 18, height: '100%' }}>
@@ -62,8 +57,7 @@ export function renderPackage(ctx: RenderCtx): React.ReactNode {
     );
   }
   // standard: 3 套餐卡
-  const tiers = ['A 轻量试水', 'B 增长进阶', 'C 品牌整合'];
-  const prices = [30, 80, 150];
+  const tiers = ['套餐一', '套餐二', '套餐三'];
   return (
     <Base variant={variant}>
       <div style={{ padding: 18, height: '100%' }}>
@@ -81,7 +75,7 @@ export function renderPackage(ctx: RenderCtx): React.ReactNode {
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 700 }}>{t}</div>
-              <div style={{ ...mono, fontWeight: 700, fontSize: 18, marginTop: 5 }}>${prices[i]}K</div>
+              <div style={{ ...mono, fontWeight: 700, fontSize: 18, marginTop: 5, color: 'var(--foreground-muted)' }}>--</div>
               <div style={{ fontSize: 9, color: 'var(--foreground-muted)', marginTop: 8, lineHeight: 1.5 }}>{details.slice(0, 2).join(' · ')}</div>
             </div>
           ))}
@@ -108,10 +102,7 @@ export function renderChallenge(ctx: RenderCtx): React.ReactNode {
           {details.map((x, i) => (
             <div key={i} style={{ padding: 10, border: '1px solid var(--border-default)', borderRadius: 7, display: 'flex', gap: 9 }}>
               <div style={{ ...mono, fontWeight: 700, fontSize: 18, color: ACCENT }}>{'0' + (i + 1)}</div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700 }}>{x}</div>
-                <div style={{ fontSize: 9, color: 'var(--foreground-muted)', marginTop: 3 }}>识别信号与行动方向</div>
-              </div>
+              <div style={{ fontSize: 11, fontWeight: 700 }}>{x}</div>
             </div>
           ))}
         </div>

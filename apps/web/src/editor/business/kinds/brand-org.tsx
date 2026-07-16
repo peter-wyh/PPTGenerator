@@ -50,8 +50,6 @@ export function renderBrandWall(ctx: RenderCtx): React.ReactNode {
 /* ------------------------ org / service ------------------------- */
 export function renderOrgService(ctx: RenderCtx): React.ReactNode {
   const { item, title, meta, details, variant } = ctx;
-  const kind = ctx.data.businessKind;
-  const subs = kind === 'org' ? ['20%', '25%', '35%', '20%'] : ['策略 · 执行 · 复盘', '策略 · 执行 · 复盘', '策略 · 执行 · 复盘', '策略 · 执行 · 复盘'];
   return (
     <Base variant={variant}>
       <div style={{ padding: 18, height: '100%' }}>
@@ -62,7 +60,6 @@ export function renderOrgService(ctx: RenderCtx): React.ReactNode {
           {details.map((x, i) => (
             <div key={i} style={{ padding: '13px 10px', borderTop: `3px solid ${STAT_COLORS[i % 4]}`, background: 'var(--surface-subtle)' }}>
               <div style={{ fontSize: 11, fontWeight: 700 }}>{x}</div>
-              <div style={{ fontSize: 9, color: 'var(--foreground-muted)', marginTop: 6 }}>{subs[i] || ''}</div>
             </div>
           ))}
         </div>
