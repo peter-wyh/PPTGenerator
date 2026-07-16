@@ -11,6 +11,7 @@ import type {
 import { collaborationId, collaborationLabel } from '@mediakit/shared';
 import { ImageInput } from '@/components/ImageInput';
 import { getCollaboration, saveCollaboration, removeCollaboration } from '@/api/collaborations';
+import { buildSeedCollaboration } from '@/api/mock/collaborationSeed';
 
 const CONTENT_TYPES: ContentType[] = ['post', 'reels', 'video', 'image', 'live', 'story'];
 
@@ -34,7 +35,8 @@ export function CollaborationDetail({
     let cancelled = false;
     getCollaboration(campaignId, creatorId).then((c) => {
       if (cancelled) return;
-      setData(c ?? { ...EMPTY, id: collaborationId(campaignId, creatorId), campaignId, creatorId });
+      // 后端无合作记录时，用 mock seed 生成 fallback（不自动落库，仅展示）
+      setData(c ?? buildSeedCollaboration(campaignId, creatorId));
     });
     return () => {
       cancelled = true;

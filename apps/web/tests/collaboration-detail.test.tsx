@@ -10,6 +10,15 @@ vi.mock('@/api/collaborations', () => ({
   removeCollaboration: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('@/api/mock/collaborationSeed', () => ({
+  buildSeedCollaboration: vi.fn(() => ({
+    id: collaborationId('c1', 'cr1'),
+    campaignId: 'c1',
+    creatorId: 'cr1',
+    deliverables: [{ contentType: 'post', metrics: [{ label: '曝光', value: '0' }] }],
+  })),
+}));
+
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
 
 const collab: CollaborationData = {
@@ -32,10 +41,12 @@ describe('CollaborationDetail', () => {
     expect(screen.getByText('reels')).toBeInTheDocument();
   });
 
-  it('shows empty state when no collaboration record', async () => {
+  it('shows seed fallback when no collaboration record', async () => {
     vi.mocked(getCollaboration).mockResolvedValueOnce(null);
     render(<CollaborationDetail campaignId="c1" creatorId="cr1" creatorName="Mia" onChange={() => {}} />);
-    await waitFor(() => expect(screen.getByText(/未设置合作/)).toBeInTheDocument());
+    // fallback 合作数据应该显示合作方式和 deliverable，而非"未设置合作"
+    await waitFor(() => expect(screen.getByText(/合作方式/)).toBeInTheDocument());
+    expect(screen.queryByText(/未设置合作/)).toBeNull();
   });
 
   it('editing 模式可编辑受众画像并保存', async () => {
