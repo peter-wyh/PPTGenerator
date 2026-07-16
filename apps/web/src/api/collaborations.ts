@@ -34,25 +34,23 @@ export async function getCollaboration(
   }
 }
 
-/** 保存合作记录：新表 + DataRecord 双写，确保兼容。data.id 强制为确定性 id。 */
+/** 保存合作记录：Phase 4 后只写新表。 */
 export async function saveCollaboration(data: CollaborationData): Promise<void> {
   const id = collaborationId(data.campaignId, data.creatorId);
   const payload: CollaborationData = { ...data, id };
 
-  // 1. 写新表
+  // 只写新表（Phase 4 降级：不再双写 DataRecord）
   try {
     await campaignsApi.upsertCollaboration(data.campaignId, data.creatorId, {
       deliverables: payload.deliverables,
     });
   } catch {
-    // 新表写入失败时仍继续写 DataRecord
-  }
-
-  // 2. 写 DataRecord（兼容旧读取方）
-  try {
-    await dataApi.update(id, payload);
-  } catch {
-    await dataApi.create('collaboration', payload);
+    // 新表写入失败时 fallback 写 DataRecord（保底不丢数据）
+    try {
+      await dataApi.update(id, payload);
+    } catch {
+      await dataApi.create('collaboration', payload);
+    }
   }
 }
 
