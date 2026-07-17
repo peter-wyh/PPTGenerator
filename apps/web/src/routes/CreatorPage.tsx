@@ -124,7 +124,18 @@ export function CreatorPage() {
         loading={loading}
         headers={headers}
         rows={rows}
-        onRowClick={(i) => setDetailCreator(records[i].data as Creator)}
+        onRowClick={(i) => {
+          const raw = records[i].data as Creator;
+          // DB 旧数据可能缺少 works/audience，用 mock 补全
+          const mock = MOCK_CREATORS.find((m) => m.id === raw.id);
+          const enriched: Creator = {
+            ...raw,
+            works: raw.works?.length ? raw.works : mock?.works ?? [],
+            audience: raw.audience ?? mock?.audience,
+            metrics: raw.metrics?.length ? raw.metrics : mock?.metrics ?? [],
+          };
+          setDetailCreator(enriched);
+        }}
       />
       {preview && (
         <ImportPreviewModal kind="creator" items={preview} onConfirm={confirmImport} onCancel={() => setPreview(null)} />
