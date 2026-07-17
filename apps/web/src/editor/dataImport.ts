@@ -2,7 +2,7 @@
 
 export const CAMPAIGN_FIELDS = ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget', 'status', 'owner', 'creatorIds'] as const;
 export const CAMPAIGN_REQUIRED = ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget'];
-export const CREATOR_FIELDS = ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region', 'avatar'] as const;
+export const CREATOR_FIELDS = ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region', 'avatar', 'bio', 'tags'] as const;
 export const CREATOR_REQUIRED = ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region'];
 
 export type DataKind = 'campaign' | 'creator';
@@ -37,6 +37,9 @@ export function buildPreviewFromRows(kind: DataKind, rows: Record<string, string
       if (f === 'creatorIds') {
         const ids = String(v).split(';').map((s) => s.trim()).filter(Boolean);
         if (ids.length) data.creatorIds = ids;
+      } else if (f === 'tags') {
+        const tags = String(v).split(';').map((s) => s.trim()).filter(Boolean);
+        if (tags.length) data.tags = tags;
       } else {
         data[f] = v;
       }
@@ -62,7 +65,7 @@ export function downloadTemplate(kind: DataKind): void {
   const example =
     kind === 'campaign'
       ? 'camp-example,示例 Campaign,示例品牌,FT,TikTok,2026-01-01,2026-01-31,$100K,Active,alex,cre-mia;cre-sofia'
-      : 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,';
+      : 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,,示例简介,示例标签1;示例标签2';
   const csv = `${header}\n${example}\n`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);

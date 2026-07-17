@@ -7,7 +7,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** 达人详情右侧滑出浮窗:头像 + 基本字段网格 + 频道 KPI + 受众画像 + 作品列表。 */
+/** 达人详情右侧滑出浮窗:头像/简介/标签 + 基本字段 + 报价 + 联系方式 + 频道 KPI + 受众画像 + 作品列表(可展开每日效果)+ 频道统计。 */
 export function CreatorDetailDrawer({ creator, onClose }: Props) {
   const [open, setOpen] = useState(false);
   const [expandedWorkIdx, setExpandedWorkIdx] = useState<number | null>(null);
@@ -45,12 +45,22 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         aria-modal="true"
         aria-label={creator.name}
       >
-        {/* 头部 */}
+        {/* 头部:头像 + name + handle + 简介 + 标签 */}
         <div className="flex items-start gap-3 border-b border-border-subtle p-5">
           <CreatorAvatar name={creator.name} avatar={creator.avatar} size={64} />
           <div className="min-w-0 flex-1">
             <div className="font-headings text-lg font-semibold text-foreground-primary">{creator.name}</div>
             <div className="truncate text-sm text-foreground-secondary">{creator.handle}</div>
+            {creator.bio && (
+              <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{creator.bio}</p>
+            )}
+            {creator.tags && creator.tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {creator.tags.map((t) => (
+                  <span key={t} className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] text-accent-primary">{t}</span>
+                ))}
+              </div>
+            )}
           </div>
           <button onClick={onClose} aria-label="关闭" className="rounded p-1 text-foreground-secondary hover:bg-surface-hover">
             ✕
@@ -67,7 +77,33 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
           ))}
         </div>
 
-        {/* 频道 KPI */}
+        {/* 合作报价 */}
+        {creator.rate && (creator.rate.post || creator.rate.video || creator.rate.live) && (
+          <div className="p-5">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">合作报价{creator.rate.currency ? ` (${creator.rate.currency})` : ''}</div>
+            <div className="grid grid-cols-3 gap-2">
+              {creator.rate.post && <RateCell label="图文" value={creator.rate.post} />}
+              {creator.rate.video && <RateCell label="短视频" value={creator.rate.video} />}
+              {creator.rate.live && <RateCell label="直播" value={creator.rate.live} />}
+            </div>
+            {creator.rate.note && <div className="mt-2 text-[11px] text-foreground-muted">{creator.rate.note}</div>}
+          </div>
+        )}
+
+        {/* 联系方式 */}
+        {creator.contact && (creator.contact.mcn || creator.contact.email || creator.contact.phone || creator.contact.contactPerson) && (
+          <div className="p-5">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">商务联系方式</div>
+            <div className="space-y-1 text-sm">
+              {creator.contact.mcn && <ContactRow label="MCN" value={creator.contact.mcn} />}
+              {creator.contact.email && <ContactRow label="邮箱" value={creator.contact.email} />}
+              {creator.contact.phone && <ContactRow label="电话" value={creator.contact.phone} />}
+              {creator.contact.contactPerson && <ContactRow label="联系人" value={creator.contact.contactPerson} />}
+            </div>
+          </div>
+        )}
+
+        {/* 频道 KPI(metrics 为空则隐藏) */}
         {metrics.length > 0 && (
           <div className="p-5">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
@@ -133,7 +169,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
           </div>
         ) : null}
 
-        {/* 作品列表 */}
+        {/* 作品列表(可展开每日效果数据) */}
         {works.length > 0 ? (
           <div className="border-t border-border-subtle p-5">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
@@ -145,7 +181,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                 const isExpanded = expandedWorkIdx === i;
                 return (
                   <div key={w.id || i} className="rounded-lg border border-border-subtle bg-surface-hover/30">
-                    {/* 作品头部（可点击展开） */}
+                    {/* 作品头部(可点击展开) */}
                     <div
                       className={`flex items-start gap-2 p-2 ${daily?.length ? 'cursor-pointer' : ''}`}
                       onClick={() => daily?.length && setExpandedWorkIdx(isExpanded ? null : i)}
@@ -158,7 +194,11 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-medium text-foreground-primary" title={w.title}>{w.title}</div>
+                        <div className="flex items-center gap-1">
+                          <span className="truncate text-xs font-medium text-foreground-primary" title={w.title}>{w.title}</span>
+                          {w.featured && <span className="rounded bg-accent-soft px-1 text-[9px] text-accent-primary">精选</span>}
+                          {w.contentType && <span className="text-[9px] text-foreground-muted">{w.contentType}</span>}
+                        </div>
                         <div className="text-[10px] text-foreground-muted">
                           {w.platform}
                           {w.publishedAt ? ` · ${w.publishedAt}` : ''}
@@ -171,6 +211,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                           {w.shares && w.shares !== '0' && <span title="转发">↗ {w.shares}</span>}
                           {w.saves && w.saves !== '0' && <span title="收藏">⭐ {w.saves}</span>}
                           {w.engagementRate && <span title="互动率">📊 {w.engagementRate}</span>}
+                          {w.attribution?.gmv && <span title="GMV">💰 <span>{w.attribution.gmv}</span></span>}
                         </div>
                       </div>
                       {/* 展开指示 */}
@@ -237,7 +278,40 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
             <div className="text-xs text-foreground-muted">暂无作品数据（需在数据管理-合作列表中关联 Campaign 后获取）</div>
           </div>
         )}
+
+        {/* 频道统计 */}
+        {(creator.stats?.length ?? 0) > 0 && (
+          <div className="border-t border-border-subtle p-5">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">频道统计</div>
+            <div className="grid grid-cols-2 gap-2">
+              {creator.stats!.map((s, i) => (
+                <div key={`${s.label}-${i}`} className="rounded-lg border border-border-subtle p-3">
+                  <div className="text-[11px] text-foreground-muted">{s.label}</div>
+                  <div className="text-sm font-semibold text-foreground-primary">{s.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </aside>
+    </div>
+  );
+}
+
+function RateCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border-subtle p-3">
+      <div className="text-[11px] text-foreground-muted">{label}</div>
+      <div className="text-sm font-semibold text-foreground-primary">{value}</div>
+    </div>
+  );
+}
+
+function ContactRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2">
+      <span className="w-14 shrink-0 text-foreground-muted">{label}</span>
+      <span className="text-foreground-primary">{value}</span>
     </div>
   );
 }

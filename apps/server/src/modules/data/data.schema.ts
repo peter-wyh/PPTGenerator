@@ -90,6 +90,18 @@ const creatorWorkSchema = z.object({
   shares: z.string().optional(),
   saves: z.string().optional(),
   engagementRate: z.string().optional(),
+  contentType: z.string().optional(),
+  hashtags: z.array(z.string()).optional(),
+  productLink: z.string().max(2048).optional(),
+  attribution: z.object({
+    clicks: z.string().optional(),
+    orders: z.string().optional(),
+    gmv: z.string().optional(),
+    ctr: z.string().optional(),
+    cvr: z.string().optional(),
+  }).optional(),
+  duration: z.string().optional(),
+  featured: z.boolean().optional(),
 });
 
 /** CreatorStatItem:镜像 shared。 */
@@ -99,6 +111,22 @@ const creatorStatItemSchema = z.object({
   value: z.string(),
   color: z.string(),
   selected: z.boolean().optional(),
+});
+
+/** CreatorContact / CreatorRate:镜像 shared。 */
+const creatorContactSchema = z.object({
+  mcn: z.string().optional(),
+  agency: z.string().optional(),
+  email: z.string().max(320).optional(),
+  phone: z.string().max(64).optional(),
+  contactPerson: z.string().max(120).optional(),
+});
+const creatorRateSchema = z.object({
+  currency: z.string().max(8).optional(),
+  post: z.string().max(64).optional(),
+  video: z.string().max(64).optional(),
+  live: z.string().max(64).optional(),
+  note: z.string().max(500).optional(),
 });
 
 /** Creator 记录数据(镜像 web Creator;metrics 必填)。 */
@@ -117,6 +145,10 @@ export const creatorRecordDataSchema = z.object({
   audience: creatorAudienceSchema.optional(),
   works: z.array(creatorWorkSchema).optional(),
   stats: z.array(creatorStatItemSchema).optional(),
+  bio: z.string().max(2000).optional(),
+  tags: z.array(z.string()).optional(),
+  contact: creatorContactSchema.optional(),
+  rate: creatorRateSchema.optional(),
 });
 
 /** Collaboration 子 schema(镜像 shared CollaborationData)。 */

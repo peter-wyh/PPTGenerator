@@ -177,3 +177,49 @@ describe('data.schema · collaborationRecordDataSchema', () => {
     ).toThrow();
   });
 });
+
+describe('creatorRecordDataSchema rich fields', () => {
+  const baseCreator = {
+    id: 'cre-x', name: 'X', handle: '@x', platform: 'TikTok', tier: 'macro',
+    followers: '100K', engagement: '7%', category: 'Beauty', region: 'US',
+    metrics: [{ label: 'Avg Reach', value: '720K', compare: '' }],
+  };
+
+  it('accepts bio/tags/contact/rate', () => {
+    const parsed = creatorRecordDataSchema.parse({
+      ...baseCreator,
+      bio: '简介文本',
+      tags: ['美妆', '种草'],
+      contact: { mcn: 'MCN-A', email: 'biz@x.com', phone: '+1-555', contactPerson: 'Ann' },
+      rate: { currency: 'USD', post: '$1,000', video: '$3,000', live: '$8,000', note: '打包可议' },
+    });
+    expect(parsed.bio).toBe('简介文本');
+    expect(parsed.tags).toEqual(['美妆', '种草']);
+    expect(parsed.contact?.mcn).toBe('MCN-A');
+    expect(parsed.rate?.video).toBe('$3,000');
+  });
+
+  it('accepts works with contentType/hashtags/productLink/attribution/duration/featured', () => {
+    const parsed = creatorRecordDataSchema.parse({
+      ...baseCreator,
+      works: [{
+        id: 'w1', title: 'T',
+        contentType: 'video',
+        hashtags: ['#glow'],
+        productLink: 'https://shop.example.com/p',
+        attribution: { clicks: '1.2K', orders: '34', gmv: '$2,100', ctr: '3.4%', cvr: '2.8%' },
+        duration: '01:12', featured: true,
+      }],
+    });
+    expect(parsed.works?.[0].contentType).toBe('video');
+    expect(parsed.works?.[0].attribution?.gmv).toBe('$2,100');
+    expect(parsed.works?.[0].featured).toBe(true);
+  });
+
+  it('rejects malformed contact (email too long)', () => {
+    expect(() => creatorRecordDataSchema.parse({
+      ...baseCreator,
+      contact: { email: 'x'.repeat(400) },
+    })).toThrow();
+  });
+});

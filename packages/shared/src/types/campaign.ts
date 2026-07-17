@@ -55,6 +55,24 @@ export interface Campaign {
   creatorIds?: string[];
 }
 
+/** 达人商务联系方式。 */
+export interface CreatorContact {
+  mcn?: string;           // MCN/机构
+  agency?: string;        // 经纪公司
+  email?: string;         // 商务邮箱
+  phone?: string;         // 商务电话
+  contactPerson?: string; // 商务联系人
+}
+
+/** 达人合作报价(多档 + 货币 + 说明)。 */
+export interface CreatorRate {
+  currency?: string; // CNY / USD …
+  post?: string;     // 图文报价
+  video?: string;    // 短视频报价
+  live?: string;     // 直播报价
+  note?: string;     // 报价说明
+}
+
 /** 上游达人（Creator / Influencer）实体（demo 中 mock；数据管理库管理）。 */
 export interface Creator {
   id: string;
@@ -83,6 +101,14 @@ export interface Creator {
   works?: CreatorWork[];
   /** 频道维度 stat 项(creator-stats-strip 用)。 */
   stats?: CreatorStatItem[];
+  /** 达人简介 / Bio。 */
+  bio?: string;
+  /** 内容标签(风格/品类)。 */
+  tags?: string[];
+  /** 商务联系方式。 */
+  contact?: CreatorContact;
+  /** 合作报价。 */
+  rate?: CreatorRate;
 }
 
 /* ------------------------------------------------------------------ */
@@ -134,6 +160,15 @@ export interface CreatorAudience {
   topCities?: AudienceSlice[];
 }
 
+/** 作品带货效果归因。 */
+export interface CreatorWorkAttribution {
+  clicks?: string;   // 点击
+  orders?: string;   // 下单
+  gmv?: string;      // 成交额
+  ctr?: string;      // 点击率 %
+  cvr?: string;      // 转化率 %
+}
+
 /** 达人作品(列表项 + 作品数据)。对齐 works 组件渲染所需字段。 */
 export interface CreatorWork {
   id: string;
@@ -150,6 +185,21 @@ export interface CreatorWork {
   engagementRate?: string;
   /** 每日效果数据（14天时间序列）。 */
   daily?: PostDaily[];
+  /**
+   * 内容形式(达人作品维度):image=图文 / video=短视频 / live=直播 / long=长视频 / series=合集。
+   * 与 ContentType(协作交付形式)、PostFormat(帖子格式)为不同维度;mock 种子目前只用 image|video。
+   */
+  contentType?: string;
+  /** 话题标签 / 关键词。 */
+  hashtags?: string[];
+  /** 带货 / 挂车链接。 */
+  productLink?: string;
+  /** 带货效果归因。 */
+  attribution?: CreatorWorkAttribution;
+  /** 视频 / 内容时长(如 "01:23")。 */
+  duration?: string;
+  /** 是否置顶 / 精选。 */
+  featured?: boolean;
 }
 
 /** 报告中选中的达人信息（精简版，用于达人组件一键填充）。 */

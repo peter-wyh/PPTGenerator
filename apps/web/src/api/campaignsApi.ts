@@ -64,10 +64,16 @@ export interface CreatorDTO {
   metrics: unknown;
   audience: unknown;
   works: unknown;
+  stats: unknown;
+  profile: unknown;
 }
 
 /** CreatorDTO → 前端 Creator 类型。 */
 export function dtoToCreator(dto: CreatorDTO): Creator {
+  const profile = (dto.profile ?? null) as {
+    bio?: string; tags?: string[];
+    contact?: Creator['contact']; rate?: Creator['rate'];
+  } | null;
   return {
     id: dto.id,
     name: dto.name,
@@ -79,8 +85,14 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     category: dto.category,
     region: dto.region,
     avatar: dto.avatar ?? creatorAvatarUrl(dto.name),
-    metrics: dto.metrics as Creator['metrics'] ?? [],
-    audience: dto.audience as Creator['audience'] ?? undefined,
+    metrics: (dto.metrics as Creator['metrics']) ?? [],
+    audience: (dto.audience as Creator['audience']) ?? undefined,
+    works: (dto.works as Creator['works']) ?? undefined,
+    stats: (dto.stats as Creator['stats']) ?? undefined,
+    bio: profile?.bio,
+    tags: profile?.tags,
+    contact: profile?.contact,
+    rate: profile?.rate,
   };
 }
 

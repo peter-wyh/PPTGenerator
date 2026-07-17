@@ -286,7 +286,9 @@ export function buildWorks(
   return pool.map((title, i) => {
     const jit = CHANNEL_JITTER[(index + i) % CHANNEL_JITTER.length];
     const base = (TIER_CHANNEL_BASE[meta.tier as Tier] ?? TIER_CHANNEL_BASE.micro).impressions / 10;
-    const impressions = Math.round(base * jit);
+    const impressionsNum = base * jit;
+    const isVideo = VIDEO_PLATFORMS.has(meta.platform);
+    const impressions = Math.round(impressionsNum);
     const likes = Math.round(impressions * 0.08);
     const comments = Math.round(impressions * 0.005);
     const shares = Math.round(impressions * 0.012);
@@ -308,19 +310,32 @@ export function buildWorks(
       };
     });
 
+
     return {
       id: `${meta.id}-work-${i + 1}`,
       title,
       cover: `https://picsum.photos/seed/${encodeURIComponent(meta.name + '-' + i)}/400/400`,
       platform: meta.platform,
       publishedAt: `2026-0${(i % 6) + 1}-${String(((index + i) % 28) + 1).padStart(2, '0')}`,
-      impressions: compact(base * jit),
-      likes: compact(base * jit * 0.08),
-      comments: compact(base * jit * 0.005),
-      shares: compact(base * jit * 0.012),
-      saves: compact(base * jit * 0.02),
+      impressions: compact(impressionsNum),
+      likes: compact(impressionsNum * 0.08),
+      comments: compact(impressionsNum * 0.005),
+      shares: compact(impressionsNum * 0.012),
+      saves: compact(impressionsNum * 0.02),
       engagementRate: `${(8 * jit).toFixed(1)}%`,
       daily,
+      contentType: isVideo ? 'video' : 'image',
+      hashtags: [`#${meta.category.toLowerCase()}`, `#collab${i + 1}`],
+      productLink: i % 2 === 0 ? `https://shop.example.com/p/${meta.id}-${i + 1}` : undefined,
+      attribution: {
+        clicks: compact(impressionsNum * 0.04),
+        orders: compact(impressionsNum * 0.04 * 0.03),
+        gmv: money(impressionsNum * 0.04 * 0.03 * 45),
+        ctr: `${(4 * jit).toFixed(1)}%`,
+        cvr: `${(3 * jit).toFixed(1)}%`,
+      },
+      duration: isVideo ? `${1 + (i % 5)}:${String((10 + i * 7) % 60).padStart(2, '0')}` : undefined,
+      featured: i === 0,
     };
   });
 }
@@ -342,6 +357,72 @@ export function buildStats(
   ];
 }
 
+/* ------------------------------ Profile(bio/tags/contact/rate) ------------------------------ */
+
+/** 按 category 取内容标签池。 */
+const TAG_POOL: Record<string, string[]> = {
+  Beauty: ['美妆种草', '试色', '日常分享', '好物推荐'],
+  Skincare: ['护肤科普', '成分党', '敏感肌', '测评'],
+  Lifestyle: ['生活方式', '好物分享', '日常记录', '家居'],
+  Tech: ['数码评测', '开箱', '硬核科普', '上手体验'],
+  Fashion: ['穿搭', 'OOTD', '时尚单品', '季节穿搭'],
+  Fitness: ['健身打卡', '减脂餐', '训练干货', '形体管理'],
+  Food: ['美食探店', '家常菜', '食谱', '零食测评'],
+};
+const DEFAULT_TAGS = ['好物推荐', '日常分享', '测评'];
+
+/** 按 region 取货币。 */
+const CURRENCY_BY_REGION: Record<string, string> = {
+  CN: 'CNY', 'US / UK': 'USD', US: 'USD', JP: 'USD', KR: 'USD', IN: 'USD',
+};
+
+/** tier → 报价基线(图文/短视频/直播,美元量级,确定性)。 */
+const TIER_RATE_BASE: Record<Tier, { post: number; video: number; live: number }> = {
+  mega: { post: 4500, video: 12000, live: 30000 },
+  macro: { post: 1500, video: 4000, live: 10000 },
+  micro: { post: 350, video: 900, live: 2200 },
+};
+
+/** 生成达人简介(确定性模板)。 */
+export function buildBio(meta: Omit<Creator, 'metrics'>, index: number): string {
+  const jit = CHANNEL_JITTER[index % CHANNEL_JITTER.length];
+  const reachK = Math.round((TIER_CHANNEL_BASE[meta.tier as Tier] ?? TIER_CHANNEL_BASE.micro).reach / 1000 * jit);
+  return `${meta.name}(${meta.handle})是 ${meta.region} 的 ${meta.category} 领域 ${meta.tier} 达人,单条平均触达约 ${(reachK / 1000).toFixed(1)}M,内容以${(TAG_POOL[meta.category] ?? DEFAULT_TAGS)[0]}见长。`;
+}
+
+/** 生成内容标签(确定性取 2-4 个)。 */
+export function buildTags(meta: Omit<Creator, 'metrics'>, index: number): string[] {
+  const pool = TAG_POOL[meta.category] ?? DEFAULT_TAGS;
+  const n = 2 + (index % 3); // 2..4
+  return pool.slice(0, n);
+}
+
+/** 生成商务联系方式(确定性)。 */
+export function buildContact(meta: Omit<Creator, 'metrics'>, index: number): NonNullable<Creator['contact']> {
+  const handleUser = meta.handle.replace(/^@/, '');
+  return {
+    mcn: `MCN-${meta.category}-${(index % 4) + 1}`,
+    email: `biz@${handleUser}.com`,
+    phone: `+1-555-0${String(100 + index).slice(-3)}`,
+    contactPerson: ['Ann', 'Ben', 'Cara', 'Dan'][index % 4],
+  };
+}
+
+/** 生成合作报价(确定性,tier 基线 + region 货币)。 */
+export function buildRate(meta: Omit<Creator, 'metrics'>, index: number): NonNullable<Creator['rate']> {
+  const base = TIER_RATE_BASE[meta.tier as Tier] ?? TIER_RATE_BASE.micro;
+  const jit = CHANNEL_JITTER[index % CHANNEL_JITTER.length];
+  const currency = CURRENCY_BY_REGION[meta.region] ?? 'USD';
+  const sym = currency === 'CNY' ? '¥' : '$';
+  return {
+    currency,
+    post: `${sym}${(base.post * jit).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+    video: `${sym}${(base.video * jit).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+    live: `${sym}${(base.live * jit).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+    note: '打包合作可议价,具体视 brief 而定',
+  };
+}
+
 /** Creator mock list (the 达人库) with channel-level metrics + audience/works/stats injected. */
 export const MOCK_CREATORS: Creator[] = CREATOR_META.map((c, i) => ({
   ...c,
@@ -353,4 +434,8 @@ export const MOCK_CREATORS: Creator[] = CREATOR_META.map((c, i) => ({
   audience: buildAudience(c, i),
   works: buildWorks(c, i),
   stats: buildStats(c, i),
+  bio: buildBio(c, i),
+  tags: buildTags(c, i),
+  contact: buildContact(c, i),
+  rate: buildRate(c, i),
 }));

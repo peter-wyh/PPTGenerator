@@ -71,3 +71,24 @@ describe('dataImport · creatorIds', () => {
     expect(buildPreviewFromObjects('campaign', items)[0].data.creatorIds).toEqual(['cre-mia']);
   });
 });
+
+describe('creator import bio/tags', () => {
+  const validBase = {
+    id: 'cre-x', name: 'X', handle: '@x', platform: 'TikTok', tier: 'macro',
+    followers: '100K', engagement: '7%', category: 'Beauty', region: 'US',
+  };
+
+  it('parses tags from semicolon-separated string into array', () => {
+    const rows = [{ ...validBase, bio: '简介文本', tags: '美妆;种草;测评' }];
+    const [item] = buildPreviewFromRows('creator', rows);
+    expect(item.valid).toBe(true);
+    expect(item.data.bio).toBe('简介文本');
+    expect(item.data.tags).toEqual(['美妆', '种草', '测评']);
+  });
+
+  it('omits tags when empty', () => {
+    const rows = [{ ...validBase, tags: '' }];
+    const [item] = buildPreviewFromRows('creator', rows);
+    expect(item.data.tags).toBeUndefined();
+  });
+});

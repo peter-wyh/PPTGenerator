@@ -290,11 +290,11 @@ ALTER TABLE `Creator` ADD COLUMN `profile` JSON NULL;
 
 Run:
 ```
-npx prisma migrate deploy --schema apps/server/prisma/schema.prisma
-npx prisma generate --schema apps/server/prisma/schema.prisma
+pnpm -C apps/server exec prisma migrate deploy --schema prisma/schema.prisma
+pnpm -C apps/server exec prisma generate --schema prisma/schema.prisma
 ```
 Expected: `migrate deploy` 应用该迁移(ADD COLUMN 不需 CREATE DATABASE,不触发 P3014);`generate` 更新 client 类型含 `stats`/`profile`。
-> 若 `migrate deploy` 报迁移已部分应用,用 `npx prisma migrate resolve --schema apps/server/prisma/schema.prisma --applied 20260716000000_creator_profile_stats` 标记已应用。
+> 若 `migrate deploy` 报迁移已部分应用,用 `pnpm -C apps/server exec prisma migrate resolve --schema prisma/schema.prisma --applied 20260716000000_creator_profile_stats` 标记已应用。
 
 - [ ] **Step 4: `CreatorDTO` 加 `stats`/`profile` 字段**
 

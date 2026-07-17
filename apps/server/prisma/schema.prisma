@@ -219,6 +219,8 @@ model Creator {
   metrics    Json?
   audience   Json?
   works      Json?
+  stats      Json?
+  profile    Json?
 
   ownerId    String
   owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
