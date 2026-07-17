@@ -148,6 +148,8 @@ export interface CreatorWork {
   shares?: string;
   saves?: string;
   engagementRate?: string;
+  /** 每日效果数据（14天时间序列）。 */
+  daily?: PostDaily[];
 }
 
 /** 报告中选中的达人信息（精简版，用于达人组件一键填充）。 */

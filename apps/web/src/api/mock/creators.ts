@@ -5,7 +5,8 @@
  * Campaign-collaboration creator data lives in creatorPerformance.ts and references these ids.
  */
 import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
-import type { CampaignMetric } from '@mediakit/shared';
+import type { CampaignMetric } from '@mediaket/shared';
+import type { PostDaily } from '@mediaket/shared';
 import type { Creator } from '../creators';
 import { creatorAvatarUrl, creatorProfileUrl } from '../creatorAvatar';
 
@@ -285,6 +286,28 @@ export function buildWorks(
   return pool.map((title, i) => {
     const jit = CHANNEL_JITTER[(index + i) % CHANNEL_JITTER.length];
     const base = (TIER_CHANNEL_BASE[meta.tier as Tier] ?? TIER_CHANNEL_BASE.micro).impressions / 10;
+    const impressions = Math.round(base * jit);
+    const likes = Math.round(impressions * 0.08);
+    const comments = Math.round(impressions * 0.005);
+    const shares = Math.round(impressions * 0.012);
+    const saves = Math.round(impressions * 0.02);
+    const pubDate = new Date(`2026-0${(i % 6) + 1}-${String(((index + i) % 28) + 1).padStart(2, '0')}`);
+
+    // 确定性 S 曲线权重（14天）
+    const weights = [0.01, 0.015, 0.025, 0.04, 0.06, 0.08, 0.1, 0.11, 0.1, 0.09, 0.08, 0.06, 0.04, 0.035];
+    const sumW = weights.reduce((a, b) => a + b, 0);
+    const daily: PostDaily[] = weights.map((w, di) => {
+      const date = new Date(pubDate.getTime() + di * 86400000);
+      return {
+        date: date.toISOString().slice(0, 10),
+        impressions: Math.round(impressions * w / sumW).toLocaleString(),
+        likes: Math.round(likes * w / sumW).toLocaleString(),
+        comments: Math.round(comments * w / sumW).toLocaleString(),
+        shares: Math.round(shares * w / sumW).toLocaleString(),
+        saves: Math.round(saves * w / sumW).toLocaleString(),
+      };
+    });
+
     return {
       id: `${meta.id}-work-${i + 1}`,
       title,
@@ -295,7 +318,9 @@ export function buildWorks(
       likes: compact(base * jit * 0.08),
       comments: compact(base * jit * 0.005),
       shares: compact(base * jit * 0.012),
+      saves: compact(base * jit * 0.02),
       engagementRate: `${(8 * jit).toFixed(1)}%`,
+      daily,
     };
   });
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Creator } from '@mediaket/shared';
+import type { Creator, PostDaily } from '@mediaket/shared';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 /** 达人详情右侧滑出浮窗:头像 + 基本字段网格 + 频道 KPI + 受众画像 + 作品列表。 */
 export function CreatorDetailDrawer({ creator, onClose }: Props) {
   const [open, setOpen] = useState(false);
+  const [expandedWorkIdx, setExpandedWorkIdx] = useState<number | null>(null);
   useEffect(() => {
     const r = requestAnimationFrame(() => setOpen(true));
     return () => cancelAnimationFrame(r);
@@ -140,10 +141,15 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
             </div>
             <div className="space-y-2">
               {works.map((w, i) => {
+                const daily = (w as { daily?: PostDaily[] }).daily;
+                const isExpanded = expandedWorkIdx === i;
                 return (
                   <div key={w.id || i} className="rounded-lg border border-border-subtle bg-surface-hover/30">
-                    {/* 作品头部 */}
-                    <div className="flex items-start gap-2 p-2">
+                    {/* 作品头部（可点击展开） */}
+                    <div
+                      className={`flex items-start gap-2 p-2 ${daily?.length ? 'cursor-pointer' : ''}`}
+                      onClick={() => daily?.length && setExpandedWorkIdx(isExpanded ? null : i)}
+                    >
                       {w.cover ? (
                         <img src={w.cover} alt={w.title} className="h-10 w-10 shrink-0 rounded border border-border-subtle object-cover" />
                       ) : (
@@ -167,6 +173,12 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                           {w.engagementRate && <span title="互动率">📊 {w.engagementRate}</span>}
                         </div>
                       </div>
+                      {/* 展开指示 */}
+                      {daily?.length ? (
+                        <span className="shrink-0 self-center p-1 text-foreground-muted text-[10px]" title={isExpanded ? '收起每日数据' : '展开每日数据'}>
+                          {isExpanded ? '▲' : '▼'}
+                        </span>
+                      ) : null}
                       {w.url && (
                         <a
                           href={w.url}
@@ -174,11 +186,46 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                           rel="noopener noreferrer"
                           className="shrink-0 rounded p-1 text-foreground-muted hover:text-accent-primary"
                           title="查看原贴"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           ↗
                         </a>
                       )}
                     </div>
+                    {/* 每日效果数据表格 */}
+                    {isExpanded && daily && daily.length > 0 && (
+                      <div className="border-t border-border-subtle px-2 pb-2 pt-1">
+                        <div className="mb-1 text-[10px] font-medium text-foreground-muted">
+                          每日效果数据 ({daily.length} 天)
+                        </div>
+                        <div className="max-h-40 overflow-auto rounded border border-border-subtle">
+                          <table className="w-full text-[10px] tabular-nums">
+                            <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                              <tr>
+                                <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
+                                <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
+                                <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
+                                <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
+                                <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
+                                <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {daily.map((d, di) => (
+                                <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
+                                  <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
+                                  <td className="px-1.5 py-0.5 text-right">{d.impressions}</td>
+                                  <td className="px-1.5 py-0.5 text-right">{d.likes}</td>
+                                  <td className="px-1.5 py-0.5 text-right">{d.comments}</td>
+                                  <td className="px-1.5 py-0.5 text-right">{d.shares}</td>
+                                  <td className="px-1.5 py-0.5 text-right">{d.saves}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
