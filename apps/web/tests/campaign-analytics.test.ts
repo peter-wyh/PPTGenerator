@@ -1,9 +1,30 @@
 import { describe, it, expect } from 'vitest';
 import type { CampaignAnalytics, CampaignInsight } from '@mediakit/shared';
-import { getCreatorPerformances, getPlacementTypeSummaries, rollupCampaignMetrics } from '@/api/mock/creatorPerformance';
-import { getCampaignAnalytics, getCampaignInsights, rollupWeekly } from '@/api/mock/campaignAnalytics';
+import { getCreatorPerformances, getPlacementTypeSummaries, rollupCampaignMetrics } from '@/api/analytics/creatorPerformance';
+import { getCampaignAnalytics, getCampaignInsights, rollupWeekly } from '@/api/analytics/campaignAnalytics';
 import { reportCampaignFrom } from '@/api/campaigns';
-import { MOCK_CAMPAIGNS } from '@/api/mock/campaigns';
+import type { Campaign } from '@mediaket/shared';
+
+/** 内联 mock Campaign（替代历史 MOCK_CAMPAIGNS，后者已删除）。 */
+const MOCK_CAMPAIGN: Campaign = {
+  id: 'camp-everyday-bfc',
+  name: 'EVERYDAY Black Friday Gift Explosion',
+  advertiser: 'EVERYDAY',
+  businessLine: 'beauty',
+  platform: 'TikTok',
+  startDate: '2026-10-12',
+  endDate: '2026-12-31',
+  budget: '$50,000',
+  status: 'active',
+  owner: 'Zoe',
+  metrics: [
+    { label: 'GMV', value: '$128.5K', compare: '+12.3%' },
+    { label: 'ROAS', value: '5.2x', compare: '+0.4x' },
+    { label: 'Spend', value: '$24.7K', compare: '-3.1%' },
+  ],
+  platforms: [],
+  creatorIds: [],
+};
 
 describe('CampaignAnalytics 类型契约', () => {
   it('可构造完整的 analytics 对象', () => {
@@ -132,9 +153,9 @@ describe('getCampaignInsights', () => {
 
 describe('reportCampaignFrom', () => {
   it('把 Campaign 映射为带 analytics 的 ReportCampaign', () => {
-    const rc = reportCampaignFrom(MOCK_CAMPAIGNS[0]);
-    expect(rc.id).toBe(MOCK_CAMPAIGNS[0].id);
-    expect(rc.metrics).toEqual(MOCK_CAMPAIGNS[0].metrics);
+    const rc = reportCampaignFrom(MOCK_CAMPAIGN);
+    expect(rc.id).toBe(MOCK_CAMPAIGN.id);
+    expect(rc.metrics).toEqual(MOCK_CAMPAIGN.metrics);
     expect(rc.analytics).toBeDefined();
     expect(rc.analytics?.insights.length).toBeGreaterThan(0);
     expect(rc.analytics?.trend.length).toBeGreaterThanOrEqual(28);

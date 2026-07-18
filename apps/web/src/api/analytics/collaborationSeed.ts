@@ -3,6 +3,8 @@ import type {
   CollaborationDeliverable,
   CommentWordItem,
   ContentType,
+  CpsDaily,
+  CpsLinkData,
   PostDaily,
   WorkAudienceInsight,
   WorkMetricItem,
@@ -248,6 +250,187 @@ function seedPublishedAt(idx: number): string {
 }
 
 /**
+ * 根据 publishedAt 实时生成每日数据（确定性 S 曲线）。
+ * 天数 = 发布日 → 当前日期，最多 30 天；未来日期 fallback 14 天。
+ */
+function buildDailyFromPublishedAt(
+  publishedAt: string,
+  totals: { impressions: number; eng: number },
+): PostDaily[] {
+  const now = new Date();
+  const pub = new Date(publishedAt);
+  const daysDiff = Math.floor((now.getTime() - pub.getTime()) / 86400000);
+  const DAYS = daysDiff > 0 ? Math.min(30, daysDiff) : 14;
+  const weights = Array.from({ length: DAYS }, (_, i) => {
+    const t = i / Math.max(1, DAYS - 1);
+    return Math.sin(t * Math.PI) * 0.9 + 0.15 + 0.08 * ((i * 5) % 3);
+  });
+  const wSum = weights.reduce((a, b) => a + b, 0) || 1;
+  const fmt = (n: number) => Math.round(n).toLocaleString();
+  return weights.map((w, i) => {
+    const impr = (totals.impressions * w) / wSum;
+    const eng = (totals.eng * w) / wSum;
+    const d = new Date(pub.getTime() + i * 86400000);
+    return {
+      date: d.toISOString().slice(0, 10),
+      impressions: fmt(impr),
+      likes: fmt(eng * 0.56),
+      comments: fmt(eng * 0.11),
+      shares: fmt(eng * 0.18),
+      saves: fmt(eng * 0.15),
+    };
+  });
+}
+
+/** 将 "63.0K" / "1.2M" / "1234" 等格式解析为数字。 */
+function parseImpressions(s: string | undefined): number {
+  if (!s) return 10000;
+  const clean = s.replace(/[^0-9.]/g, '');
+  const num = parseFloat(clean) || 10000;
+  if (s.includes('M')) return num * 1_000_000;
+  if (s.includes('K') || s.includes('k')) return num * 1_000;
+  return num;
+}
+
+/* ─── CPS 链接推广效果生成 ─────────────────────────────────────────── */
+
+/** CPS 佣金比例（按 campaign profile，与 creatorPerformance 对齐）。 */
+const CPS_COMMISSION_PCT: Record<string, number> = {
+  'camp-glowlab-q4': 0.12,
+  'camp-lumiere-launch': 0.15,
+  'camp-nova-home-618': 0.08,
+  'camp-motion-spring': 0.1,
+  'camp-everyday-bf': 0.1,
+  'camp-wander-summer': 0.06,
+};
+const DEFAULT_CPS_COMMISSION = 0.1;
+
+/** 客单价（按 campaign profile）。 */
+const CPS_AOV: Record<string, number> = {
+  'camp-glowlab-q4': 189,
+  'camp-lumiere-launch': 359,
+  'camp-nova-home-618': 129,
+  'camp-motion-spring': 159,
+  'camp-everyday-bf': 249,
+  'camp-wander-summer': 899,
+};
+const DEFAULT_CPS_AOV = 200;
+
+/**
+ * 为一条 deliverable 生成 CPS 链接推广效果数据（确定性，基于 deliverableIdx）。
+ * 逻辑与 creatorPerformance.ts 的 CPS 生成对齐但简化为单 deliverable 级别。
+ * 同时生成按天拆分的 CPS 明细（daily），日期范围与 PostDaily 对齐。
+ */
+function buildCpsLinkData(
+  campaignId: string,
+  creatorId: string,
+  deliverableIdx: number,
+  baseImpressions: number,
+  publishedAt?: string,
+): CpsLinkData {
+  const commPct = CPS_COMMISSION_PCT[campaignId] ?? DEFAULT_CPS_COMMISSION;
+  const aov = CPS_AOV[campaignId] ?? DEFAULT_CPS_AOV;
+
+  // 确定性抖动（用 creatorId hash + deliverableIdx）
+  let h = 0;
+  for (let i = 0; i < creatorId.length; i++) h = ((h << 5) - h + creatorId.charCodeAt(i)) | 0;
+  h = Math.abs(h + deliverableIdx * 31);
+
+  // CTR 3%~5%
+  const ctr = 3 + (h % 20) / 10;
+  // 链接点击数（≈曝光的 3-5%）
+  const clicks = Math.round((baseImpressions * ctr) / 100);
+  // CVR 1.5%~4%
+  const cvr = 1.5 + (h % 26) / 10;
+  const orders = Math.max(1, Math.round((clicks * cvr) / 100));
+  const gmv = orders * aov;
+  const commission = Math.round(gmv * commPct);
+  const spend = Math.round(commission * 1.08);
+  const roas = spend > 0 ? gmv / spend : 0;
+  const epc = clicks > 0 ? gmv / clicks : 0;
+  const impressions = Math.round(clicks / (ctr / 100));
+
+  const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+  const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const money2 = (n: number) => `$${n.toFixed(2)}`;
+
+  return {
+    linkUrl: `https://shop.example.com/cps/${campaignId.slice(-6)}${creatorId.slice(-4)}${deliverableIdx}`,
+    clicks: fmt(clicks),
+    impressions: fmt(impressions),
+    ctr: `${ctr.toFixed(2)}%`,
+    orders: fmt(orders),
+    cvr: `${cvr.toFixed(2)}%`,
+    gmv: money(gmv),
+    commission: money(commission),
+    spend: money(spend),
+    roas: roas.toFixed(2),
+    epc: money2(epc),
+    daily: buildCpsDaily(publishedAt, { clicks, impressions, orders, gmv, commission, ctr, cvr, aov }),
+  };
+}
+
+/**
+ * 按 publishedAt 拆分 CPS 总量为每日明细（确定性 S 曲线，与 PostDaily 同日期范围）。
+ * 当日 CTR / CVR 与总量保持一致（恒定）；clicks/orders/gmv/commission 按 S 曲线分布。
+ */
+function buildCpsDaily(
+  publishedAt: string | undefined,
+  totals: {
+    clicks: number;
+    impressions: number;
+    orders: number;
+    gmv: number;
+    commission: number;
+    ctr: number; // 百分比
+    cvr: number; // 百分比
+    aov: number;
+  },
+): CpsDaily[] {
+  const now = new Date();
+  const pub = publishedAt ? new Date(publishedAt) : new Date('2024-08-01');
+  const daysDiff = Math.floor((now.getTime() - pub.getTime()) / 86400000);
+  const DAYS = daysDiff > 0 ? Math.min(30, daysDiff) : 14;
+
+  // S 曲线权重（与 buildDailyFromPublishedAt 对齐）
+  const weights = Array.from({ length: DAYS }, (_, i) => {
+    const t = i / Math.max(1, DAYS - 1);
+    return Math.sin(t * Math.PI) * 0.9 + 0.15 + 0.08 * ((i * 5) % 3);
+  });
+  const wSum = weights.reduce((a, b) => a + b, 0) || 1;
+
+  const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+  const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const money2 = (n: number) => `$${n.toFixed(2)}`;
+  const ctrStr = `${totals.ctr.toFixed(2)}%`;
+  const cvrStr = `${totals.cvr.toFixed(2)}%`;
+
+  return weights.map((w, i) => {
+    const dayClicks = (totals.clicks * w) / wSum;
+    const dayOrders = Math.max(0, Math.round((totals.orders * w) / wSum));
+    const dayGmv = dayOrders * totals.aov;
+    const dayComm = Math.round(dayGmv * (totals.commission > 0 && totals.gmv > 0 ? totals.commission / totals.gmv : 0.1));
+    const daySpend = Math.round(dayComm * 1.08);
+    const dayImp = (totals.impressions * w) / wSum;
+    const dayRoas = daySpend > 0 ? dayGmv / daySpend : 0;
+    const dayEpc = dayClicks > 0 ? dayGmv / dayClicks : 0;
+    const d = new Date(pub.getTime() + i * 86400000);
+    return {
+      date: d.toISOString().slice(0, 10),
+      clicks: fmt(dayClicks),
+      impressions: fmt(dayImp),
+      ctr: ctrStr,
+      orders: fmt(dayOrders),
+      cvr: cvrStr,
+      gmv: money(dayGmv),
+      commission: money(dayComm),
+      roas: dayRoas.toFixed(2),
+      epc: money2(dayEpc),
+    };
+  });
+}
+
+/**
  * 从 creatorPerformance mock 为 (campaign, creator) 组装一条合作记录。
  *
  * **核心改造**：
@@ -295,15 +478,20 @@ export function buildSeedCollaboration(campaignId: string, creatorId: string): C
       value: seedMetricValue(m.label, baseImpressions, deliverableIdx),
     }));
 
+    const pubAt = repPost.publishedAt || seedPublishedAt(deliverableIdx);
+    const baseImp = parseImpressions(repPost.impressions);
+    const engNum = Math.round(baseImp * 0.06); // 6% engagement rate
+
     deliverables.push({
       contentType,
       screenshots,
       metrics,
       wordcloud: seedWordcloud(repPost.title || contentType, deliverableIdx),
       audience: seedAudience(deliverableIdx),
-      publishedAt: repPost.publishedAt || seedPublishedAt(deliverableIdx),
+      publishedAt: pubAt,
       platform,
-      daily: repPost.daily as PostDaily[] | undefined,
+      daily: buildDailyFromPublishedAt(pubAt, { impressions: baseImp, eng: engNum }),
+      cps: buildCpsLinkData(campaignId, creatorId, deliverableIdx, baseImp, pubAt),
     });
     deliverableIdx++;
   }

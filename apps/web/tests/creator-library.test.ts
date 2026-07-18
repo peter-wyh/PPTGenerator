@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CREATOR_META, MOCK_CREATORS, buildChannelMetrics } from '@/api/mock/creators';
+import { CREATOR_META, MOCK_CREATORS, buildChannelMetrics } from '@/api/analytics/creators';
 import type { Creator } from '@/api/creators';
 import { campaignParticipantIds } from '@/api/creatorPerformance';
 

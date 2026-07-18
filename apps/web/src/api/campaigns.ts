@@ -1,6 +1,6 @@
 import type { Campaign, ReportCampaign } from '@mediaket/shared';
 import { dataApi } from './dataLibrary';
-import { getCampaignAnalytics } from './mock/campaignAnalytics';
+import { getCampaignAnalytics } from './analytics/campaignAnalytics';
 import { campaignsApi, dtoToCampaign } from './campaignsApi';
 
 /**

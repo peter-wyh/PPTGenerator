@@ -11,7 +11,7 @@ import type {
 import { collaborationId, collaborationLabel } from '@mediakit/shared';
 import { ImageInput } from '@/components/ImageInput';
 import { getCollaboration, saveCollaboration, removeCollaboration } from '@/api/collaborations';
-import { buildSeedCollaboration } from '@/api/mock/collaborationSeed';
+import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
 
 const CONTENT_TYPES: ContentType[] = ['post', 'reels', 'video', 'image', 'live', 'story'];
 

@@ -10,7 +10,7 @@ vi.mock('@/api/collaborations', () => ({
   removeCollaboration: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@/api/mock/collaborationSeed', () => ({
+vi.mock('@/api/analytics/collaborationSeed', () => ({
   buildSeedCollaboration: vi.fn(() => ({
     id: collaborationId('c1', 'cr1'),
     campaignId: 'c1',

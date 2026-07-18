@@ -12,7 +12,7 @@ import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediaket/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
 import { collaborationLabel, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
-import { buildSeedCollaboration } from '@/api/mock/collaborationSeed';
+import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 
 /* ============================= 类型 ============================= */
@@ -572,6 +572,115 @@ function DeliverableCard({
           </div>
         )}
       </div>
+
+      {/* 每日效果数据（只读展示） */}
+      {deliverable.daily && deliverable.daily.length > 0 && (
+        <div className="mb-2">
+          <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
+            <span>每日效果数据</span>
+            <span className="text-foreground-muted">({deliverable.daily.length} 天)</span>
+          </div>
+          <div className="max-h-40 overflow-auto rounded border border-border-subtle">
+            <table className="w-full text-[10px] tabular-nums">
+              <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                <tr>
+                  <th className="whitespace-nowrap px-1.5 py-0.5 text-left font-medium">日期</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
+                  <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deliverable.daily.map((d, di) => (
+                  <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
+                    <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.impressions}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.likes}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.comments}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.shares}</td>
+                    <td className="px-1.5 py-0.5 text-right">{d.saves}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* CPS 挂链推广效果（只读展示） */}
+      {deliverable.cps && (
+        <div className="mb-2">
+          <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
+            <span>CPS 挂链效果</span>
+            {deliverable.cps.linkUrl && (
+              <a href={deliverable.cps.linkUrl} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline truncate max-w-[200px]">↗ 链接</a>
+            )}
+          </div>
+          <div className="grid grid-cols-5 gap-px rounded border border-border-subtle overflow-hidden">
+            {([
+              ['GMV', deliverable.cps.gmv],
+              ['佣金', deliverable.cps.commission],
+              ['ROAS', deliverable.cps.roas],
+              ['订单', deliverable.cps.orders],
+              ['CVR', deliverable.cps.cvr],
+              ['点击', deliverable.cps.clicks],
+              ['CTR', deliverable.cps.ctr],
+              ['EPC', deliverable.cps.epc],
+              ['花费', deliverable.cps.spend],
+              ['曝光', deliverable.cps.impressions],
+            ] as const).map(([label, value]) => (
+              <div key={label} className="bg-surface-primary px-1.5 py-1">
+                <div className="text-[9px] uppercase tracking-wide text-foreground-muted">{label}</div>
+                <div className="text-[10px] font-medium text-foreground-primary tabular-nums">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* CPS 每日明细（只读） */}
+          {deliverable.cps.daily && deliverable.cps.daily.length > 0 && (
+            <div className="mt-1.5">
+              <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
+                <span>CPS 每日明细</span>
+                <span className="text-foreground-muted">({deliverable.cps.daily.length} 天)</span>
+              </div>
+              <div className="max-h-40 overflow-auto rounded border border-border-subtle">
+                <table className="w-full text-[10px] tabular-nums">
+                  <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                    <tr>
+                      <th className="whitespace-nowrap px-1.5 py-0.5 text-left font-medium">日期</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">点击</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">订单</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">GMV</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">佣金</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">CTR</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">CVR</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">ROAS</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">EPC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deliverable.cps.daily.map((d, di) => (
+                      <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
+                        <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.clicks}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.orders}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.gmv}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.commission}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.ctr}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.cvr}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.roas}</td>
+                        <td className="px-1.5 py-0.5 text-right">{d.epc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 评论词云 */}
       {wordcloud.length > 0 && (

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReportCreator, ReportDataContext } from '@mediaket/shared';
 import { useEditorStore } from '../store';
 import { listCampaignCreators, fetchCampaignCreatorWorks, type Creator } from '../../api/creators';
-import type { CreatorWorkPost } from '../../api/mock/creatorPerformance';
+import type { CreatorWorkPost } from '../../api/analytics/creatorPerformance';
 
 /** 达人作品集合（fetchCampaignCreatorWorks 返回类型）。 */
 type CreatorWorks = { creatorId: string; creatorName: string; platform: string; tier: string; posts: CreatorWorkPost[] };

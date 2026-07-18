@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeedCollaboration } from '@/api/mock/collaborationSeed';
+import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
 
 describe('buildSeedCollaboration', () => {
   it('每个 deliverable 含全部四槽（screenshots/metrics/wordcloud/audience）', () => {

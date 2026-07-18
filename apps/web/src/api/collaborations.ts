@@ -1,7 +1,7 @@
 import { dataApi } from './dataLibrary';
 import { campaignsApi } from './campaignsApi';
 import { collaborationId, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
-import { buildSeedCollaboration } from './mock/collaborationSeed';
+import { buildSeedCollaboration } from './analytics/collaborationSeed';
 
 /**
  * Phase 3: 优先从独立表 /api/v1/campaigns/.../collaboration 读写；失败回退 DataRecord。
@@ -58,15 +58,19 @@ export async function getCollaboration(
     }
   }
 
-  // 3. 如果 DB 有数据但 deliverable 缺少 daily，用 seed 补全
-  if (result && result.deliverables.some((d) => !d.daily || d.daily.length === 0)) {
+  // 3. daily + cps 都是确定性 mock 数据，总是从 seed 重新生成
+  //    daily: 发布日→当前日期，最多 30 天
+  //    cps: CPS 链接挂链效果（clicks/GMV/佣金/ROAS/CVR 等）
+  //    这样无需 DB migration 即可保证确定性 mock 始终反映最新逻辑
+  if (result) {
     try {
       const seed = buildSeedCollaboration(campaignId, creatorId);
       result = {
         ...result,
         deliverables: result.deliverables.map((d, i) => ({
           ...d,
-          daily: (d.daily && d.daily.length > 0) ? d.daily : seed.deliverables[i]?.daily,
+          daily: seed.deliverables[i]?.daily ?? d.daily,
+          cps: seed.deliverables[i]?.cps ?? d.cps,
         })),
       };
     } catch {

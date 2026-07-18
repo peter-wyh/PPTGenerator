@@ -295,8 +295,14 @@ export function buildWorks(
     const saves = Math.round(impressions * 0.02);
     const pubDate = new Date(`2026-0${(i % 6) + 1}-${String(((index + i) % 28) + 1).padStart(2, '0')}`);
 
-    // 确定性 S 曲线权重（14天）
-    const weights = [0.01, 0.015, 0.025, 0.04, 0.06, 0.08, 0.1, 0.11, 0.1, 0.09, 0.08, 0.06, 0.04, 0.035];
+    // 动态天数：发布日 → 当前日期，最多 30 天；发布日在未来时默认 14 天
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - pubDate.getTime()) / 86400000);
+    const numDays = daysDiff > 0 ? Math.min(30, daysDiff) : 14;
+    const weights = Array.from({ length: numDays }, (_, di) => {
+      const t = di / Math.max(1, numDays - 1);
+      return Math.sin(t * Math.PI) * 0.9 + 0.15 + 0.08 * ((di * 5) % 3);
+    });
     const sumW = weights.reduce((a, b) => a + b, 0);
     const daily: PostDaily[] = weights.map((w, di) => {
       const date = new Date(pubDate.getTime() + di * 86400000);
@@ -423,7 +429,13 @@ export function buildRate(meta: Omit<Creator, 'metrics'>, index: number): NonNul
   };
 }
 
-/** Creator mock list (the 达人库) with channel-level metrics + audience/works/stats injected. */
+/**
+ * Creator mock list —— 历史导出，数据已迁移至 DB Creator 表（seed-creator-extension.ts）。
+ * 仅保留为某些后端 seed 脚本的工具函数（buildChannelMetrics 等）和 CREATOR_META 元数据来源。
+ * 前端数据管理页一律走 /api/v1/campaigns/creators（真实 DB）。
+ *
+ * @deprecated 不再作为运行时数据源使用；保留给 server 端 seed 脚本（apps/server/prisma/seed-creator-extension.ts）。
+ */
 export const MOCK_CREATORS: Creator[] = CREATOR_META.map((c, i) => ({
   ...c,
   profileUrl: creatorProfileUrl(c.handle, c.platform),

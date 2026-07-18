@@ -380,9 +380,13 @@ function buildDaily(
   startDate: string,
   totals: { impressions: number; engagement: number; clicks: number; gmv: number; orders: number },
 ): CreatorDaily[] {
-  const DAYS = 28;
+  // 动态天数：campaign 起始 → 当前日期，最多 30 天；起始日在未来时默认 28 天
+  const now = new Date();
+  const start = new Date(startDate);
+  const daysDiff = Math.floor((now.getTime() - start.getTime()) / 86400000);
+  const DAYS = daysDiff > 0 ? Math.min(30, daysDiff) : 28;
   const weights = Array.from({ length: DAYS }, (_, i) => {
-    const t = i / (DAYS - 1);
+    const t = i / Math.max(1, DAYS - 1);
     return Math.sin(t * Math.PI) * 0.9 + 0.15 + 0.08 * ((i * 7) % 3);
   });
   const wSum = weights.reduce((a, b) => a + b, 0) || 1;
@@ -396,11 +400,14 @@ function buildDaily(
   }));
 }
 
-/** 生成单个作品 14 天每日数据（确定性 S 曲线，中峰偏高）。 */
-function buildPostDaily(startDate: string, totals: { impressions: number; eng: number }): PostDaily[] {
-  const DAYS = 14;
+/** 生成单个作品每日数据（确定性 S 曲线，中峰偏高）。天数为发布日→当前日期，最多 30 天；发布日在未来时默认 14 天。 */
+function buildPostDaily(publishedAt: string, totals: { impressions: number; eng: number }): PostDaily[] {
+  const now = new Date();
+  const pub = new Date(publishedAt);
+  const daysDiff = Math.floor((now.getTime() - pub.getTime()) / 86400000);
+  const DAYS = daysDiff > 0 ? Math.min(30, daysDiff) : 14;
   const weights = Array.from({ length: DAYS }, (_, i) => {
-    const t = i / (DAYS - 1);
+    const t = i / Math.max(1, DAYS - 1);
     return Math.sin(t * Math.PI) * 0.9 + 0.15 + 0.08 * ((i * 5) % 3);
   });
   const wSum = weights.reduce((a, b) => a + b, 0) || 1;
@@ -408,7 +415,7 @@ function buildPostDaily(startDate: string, totals: { impressions: number; eng: n
     const impr = (totals.impressions * w) / wSum;
     const eng = (totals.eng * w) / wSum;
     return {
-      date: addDays(startDate, i),
+      date: addDays(publishedAt, i),
       impressions: fmt(impr),
       likes: fmt(eng * 0.56),
       comments: fmt(eng * 0.11),

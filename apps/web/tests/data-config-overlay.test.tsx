@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { DataConfigOverlay } from '@/editor/components/DataConfigOverlay';
 import { useEditorStore } from '@/editor/store';
 import type { Creator } from '@/api/creators';
-import type { CreatorWorkPost } from '@/api/mock/creatorPerformance';
+import type { CreatorWorkPost } from '@/api/analytics/creatorPerformance';
 
 // ---- Mock 达人 + 作品数据 ----
 const MOCK_CREATORS: Creator[] = [

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { CreatorWork } from '@mediakit/shared';
-import { MOCK_CREATORS, buildAudience, buildWorks, buildStats } from '@/api/mock/creators';
+import { MOCK_CREATORS, buildAudience, buildWorks, buildStats } from '@/api/analytics/creators';
 import { dtoToCreator, type CreatorDTO } from '@/api/campaignsApi';
 
 const isSlice = (x: unknown) =>
