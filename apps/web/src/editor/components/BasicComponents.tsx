@@ -422,7 +422,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
       : `calc(var(--heading-font-size, 32px) * ${m})`;
   const fw = data.fontWeight ?? 700;
   // 标题文字颜色:品牌色 / 黑色(默认黑)。gradient 在彩色背景上固定白。
-  const titleFg = variant === 'gradient' ? '#fff' : data.titleColor === 'brand' ? 'var(--color-primary)' : '#000000';
+  const titleFg = variant === 'gradient' ? 'var(--surface-primary)' : data.titleColor === 'brand' ? 'var(--color-primary)' : 'var(--foreground-primary)';
 
   // 内层：按变体渲染。divider 由外层统一控制（统一加底部分割线）。
   let inner: React.ReactNode;
@@ -455,7 +455,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
             {/* 色块条带：绝对定位贴标题底部 → 与标题底对齐并落在文字之后（重叠） */}
             <div
               className="absolute bottom-0 left-0 h-1.5 w-1/5 rounded-full"
-              style={{ backgroundColor: data.underlineColor === 'black' ? '#000000' : 'var(--color-primary)' }}
+              style={{ backgroundColor: data.underlineColor === 'black' ? 'var(--foreground-primary)' : 'var(--color-primary)' }}
             />
             <div className="relative text-2xl font-bold leading-tight text-foreground-primary">{text}</div>
           </div>
@@ -551,7 +551,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
           <div className="relative inline-block leading-none">
             <div
               className="absolute bottom-0 left-0 h-2 w-[30%] rounded-md"
-              style={{ backgroundColor: data.underlineColor === 'black' ? '#000000' : 'var(--color-primary)' }}
+              style={{ backgroundColor: data.underlineColor === 'black' ? 'var(--foreground-primary)' : 'var(--color-primary)' }}
             />
             <div
               className="relative text-foreground-primary"

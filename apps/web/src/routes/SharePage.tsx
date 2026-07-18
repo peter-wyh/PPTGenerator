@@ -72,7 +72,7 @@ export function SharePage() {
               height: canvasHeight,
               pageBreakAfter: 'always',
               position: 'relative',
-              background: '#fff',
+              background: 'var(--surface-primary)',
             }}
           >
             <PageView page={page} canvasWidth={canvasWidth} canvasHeight={canvasHeight} scale={1} />
