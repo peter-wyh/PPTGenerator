@@ -86,6 +86,14 @@ export interface CollaborationDeliverable {
   daily?: PostDaily[];
   /** CPS 挂链推广效果（该作品挂的 CPS 链接带来的转化数据）。 */
   cps?: CpsLinkData;
+
+  // ─── 单作品成本指标（CPE / CPM）──────────────────────────────────
+  /** 执行价（该 deliverable 的合作报价，CNY）。 */
+  execPrice?: string;
+  /** 单次互动成本 CPE = 执行价 ÷ 互动量（保留 2 位小数）。 */
+  cpe?: string;
+  /** 千次曝光成本 CPM = 执行价 ÷ 曝光量 × 1000（保留 2 位小数）。 */
+  cpm?: string;
 }
 
 /** 一条合作记录的 data 载荷。id 作 DataRecord 主键 = collaborationId(campaignId, creatorId)。 */

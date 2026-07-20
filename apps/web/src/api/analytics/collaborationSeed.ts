@@ -11,7 +11,7 @@ import type {
   WorkScreenshotItem,
 } from '@mediaket/shared';
 import { collaborationId } from '@mediaket/shared';
-import { campaignCreatorWorks } from './creatorPerformance';
+import { campaignCreatorWorks, creatorExecPrice } from './creatorPerformance';
 import { dataApi } from '../dataLibrary';
 
 const SENTIMENTS = ['pos', 'neutral', 'neg'] as const;
@@ -482,6 +482,11 @@ export function buildSeedCollaboration(campaignId: string, creatorId: string): C
     const baseImp = parseImpressions(repPost.impressions);
     const engNum = Math.round(baseImp * 0.06); // 6% engagement rate
 
+    // ─── 单作品成本指标：CPE / CPM ───────────────────────────────
+    const execPrice = creatorExecPrice(creatorId, contentType);
+    const cpe = engNum > 0 ? (execPrice / engNum).toFixed(2) : '0.00';
+    const cpm = baseImp > 0 ? ((execPrice / baseImp) * 1000).toFixed(2) : '0.00';
+
     deliverables.push({
       contentType,
       screenshots,
@@ -492,6 +497,9 @@ export function buildSeedCollaboration(campaignId: string, creatorId: string): C
       platform,
       daily: buildDailyFromPublishedAt(pubAt, { impressions: baseImp, eng: engNum }),
       cps: buildCpsLinkData(campaignId, creatorId, deliverableIdx, baseImp, pubAt),
+      execPrice: execPrice.toLocaleString('en-US'),
+      cpe,
+      cpm,
     });
     deliverableIdx++;
   }

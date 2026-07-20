@@ -40,11 +40,11 @@ for (const c of CREATOR_META) {
   ROSTER[c.id] = { id: c.id, name: c.name, handle: c.handle, tier: c.tier as Tier };
 }
 
-/** Tier baseline: single-post impressions / avg engagement rate / per-campaign GMV potential. */
-const TIER_BASE: Record<Tier, { impr: number; er: number; gmv: number }> = {
-  mega: { impr: 850_000, er: 8.4, gmv: 240_000 },
-  macro: { impr: 360_000, er: 6.8, gmv: 70_000 },
-  micro: { impr: 90_000, er: 10.5, gmv: 16_000 },
+/** Tier baseline: single-post impressions / avg engagement rate / per-campaign GMV potential / exec price (CNY). */
+const TIER_BASE: Record<Tier, { impr: number; er: number; gmv: number; execPrice: number }> = {
+  mega: { impr: 850_000, er: 8.4, gmv: 240_000, execPrice: 45_000 },
+  macro: { impr: 360_000, er: 6.8, gmv: 70_000, execPrice: 12_000 },
+  micro: { impr: 90_000, er: 10.5, gmv: 16_000, execPrice: 3_500 },
 };
 
 /** Single-post impression jitter (deterministic, avoids identical per-post values). */
@@ -954,6 +954,18 @@ function buildCollabInfo(
  * Fetch each creator and their works under a campaign (mock, synchronous, deterministic).
  * For work-screenshot component's "select creator works" UI.
  */
+/**
+ * 获取达人执行价（CNY），按 tier 基准价 × contentType 系数。
+ * video 系数 1.5（制作成本高），live 系数 2.0（直播时长），其他 1.0。
+ */
+export function creatorExecPrice(creatorId: string, contentType?: string): number {
+  const roster = ROSTER[creatorId];
+  if (!roster) return TIER_BASE.micro.execPrice;
+  const base = TIER_BASE[roster.tier].execPrice;
+  const mult = contentType === 'video' ? 1.5 : contentType === 'live' ? 2.0 : 1.0;
+  return Math.round(base * mult);
+}
+
 export function campaignCreatorWorks(campaignId: string): CreatorWithWorks[] {
   const perfs = MOCK_PERFORMANCE[campaignId] ?? getOrBuildFallback(campaignId);
   return perfs.map((p) => ({
