@@ -13,6 +13,7 @@ import type { Campaign, Creator } from '@mediaket/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
 import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData } from '@mediaket/shared';
 import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collaborationSeed';
+import { formatUSD, formatEPC } from '@/lib/format';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
@@ -39,11 +40,11 @@ function cpsDailyToSummary(daily: CpsDaily[]): CpsLinkData {
     ctr: `${ctr.toFixed(2)}%`,
     orders: orders.toLocaleString('en-US'),
     cvr: `${cvr.toFixed(2)}%`,
-    gmv: `$${Math.round(gmv).toLocaleString('en-US')}`,
-    commission: `$${Math.round(commission).toLocaleString('en-US')}`,
-    spend: `$${spend.toLocaleString('en-US')}`,
+    gmv: formatUSD(gmv),
+    commission: formatUSD(commission),
+    spend: formatUSD(spend),
     roas: roas.toFixed(2),
-    epc: `$${epc.toFixed(2)}`,
+    epc: formatEPC(epc),
     daily,
   };
 }

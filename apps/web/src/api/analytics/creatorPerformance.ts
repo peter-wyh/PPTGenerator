@@ -11,8 +11,9 @@ import type {
   PostFormat,
   WorkScreenshotItem,
 } from '@mediaket/shared';
-import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
+import { formatMoney, DEFAULT_FORMAT } from '@mediaket/shared';
 import { CREATOR_META, type Tier } from './creators';
+import { formatExecPrice, formatCPE, formatCPM } from '@/lib/format';
 
 /**
  * Upstream "Creator Performance" API (mock for demo).
@@ -501,7 +502,7 @@ function buildPerformance(
       shares: fmt(eng * 0.18),
       saves: fmt(eng * 0.15),
       orders: fmt(Math.round(impr * 0.0015 + cIdx * 3)),
-      cpm: `¥${(8 + cIdx * 2.5 + p).toFixed(2)}`,
+      cpm: formatCPM(8 + cIdx * 2.5 + p),
       engagementRate: pct(er),
       daily: buildPostDaily(addDays(profile.startDate, 2 + cIdx * 4 + p * 6), { impressions: impr, eng }),
     });
@@ -933,15 +934,15 @@ function buildCollabInfo(
   return {
     collabType: COLLAB_TYPES[seed % COLLAB_TYPES.length],
     status: statusOptions[seed % statusOptions.length],
-    contractFee: `¥${fee.toLocaleString()}`,
+    contractFee: formatExecPrice(fee),
     period: '2024.12.01 - 2024.12.15',
     contentType: contentTypes[seed % contentTypes.length],
     estImpressions: `${(imprNum * 0.85).toFixed(0)}`,
     actualImpressions: summary.totalImpressions,
     estEngagement: `${(engNum * 0.9).toFixed(0)}`,
     actualEngagement: summary.totalEngagement,
-    cpe: `¥${cpe.toFixed(2)}`,
-    cpm: `¥${cpm.toFixed(2)}`,
+    cpe: formatCPE(cpe),
+    cpm: formatCPM(cpm),
     roi,
     brandMentions: 3 + (seed % 8),
     linkClicks: `${Math.round(imprNum * 0.03).toLocaleString()}`,

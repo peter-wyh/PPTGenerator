@@ -12,8 +12,18 @@ import { collaborationId, collaborationLabel } from '@mediakit/shared';
 import { ImageInput } from '@/components/ImageInput';
 import { getCollaboration, saveCollaboration, removeCollaboration } from '@/api/collaborations';
 import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
+import { formatExecPrice, formatCPE, formatCPM, rateCPE, rateCPM, COST_COLOR_CLASS, CPE_HINT, CPM_HINT, EXEC_PRICE_HINT } from '@/lib/format';
 
 const CONTENT_TYPES: ContentType[] = ['post', 'reels', 'video', 'image', 'live', 'story'];
+
+/** 小信息点图标 */
+function InfoDot() {
+  return (
+    <svg className="w-2.5 h-2.5 inline-block shrink-0 opacity-40" viewBox="0 0 12 12" fill="currentColor">
+      <path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2a.75.75 0 110 1.5.75.75 0 010-1.5zm-.75 2.5h1.5v4H5.25v-4z" />
+    </svg>
+  );
+}
 
 const EMPTY: CollaborationData = { id: '', campaignId: '', creatorId: '', deliverables: [] };
 
@@ -208,35 +218,35 @@ function DeliverableEditor({
           </div>
           <div className="ml-2 grid grid-cols-3 gap-2">
             {execPrice != null && (
-              <div className="rounded border border-border-subtle px-2 py-1 text-center" title="达人合作执行费用，不含投流加温等额外支出">
+              <div className="rounded border border-border-subtle px-2 py-1 text-center" title={EXEC_PRICE_HINT}>
                 <div className="text-[10px] text-foreground-muted flex items-center justify-center gap-0.5">
-                  <svg className="w-2.5 h-2.5 opacity-40" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2a.75.75 0 110 1.5.75.75 0 010-1.5zm-.75 2.5h1.5v4H5.25v-4z" /></svg>
+                  <InfoDot />
                   执行价
                 </div>
                 <div className="text-sm font-semibold tabular-nums text-foreground-primary">
-                  ¥{Number(execPrice).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}
+                  {formatExecPrice(execPrice)}
                 </div>
               </div>
             )}
             {cpe != null && (
-              <div className="rounded border border-border-subtle px-2 py-1 text-center" title="Cost Per Engagement = 执行价 ÷ 互动量。衡量每次互动的成本，单位￥：¥3/次以内优秀，¥8/次以上偏高">
+              <div className="rounded border border-border-subtle px-2 py-1 text-center" title={CPE_HINT}>
                 <div className="text-[10px] text-foreground-muted flex items-center justify-center gap-0.5">
-                  <svg className="w-2.5 h-2.5 opacity-40" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2a.75.75 0 110 1.5.75.75 0 010-1.5zm-.75 2.5h1.5v4H5.25v-4z" /></svg>
+                  <InfoDot />
                   CPE
                 </div>
-                <div className={`text-sm font-semibold tabular-nums ${Number(cpe) < 3 ? 'text-green-500' : Number(cpe) < 8 ? 'text-yellow-500' : 'text-red-500'}`}>
-                  ¥{Number(cpe).toFixed(2)}/次
+                <div className={`text-sm font-semibold tabular-nums ${COST_COLOR_CLASS[rateCPE(Number(cpe))]}`}>
+                  {formatCPE(cpe)}
                 </div>
               </div>
             )}
             {cpm != null && (
-              <div className="rounded border border-border-subtle px-2 py-1 text-center" title="Cost Per Mille = 执行价 ÷ 曝光量 × 1000。衡量每千次曝光的成本，单位￥：¥30/千次以内优秀，¥80/千次以上偏高">
+              <div className="rounded border border-border-subtle px-2 py-1 text-center" title={CPM_HINT}>
                 <div className="text-[10px] text-foreground-muted flex items-center justify-center gap-0.5">
-                  <svg className="w-2.5 h-2.5 opacity-40" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2a.75.75 0 110 1.5.75.75 0 010-1.5zm-.75 2.5h1.5v4H5.25v-4z" /></svg>
+                  <InfoDot />
                   CPM
                 </div>
-                <div className={`text-sm font-semibold tabular-nums ${Number(cpm) < 30 ? 'text-green-500' : Number(cpm) < 80 ? 'text-yellow-500' : 'text-red-500'}`}>
-                  ¥{Number(cpm).toFixed(2)}/千次
+                <div className={`text-sm font-semibold tabular-nums ${COST_COLOR_CLASS[rateCPM(Number(cpm))]}`}>
+                  {formatCPM(cpm)}
                 </div>
               </div>
             )}

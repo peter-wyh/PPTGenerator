@@ -13,6 +13,7 @@ import type {
 import { collaborationId } from '@mediaket/shared';
 import { campaignCreatorWorks, creatorExecPrice } from './creatorPerformance';
 import { dataApi } from '../dataLibrary';
+import { formatCPM } from '@/lib/format';
 
 const SENTIMENTS = ['pos', 'neutral', 'neg'] as const;
 
@@ -232,7 +233,7 @@ function seedMetricValue(label: string, baseImpressions: string, idx: number): s
     case 'Orders':
       return Math.round(num * (0.0002 + (idx % 5) * 0.00005)).toString();
     case 'CPM':
-      return `¥${(8 + (idx % 7) * 2.5).toFixed(2)}`;
+      return formatCPM(8 + (idx % 7) * 2.5);
     case 'Eng Rate':
       return `${(6 + (idx % 4) * 0.8).toFixed(1)}%`;
     default:

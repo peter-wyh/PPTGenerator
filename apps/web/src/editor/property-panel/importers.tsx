@@ -8,6 +8,7 @@ import type {
 import { useEditorStore, allReportCreators } from '../store';
 import { getCollaboration } from '@/api/collaborations';
 import { parseCreatorLink } from '../creatorLink';
+import { formatExecPrice, formatCPE, formatCPM } from '@/lib/format';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
 import { metricsToRows } from '../campaignMetrics';
@@ -539,9 +540,9 @@ export function buildWorksTable(deliverables: CollaborationDeliverable[]): {
     const byLabel = new Map((d.metrics ?? []).map((m) => [m.label, m.value]));
     const costCells = hasCostFields
       ? [
-          d.execPrice != null ? `¥${Number(d.execPrice).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}` : '',
-          d.cpe != null ? `¥${Number(d.cpe).toFixed(2)}/次` : '',
-          d.cpm != null ? `¥${Number(d.cpm).toFixed(2)}` : '',
+          d.execPrice != null ? formatExecPrice(d.execPrice) : '',
+          d.cpe != null ? formatCPE(d.cpe) : '',
+          d.cpm != null ? formatCPM(d.cpm) : '',
         ]
       : [];
     return [d.screenshots?.[0]?.src ?? '', d.contentType, ...metricLabels.map((l) => byLabel.get(l) ?? ''), ...costCells];
