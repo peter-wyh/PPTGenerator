@@ -574,7 +574,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
   return (
     <div className="fixed inset-0 z-50 animate-fadeIn bg-black/40" onClick={onClose} role="presentation">
       <aside
-        className="absolute right-0 top-0 flex h-full w-[680px] max-w-[92vw] animate-slideInRight flex-col bg-surface-primary shadow-2xl"
+        className="absolute right-0 top-0 flex h-full w-[1100px] max-w-[95vw] animate-slideInRight flex-col bg-surface-primary shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
