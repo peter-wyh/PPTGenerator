@@ -656,7 +656,7 @@ function DeliverableCard({
         )}
       </div>
 
-      {/* 效果数据 */}
+      {/* 效果数据（含 CPS 挂链汇总） */}
       <div className="mb-2">
         <div className="flex items-center gap-1 text-[10px] text-foreground-secondary mb-1">
           <span>效果数据</span>
@@ -664,33 +664,69 @@ function DeliverableCard({
             <button onClick={() => setMetrics([...metrics, { label: '', value: '' }])} className="text-accent-primary hover:underline">+ 添加</button>
           )}
         </div>
-        {metrics.length === 0 ? (
+        {metrics.length === 0 && !deliverable.cps ? (
           <span className="text-foreground-muted">—</span>
         ) : (
-          <div className="grid grid-cols-2 gap-1">
-            {metrics.map((m, i) => editing ? (
-              <div key={i} className="flex items-center gap-1">
-                <input
-                  value={m.label}
-                  placeholder="指标"
-                  onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)))}
-                  className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5"
-                />
-                <input
-                  value={m.value}
-                  placeholder="数值"
-                  onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, value: e.target.value } : x)))}
-                  className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5"
-                />
-                <button onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))} className="text-red">✕</button>
+          <>
+            {/* 基础互动指标 */}
+            {metrics.length > 0 && (
+              <div className="grid grid-cols-2 gap-1">
+                {metrics.map((m, i) => editing ? (
+                  <div key={i} className="flex items-center gap-1">
+                    <input
+                      value={m.label}
+                      placeholder="指标"
+                      onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)))}
+                      className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                    />
+                    <input
+                      value={m.value}
+                      placeholder="数值"
+                      onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, value: e.target.value } : x)))}
+                      className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                    />
+                    <button onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))} className="text-red">✕</button>
+                  </div>
+                ) : (
+                  <div key={i} className="rounded bg-surface-hover px-2 py-1">
+                    <span className="text-foreground-muted">{m.label}</span>{' '}
+                    <span className="font-medium text-foreground-primary">{m.value}</span>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div key={i} className="rounded bg-surface-hover px-2 py-1">
-                <span className="text-foreground-muted">{m.label}</span>{' '}
-                <span className="font-medium text-foreground-primary">{m.value}</span>
+            )}
+
+            {/* CPS 挂链汇总指标 */}
+            {deliverable.cps && (
+              <div className={metrics.length > 0 ? 'mt-1.5' : ''}>
+                <div className="flex items-center gap-2 text-[9px] text-foreground-muted mb-0.5">
+                  <span className="text-accent-primary">CPS 挂链</span>
+                  {deliverable.cps.linkUrl && (
+                    <a href={deliverable.cps.linkUrl} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline truncate max-w-[200px]">↗ 链接</a>
+                  )}
+                </div>
+                <div className="grid grid-cols-5 gap-px rounded border border-border-subtle overflow-hidden">
+                  {([
+                    ['GMV', deliverable.cps.gmv],
+                    ['佣金', deliverable.cps.commission],
+                    ['ROAS', deliverable.cps.roas],
+                    ['订单', deliverable.cps.orders],
+                    ['CVR', deliverable.cps.cvr],
+                    ['点击', deliverable.cps.clicks],
+                    ['CTR', deliverable.cps.ctr],
+                    ['EPC', deliverable.cps.epc],
+                    ['花费', deliverable.cps.spend],
+                    ['曝光', deliverable.cps.impressions],
+                  ] as const).map(([label, value]) => (
+                    <div key={label} className="bg-surface-primary px-1.5 py-1">
+                      <div className="text-[9px] uppercase tracking-wide text-foreground-muted">{label}</div>
+                      <div className="text-[10px] font-medium text-foreground-primary tabular-nums">{value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
@@ -769,37 +805,6 @@ function DeliverableCard({
           </div>
         );
       })()}
-
-      {/* CPS 挂链效果汇总（只读展示） */}
-      {deliverable.cps && (
-        <div className="mb-2">
-          <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
-            <span>CPS 挂链效果</span>
-            {deliverable.cps.linkUrl && (
-              <a href={deliverable.cps.linkUrl} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline truncate max-w-[200px]">↗ 链接</a>
-            )}
-          </div>
-          <div className="grid grid-cols-5 gap-px rounded border border-border-subtle overflow-hidden">
-            {([
-              ['GMV', deliverable.cps.gmv],
-              ['佣金', deliverable.cps.commission],
-              ['ROAS', deliverable.cps.roas],
-              ['订单', deliverable.cps.orders],
-              ['CVR', deliverable.cps.cvr],
-              ['点击', deliverable.cps.clicks],
-              ['CTR', deliverable.cps.ctr],
-              ['EPC', deliverable.cps.epc],
-              ['花费', deliverable.cps.spend],
-              ['曝光', deliverable.cps.impressions],
-            ] as const).map(([label, value]) => (
-              <div key={label} className="bg-surface-primary px-1.5 py-1">
-                <div className="text-[9px] uppercase tracking-wide text-foreground-muted">{label}</div>
-                <div className="text-[10px] font-medium text-foreground-primary tabular-nums">{value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 评论词云 */}
       {wordcloud.length > 0 && (
