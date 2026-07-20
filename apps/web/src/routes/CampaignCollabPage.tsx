@@ -859,9 +859,6 @@ function DeliverableCard({
             {/* CPS 挂链汇总指标 */}
             {deliverable.cps && (
               <div className={metrics.length > 0 ? 'mt-1.5' : ''}>
-                <div className="flex items-center gap-2 text-[10px] text-foreground-muted mb-1">
-                  <span className="text-accent-primary font-medium">CPS 挂链</span>
-                </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
                   {([
                     ['GMV', deliverable.cps.gmv, 'Gross Merchandise Volume，挂链链接产生的总成交金额'],
