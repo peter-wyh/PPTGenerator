@@ -802,7 +802,7 @@ function DeliverableCard({
           <>
             {/* 基础互动指标 */}
             {metrics.length > 0 && (
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
                 {metrics.map((m, i) => editing ? (
                   <div key={i} className="flex items-center gap-1">
                     <input
@@ -820,9 +820,9 @@ function DeliverableCard({
                     <button onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))} className="text-red">✕</button>
                   </div>
                 ) : (
-                  <div key={i} className="rounded bg-surface-hover px-2 py-1">
-                    <span className="text-foreground-muted">{m.label}</span>{' '}
-                    <span className="font-medium text-foreground-primary">{m.value}</span>
+                  <div key={i} className="rounded bg-surface-hover px-2 py-1.5">
+                    <div className="text-[10px] text-foreground-muted">{m.label}</div>
+                    <div className="text-xs font-medium text-foreground-primary tabular-nums">{m.value}</div>
                   </div>
                 ))}
               </div>
@@ -831,13 +831,13 @@ function DeliverableCard({
             {/* CPS 挂链汇总指标 */}
             {deliverable.cps && (
               <div className={metrics.length > 0 ? 'mt-1.5' : ''}>
-                <div className="flex items-center gap-2 text-[9px] text-foreground-muted mb-0.5">
-                  <span className="text-accent-primary">CPS 挂链</span>
+                <div className="flex items-center gap-2 text-[10px] text-foreground-muted mb-1">
+                  <span className="text-accent-primary font-medium">CPS 挂链</span>
                   {deliverable.cps.linkUrl && (
                     <a href={deliverable.cps.linkUrl} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline truncate max-w-[200px]">↗ 链接</a>
                   )}
                 </div>
-                <div className="grid grid-cols-5 gap-px rounded border border-border-subtle overflow-hidden">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
                   {([
                     ['GMV', deliverable.cps.gmv],
                     ['佣金', deliverable.cps.commission],
@@ -850,9 +850,9 @@ function DeliverableCard({
                     ['花费', deliverable.cps.spend],
                     ['曝光', deliverable.cps.impressions],
                   ] as const).map(([label, value]) => (
-                    <div key={label} className="bg-surface-primary px-1.5 py-1">
-                      <div className="text-[9px] uppercase tracking-wide text-foreground-muted">{label}</div>
-                      <div className="text-[10px] font-medium text-foreground-primary tabular-nums">{value}</div>
+                    <div key={label} className="rounded bg-surface-hover px-2 py-1.5">
+                      <div className="text-[10px] text-foreground-muted">{label}</div>
+                      <div className="text-xs font-medium text-foreground-primary tabular-nums">{value}</div>
                     </div>
                   ))}
                 </div>
