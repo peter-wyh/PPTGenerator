@@ -233,7 +233,7 @@ function seedMetricValue(label: string, baseImpressions: string, idx: number): s
     case 'Orders':
       return Math.round(num * (0.0002 + (idx % 5) * 0.00005)).toString();
     case 'CPM':
-      return formatCPM(8 + (idx % 7) * 2.5);
+      return formatCPM(3 + (idx % 7) * 1.2);
     case 'Eng Rate':
       return `${(6 + (idx % 4) * 0.8).toFixed(1)}%`;
     default:

@@ -41,11 +41,11 @@ for (const c of CREATOR_META) {
   ROSTER[c.id] = { id: c.id, name: c.name, handle: c.handle, tier: c.tier as Tier };
 }
 
-/** Tier baseline: single-post impressions / avg engagement rate / per-campaign GMV potential / exec price (CNY). */
+/** Tier baseline: single-post impressions / avg engagement rate / per-campaign GMV potential / exec price (USD). */
 const TIER_BASE: Record<Tier, { impr: number; er: number; gmv: number; execPrice: number }> = {
-  mega: { impr: 850_000, er: 8.4, gmv: 240_000, execPrice: 45_000 },
-  macro: { impr: 360_000, er: 6.8, gmv: 70_000, execPrice: 12_000 },
-  micro: { impr: 90_000, er: 10.5, gmv: 16_000, execPrice: 3_500 },
+  mega: { impr: 850_000, er: 8.4, gmv: 240_000, execPrice: 6_500 },
+  macro: { impr: 360_000, er: 6.8, gmv: 70_000, execPrice: 1_800 },
+  micro: { impr: 90_000, er: 10.5, gmv: 16_000, execPrice: 500 },
 };
 
 /** Single-post impression jitter (deterministic, avoids identical per-post values). */
@@ -66,7 +66,7 @@ interface CampaignProfile {
   intensity: number;
   /** CPS commission rate (decimal, 0.12 = 12%). */
   commissionPct: number;
-  /** Average order value (in CNY). */
+  /** Average order value (in USD). */
   aov: number;
   /** Post title pool (creators draw from this in order). */
   titles: string[];
@@ -502,7 +502,7 @@ function buildPerformance(
       shares: fmt(eng * 0.18),
       saves: fmt(eng * 0.15),
       orders: fmt(Math.round(impr * 0.0015 + cIdx * 3)),
-      cpm: formatCPM(8 + cIdx * 2.5 + p),
+      cpm: formatCPM(3 + cIdx * 1.2 + p * 0.5),
       engagementRate: pct(er),
       daily: buildPostDaily(addDays(profile.startDate, 2 + cIdx * 4 + p * 6), { impressions: impr, eng }),
     });
