@@ -14,6 +14,7 @@ import { collaborationId } from '@mediaket/shared';
 import { campaignCreatorWorks, creatorExecPrice } from './creatorPerformance';
 import { dataApi } from '../dataLibrary';
 import { formatCPM } from '@/lib/format';
+import { ENGAGEMENT_RATIOS, CPS_FUNNEL_RATES } from '@/lib/ratios';
 
 const SENTIMENTS = ['pos', 'neutral', 'neg'] as const;
 
@@ -223,15 +224,15 @@ function seedMetricValue(label: string, baseImpressions: string, idx: number): s
     case 'Views':
       return baseImpressions;
     case 'Likes':
-      return Math.round(num * (0.08 + (idx % 5) * 0.005)).toLocaleString();
+      return Math.round(num * (CPS_FUNNEL_RATES.clicks.base + (idx % CPS_FUNNEL_RATES.clicks.jitterMod) * CPS_FUNNEL_RATES.clicks.jitterStep)).toLocaleString();
     case 'Comments':
-      return Math.round(num * (0.005 + (idx % 3) * 0.001)).toLocaleString();
+      return Math.round(num * (CPS_FUNNEL_RATES.orders.base + (idx % CPS_FUNNEL_RATES.orders.jitterMod) * CPS_FUNNEL_RATES.orders.jitterStep)).toLocaleString();
     case 'Shares':
-      return Math.round(num * (0.003 + (idx % 3) * 0.0008)).toLocaleString();
+      return Math.round(num * (CPS_FUNNEL_RATES.shares.base + (idx % CPS_FUNNEL_RATES.shares.jitterMod) * CPS_FUNNEL_RATES.shares.jitterStep)).toLocaleString();
     case 'Saves':
-      return Math.round(num * (0.02 + (idx % 4) * 0.003)).toLocaleString();
+      return Math.round(num * (CPS_FUNNEL_RATES.saves.base + (idx % CPS_FUNNEL_RATES.saves.jitterMod) * CPS_FUNNEL_RATES.saves.jitterStep)).toLocaleString();
     case 'Orders':
-      return Math.round(num * (0.0002 + (idx % 5) * 0.00005)).toString();
+      return Math.round(num * (CPS_FUNNEL_RATES.ordersRaw.base + (idx % CPS_FUNNEL_RATES.ordersRaw.jitterMod) * CPS_FUNNEL_RATES.ordersRaw.jitterStep)).toString();
     case 'CPM':
       return formatCPM(3 + (idx % 7) * 1.2);
     case 'Eng Rate':
@@ -275,10 +276,10 @@ function buildDailyFromPublishedAt(
     return {
       date: d.toISOString().slice(0, 10),
       impressions: fmt(impr),
-      likes: fmt(eng * 0.56),
-      comments: fmt(eng * 0.11),
-      shares: fmt(eng * 0.18),
-      saves: fmt(eng * 0.15),
+      likes: fmt(eng * ENGAGEMENT_RATIOS.likes),
+      comments: fmt(eng * ENGAGEMENT_RATIOS.comments),
+      shares: fmt(eng * ENGAGEMENT_RATIOS.shares),
+      saves: fmt(eng * ENGAGEMENT_RATIOS.saves),
     };
   });
 }

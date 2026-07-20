@@ -14,6 +14,7 @@ import type {
 import { formatMoney, DEFAULT_FORMAT } from '@mediaket/shared';
 import { CREATOR_META, type Tier } from './creators';
 import { formatExecPrice, formatCPE, formatCPM } from '@/lib/format';
+import { ENGAGEMENT_RATIOS, PLAY_RATE, ORDER_RATE, CPS_DEFAULTS } from '@/lib/ratios';
 
 /**
  * Upstream "Creator Performance" API (mock for demo).
@@ -418,10 +419,10 @@ function buildPostDaily(publishedAt: string, totals: { impressions: number; eng:
     return {
       date: addDays(publishedAt, i),
       impressions: fmt(impr),
-      likes: fmt(eng * 0.56),
-      comments: fmt(eng * 0.11),
-      shares: fmt(eng * 0.18),
-      saves: fmt(eng * 0.15),
+      likes: fmt(eng * ENGAGEMENT_RATIOS.likes),
+      comments: fmt(eng * ENGAGEMENT_RATIOS.comments),
+      shares: fmt(eng * ENGAGEMENT_RATIOS.shares),
+      saves: fmt(eng * ENGAGEMENT_RATIOS.saves),
     };
   });
 }
@@ -494,14 +495,14 @@ function buildPerformance(
       publishedAt: addDays(profile.startDate, 2 + cIdx * 4 + p * 6),
       platform,
       format,
-      ...(isVideo ? { duration: videoDuration(cIdx + p), plays: compact(Math.round(impr * 0.82)) } : {}),
+      ...(isVideo ? { duration: videoDuration(cIdx + p), plays: compact(Math.round(impr * PLAY_RATE)) } : {}),
       hashtags: HASHTAGS[(cIdx + p) % HASHTAGS.length],
       impressions: compact(impr),
-      likes: fmt(eng * 0.56),
-      comments: fmt(eng * 0.11),
-      shares: fmt(eng * 0.18),
-      saves: fmt(eng * 0.15),
-      orders: fmt(Math.round(impr * 0.0015 + cIdx * 3)),
+      likes: fmt(eng * ENGAGEMENT_RATIOS.likes),
+      comments: fmt(eng * ENGAGEMENT_RATIOS.comments),
+      shares: fmt(eng * ENGAGEMENT_RATIOS.shares),
+      saves: fmt(eng * ENGAGEMENT_RATIOS.saves),
+      orders: fmt(Math.round(impr * ORDER_RATE.base + cIdx * ORDER_RATE.perCreatorIndex)),
       cpm: formatCPM(3 + cIdx * 1.2 + p * 0.5),
       engagementRate: pct(er),
       daily: buildPostDaily(addDays(profile.startDate, 2 + cIdx * 4 + p * 6), { impressions: impr, eng }),
@@ -512,8 +513,8 @@ function buildPerformance(
   const gmv = Math.round(base.gmv * k * (0.8 + 0.18 * cIdx));
   const orders = Math.round(gmv / profile.aov);
   const commission = Math.round(gmv * profile.commissionPct);
-  const cpsSpend = Math.round(commission * 1.08); // commission + 8% platform service fee
-  const clicks = Math.round(totalImpr * 0.038);
+  const cpsSpend = Math.round(commission * (1 + CPS_DEFAULTS.commissionTaxRate)); // commission + platform service fee
+  const clicks = Math.round(totalImpr * CPS_DEFAULTS.linkClickRateAggregate);
   const ctrOverall = (clicks / totalImpr) * 100;
   const cvr = (orders / clicks) * 100;
   const roas = gmv / cpsSpend;
@@ -549,7 +550,7 @@ function buildPerformance(
     const imprP = Math.round(clkP / (ctrP / 100));
     const cvrP = (convP / clkP) * 100;
     const epcP = revP / clkP;
-    const roasP = revP / (commP * 1.08);
+    const roasP = revP / (commP * (1 + CPS_DEFAULTS.commissionTaxRate));
 
     rawPlacements.push({
       type: tpl.type,
@@ -637,7 +638,7 @@ function rollupPlacementTypes(raws: RawPlacement[]): PlacementTypeSummary[] {
       conversions: fmt(v.conversions),
       cvr: pct2((v.conversions / (v.clicks || 1)) * 100),
       epc: money2(v.revenue / (v.clicks || 1)),
-      roas: (v.revenue / ((v.commission || 0) * 1.08)).toFixed(2),
+      roas: (v.revenue / ((v.commission || 0) * (1 + CPS_DEFAULTS.commissionTaxRate))).toFixed(2),
       trend: trendPoints(v.revenue, idx + type.length),
     }));
 }
@@ -945,7 +946,7 @@ function buildCollabInfo(
     cpm: formatCPM(cpm),
     roi,
     brandMentions: 3 + (seed % 8),
-    linkClicks: `${Math.round(imprNum * 0.03).toLocaleString()}`,
+    linkClicks: `${Math.round(imprNum * CPS_DEFAULTS.linkClickRate).toLocaleString()}`,
     rating: 3 + (seed % 3),
     comment: comments[seed % comments.length],
   };
