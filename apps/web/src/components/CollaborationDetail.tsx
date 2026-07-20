@@ -123,7 +123,7 @@ function DeliverableEditor({
   onChange: (d: CollaborationDeliverable) => void;
   onRemove: () => void;
 }) {
-  const { contentType, screenshots = [], metrics = [], audience, wordcloud = [] } = deliverable;
+  const { contentType, screenshots = [], metrics = [], audience, wordcloud = [], execPrice, cpe, cpm } = deliverable;
   const patch = (p: Partial<CollaborationDeliverable>) => onChange({ ...deliverable, ...p });
 
   const setScreenshots = (s: WorkScreenshotItem[]) => patch({ screenshots: s });
@@ -199,6 +199,41 @@ function DeliverableEditor({
           </div>
         ))}
       </Section>
+
+      {/* 成本指标（只读，由 seed 自动计算） */}
+      {(execPrice != null || cpe != null || cpm != null) && (
+        <div className="mb-1">
+          <div className="flex items-center gap-2 text-foreground-secondary">
+            <span>成本指标</span>
+          </div>
+          <div className="ml-2 grid grid-cols-3 gap-2">
+            {execPrice != null && (
+              <div className="rounded border border-border-subtle px-2 py-1 text-center">
+                <div className="text-[10px] text-foreground-muted">执行价</div>
+                <div className="text-sm font-semibold tabular-nums text-foreground-primary">
+                  ¥{Number(execPrice).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}
+                </div>
+              </div>
+            )}
+            {cpe != null && (
+              <div className="rounded border border-border-subtle px-2 py-1 text-center">
+                <div className="text-[10px] text-foreground-muted">CPE</div>
+                <div className={`text-sm font-semibold tabular-nums ${Number(cpe) < 3 ? 'text-green-500' : Number(cpe) < 8 ? 'text-yellow-500' : 'text-red-500'}`}>
+                  ¥{Number(cpe).toFixed(2)}/次
+                </div>
+              </div>
+            )}
+            {cpm != null && (
+              <div className="rounded border border-border-subtle px-2 py-1 text-center">
+                <div className="text-[10px] text-foreground-muted">CPM</div>
+                <div className={`text-sm font-semibold tabular-nums ${Number(cpm) < 30 ? 'text-green-500' : Number(cpm) < 80 ? 'text-yellow-500' : 'text-red-500'}`}>
+                  ¥{Number(cpm).toFixed(2)}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 每日效果数据（只读展示） */}
       {deliverable.daily && deliverable.daily.length > 0 && (

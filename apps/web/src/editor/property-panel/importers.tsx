@@ -532,10 +532,19 @@ export function buildWorksTable(deliverables: CollaborationDeliverable[]): {
   insights: WorkAudienceInsight[];
 } {
   const metricLabels = (deliverables[0]?.metrics ?? []).map((m) => m.label);
-  const headers = ['封面', '类型', ...metricLabels];
+  const hasCostFields = deliverables.some((d) => d.execPrice != null);
+  const costHeaders = hasCostFields ? ['执行价', 'CPE', 'CPM'] : [];
+  const headers = ['封面', '类型', ...metricLabels, ...costHeaders];
   const rows = deliverables.map((d) => {
     const byLabel = new Map((d.metrics ?? []).map((m) => [m.label, m.value]));
-    return [d.screenshots?.[0]?.src ?? '', d.contentType, ...metricLabels.map((l) => byLabel.get(l) ?? '')];
+    const costCells = hasCostFields
+      ? [
+          d.execPrice != null ? `¥${Number(d.execPrice).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}` : '',
+          d.cpe != null ? `¥${Number(d.cpe).toFixed(2)}/次` : '',
+          d.cpm != null ? `¥${Number(d.cpm).toFixed(2)}` : '',
+        ]
+      : [];
+    return [d.screenshots?.[0]?.src ?? '', d.contentType, ...metricLabels.map((l) => byLabel.get(l) ?? ''), ...costCells];
   });
   const insights = deliverables.map((d) => d.audience ?? {});
   return { headers, rows, insights };
