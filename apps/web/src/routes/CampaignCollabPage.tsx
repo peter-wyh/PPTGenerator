@@ -693,6 +693,28 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
 
 const CONTENT_TYPES: string[] = ['post', 'reels', 'video', 'image', 'live', 'story'];
 
+/** 指标解释说明 — 鼠标 hover title 显示 */
+const METRIC_HINTS: Record<string, string> = {
+  曝光: '内容被展示的总次数（impressions）',
+  播放量: '视频被播放的总次数',
+  点赞: '用户点赞总数',
+  评论: '用户评论总数',
+  转发: '内容被转发/分享的次数',
+  收藏: '内容被收藏/保存的次数',
+  粉丝增量: '合作期间该达人新增粉丝数',
+  互动量: '点赞+评论+转发+收藏的总和',
+  互动率: '互动量 ÷ 曝光 × 100%，衡量内容质量',
+};
+
+/** 小信息点图标 */
+function InfoDot() {
+  return (
+    <svg className="w-2.5 h-2.5 inline-block shrink-0 opacity-40" viewBox="0 0 12 12" fill="currentColor">
+      <path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2a.75.75 0 110 1.5.75.75 0 010-1.5zm-.75 2.5h1.5v4H5.25v-4z" />
+    </svg>
+  );
+}
+
 function DeliverableCard({
   deliverable,
   index,
@@ -820,8 +842,11 @@ function DeliverableCard({
                     <button onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))} className="text-red">✕</button>
                   </div>
                 ) : (
-                  <div key={i} className="rounded bg-surface-hover px-2 py-1.5">
-                    <div className="text-[10px] text-foreground-muted">{m.label}</div>
+                  <div key={i} className="rounded bg-surface-hover px-2 py-1.5" title={METRIC_HINTS[m.label] ?? ''}>
+                    <div className="text-[10px] text-foreground-muted flex items-center gap-0.5">
+                      {METRIC_HINTS[m.label] && <InfoDot />}
+                      {m.label}
+                    </div>
                     <div className="text-xs font-medium text-foreground-primary tabular-nums">{m.value}</div>
                   </div>
                 ))}
@@ -839,19 +864,22 @@ function DeliverableCard({
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
                   {([
-                    ['GMV', deliverable.cps.gmv],
-                    ['佣金', deliverable.cps.commission],
-                    ['ROAS', deliverable.cps.roas],
-                    ['订单', deliverable.cps.orders],
-                    ['CVR', deliverable.cps.cvr],
-                    ['点击', deliverable.cps.clicks],
-                    ['CTR', deliverable.cps.ctr],
-                    ['EPC', deliverable.cps.epc],
-                    ['花费', deliverable.cps.spend],
-                    ['曝光', deliverable.cps.impressions],
-                  ] as const).map(([label, value]) => (
-                    <div key={label} className="rounded bg-surface-hover px-2 py-1.5">
-                      <div className="text-[10px] text-foreground-muted">{label}</div>
+                    ['GMV', deliverable.cps.gmv, 'Gross Merchandise Volume，挂链链接产生的总成交金额'],
+                    ['佣金', deliverable.cps.commission, '根据成交订单计算出的佣金收入'],
+                    ['ROAS', deliverable.cps.roas, 'Return On Ad Spend，GMV ÷ 花费，衡量投放回报'],
+                    ['订单', deliverable.cps.orders, '挂链链接产生的总下单数量'],
+                    ['CVR', deliverable.cps.cvr, 'Conversion Rate，订单数 ÷ 点击数 × 100%，衡量转化效率'],
+                    ['点击', deliverable.cps.clicks, '挂链链接被点击的总次数'],
+                    ['CTR', deliverable.cps.ctr, 'Click-Through Rate，点击数 ÷ 曝光数 × 100%，衡量内容吸引力'],
+                    ['EPC', deliverable.cps.epc, 'Earnings Per Click，GMV ÷ 点击数，单次点击平均产出'],
+                    ['花费', deliverable.cps.spend, '佣金 × 1.08（含税费及服务费），总投放成本'],
+                    ['曝光', deliverable.cps.impressions, '挂链链接相关内容的总展示次数'],
+                  ] as const).map(([label, value, hint]) => (
+                    <div key={label} className="rounded bg-surface-hover px-2 py-1.5" title={hint}>
+                      <div className="text-[10px] text-foreground-muted flex items-center gap-0.5">
+                        <InfoDot />
+                        {label}
+                      </div>
                       <div className="text-xs font-medium text-foreground-primary tabular-nums">{value}</div>
                     </div>
                   ))}
