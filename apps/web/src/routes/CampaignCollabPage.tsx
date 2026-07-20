@@ -694,43 +694,83 @@ function DeliverableCard({
         )}
       </div>
 
-      {/* 每日效果数据（只读展示） */}
-      {deliverable.daily && deliverable.daily.length > 0 && (
-        <div className="mb-2">
-          <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
-            <span>每日效果数据</span>
-            <span className="text-foreground-muted">({deliverable.daily.length} 天)</span>
-          </div>
-          <div className="max-h-40 overflow-auto rounded border border-border-subtle">
-            <table className="w-full text-[10px] tabular-nums">
-              <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
-                <tr>
-                  <th className="whitespace-nowrap px-1.5 py-0.5 text-left font-medium">日期</th>
-                  <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
-                  <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
-                  <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
-                  <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
-                  <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deliverable.daily.map((d, di) => (
-                  <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
-                    <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
-                    <td className="px-1.5 py-0.5 text-right">{d.impressions}</td>
-                    <td className="px-1.5 py-0.5 text-right">{d.likes}</td>
-                    <td className="px-1.5 py-0.5 text-right">{d.comments}</td>
-                    <td className="px-1.5 py-0.5 text-right">{d.shares}</td>
-                    <td className="px-1.5 py-0.5 text-right">{d.saves}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* 每日效果数据 + CPS 每日明细（合并为一张表，按日期 join） */}
+      {(() => {
+        const daily = deliverable.daily ?? [];
+        const cpsDaily = deliverable.cps?.daily ?? [];
+        if (daily.length === 0 && cpsDaily.length === 0) return null;
 
-      {/* CPS 挂链推广效果（只读展示） */}
+        // 按日期 join
+        const byDate = new Map<string, { post?: typeof daily[number]; cps?: typeof cpsDaily[number] }>();
+        for (const d of daily) byDate.set(d.date, { post: d });
+        for (const d of cpsDaily) {
+          const e = byDate.get(d.date);
+          if (e) e.cps = d; else byDate.set(d.date, { cps: d });
+        }
+        const merged = [...byDate.values()].sort((a, b) => {
+          const da = a.post?.date ?? a.cps?.date ?? '';
+          const db = b.post?.date ?? b.cps?.date ?? '';
+          return da.localeCompare(db);
+        });
+        const hasCps = cpsDaily.length > 0;
+
+        return (
+          <div className="mb-2">
+            <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
+              <span>每日效果数据</span>
+              <span className="text-foreground-muted">({merged.length} 天{hasCps ? ' · 含 CPS 挂链' : ''})</span>
+            </div>
+            <div className="max-h-40 overflow-auto rounded border border-border-subtle">
+              <table className="w-full text-[10px] tabular-nums whitespace-nowrap">
+                <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                  <tr>
+                    <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
+                    <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
+                    <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
+                    <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
+                    <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
+                    <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
+                    {hasCps && <>
+                      <th className="border-l border-border-subtle px-1.5 py-0.5 text-right font-medium text-accent-primary">点击</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">订单</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">GMV</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">佣金</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">CTR</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">CVR</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">ROAS</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">EPC</th>
+                    </>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {merged.map((row, ri) => (
+                    <tr key={ri} className="border-t border-border-subtle text-foreground-secondary">
+                      <td className="whitespace-nowrap px-1.5 py-0.5">{row.post?.date ?? row.cps?.date}</td>
+                      <td className="px-1.5 py-0.5 text-right">{row.post?.impressions ?? '—'}</td>
+                      <td className="px-1.5 py-0.5 text-right">{row.post?.likes ?? '—'}</td>
+                      <td className="px-1.5 py-0.5 text-right">{row.post?.comments ?? '—'}</td>
+                      <td className="px-1.5 py-0.5 text-right">{row.post?.shares ?? '—'}</td>
+                      <td className="px-1.5 py-0.5 text-right">{row.post?.saves ?? '—'}</td>
+                      {hasCps && <>
+                        <td className="border-l border-border-subtle px-1.5 py-0.5 text-right">{row.cps?.clicks ?? '—'}</td>
+                        <td className="px-1.5 py-0.5 text-right">{row.cps?.orders ?? '—'}</td>
+                        <td className="px-1.5 py-0.5 text-right">{row.cps?.gmv ?? '—'}</td>
+                        <td className="px-1.5 py-0.5 text-right">{row.cps?.commission ?? '—'}</td>
+                        <td className="px-1.5 py-0.5 text-right">{row.cps?.ctr ?? '—'}</td>
+                        <td className="px-1.5 py-0.5 text-right">{row.cps?.cvr ?? '—'}</td>
+                        <td className="px-1.5 py-0.5 text-right">{row.cps?.roas ?? '—'}</td>
+                        <td className="px-1.5 py-0.5 text-right">{row.cps?.epc ?? '—'}</td>
+                      </>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* CPS 挂链效果汇总（只读展示） */}
       {deliverable.cps && (
         <div className="mb-2">
           <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
@@ -758,48 +798,6 @@ function DeliverableCard({
               </div>
             ))}
           </div>
-
-          {/* CPS 每日明细（只读） */}
-          {deliverable.cps.daily && deliverable.cps.daily.length > 0 && (
-            <div className="mt-1.5">
-              <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
-                <span>CPS 每日明细</span>
-                <span className="text-foreground-muted">({deliverable.cps.daily.length} 天)</span>
-              </div>
-              <div className="max-h-40 overflow-auto rounded border border-border-subtle">
-                <table className="w-full text-[10px] tabular-nums">
-                  <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
-                    <tr>
-                      <th className="whitespace-nowrap px-1.5 py-0.5 text-left font-medium">日期</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">点击</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">订单</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">GMV</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">佣金</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">CTR</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">CVR</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">ROAS</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium">EPC</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {deliverable.cps.daily.map((d, di) => (
-                      <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
-                        <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.clicks}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.orders}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.gmv}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.commission}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.ctr}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.cvr}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.roas}</td>
-                        <td className="px-1.5 py-0.5 text-right">{d.epc}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
