@@ -761,6 +761,9 @@ function DeliverableCard({
         {firstLink && !editing && (
           <a href={firstLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline">↗ 作品链接</a>
         )}
+        {deliverable.cps?.linkUrl && !editing && (
+          <a href={deliverable.cps.linkUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline truncate max-w-[200px]">↗ CPS 挂链</a>
+        )}
         {editing && (
           <button onClick={onRemove} className="ml-auto text-red hover:underline text-[10px]">移除</button>
         )}
@@ -858,9 +861,6 @@ function DeliverableCard({
               <div className={metrics.length > 0 ? 'mt-1.5' : ''}>
                 <div className="flex items-center gap-2 text-[10px] text-foreground-muted mb-1">
                   <span className="text-accent-primary font-medium">CPS 挂链</span>
-                  {deliverable.cps.linkUrl && (
-                    <a href={deliverable.cps.linkUrl} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline truncate max-w-[200px]">↗ 链接</a>
-                  )}
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
                   {([
