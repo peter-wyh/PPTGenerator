@@ -11,12 +11,42 @@ import { useSearchParams, useLocation } from 'react-router-dom';
 import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediaket/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
-import { collaborationLabel, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
+import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData } from '@mediaket/shared';
 import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collaborationSeed';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
+
+/** 从每日 CPS 明细累加出汇总 CpsLinkData。 */
+function cpsDailyToSummary(daily: CpsDaily[]): CpsLinkData {
+  let clicks = 0, impressions = 0, orders = 0, gmv = 0, commission = 0;
+  for (const d of daily) {
+    clicks += parseInt(d.clicks, 10) || 0;
+    impressions += parseInt(d.impressions, 10) || 0;
+    orders += parseInt(d.orders, 10) || 0;
+    gmv += parseFloat(d.gmv.replace(/[$,]/g, '')) || 0;
+    commission += parseFloat(d.commission.replace(/[$,]/g, '')) || 0;
+  }
+  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  const cvr = clicks > 0 ? (orders / clicks) * 100 : 0;
+  const spend = Math.round(commission * 1.08);
+  const roas = spend > 0 ? gmv / spend : 0;
+  const epc = clicks > 0 ? gmv / clicks : 0;
+  return {
+    clicks: clicks.toLocaleString('en-US'),
+    impressions: impressions.toLocaleString('en-US'),
+    ctr: `${ctr.toFixed(2)}%`,
+    orders: orders.toLocaleString('en-US'),
+    cvr: `${cvr.toFixed(2)}%`,
+    gmv: `$${Math.round(gmv).toLocaleString('en-US')}`,
+    commission: `$${Math.round(commission).toLocaleString('en-US')}`,
+    spend: `$${spend.toLocaleString('en-US')}`,
+    roas: roas.toFixed(2),
+    epc: `$${epc.toFixed(2)}`,
+    daily,
+  };
+}
 
 /* ============================= 类型 ============================= */
 
@@ -115,72 +145,174 @@ export function CampaignCollabPage() {
     }
   }
 
-  /** 确认导入：将扁平行按 (campaignId, creatorId) 归组 → 每组构建一个 CollaborationData → 逐条 saveCollaboration */
+  /** 确认导入：将扁平行按 (campaignId, creatorId) 归组 → 每组构建一个 CollaborationData → 逐条 saveCollaboration
+   *  支持汇总行（dailyDate 为空）和每日明细行（dailyDate 非空）。
+   *  归组键: campaignId::creatorId，deliverable 键: contentType + publishedAt。 */
   async function confirmCollabImport(validItems: Record<string, unknown>[]) {
     setPreview(null);
-    // 归组
-    const grouped = new Map<string, CollaborationDeliverable[]>();
+
+    // ── 第一轮遍历：构建 deliverable map ──
+    // key = campaignId::creatorId → (deliverableKey → { del, dailyPost: Map, dailyCps: Map })
+    type DelBuf = { del: CollaborationDeliverable; dailyPost: Map<string, PostDaily>; dailyCps: Map<string, CpsDaily> };
+    const grouped = new Map<string, Map<string, DelBuf>>();
+
     for (const item of validItems) {
       const cid = String(item.campaignId ?? '');
       const creId = String(item.creatorId ?? '');
       if (!cid || !creId) continue;
-      const key = `${cid}::${creId}`;
-      const del: CollaborationDeliverable = {
-        contentType: (item.contentType as CollaborationDeliverable['contentType']) ?? 'post',
-      };
-      if (item.publishedAt) del.publishedAt = String(item.publishedAt);
-      if (item.platform) del.platform = String(item.platform);
-      if (item.metrics) del.metrics = item.metrics as CollaborationDeliverable['metrics'];
-      if (item.screenshots) del.screenshots = item.screenshots as CollaborationDeliverable['screenshots'];
-      if (item.execPrice) del.execPrice = String(item.execPrice);
+      const groupKey = `${cid}::${creId}`;
+      const ct = (item.contentType as CollaborationDeliverable['contentType']) ?? 'post';
+      const pub = item.publishedAt ? String(item.publishedAt) : '';
+      const delKey = `${ct}::${pub}`;
+      const dailyDate = item.dailyDate ? String(item.dailyDate) : '';
 
-      // CPS 挂链效果：填了 cpsClicks 即启用，自动按 S 曲线拆分每日明细
-      const cpsClicks = item.cpsClicks ? parseInt(String(item.cpsClicks), 10) || 0 : 0;
-      if (cpsClicks > 0) {
-        const cpsOrders = item.cpsOrders ? parseInt(String(item.cpsOrders), 10) || 0 : 0;
-        const cpsGmv = item.cpsGmv ? parseFloat(String(item.cpsGmv).replace(/[$,]/g, '')) || 0 : 0;
-        const cpsCommission = item.cpsCommission ? parseFloat(String(item.cpsCommission).replace(/[$,]/g, '')) || 0 : 0;
-        const linkUrl = item.cpsLinkUrl ? String(item.cpsLinkUrl) : undefined;
+      let g = grouped.get(groupKey);
+      if (!g) { g = new Map(); grouped.set(groupKey, g); }
 
-        // 计算衍生指标
-        const ctr = 3 + (cpsClicks % 20) / 10; // 3%~5%
-        const impressions = Math.round((cpsClicks * 100) / ctr);
-        const cvr = cpsClicks > 0 ? (cpsOrders / cpsClicks) * 100 : 0;
-        const spend = Math.round(cpsCommission * 1.08);
-        const roas = spend > 0 ? cpsGmv / spend : 0;
-        const epc = cpsClicks > 0 ? cpsGmv / cpsClicks : 0;
-        const aov = cpsOrders > 0 ? cpsGmv / cpsOrders : 0;
+      if (dailyDate) {
+        // ── 每日明细行 ──
+        let buf = g.get(delKey);
+        if (!buf) {
+          // 无对应汇总行 → 创建空壳 deliverable
+          buf = { del: { contentType: ct }, dailyPost: new Map(), dailyCps: new Map() };
+          g.set(delKey, buf);
+        }
 
-        // 按 S 曲线拆分每日
-        const daily = buildCpsDaily(
-          item.publishedAt ? String(item.publishedAt) : undefined,
-          { clicks: cpsClicks, impressions, orders: cpsOrders, gmv: cpsGmv, commission: cpsCommission, ctr, cvr, aov },
-        );
+        // PostDaily（互动指标）
+        const hasPost = item.dailyImpressions || item.dailyLikes || item.dailyComments || item.dailyShares || item.dailySaves;
+        if (hasPost) {
+          buf.dailyPost.set(dailyDate, {
+            date: dailyDate,
+            impressions: item.dailyImpressions ? String(item.dailyImpressions) : '0',
+            likes: item.dailyLikes ? String(item.dailyLikes) : '0',
+            comments: item.dailyComments ? String(item.dailyComments) : '0',
+            shares: item.dailyShares ? String(item.dailyShares) : '0',
+            saves: item.dailySaves ? String(item.dailySaves) : '0',
+          });
+        }
 
-        del.cps = {
-          linkUrl,
-          clicks: cpsClicks.toLocaleString('en-US'),
-          impressions: impressions.toLocaleString('en-US'),
-          ctr: `${ctr.toFixed(2)}%`,
-          orders: cpsOrders.toLocaleString('en-US'),
-          cvr: `${cvr.toFixed(2)}%`,
-          gmv: `$${Math.round(cpsGmv).toLocaleString('en-US')}`,
-          commission: `$${Math.round(cpsCommission).toLocaleString('en-US')}`,
-          spend: `$${spend.toLocaleString('en-US')}`,
-          roas: roas.toFixed(2),
-          epc: `$${epc.toFixed(2)}`,
-          daily,
-        };
+        // CpsDaily（CPS 指标）
+        const cpsClicks = item.dailyCpsClicks ? parseInt(String(item.dailyCpsClicks), 10) || 0 : 0;
+        const cpsOrders = item.dailyCpsOrders ? parseInt(String(item.dailyCpsOrders), 10) || 0 : 0;
+        const cpsGmv = item.dailyCpsGmv ? parseFloat(String(item.dailyCpsGmv).replace(/[$,]/g, '')) || 0 : 0;
+        const cpsCommission = item.dailyCpsCommission ? parseFloat(String(item.dailyCpsCommission).replace(/[$,]/g, '')) || 0 : 0;
+        if (cpsClicks > 0 || cpsOrders > 0 || cpsGmv > 0 || cpsCommission > 0) {
+          const ctr = cpsClicks > 0 ? (cpsClicks / Math.max(parseInt(String(item.dailyImpressions), 10) || cpsClicks * 30)) * 100 : 0;
+          const cvr = cpsClicks > 0 ? (cpsOrders / cpsClicks) * 100 : 0;
+          const spend = Math.round(cpsCommission * 1.08);
+          const roas = spend > 0 ? cpsGmv / spend : 0;
+          const epc = cpsClicks > 0 ? cpsGmv / cpsClicks : 0;
+          buf.dailyCps.set(dailyDate, {
+            date: dailyDate,
+            clicks: String(cpsClicks),
+            impressions: item.dailyImpressions ? String(item.dailyImpressions) : String(cpsClicks * 30),
+            ctr: `${ctr.toFixed(2)}%`,
+            orders: String(cpsOrders),
+            cvr: `${cvr.toFixed(2)}%`,
+            gmv: `$${Math.round(cpsGmv).toLocaleString('en-US')}`,
+            commission: `$${Math.round(cpsCommission).toLocaleString('en-US')}`,
+            roas: roas.toFixed(2),
+            epc: `$${epc.toFixed(2)}`,
+          });
+        }
+      } else {
+        // ── 汇总行（deliverable 定义） ──
+        let buf = g.get(delKey);
+        if (!buf) {
+          buf = { del: { contentType: ct }, dailyPost: new Map(), dailyCps: new Map() };
+          g.set(delKey, buf);
+        }
+        const del = buf.del;
+        if (item.publishedAt) del.publishedAt = String(item.publishedAt);
+        if (item.platform) del.platform = String(item.platform);
+        if (item.metrics) del.metrics = item.metrics as CollaborationDeliverable['metrics'];
+        if (item.screenshots) del.screenshots = item.screenshots as CollaborationDeliverable['screenshots'];
+        if (item.execPrice) del.execPrice = String(item.execPrice);
+
+        // CPS 挂链效果：填了 cpsClicks 即启用
+        const cpsClicks = item.cpsClicks ? parseInt(String(item.cpsClicks), 10) || 0 : 0;
+        if (cpsClicks > 0) {
+          const cpsOrders = item.cpsOrders ? parseInt(String(item.cpsOrders), 10) || 0 : 0;
+          const cpsGmv = item.cpsGmv ? parseFloat(String(item.cpsGmv).replace(/[$,]/g, '')) || 0 : 0;
+          const cpsCommission = item.cpsCommission ? parseFloat(String(item.cpsCommission).replace(/[$,]/g, '')) || 0 : 0;
+          const linkUrl = item.cpsLinkUrl ? String(item.cpsLinkUrl) : undefined;
+
+          const ctr = 3 + (cpsClicks % 20) / 10;
+          const impressions = Math.round((cpsClicks * 100) / ctr);
+          const cvr = cpsClicks > 0 ? (cpsOrders / cpsClicks) * 100 : 0;
+          const spend = Math.round(cpsCommission * 1.08);
+          const roas = spend > 0 ? cpsGmv / spend : 0;
+          const epc = cpsClicks > 0 ? cpsGmv / cpsClicks : 0;
+          const aov = cpsOrders > 0 ? cpsGmv / cpsOrders : 0;
+
+          // 如果有明细行，使用明细行的 CPS daily；否则按 S 曲线拆分
+          del.cps = {
+            linkUrl,
+            clicks: cpsClicks.toLocaleString('en-US'),
+            impressions: impressions.toLocaleString('en-US'),
+            ctr: `${ctr.toFixed(2)}%`,
+            orders: cpsOrders.toLocaleString('en-US'),
+            cvr: `${cvr.toFixed(2)}%`,
+            gmv: `$${Math.round(cpsGmv).toLocaleString('en-US')}`,
+            commission: `$${Math.round(cpsCommission).toLocaleString('en-US')}`,
+            spend: `$${spend.toLocaleString('en-US')}`,
+            roas: roas.toFixed(2),
+            epc: `$${epc.toFixed(2)}`,
+            daily: [], // 先占位，下面填充
+          };
+          // 保存这些用于后面构建汇总 CPS（如果明细行覆盖了汇总）
+          (buf as DelBuf & { _cpsSummary?: Record<string, unknown> })._cpsSummary = {
+            cpsClicks, cpsOrders, cpsGmv, cpsCommission, linkUrl, ctr, impressions, cvr, spend, roas, epc, aov,
+          };
+        }
       }
-
-      const arr = grouped.get(key) ?? [];
-      arr.push(del);
-      grouped.set(key, arr);
     }
 
+    // ── 第二轮：将 daily map 写入 deliverable，构建最终 CollaborationData ──
     let success = 0, fail = 0;
-    for (const [key, deliverables] of grouped) {
+    for (const [key, delMap] of grouped) {
       const [campaignId, creatorId] = key.split('::');
+      const deliverables: CollaborationDeliverable[] = [];
+      for (const buf of delMap.values()) {
+        const del = buf.del;
+
+        // 写入 PostDaily
+        if (buf.dailyPost.size > 0) {
+          del.daily = [...buf.dailyPost.values()].sort((a, b) => a.date.localeCompare(b.date));
+        }
+
+        // 写入 CpsDaily
+        if (buf.dailyCps.size > 0) {
+          const cpsDailyArr = [...buf.dailyCps.values()].sort((a, b) => a.date.localeCompare(b.date));
+          if (del.cps) {
+            // 有明细 CPS 数据 → 覆盖 S 曲线拆分
+            del.cps.daily = cpsDailyArr;
+          } else {
+            // 有明细 CPS 但无汇总 CPS → 只填 daily，汇总从明细累加
+            del.cps = cpsDailyToSummary(cpsDailyArr);
+          }
+        } else if (del.cps) {
+          // 有汇总 CPS 但无明细 → 按 S 曲线拆分
+          const summary = (buf as DelBuf & { _cpsSummary?: Record<string, unknown> })._cpsSummary;
+          if (summary) {
+            del.cps.daily = buildCpsDaily(
+              del.publishedAt,
+              {
+                clicks: summary.cpsClicks as number,
+                impressions: summary.impressions as number,
+                orders: summary.cpsOrders as number,
+                gmv: summary.cpsGmv as number,
+                commission: summary.cpsCommission as number,
+                ctr: summary.ctr as number,
+                cvr: summary.cvr as number,
+                aov: summary.aov as number,
+              },
+            );
+          }
+        }
+
+        deliverables.push(del);
+      }
       try {
         await saveCollaboration({ id: `collab:${campaignId}:${creatorId}`, campaignId, creatorId, deliverables });
         success++;

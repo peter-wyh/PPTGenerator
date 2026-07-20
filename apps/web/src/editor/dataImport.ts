@@ -7,11 +7,17 @@ export const CREATOR_REQUIRED = ['id', 'name', 'handle', 'platform', 'tier', 'fo
 
 export type DataKind = 'campaign' | 'creator' | 'collaboration';
 
-/** 合作导入：CSV 每行=一个 deliverable，按 campaignId+creatorId 归组。 */
+/** 合作导入：CSV 每行=一个 deliverable 或一条每日明细行。
+ * 每日明细行: campaignId+creatorId+publishedAt 相同时，dailyDate 非空的行为该 deliverable 的 daily 明细。
+ * 同一对 campaignId+creatorId 可有多条 deliverable（用 contentType + publishedAt 区分），
+ * 每条 deliverable 又可有多行每日明细（dailyDate 不同）。 */
 export const COLLAB_DELIVERABLE_FIELDS = [
   'campaignId', 'creatorId', 'contentType', 'publishedAt', 'platform',
   'metrics', 'execPrice', 'screenshots',
   'cpsLinkUrl', 'cpsClicks', 'cpsOrders', 'cpsGmv', 'cpsCommission',
+  // ─── 每日明细行字段（dailyDate 非空时本行为明细行，上面的汇总字段被忽略）───
+  'dailyDate', 'dailyImpressions', 'dailyLikes', 'dailyComments', 'dailyShares', 'dailySaves',
+  'dailyCpsClicks', 'dailyCpsOrders', 'dailyCpsGmv', 'dailyCpsCommission',
 ] as const;
 export const COLLAB_REQUIRED = ['campaignId', 'creatorId', 'contentType'];
 
@@ -36,7 +42,7 @@ export interface PreviewItem {
 export const PREVIEW_COLUMNS: Record<DataKind, string[]> = {
   campaign: ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget', 'status'],
   creator: ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region'],
-  collaboration: ['campaignId', 'creatorId', 'contentType', 'publishedAt', 'metrics', 'execPrice'],
+  collaboration: ['campaignId', 'creatorId', 'contentType', 'publishedAt', 'metrics', 'execPrice', 'dailyDate'],
 };
 
 function checkRequired(kind: DataKind, data: Record<string, unknown>): string[] {
@@ -114,9 +120,31 @@ export function downloadTemplate(kind: DataKind): void {
     example = 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,,示例简介,示例标签1;示例标签2';
     note = '\n# tags 格式: tag1;tag2;tag3 (;分隔)\n# 必填字段: id,name,handle,platform,tier,followers,engagement,category,region';
   } else {
-    // collaboration: 两行示例，展示同一对 campaign+creator 的多个作品归组
-    example = 'camp-001,cre-mia,video,2026-03-15,TikTok,曝光:850000|点赞:51000|评论:3200|转发:2800,67500,https://cdn.example.com/screenshot1.jpg;https://cdn.example.com/screenshot2.jpg,https://shop.example.com/cps/abc123,12500,380,45000,4500\ncamp-001,cre-mia,reels,2026-03-16,TikTok,曝光:420000|点赞:28000|评论:1500,32500,,,,\ncamp-001,cre-sofia,post,2026-03-18,Instagram,曝光:1200000|点赞:95000|评论:4100|收藏:12000,80000,https://cdn.example.com/ig-post1.jpg,https://shop.example.com/cps/def456,8900,215,28000,2800';
-    note = '\n# 每行=一个作品(deliverable)，相同 campaignId+creatorId 的行自动归组为一条合作记录\n# metrics 格式: 指标名:数值|指标名:数值 (|分隔多个，如 曝光:850000|点赞:51000)\n# screenshots 格式: url1;url2;url3 (;分隔多个URL)\n# execPrice: 该作品的执行价(数字，单位元)\n# CPS 字段(可选，填了cpsClicks即启用): cpsLinkUrl链接 | cpsClicks点击 | cpsOrders订单 | cpsGmv成交额 | cpsCommission佣金\n#   CPS 每日明细会自动按 S 曲线拆分（与作品发布日期对齐）\n# 必填字段: campaignId,creatorId,contentType';
+    // collaboration: 汇总行 + 每日明细行
+    example = [
+      // ── 汇总行（主行：含 metrics + execPrice + CPS 汇总）──
+      'camp-001,cre-mia,video,2026-03-15,TikTok,曝光:850000|点赞:51000|评论:3200|转发:2800,67500,https://cdn.example.com/s1.jpg;https://cdn.example.com/s2.jpg,https://shop.example.com/cps/abc,12500,380,45000,4500,,,,,,,',
+      // ── 每日明细行（dailyDate 非空→归入上面这个 deliverable 的 daily 数组）──
+      'camp-001,cre-mia,video,2026-03-15,TikTok,,,,,,,,2026-03-15,120000,8000,500,300,200,1800,55,6500,650',
+      'camp-001,cre-mia,video,2026-03-15,TikTok,,,,,,,,2026-03-16,85000,5200,320,200,150,1600,48,5800,580',
+      'camp-001,cre-mia,video,2026-03-15,TikTok,,,,,,,,2026-03-17,60000,3800,250,150,100,1400,42,5200,520',
+      // ── 第二个 deliverable（不同 contentType + publishedAt，无明细）──
+      'camp-001,cre-mia,reels,2026-03-16,TikTok,曝光:420000|点赞:28000|评论:1500,32500,,,,,,,,,,,,,',
+      // ── 另一个 creator 的 deliverable + CPS 汇总 ──
+      'camp-001,cre-sofia,post,2026-03-18,Instagram,曝光:1200000|点赞:95000|评论:4100|收藏:12000,80000,https://cdn.example.com/ig.jpg,https://shop.example.com/cps/def,8900,215,28000,2800,,,,,,,',
+    ].join('\n');
+    note = [
+      '# 每行=一个作品(deliverable)或一条每日明细行',
+      '# 汇总行: campaignId+creatorId+contentType+publishedAt 相同的行自动归组为一条 deliverable',
+      '# 每日明细行: dailyDate 非空时, 本行作为该 deliverable 的 daily 数组的一条明细',
+      '#   明细行需填 campaignId+creatorId+contentType+publishedAt (与汇总行一致) + dailyDate + 各指标',
+      '# metrics 格式: 指标名:数值|指标名:数值 (|分隔多个，如 曝光:850000|点赞:51000)',
+      '# screenshots 格式: url1;url2;url3 (;分隔多个URL)',
+      '# execPrice: 该作品的执行价(数字，单位元)',
+      '# CPS 汇总(可选, 填了cpsClicks即启用): cpsLinkUrl链接 | cpsClicks点击 | cpsOrders订单 | cpsGmv成交额 | cpsCommission佣金',
+      '#   CPS 仅填汇总量即可, 每日明细可填 dailyCps* 字段或留空(系统自动按 S 曲线拆分)',
+      '# 必填字段: campaignId,creatorId,contentType',
+    ].join('\n');
   }
   const csv = `${header}\n${example}\n${note}\n`;
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
