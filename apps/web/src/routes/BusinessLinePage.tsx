@@ -50,7 +50,7 @@ export function BusinessLinePage() {
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {bl.logo ? (
-                    <img src={bl.logo} alt={bl.name} className="h-8 w-8 rounded-md border border-border-subtle object-cover" />
+                    <img src={bl.logo} alt={bl.name} className="max-h-8 max-w-24 rounded-md border border-border-subtle object-contain" />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface-hover text-[10px] font-bold text-foreground-muted">
                       {bl.code.toUpperCase()}
