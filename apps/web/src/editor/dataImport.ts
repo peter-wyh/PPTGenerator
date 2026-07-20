@@ -5,10 +5,25 @@ export const CAMPAIGN_REQUIRED = ['id', 'name', 'advertiser', 'businessLine', 'p
 export const CREATOR_FIELDS = ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region', 'avatar', 'bio', 'tags'] as const;
 export const CREATOR_REQUIRED = ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region'];
 
-export type DataKind = 'campaign' | 'creator';
+export type DataKind = 'campaign' | 'creator' | 'collaboration';
 
-const FIELDS: Record<DataKind, readonly string[]> = { campaign: CAMPAIGN_FIELDS, creator: CREATOR_FIELDS };
-const REQUIRED: Record<DataKind, string[]> = { campaign: CAMPAIGN_REQUIRED, creator: CREATOR_REQUIRED };
+/** 合作导入：CSV 每行=一个 deliverable，按 campaignId+creatorId 归组。 */
+export const COLLAB_DELIVERABLE_FIELDS = [
+  'campaignId', 'creatorId', 'contentType', 'publishedAt', 'platform',
+  'metrics', 'execPrice', 'screenshots',
+] as const;
+export const COLLAB_REQUIRED = ['campaignId', 'creatorId', 'contentType'];
+
+const FIELDS: Record<DataKind, readonly string[]> = {
+  campaign: CAMPAIGN_FIELDS,
+  creator: CREATOR_FIELDS,
+  collaboration: COLLAB_DELIVERABLE_FIELDS,
+};
+const REQUIRED: Record<DataKind, string[]> = {
+  campaign: CAMPAIGN_REQUIRED,
+  creator: CREATOR_REQUIRED,
+  collaboration: COLLAB_REQUIRED,
+};
 
 export interface PreviewItem {
   data: Record<string, unknown>;
@@ -20,6 +35,7 @@ export interface PreviewItem {
 export const PREVIEW_COLUMNS: Record<DataKind, string[]> = {
   campaign: ['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget', 'status'],
   creator: ['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region'],
+  collaboration: ['campaignId', 'creatorId', 'contentType', 'publishedAt', 'metrics', 'execPrice'],
 };
 
 function checkRequired(kind: DataKind, data: Record<string, unknown>): string[] {
@@ -41,7 +57,8 @@ export function buildPreviewFromRows(kind: DataKind, rows: Record<string, string
         const tags = String(v).split(';').map((s) => s.trim()).filter(Boolean);
         if (tags.length) data.tags = tags;
       } else if (f === 'metrics') {
-        // metrics 格式: GMV:120000|ROAS:3.5|Spend:35000
+        // metrics 格式: GMV:120000|ROAS:3.5|Spend:35000（campaign）
+        // 或 曝光:850000|点赞:51000（collaboration deliverable）
         try {
           const metrics = String(v).split('|').map((pair) => {
             const [label, value] = pair.split(':').map((s) => s.trim());
@@ -61,6 +78,10 @@ export function buildPreviewFromRows(kind: DataKind, rows: Record<string, string
           }).filter(Boolean);
           if (platforms.length) data.platforms = platforms;
         }
+      } else if (f === 'screenshots') {
+        // screenshots 格式: url1;url2;url3（;分隔）
+        const shots = String(v).split(';').map((s) => s.trim()).filter(Boolean);
+        if (shots.length) data.screenshots = shots.map((src) => ({ src }));
       } else {
         data[f] = v;
       }
@@ -79,18 +100,23 @@ export function buildPreviewFromObjects(kind: DataKind, items: unknown[]): Previ
   });
 }
 
-/** 下载 CSV 模板(表头对齐字段 + 两行示例：基础行 + 完整行)。 */
+/** 下载 CSV 模板(表头对齐字段 + 示例行 + 格式说明)。 */
 export function downloadTemplate(kind: DataKind): void {
   const fields = FIELDS[kind];
   const header = fields.join(',');
-  const example =
-    kind === 'campaign'
-      ? 'camp-001,春季新品推广,示例品牌,FT,TikTok,2026-03-01,2026-03-31,$100K,Active,alex,cre-mia;cre-sofia,GMV:120000|ROAS:3.5|Spend:35000|Impressions:15M,TikTok:短视频;TikTok:直播'
-      : 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,,示例简介,示例标签1;示例标签2';
-  const note =
-    kind === 'campaign'
-      ? '\n# metrics 格式: label:value|label:value (|分隔多个)\n# platforms 格式: platform:form;platform:form (;分隔多个)\n# creatorIds 格式: id1;id2;id3 (;分隔)\n# 必填字段: id,name,advertiser,businessLine,platform,startDate,endDate,budget'
-      : '\n# tags 格式: tag1;tag2;tag3 (;分隔)\n# 必填字段: id,name,handle,platform,tier,followers,engagement,category,region';
+  let example = '';
+  let note = '';
+  if (kind === 'campaign') {
+    example = 'camp-001,春季新品推广,示例品牌,FT,TikTok,2026-03-01,2026-03-31,$100K,Active,alex,cre-mia;cre-sofia,GMV:120000|ROAS:3.5|Spend:35000|Impressions:15M,TikTok:短视频;TikTok:直播';
+    note = '\n# metrics 格式: label:value|label:value (|分隔多个)\n# platforms 格式: platform:form;platform:form (;分隔多个)\n# creatorIds 格式: id1;id2;id3 (;分隔)\n# 必填字段: id,name,advertiser,businessLine,platform,startDate,endDate,budget';
+  } else if (kind === 'creator') {
+    example = 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,,示例简介,示例标签1;示例标签2';
+    note = '\n# tags 格式: tag1;tag2;tag3 (;分隔)\n# 必填字段: id,name,handle,platform,tier,followers,engagement,category,region';
+  } else {
+    // collaboration: 两行示例，展示同一对 campaign+creator 的多个作品归组
+    example = 'camp-001,cre-mia,video,2026-03-15,TikTok,曝光:850000|点赞:51000|评论:3200|转发:2800,67500,https://cdn.example.com/screenshot1.jpg;https://cdn.example.com/screenshot2.jpg\ncamp-001,cre-mia,reels,2026-03-16,TikTok,曝光:420000|点赞:28000|评论:1500,32500,\ncamp-001,cre-sofia,post,2026-03-18,Instagram,曝光:1200000|点赞:95000|评论:4100|收藏:12000,80000,https://cdn.example.com/ig-post1.jpg';
+    note = '\n# 每行=一个作品(deliverable)，相同 campaignId+creatorId 的行自动归组为一条合作记录\n# metrics 格式: 指标名:数值|指标名:数值 (|分隔多个，如 曝光:850000|点赞:51000)\n# screenshots 格式: url1;url2;url3 (;分隔多个URL)\n# execPrice: 该作品的执行价(数字，单位元)\n# 必填字段: campaignId,creatorId,contentType';
+  }
   const csv = `${header}\n${example}\n${note}\n`;
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);

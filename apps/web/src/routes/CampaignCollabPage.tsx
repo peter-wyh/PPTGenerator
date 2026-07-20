@@ -6,7 +6,7 @@
  * 表格行 = Campaign × Creator，达人头像/合作方式/作品截图/效果指标累加全部平铺在列中。
  * 点击「详情」打开右侧浮窗，展示每部作品的详细数据。
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediaket/shared';
@@ -14,6 +14,9 @@ import { getCollaboration, saveCollaboration } from '@/api/collaborations';
 import { collaborationLabel, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
 import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
+import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
+import { parseFile } from '@/editor/datasource/parse';
+import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 
 /* ============================= 类型 ============================= */
 
@@ -44,6 +47,8 @@ export function CampaignCollabPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [drawerRow, setDrawerRow] = useState<CollabRow | null>(null);
   const [tick, setTick] = useState(0);
+  const [preview, setPreview] = useState<PreviewItem[] | null>(null);
+  const csvRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (filterCampaign) {
@@ -96,6 +101,56 @@ export function CampaignCollabPage() {
     }
   }, []);
   useEffect(() => { void reload(); }, [reload, tick]);
+
+  /** CSV/XLSX 导入：每行=一个 deliverable，按 campaignId+creatorId 归组为合作记录 */
+  async function onCsv(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const sheets = await parseFile(f);
+      setPreview(buildPreviewFromRows('collaboration', sheets[0]?.rows ?? []));
+    } catch {
+      window.alert('文件解析失败');
+    }
+  }
+
+  /** 确认导入：将扁平行按 (campaignId, creatorId) 归组 → 每组构建一个 CollaborationData → 逐条 saveCollaboration */
+  async function confirmCollabImport(validItems: Record<string, unknown>[]) {
+    setPreview(null);
+    // 归组
+    const grouped = new Map<string, CollaborationDeliverable[]>();
+    for (const item of validItems) {
+      const cid = String(item.campaignId ?? '');
+      const creId = String(item.creatorId ?? '');
+      if (!cid || !creId) continue;
+      const key = `${cid}::${creId}`;
+      const del: CollaborationDeliverable = {
+        contentType: (item.contentType as CollaborationDeliverable['contentType']) ?? 'post',
+      };
+      if (item.publishedAt) del.publishedAt = String(item.publishedAt);
+      if (item.platform) del.platform = String(item.platform);
+      if (item.metrics) del.metrics = item.metrics as CollaborationDeliverable['metrics'];
+      if (item.screenshots) del.screenshots = item.screenshots as CollaborationDeliverable['screenshots'];
+      if (item.execPrice) del.execPrice = String(item.execPrice);
+      const arr = grouped.get(key) ?? [];
+      arr.push(del);
+      grouped.set(key, arr);
+    }
+
+    let success = 0, fail = 0;
+    for (const [key, deliverables] of grouped) {
+      const [campaignId, creatorId] = key.split('::');
+      try {
+        await saveCollaboration({ id: `collab:${campaignId}:${creatorId}`, campaignId, creatorId, deliverables });
+        success++;
+      } catch {
+        fail++;
+      }
+    }
+    window.alert(`导入完成: ${success} 条合作记录成功${fail > 0 ? `, ${fail} 条失败` : ''}`);
+    setTick((t) => t + 1);
+  }
 
   const filtered = rows.filter((r) => {
     if (filterCampaign && !r.campaign.name.toLowerCase().includes(filterCampaign.toLowerCase()) && r.campaignId !== filterCampaign) return false;
@@ -153,6 +208,22 @@ export function CampaignCollabPage() {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="mb-3 flex gap-2">
+        <button
+          onClick={() => csvRef.current?.click()}
+          className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary"
+        >
+          导入合作数据 CSV/XLSX
+        </button>
+        <button
+          onClick={() => downloadTemplate('collaboration')}
+          className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+        >
+          下载模板
+        </button>
+        <input ref={csvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsv} />
       </div>
 
       {filtered.length === 0 ? (
@@ -258,6 +329,16 @@ export function CampaignCollabPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* 导入预览弹窗 */}
+      {preview && (
+        <ImportPreviewModal
+          kind="collaboration"
+          items={preview}
+          onConfirm={confirmCollabImport}
+          onCancel={() => setPreview(null)}
+        />
       )}
 
       {/* 右侧浮窗 */}

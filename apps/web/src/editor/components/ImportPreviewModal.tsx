@@ -19,7 +19,7 @@ export function ImportPreviewModal({ kind, items, onConfirm, onCancel }: Props) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="font-headings text-sm font-semibold text-foreground-primary">
-          导入预览 · {kind === 'campaign' ? 'Campaign' : '达人库'} · 共 {items.length} 行(有效 {valid.length})
+          导入预览 · {kind === 'campaign' ? 'Campaign' : kind === 'creator' ? '达人库' : '达人合作'} · 共 {items.length} 行(有效 {valid.length})
         </div>
         <div className="overflow-auto rounded-lg border border-border-default">
           <table className="w-full min-w-[640px] border-collapse text-xs">
