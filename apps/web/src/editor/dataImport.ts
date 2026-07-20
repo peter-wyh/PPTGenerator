@@ -11,6 +11,7 @@ export type DataKind = 'campaign' | 'creator' | 'collaboration';
 export const COLLAB_DELIVERABLE_FIELDS = [
   'campaignId', 'creatorId', 'contentType', 'publishedAt', 'platform',
   'metrics', 'execPrice', 'screenshots',
+  'cpsLinkUrl', 'cpsClicks', 'cpsOrders', 'cpsGmv', 'cpsCommission',
 ] as const;
 export const COLLAB_REQUIRED = ['campaignId', 'creatorId', 'contentType'];
 
@@ -114,8 +115,8 @@ export function downloadTemplate(kind: DataKind): void {
     note = '\n# tags 格式: tag1;tag2;tag3 (;分隔)\n# 必填字段: id,name,handle,platform,tier,followers,engagement,category,region';
   } else {
     // collaboration: 两行示例，展示同一对 campaign+creator 的多个作品归组
-    example = 'camp-001,cre-mia,video,2026-03-15,TikTok,曝光:850000|点赞:51000|评论:3200|转发:2800,67500,https://cdn.example.com/screenshot1.jpg;https://cdn.example.com/screenshot2.jpg\ncamp-001,cre-mia,reels,2026-03-16,TikTok,曝光:420000|点赞:28000|评论:1500,32500,\ncamp-001,cre-sofia,post,2026-03-18,Instagram,曝光:1200000|点赞:95000|评论:4100|收藏:12000,80000,https://cdn.example.com/ig-post1.jpg';
-    note = '\n# 每行=一个作品(deliverable)，相同 campaignId+creatorId 的行自动归组为一条合作记录\n# metrics 格式: 指标名:数值|指标名:数值 (|分隔多个，如 曝光:850000|点赞:51000)\n# screenshots 格式: url1;url2;url3 (;分隔多个URL)\n# execPrice: 该作品的执行价(数字，单位元)\n# 必填字段: campaignId,creatorId,contentType';
+    example = 'camp-001,cre-mia,video,2026-03-15,TikTok,曝光:850000|点赞:51000|评论:3200|转发:2800,67500,https://cdn.example.com/screenshot1.jpg;https://cdn.example.com/screenshot2.jpg,https://shop.example.com/cps/abc123,12500,380,45000,4500\ncamp-001,cre-mia,reels,2026-03-16,TikTok,曝光:420000|点赞:28000|评论:1500,32500,,,,\ncamp-001,cre-sofia,post,2026-03-18,Instagram,曝光:1200000|点赞:95000|评论:4100|收藏:12000,80000,https://cdn.example.com/ig-post1.jpg,https://shop.example.com/cps/def456,8900,215,28000,2800';
+    note = '\n# 每行=一个作品(deliverable)，相同 campaignId+creatorId 的行自动归组为一条合作记录\n# metrics 格式: 指标名:数值|指标名:数值 (|分隔多个，如 曝光:850000|点赞:51000)\n# screenshots 格式: url1;url2;url3 (;分隔多个URL)\n# execPrice: 该作品的执行价(数字，单位元)\n# CPS 字段(可选，填了cpsClicks即启用): cpsLinkUrl链接 | cpsClicks点击 | cpsOrders订单 | cpsGmv成交额 | cpsCommission佣金\n#   CPS 每日明细会自动按 S 曲线拆分（与作品发布日期对齐）\n# 必填字段: campaignId,creatorId,contentType';
   }
   const csv = `${header}\n${example}\n${note}\n`;
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });

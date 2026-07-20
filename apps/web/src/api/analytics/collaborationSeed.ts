@@ -374,7 +374,7 @@ function buildCpsLinkData(
  * 按 publishedAt 拆分 CPS 总量为每日明细（确定性 S 曲线，与 PostDaily 同日期范围）。
  * 当日 CTR / CVR 与总量保持一致（恒定）；clicks/orders/gmv/commission 按 S 曲线分布。
  */
-function buildCpsDaily(
+export function buildCpsDaily(
   publishedAt: string | undefined,
   totals: {
     clicks: number;

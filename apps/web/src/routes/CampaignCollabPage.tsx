@@ -12,7 +12,7 @@ import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediaket/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
 import { collaborationLabel, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
-import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
+import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collaborationSeed';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
@@ -133,6 +133,46 @@ export function CampaignCollabPage() {
       if (item.metrics) del.metrics = item.metrics as CollaborationDeliverable['metrics'];
       if (item.screenshots) del.screenshots = item.screenshots as CollaborationDeliverable['screenshots'];
       if (item.execPrice) del.execPrice = String(item.execPrice);
+
+      // CPS 挂链效果：填了 cpsClicks 即启用，自动按 S 曲线拆分每日明细
+      const cpsClicks = item.cpsClicks ? parseInt(String(item.cpsClicks), 10) || 0 : 0;
+      if (cpsClicks > 0) {
+        const cpsOrders = item.cpsOrders ? parseInt(String(item.cpsOrders), 10) || 0 : 0;
+        const cpsGmv = item.cpsGmv ? parseFloat(String(item.cpsGmv).replace(/[$,]/g, '')) || 0 : 0;
+        const cpsCommission = item.cpsCommission ? parseFloat(String(item.cpsCommission).replace(/[$,]/g, '')) || 0 : 0;
+        const linkUrl = item.cpsLinkUrl ? String(item.cpsLinkUrl) : undefined;
+
+        // 计算衍生指标
+        const ctr = 3 + (cpsClicks % 20) / 10; // 3%~5%
+        const impressions = Math.round((cpsClicks * 100) / ctr);
+        const cvr = cpsClicks > 0 ? (cpsOrders / cpsClicks) * 100 : 0;
+        const spend = Math.round(cpsCommission * 1.08);
+        const roas = spend > 0 ? cpsGmv / spend : 0;
+        const epc = cpsClicks > 0 ? cpsGmv / cpsClicks : 0;
+        const aov = cpsOrders > 0 ? cpsGmv / cpsOrders : 0;
+
+        // 按 S 曲线拆分每日
+        const daily = buildCpsDaily(
+          item.publishedAt ? String(item.publishedAt) : undefined,
+          { clicks: cpsClicks, impressions, orders: cpsOrders, gmv: cpsGmv, commission: cpsCommission, ctr, cvr, aov },
+        );
+
+        del.cps = {
+          linkUrl,
+          clicks: cpsClicks.toLocaleString('en-US'),
+          impressions: impressions.toLocaleString('en-US'),
+          ctr: `${ctr.toFixed(2)}%`,
+          orders: cpsOrders.toLocaleString('en-US'),
+          cvr: `${cvr.toFixed(2)}%`,
+          gmv: `$${Math.round(cpsGmv).toLocaleString('en-US')}`,
+          commission: `$${Math.round(cpsCommission).toLocaleString('en-US')}`,
+          spend: `$${spend.toLocaleString('en-US')}`,
+          roas: roas.toFixed(2),
+          epc: `$${epc.toFixed(2)}`,
+          daily,
+        };
+      }
+
       const arr = grouped.get(key) ?? [];
       arr.push(del);
       grouped.set(key, arr);
