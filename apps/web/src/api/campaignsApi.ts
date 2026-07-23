@@ -239,4 +239,14 @@ export const campaignsApi = {
     api
       .put<{ collaboration: CollaborationDTO }>(`/campaigns/${campaignId}/creators/${creatorId}/collaboration`, data)
       .then((r) => r.data.collaboration),
+
+  // ─── Batch Import (structured tables) ───────────────────────────────────────
+  importCreators: (items: Record<string, unknown>[]) =>
+    api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/creators', { items }).then((r) => r.data),
+  importCreatorAudience: (items: Record<string, unknown>[]) =>
+    api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/creator-audience', { items }).then((r) => r.data),
+  importCreatorWorks: (items: Record<string, unknown>[]) =>
+    api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/creator-works', { items }).then((r) => r.data),
+  importCollaborationDaily: (items: Record<string, unknown>[]) =>
+    api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/collaboration-daily', { items }).then((r) => r.data),
 };

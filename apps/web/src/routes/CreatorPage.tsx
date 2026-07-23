@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type ChangeEv
 import type { Creator } from '@mediaket/shared';
 import { listCreators } from '@/api/creators';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
+import { campaignsApi } from '@/api/campaignsApi';
 import { DataTable } from '@/components/DataTable';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 import { CreatorDetailDrawer } from '@/editor/components/CreatorDetailDrawer';
@@ -63,11 +64,14 @@ function deriveEngagementMedian(name: string, followers: string, engagement: str
 export function CreatorPage() {
   const { records, loading, reload } = useCreatorRecords();
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
+  const [previewKind, setPreviewKind] = useState<'creator' | 'creatorAudience' | 'creatorWorks'>('creator');
   const [editing, setEditing] = useState<DataRecordDTO | null>(null);
   const [adding, setAdding] = useState(false);
   const [detailCreator, setDetailCreator] = useState<Creator | null>(null);
   const csvRef = useRef<HTMLInputElement>(null);
   const jsonRef = useRef<HTMLInputElement>(null);
+  const audienceCsvRef = useRef<HTMLInputElement>(null);
+  const worksCsvRef = useRef<HTMLInputElement>(null);
 
   const empty = !loading && records.length === 0;
   void empty;
@@ -145,7 +149,34 @@ export function CreatorPage() {
     if (!f) return;
     try {
       const sheets = await parseFile(f);
+      setPreviewKind('creator');
       setPreview(buildPreviewFromRows('creator', sheets[0]?.rows ?? []));
+    } catch {
+      window.alert('文件解析失败');
+    }
+  }
+
+  async function onCsvAudience(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const sheets = await parseFile(f);
+      setPreviewKind('creatorAudience');
+      setPreview(buildPreviewFromRows('creatorAudience', sheets[0]?.rows ?? []));
+    } catch {
+      window.alert('文件解析失败');
+    }
+  }
+
+  async function onCsvWorks(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const sheets = await parseFile(f);
+      setPreviewKind('creatorWorks');
+      setPreview(buildPreviewFromRows('creatorWorks', sheets[0]?.rows ?? []));
     } catch {
       window.alert('文件解析失败');
     }
@@ -169,8 +200,17 @@ export function CreatorPage() {
 
   async function confirmImport(validItems: Record<string, unknown>[]) {
     setPreview(null);
-    const r = await dataApi.importMany('creator', validItems);
-    window.alert(`导入完成:新增 ${r.created},更新 ${r.updated},跳过 ${r.skipped}`);
+    const k = previewKind;
+    if (k === 'creator') {
+      const r = await dataApi.importMany('creator', validItems);
+      window.alert(`导入完成:新增 ${r.created},更新 ${r.updated},跳过 ${r.skipped}`);
+    } else if (k === 'creatorAudience') {
+      const r = await campaignsApi.importCreatorAudience(validItems);
+      window.alert(`画像导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+    } else if (k === 'creatorWorks') {
+      const r = await campaignsApi.importCreatorWorks(validItems);
+      window.alert(`作品导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+    }
     await reload();
   }
 
@@ -181,7 +221,19 @@ export function CreatorPage() {
           onClick={() => csvRef.current?.click()}
           className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary"
         >
-          导入 CSV/XLSX
+          导入达人 CSV/XLSX
+        </button>
+        <button
+          onClick={() => audienceCsvRef.current?.click()}
+          className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+        >
+          导入受众画像
+        </button>
+        <button
+          onClick={() => worksCsvRef.current?.click()}
+          className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+        >
+          导入达人作品
         </button>
         <button
           onClick={() => jsonRef.current?.click()}
@@ -189,12 +241,16 @@ export function CreatorPage() {
         >
           导入 JSON
         </button>
-        <button
-          onClick={() => downloadTemplate('creator')}
+        <select
+          onChange={(e) => { if (e.target.value) downloadTemplate(e.target.value as 'creator' | 'creatorAudience' | 'creatorWorks'); e.target.value = ''; }}
           className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+          defaultValue=""
         >
-          下载模板
-        </button>
+          <option value="" disabled>下载模板</option>
+          <option value="creator">达人基础模板</option>
+          <option value="creatorAudience">受众画像模板</option>
+          <option value="creatorWorks">达人作品模板</option>
+        </select>
         <button
           onClick={() => setAdding(true)}
           className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
@@ -202,6 +258,8 @@ export function CreatorPage() {
           新增
         </button>
         <input ref={csvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsv} />
+        <input ref={audienceCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvAudience} />
+        <input ref={worksCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvWorks} />
         <input ref={jsonRef} type="file" accept=".json,application/json" className="hidden" onChange={onJson} />
       </div>
       <DataTable
@@ -216,7 +274,7 @@ export function CreatorPage() {
       />
       {preview && (
         <ImportPreviewModal
-          kind="creator"
+          kind={previewKind}
           items={preview}
           onConfirm={confirmImport}
           onCancel={() => setPreview(null)}

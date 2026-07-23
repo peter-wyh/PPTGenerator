@@ -1,8 +1,8 @@
-import type { DataKind, PreviewItem } from '../dataImport';
+import type { ImportKind, PreviewItem } from '../dataImport';
 import { PREVIEW_COLUMNS } from '../dataImport';
 
 interface Props {
-  kind: DataKind;
+  kind: ImportKind;
   items: PreviewItem[];
   onConfirm: (validItems: Record<string, unknown>[]) => void;
   onCancel: () => void;
@@ -12,6 +12,14 @@ interface Props {
 export function ImportPreviewModal({ kind, items, onConfirm, onCancel }: Props) {
   const valid = items.filter((i) => i.valid);
   const columns = PREVIEW_COLUMNS[kind];
+  const labelMap: Record<string, string> = {
+    campaign: 'Campaign',
+    creator: '达人库',
+    creatorAudience: '达人画像',
+    creatorWorks: '达人作品',
+    collaboration: '达人合作',
+    collaborationDaily: '合作每日明细',
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div
@@ -19,7 +27,7 @@ export function ImportPreviewModal({ kind, items, onConfirm, onCancel }: Props) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="font-headings text-sm font-semibold text-foreground-primary">
-          导入预览 · {kind === 'campaign' ? 'Campaign' : kind === 'creator' ? '达人库' : '达人合作'} · 共 {items.length} 行(有效 {valid.length})
+          导入预览 · {labelMap[kind] ?? kind} · 共 {items.length} 行(有效 {valid.length})
         </div>
         <div className="overflow-auto rounded-lg border border-border-default">
           <table className="w-full min-w-[640px] border-collapse text-xs">

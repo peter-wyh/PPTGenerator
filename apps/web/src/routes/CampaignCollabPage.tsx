@@ -16,6 +16,7 @@ import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collabora
 import { formatUSD, formatEPC } from '@/lib/format';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
+import type { ImportKind } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 
@@ -79,7 +80,9 @@ export function CampaignCollabPage() {
   const [drawerRow, setDrawerRow] = useState<CollabRow | null>(null);
   const [tick, setTick] = useState(0);
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
+  const [previewKind, setPreviewKind] = useState<ImportKind>('collaboration');
   const csvRef = useRef<HTMLInputElement>(null);
+  const dailyCsvRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (filterCampaign) {
@@ -140,9 +143,36 @@ export function CampaignCollabPage() {
     if (!f) return;
     try {
       const sheets = await parseFile(f);
+      setPreviewKind('collaboration');
       setPreview(buildPreviewFromRows('collaboration', sheets[0]?.rows ?? []));
     } catch {
       window.alert('文件解析失败');
+    }
+  }
+
+  /** 每日明细 CSV/XLSX 导入 */
+  async function onCsvDaily(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const sheets = await parseFile(f);
+      setPreviewKind('collaborationDaily');
+      setPreview(buildPreviewFromRows('collaborationDaily', sheets[0]?.rows ?? []));
+    } catch {
+      window.alert('文件解析失败');
+    }
+  }
+
+  /** 确认导入每日明细：走后端 /campaigns/import/collaboration-daily */
+  async function confirmDailyImport(validItems: Record<string, unknown>[]) {
+    setPreview(null);
+    try {
+      const r = await campaignsApi.importCollaborationDaily(validItems);
+      window.alert(`每日明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      setTick((t) => t + 1);
+    } catch {
+      window.alert('每日明细导入失败');
     }
   }
 
@@ -383,20 +413,30 @@ export function CampaignCollabPage() {
         </div>
       </div>
 
-      <div className="mb-3 flex gap-2">
+      <div className="mb-3 flex flex-wrap gap-2">
         <button
           onClick={() => csvRef.current?.click()}
           className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary"
         >
-          导入合作数据 CSV/XLSX
+          导入合作汇总 CSV
         </button>
         <button
-          onClick={() => downloadTemplate('collaboration')}
-          className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+          onClick={() => dailyCsvRef.current?.click()}
+          className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary"
         >
-          下载模板
+          导入每日明细 CSV
         </button>
+        <select
+          onChange={(e) => { if (e.target.value) downloadTemplate(e.target.value as ImportKind); e.target.value = ''; }}
+          className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+          defaultValue=""
+        >
+          <option value="" disabled>下载模板</option>
+          <option value="collaboration">合作汇总模板</option>
+          <option value="collaborationDaily">每日明细模板</option>
+        </select>
         <input ref={csvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsv} />
+        <input ref={dailyCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvDaily} />
       </div>
 
       {filtered.length === 0 ? (
@@ -507,9 +547,9 @@ export function CampaignCollabPage() {
       {/* 导入预览弹窗 */}
       {preview && (
         <ImportPreviewModal
-          kind="collaboration"
+          kind={previewKind}
           items={preview}
-          onConfirm={confirmCollabImport}
+          onConfirm={previewKind === 'collaborationDaily' ? confirmDailyImport : confirmCollabImport}
           onCancel={() => setPreview(null)}
         />
       )}
