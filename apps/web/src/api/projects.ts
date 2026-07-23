@@ -21,6 +21,13 @@ export const projectsApi = {
   duplicate: (id: string) =>
     api.post<{ project: ProjectDetail }>(`/projects/${id}/duplicate`).then((r) => r.data.project),
 
+  /** 导出图片（PNG ZIP）：返回 Blob。
+   *  format=images，后端用 puppeteer 逐页截图 2x 高清 PNG，打包 ZIP。 */
+  exportImages: (id: string) =>
+    api
+      .post(`/projects/${id}/export`, undefined, { params: { format: 'images' }, responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
   // ---- M6 分享 ----
   /** 生成（或刷新）分享 token，返回 token。 */
   createShare: (id: string) =>

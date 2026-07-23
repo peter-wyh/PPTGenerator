@@ -3,13 +3,12 @@ import { projectsApi } from '../../api/projects';
 import { useEditorStore } from '../store';
 
 /**
- * 导出下拉菜单（M6）：导出 PDF / 复制分享链接。
- * 下拉交互复用 DatasourceMenu 模式（open state + useRef 外部点击关闭）。
+ * 导出下拉菜单（M6）：导出 PDF / 导出图片 / 复制分享链接。
  */
 export function ExportMenu() {
   const projectId = useEditorStore((s) => s.projectId);
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState<null | 'pdf' | 'share'>(null);
+  const [busy, setBusy] = useState<null | 'pdf' | 'images' | 'share'>(null);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -39,6 +38,28 @@ export function ExportMenu() {
       setOpen(false);
     } catch {
       setFeedback({ ok: false, text: 'PDF 导出失败，请稍后重试' });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleImages() {
+    if (!projectId || busy) return;
+    setBusy('images');
+    setFeedback(null);
+    try {
+      const blob = await projectsApi.exportImages(projectId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'slides.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setOpen(false);
+    } catch {
+      setFeedback({ ok: false, text: '图片导出失败，请稍后重试' });
     } finally {
       setBusy(null);
     }
@@ -82,6 +103,14 @@ export function ExportMenu() {
           >
             {busy === 'pdf' ? '导出中…' : '导出 PDF'}
           </button>
+          <button
+            onClick={handleImages}
+            disabled={busy !== null}
+            className="block w-full px-3 py-1.5 text-left text-sm text-foreground-primary hover:bg-surface-hover disabled:opacity-50"
+          >
+            {busy === 'images' ? '导出中…' : '导出图片 (PNG)'}
+          </button>
+          <hr className="my-1 border-border-default" />
           <button
             onClick={handleShare}
             disabled={busy !== null}

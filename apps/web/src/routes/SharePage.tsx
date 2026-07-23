@@ -67,6 +67,7 @@ export function SharePage() {
         {pages.map((page, i) => (
           <div
             key={page.id}
+            data-page
             style={{
               width: canvasWidth,
               height: canvasHeight,
