@@ -67,6 +67,7 @@ describe('dtoToCreator maps rich fields', () => {
     const dto: CreatorDTO = {
       id: 'cre-x', name: 'X', handle: '@x', platform: 'TikTok', tier: 'macro',
       followers: '100K', engagement: '7%', category: 'Beauty', region: 'US', avatar: null,
+      profileUrl: null, contact: null, rate: null,
       metrics: [], audience: { genderSplit: [{ label: 'Female', value: 55 }] },
       works: [{ id: 'w1', title: 'T' }],
       stats: [{ label: 'Followers', value: '100K', color: '#000' }],

@@ -46,4 +46,10 @@ router.put('/:campaignId/creators/:creatorId/performance', campaignController.up
 router.get('/:campaignId/creators/:creatorId/collaboration', campaignController.getCollaboration);
 router.put('/:campaignId/creators/:creatorId/collaboration', campaignController.upsertCollaboration);
 
+// ─── Batch Import (structured tables) ────────────────────────────────────────
+router.post('/import/creators', campaignController.importCreators);
+router.post('/import/creator-audience', campaignController.importCreatorAudience);
+router.post('/import/creator-works', campaignController.importCreatorWorks);
+router.post('/import/collaboration-daily', campaignController.importCollaborationDaily);
+
 export const campaignsRoutes = router;

@@ -41,6 +41,9 @@ export const createCreatorSchema = z.object({
   category: z.string(),
   region: z.string(),
   avatar: z.string().optional(),
+  profileUrl: z.string().optional(),
+  contact: z.any().optional(),
+  rate: z.any().optional(),
   metrics: z.any().optional(),
   audience: z.any().optional(),
   works: z.any().optional(),
@@ -63,6 +66,9 @@ export const createCampaignCreatorSchema = z.object({
   collabType: z.string().optional(),
   status: z.string().optional(),
   contentType: z.string().optional(),
+  collabId: z.string().optional(),
+  currency: z.string().optional(),
+  totalPrice: z.string().optional(),
 });
 
 export const updateCampaignCreatorSchema = createCampaignCreatorSchema.partial().omit({ campaignId: true, creatorId: true });

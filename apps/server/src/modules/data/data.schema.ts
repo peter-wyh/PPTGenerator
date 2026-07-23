@@ -141,6 +141,7 @@ export const creatorRecordDataSchema = z.object({
   category: z.string(),
   region: z.string(),
   avatar: z.string().max(2048).optional(),
+  profileUrl: z.string().max(2048).optional(),
   metrics: z.array(campaignMetricSchema),
   audience: creatorAudienceSchema.optional(),
   works: z.array(creatorWorkSchema).optional(),
@@ -179,6 +180,10 @@ const wordItemSchema = z.object({
 });
 const deliverableSchema = z.object({
   contentType: contentTypeSchema,
+  /// 作品原始链接（帖子/视频/直播 URL）。
+  postUrl: z.string().max(2048).optional(),
+  /// 作品形式：短视频/图文/直播切片/合集/UGC...
+  contentFormat: z.string().max(64).optional(),
   screenshots: z.array(screenshotItemSchema).optional(),
   metrics: z.array(collaborationMetricSchema).optional(),
   audience: audienceInsightSchema.optional(),
@@ -190,6 +195,17 @@ export const collaborationRecordDataSchema = z.object({
   id: z.string().min(1),
   campaignId: z.string().min(1),
   creatorId: z.string().min(1),
+  /// 合作分组 ID：一次合作（含多个 contentType）共享一个 ID。
+  collabId: z.string().optional(),
+  /// 合作币种（USD / CNY / EUR...）。
+  currency: z.string().max(8).optional(),
+  /// 合作总价（一次合作可能含多个 deliverable 的价格汇总）。
+  totalPrice: z.string().max(64).optional(),
+  /// 达人基础信息（导入时自动同步到 Creator 表，不填则从已有 Creator 读取）。
+  creatorName: z.string().optional(),
+  creatorAvatar: z.string().max(2048).optional(),
+  creatorHandle: z.string().optional(),
+  creatorProfileUrl: z.string().max(2048).optional(),
   deliverables: z.array(deliverableSchema).min(1),
 });
 

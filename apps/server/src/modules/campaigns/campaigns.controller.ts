@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService } from './campaigns.service';
+import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService, importService } from './campaigns.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
 
@@ -105,5 +105,30 @@ export const campaignController = {
       ...req.body,
     });
     res.status(201).json({ collaboration: collab });
+  }),
+
+  // ─── Batch Import ───────────────────────────────────────────────────────────
+  importCreators: asyncHandler(async (req: Request, res: Response) => {
+    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const result = await importService.importCreators(userId(req), items);
+    res.json(result);
+  }),
+
+  importCreatorAudience: asyncHandler(async (req: Request, res: Response) => {
+    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const result = await importService.importCreatorAudience(userId(req), items);
+    res.json(result);
+  }),
+
+  importCreatorWorks: asyncHandler(async (req: Request, res: Response) => {
+    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const result = await importService.importCreatorWorks(userId(req), items);
+    res.json(result);
+  }),
+
+  importCollaborationDaily: asyncHandler(async (req: Request, res: Response) => {
+    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const result = await importService.importCollaborationDaily(userId(req), items);
+    res.json(result);
   }),
 };

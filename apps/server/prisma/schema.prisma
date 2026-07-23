@@ -215,6 +215,14 @@ model Creator {
   region     String
   avatar     String?
 
+  /// 达人主页链接（平台个人页 URL）。
+  profileUrl String?
+  /// MCN / 经纪公司 / 邮箱 / 电话 / 联系人。
+  contact    Json?
+
+  /// 合作报价：{ currency, post, video, live, note }。
+  rate       Json?
+
   /// 频道 KPI 指标 + 受众画像 + 作品集 (结构多变,保留 JSON)。
   metrics    Json?
   audience   Json?
@@ -243,10 +251,18 @@ model CampaignCreator {
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
+  /// 合作分组 ID：一次合作（含多个 contentType）共享一个 ID。
+  /// 用于将同一次合作下的多个作品（video + reels + post）关联在一起。
+  collabId    String?
+
   /// 合作概要(可选,从旧 mock 数据补全)。
   collabType  String?
   status      String?
   contentType String?
+
+  /// 合作总价 + 币种（一次合作可能包含多个 contentType，价格汇总在此）。
+  currency    String?  @default("USD")
+  totalPrice  String?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -257,6 +273,7 @@ model CampaignCreator {
   @@unique([campaignId, creatorId])
   @@index([campaignId])
   @@index([creatorId])
+  @@index([collabId])
 }
 
 // ─── Phase 3: CreatorPerformance / Collaboration ────────────────────────────

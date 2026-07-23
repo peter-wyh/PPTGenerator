@@ -105,7 +105,16 @@ export const campaignCreatorService = {
     });
   },
 
-  async upsert(data: { campaignId: string; creatorId: string; collabType?: string; status?: string; contentType?: string }, ownerId: string) {
+  async upsert(data: {
+    campaignId: string;
+    creatorId: string;
+    collabType?: string;
+    status?: string;
+    contentType?: string;
+    collabId?: string;
+    currency?: string;
+    totalPrice?: string;
+  }, ownerId: string) {
     // Verify ownership
     await campaignService.getOrThrow(data.campaignId, ownerId);
     await creatorService.getOrThrow(data.creatorId, ownerId);
@@ -116,11 +125,21 @@ export const campaignCreatorService = {
         ...(data.collabType !== undefined && { collabType: data.collabType }),
         ...(data.status !== undefined && { status: data.status }),
         ...(data.contentType !== undefined && { contentType: data.contentType }),
+        ...(data.collabId !== undefined && { collabId: data.collabId }),
+        ...(data.currency !== undefined && { currency: data.currency }),
+        ...(data.totalPrice !== undefined && { totalPrice: data.totalPrice }),
       },
     });
   },
 
-  async update(id: string, ownerId: string, data: { collabType?: string; status?: string; contentType?: string }) {
+  async update(id: string, ownerId: string, data: {
+    collabType?: string;
+    status?: string;
+    contentType?: string;
+    collabId?: string;
+    currency?: string;
+    totalPrice?: string;
+  }) {
     const rec = await prisma.campaignCreator.findUnique({
       where: { id },
       include: { campaign: { select: { ownerId: true } } },
@@ -206,5 +225,216 @@ export const collaborationService = {
 
   async remove(linkId: string) {
     await prisma.collaboration.delete({ where: { campaignCreatorId: linkId } }).catch(() => {});
+  },
+};
+
+// ─── Batch Import (structured tables) ────────────────────────────────────────
+
+export const importService = {
+  /** 批量导入达人基础数据：按 id upsert Creator。 */
+  async importCreators(ownerId: string, items: Record<string, unknown>[]) {
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    for (const item of items) {
+      const id = String(item.id ?? '');
+      const name = String(item.name ?? '');
+      if (!id || !name) { skipped++; continue; }
+      // 构建 contact / rate JSON
+      const contact: Record<string, string> = {};
+      for (const k of ['mcn', 'agency', 'email', 'phone', 'contactPerson']) {
+        if (item[k]) contact[k] = String(item[k]);
+      }
+      const rate: Record<string, string> = {};
+      for (const k of ['currency', 'ratePost', 'rateVideo', 'rateLive', 'rateNote']) {
+        const rk = k === 'ratePost' ? 'post' : k === 'rateVideo' ? 'video' : k === 'rateLive' ? 'live' : k === 'rateNote' ? 'note' : k;
+        if (item[k]) rate[rk] = String(item[k]);
+      }
+      try {
+        const existing = await prisma.creator.findUnique({ where: { id } });
+        const data = {
+          id,
+          name,
+          handle: String(item.handle ?? ''),
+          platform: String(item.platform ?? ''),
+          tier: String(item.tier ?? ''),
+          followers: String(item.followers ?? ''),
+          engagement: String(item.engagement ?? ''),
+          category: String(item.category ?? ''),
+          region: String(item.region ?? ''),
+          ...('avatar' in item && item.avatar ? { avatar: String(item.avatar) } : {}),
+          ...('profileUrl' in item && item.profileUrl ? { profileUrl: String(item.profileUrl) } : {}),
+          ...('bio' in item && item.bio ? { profile: { bio: String(item.bio) } } : {}),
+          ...(Object.keys(contact).length ? { contact } : {}),
+          ...(Object.keys(rate).length ? { rate } : {}),
+          ownerId,
+        };
+        if (existing) {
+          await prisma.creator.update({ where: { id }, data });
+          updated++;
+        } else {
+          await prisma.creator.create({ data });
+          created++;
+        }
+      } catch {
+        skipped++;
+      }
+    }
+    return { created, updated, skipped };
+  },
+
+  /** 批量导入达人受众画像：merge 到 Creator.audience JSON。 */
+  async importCreatorAudience(ownerId: string, items: Record<string, unknown>[]) {
+    let updated = 0;
+    let skipped = 0;
+    for (const item of items) {
+      const creatorId = String(item.creatorId ?? '');
+      if (!creatorId) { skipped++; continue; }
+      try {
+        const creator = await prisma.creator.findFirst({ where: { id: creatorId, ownerId } });
+        if (!creator) { skipped++; continue; }
+        const audience = {
+          ...(creator.audience as object | null ?? {}),
+          genderSplit: [
+            ...(item.genderMale ? [{ label: 'Male', value: Number(item.genderMale) }] : []),
+            ...(item.genderFemale ? [{ label: 'Female', value: Number(item.genderFemale) }] : []),
+          ],
+          ageRange: [
+            ...(item.age13_17 ? [{ label: '13-17', value: Number(item.age13_17) }] : []),
+            ...(item.age18_24 ? [{ label: '18-24', value: Number(item.age18_24) }] : []),
+            ...(item.age25_34 ? [{ label: '25-34', value: Number(item.age25_34) }] : []),
+            ...(item.age35_44 ? [{ label: '35-44', value: Number(item.age35_44) }] : []),
+            ...(item.age45_64 ? [{ label: '45-64', value: Number(item.age45_64) }] : []),
+          ],
+          topCities: [
+            ...(item.topCity1 ? [{ label: String(item.topCity1), value: Number(item.topCity1Pct ?? 0) }] : []),
+            ...(item.topCity2 ? [{ label: String(item.topCity2), value: Number(item.topCity2Pct ?? 0) }] : []),
+            ...(item.topCity3 ? [{ label: String(item.topCity3), value: Number(item.topCity3Pct ?? 0) }] : []),
+          ],
+        };
+        await prisma.creator.update({ where: { id: creatorId }, data: { audience: audience as unknown as Prisma.InputJsonValue } });
+        updated++;
+      } catch {
+        skipped++;
+      }
+    }
+    return { updated, skipped };
+  },
+
+  /** 批量导入达人作品：merge 到 Creator.works JSON 数组。 */
+  async importCreatorWorks(ownerId: string, items: Record<string, unknown>[]) {
+    let updated = 0;
+    let skipped = 0;
+    // 按 creatorId 分组
+    const grouped = new Map<string, Record<string, unknown>[]>();
+    for (const item of items) {
+      const creatorId = String(item.creatorId ?? '');
+      if (!creatorId) { skipped++; continue; }
+      if (!grouped.has(creatorId)) grouped.set(creatorId, []);
+      grouped.get(creatorId)!.push(item);
+    }
+    for (const [creatorId, works] of grouped) {
+      try {
+        const creator = await prisma.creator.findFirst({ where: { id: creatorId, ownerId } });
+        if (!creator) { skipped += works.length; continue; }
+        const existing = (creator.works as Record<string, unknown>[] | null) ?? [];
+        // 按 workId 去重 merge
+        const byId = new Map(existing.map((w) => [String(w.id ?? w.workId ?? ''), w]));
+        for (const w of works) {
+          const wid = String(w.workId ?? '');
+          byId.set(wid, {
+            id: wid,
+            title: String(w.title ?? ''),
+            ...('cover' in w && w.cover ? { cover: String(w.cover) } : {}),
+            ...('url' in w && w.url ? { url: String(w.url) } : {}),
+            ...('platform' in w && w.platform ? { platform: String(w.platform) } : {}),
+            ...('publishedAt' in w && w.publishedAt ? { publishedAt: String(w.publishedAt) } : {}),
+            ...('impressions' in w && w.impressions ? { impressions: String(w.impressions) } : {}),
+            ...('likes' in w && w.likes ? { likes: String(w.likes) } : {}),
+            ...('comments' in w && w.comments ? { comments: String(w.comments) } : {}),
+            ...('shares' in w && w.shares ? { shares: String(w.shares) } : {}),
+            ...('saves' in w && w.saves ? { saves: String(w.saves) } : {}),
+            ...('engagementRate' in w && w.engagementRate ? { engagementRate: String(w.engagementRate) } : {}),
+            ...('contentType' in w && w.contentType ? { contentType: String(w.contentType) } : {}),
+            ...('hashtags' in w && w.hashtags ? { hashtags: (w.hashtags as string).split(';').map((s) => s.trim()).filter(Boolean) } : {}),
+            ...('productLink' in w && w.productLink ? { productLink: String(w.productLink) } : {}),
+            ...('duration' in w && w.duration ? { duration: String(w.duration) } : {}),
+            ...('featured' in w && w.featured !== undefined ? { featured: w.featured === 'true' || w.featured === '1' || w.featured === 'yes' } : {}),
+          });
+        }
+        await prisma.creator.update({ where: { id: creatorId }, data: { works: [...byId.values()] as unknown as Prisma.InputJsonValue } });
+        updated += works.length;
+      } catch {
+        skipped += works.length;
+      }
+    }
+    return { updated, skipped };
+  },
+
+  /** 批量导入合作每日明细：按 (campaignId, creatorId) 归组 → CreatorPerformance.daily JSON。 */
+  async importCollaborationDaily(ownerId: string, items: Record<string, unknown>[]) {
+    let updated = 0;
+    let skipped = 0;
+    // 按 campaignId+creatorId 分组
+    const grouped = new Map<string, Record<string, unknown>[]>();
+    for (const item of items) {
+      const key = `${item.campaignId}:${item.creatorId}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(item);
+    }
+    for (const [key, dailyRows] of grouped) {
+      const [campaignId, creatorId] = key.split(':');
+      try {
+        const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, ownerId } });
+        if (!campaign) { skipped += dailyRows.length; continue; }
+        const link = await prisma.campaignCreator.findUnique({
+          where: { campaignId_creatorId: { campaignId, creatorId } },
+        });
+        if (!link) { skipped += dailyRows.length; continue; }
+        // 按 contentType 进一步归组
+        const byContentType = new Map<string, Record<string, unknown>[]>();
+        for (const row of dailyRows) {
+          const ct = String(row.contentType ?? 'default');
+          if (!byContentType.has(ct)) byContentType.set(ct, []);
+          byContentType.get(ct)!.push({
+            date: String(row.dailyDate ?? ''),
+            ...('dailyImpressions' in row && row.dailyImpressions ? { impressions: Number(row.dailyImpressions) } : {}),
+            ...('dailyLikes' in row && row.dailyLikes ? { likes: Number(row.dailyLikes) } : {}),
+            ...('dailyComments' in row && row.dailyComments ? { comments: Number(row.dailyComments) } : {}),
+            ...('dailyShares' in row && row.dailyShares ? { shares: Number(row.dailyShares) } : {}),
+            ...('dailySaves' in row && row.dailySaves ? { saves: Number(row.dailySaves) } : {}),
+            ...('dailyCpsClicks' in row && row.dailyCpsClicks ? { cpsClicks: Number(row.dailyCpsClicks) } : {}),
+            ...('dailyCpsOrders' in row && row.dailyCpsOrders ? { cpsOrders: Number(row.dailyCpsOrders) } : {}),
+            ...('dailyCpsGmv' in row && row.dailyCpsGmv ? { cpsGmv: Number(row.dailyCpsGmv) } : {}),
+            ...('dailyCpsCommission' in row && row.dailyCpsCommission ? { cpsCommission: Number(row.dailyCpsCommission) } : {}),
+          });
+        }
+        // Merge daily data into CreatorPerformance
+        const existingPerf = await prisma.creatorPerformance.findUnique({ where: { campaignCreatorId: link.id } });
+        const existingDaily = (existingPerf?.daily as Record<string, unknown>[] | null) ?? [];
+        // Merge: append new daily entries by date+contentType key
+        const byDate = new Map(existingDaily.map((d) => [`${d.contentType ?? 'default'}:${d.date}`, d]));
+        for (const [ct, rows] of byContentType) {
+          for (const row of rows) {
+            byDate.set(`${ct}:${row.date}`, { ...row, contentType: ct });
+          }
+        }
+        const mergedDaily = [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        if (existingPerf) {
+          await prisma.creatorPerformance.update({
+            where: { campaignCreatorId: link.id },
+            data: { daily: mergedDaily as unknown as Prisma.InputJsonValue },
+          });
+        } else {
+          await prisma.creatorPerformance.create({
+            data: { campaignCreatorId: link.id, summary: {}, daily: mergedDaily as unknown as Prisma.InputJsonValue },
+          });
+        }
+        updated += dailyRows.length;
+      } catch {
+        skipped += dailyRows.length;
+      }
+    }
+    return { updated, skipped };
   },
 };

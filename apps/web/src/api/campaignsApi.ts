@@ -61,6 +61,9 @@ export interface CreatorDTO {
   category: string;
   region: string;
   avatar: string | null;
+  profileUrl: string | null;
+  contact: unknown;
+  rate: unknown;
   metrics: unknown;
   audience: unknown;
   works: unknown;
@@ -114,8 +117,9 @@ function deriveEngagementMedian(name: string, followers: string, engagement: str
 export function dtoToCreator(dto: CreatorDTO): Creator {
   const profile = (dto.profile ?? null) as {
     bio?: string; tags?: string[];
-    contact?: Creator['contact']; rate?: Creator['rate'];
   } | null;
+  const contact = (dto.contact ?? null) as Creator['contact'] | null;
+  const rate = (dto.rate ?? null) as Creator['rate'] | null;
   // 优先用 DB stats 中的 recentPostsCount / engagementMedian；缺失时派生确定性 mock
   const stats = (dto.stats ?? null) as {
     recentPostsCount?: number; engagementMedian?: string;
@@ -137,8 +141,8 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     stats: (dto.stats as Creator['stats']) ?? undefined,
     bio: profile?.bio,
     tags: profile?.tags,
-    contact: profile?.contact,
-    rate: profile?.rate,
+    contact: contact ?? undefined,
+    rate: rate ?? undefined,
     recentPostsCount: stats?.recentPostsCount ?? deriveRecentPosts(dto.name, dto.tier),
     engagementMedian: stats?.engagementMedian ?? deriveEngagementMedian(dto.name, dto.followers, dto.engagement),
   };
@@ -151,6 +155,9 @@ export interface CampaignCreatorDTO {
   collabType: string | null;
   status: string | null;
   contentType: string | null;
+  collabId: string | null;
+  currency: string | null;
+  totalPrice: string | null;
   creator?: CreatorDTO;
 }
 
