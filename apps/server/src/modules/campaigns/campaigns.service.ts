@@ -1,6 +1,6 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 // ─── Campaign ────────────────────────────────────────────────────────────────
 
@@ -267,6 +267,15 @@ export const importService = {
           ...('bio' in item && item.bio ? { profile: { bio: String(item.bio) } } : {}),
           ...(Object.keys(contact).length ? { contact } : {}),
           ...(Object.keys(rate).length ? { rate } : {}),
+          // 近 90 天数据存入 stats JSON
+          ...(('recentPostsCount' in item && item.recentPostsCount) || ('engagementMedian' in item && item.engagementMedian)
+            ? {
+                stats: {
+                  ...('recentPostsCount' in item && item.recentPostsCount ? { recentPostsCount: parseInt(String(item.recentPostsCount), 10) || 0 } : {}),
+                  ...('engagementMedian' in item && item.engagementMedian ? { engagementMedian: String(item.engagementMedian) } : {}),
+                } as Prisma.InputJsonValue
+              }
+            : {}),
           ownerId,
         };
         if (existing) {
@@ -360,6 +369,18 @@ export const importService = {
             ...('productLink' in w && w.productLink ? { productLink: String(w.productLink) } : {}),
             ...('duration' in w && w.duration ? { duration: String(w.duration) } : {}),
             ...('featured' in w && w.featured !== undefined ? { featured: w.featured === 'true' || w.featured === '1' || w.featured === 'yes' } : {}),
+            // 带货归因 attribution
+            ...(('attrClicks' in w && w.attrClicks) || ('attrOrders' in w && w.attrOrders) || ('attrGmv' in w && w.attrGmv) || ('attrCtr' in w && w.attrCtr) || ('attrCvr' in w && w.attrCvr)
+              ? {
+                  attribution: {
+                    ...('attrClicks' in w && w.attrClicks ? { clicks: String(w.attrClicks) } : {}),
+                    ...('attrOrders' in w && w.attrOrders ? { orders: String(w.attrOrders) } : {}),
+                    ...('attrGmv' in w && w.attrGmv ? { gmv: String(w.attrGmv) } : {}),
+                    ...('attrCtr' in w && w.attrCtr ? { ctr: String(w.attrCtr) } : {}),
+                    ...('attrCvr' in w && w.attrCvr ? { cvr: String(w.attrCvr) } : {}),
+                  }
+                }
+              : {}),
           });
         }
         await prisma.creator.update({ where: { id: creatorId }, data: { works: [...byId.values()] as unknown as Prisma.InputJsonValue } });
@@ -428,6 +449,120 @@ export const importService = {
         } else {
           await prisma.creatorPerformance.create({
             data: { campaignCreatorId: link.id, summary: {}, daily: mergedDaily as unknown as Prisma.InputJsonValue },
+          });
+        }
+        updated += dailyRows.length;
+      } catch {
+        skipped += dailyRows.length;
+      }
+    }
+    return { updated, skipped };
+  },
+
+  /** 导入 CPS 链接效果汇总（每条链接一行→CpsPerformance upsert）。 */
+  async importCpsPerformance(_ownerId: string, items: Record<string, unknown>[]) {
+    let updated = 0, skipped = 0;
+    for (const item of items) {
+      try {
+        const campaignId = String(item.campaignId ?? '');
+        const creatorId = String(item.creatorId ?? '');
+        const contentType = String(item.contentType ?? '');
+        if (!campaignId || !creatorId || !contentType) { skipped++; continue; }
+
+        const link = await prisma.campaignCreator.findFirst({
+          where: { campaignId, creatorId },
+        });
+        if (!link) { skipped++; continue; }
+
+        const clicks = parseInt(String(item.clicks ?? '0'), 10) || 0;
+        const impressions = parseInt(String(item.impressions ?? '0'), 10) || 0;
+        const orders = parseInt(String(item.orders ?? '0'), 10) || 0;
+        const gmv = new Prisma.Decimal(parseFloat(String(item.gmv ?? '0').replace(/[$,]/g, '')) || 0);
+        const commission = new Prisma.Decimal(parseFloat(String(item.commission ?? '0').replace(/[$,]/g, '')) || 0);
+        const spend = new Prisma.Decimal(parseFloat(String(item.spend ?? '0').replace(/[$,]/g, '')) || 0);
+
+        await prisma.cpsPerformance.upsert({
+          where: { campaignCreatorId_contentType: { campaignCreatorId: link.id, contentType } },
+          create: {
+            campaignCreatorId: link.id,
+            contentType,
+            linkUrl: String(item.linkUrl ?? '') || null,
+            clicks, impressions, orders,
+            gmv, commission, spend,
+          },
+          update: {
+            linkUrl: String(item.linkUrl ?? '') || null,
+            clicks, impressions, orders,
+            gmv, commission, spend,
+          },
+        });
+        updated++;
+      } catch {
+        skipped++;
+      }
+    }
+    return { updated, skipped };
+  },
+
+  /** 导入 CPS 每日明细（合并到 CpsPerformance.daily JSON）。 */
+  async importCpsDaily(_ownerId: string, items: Record<string, unknown>[]) {
+    let updated = 0, skipped = 0;
+    // 按 (campaignId, creatorId, contentType) 分组
+    const grouped = new Map<string, Record<string, unknown>[]>();
+    for (const item of items) {
+      const key = `${String(item.campaignId)}::${String(item.creatorId)}::${String(item.contentType)}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(item);
+    }
+
+    for (const [key, dailyRows] of grouped) {
+      try {
+        const [campaignId, creatorId, contentType] = key.split('::');
+        const link = await prisma.campaignCreator.findFirst({
+          where: { campaignId, creatorId },
+        });
+        if (!link) { skipped += dailyRows.length; continue; }
+
+        const existingCps = await prisma.cpsPerformance.findUnique({
+          where: { campaignCreatorId_contentType: { campaignCreatorId: link.id, contentType } },
+        });
+
+        // 合并每日数据
+        const existingDaily = new Map<string, Record<string, unknown>>();
+        if (existingCps?.daily) {
+          const arr = (existingCps.daily as unknown as { date: string }[]) || [];
+          for (const d of arr) {
+            if (d.date) existingDaily.set(d.date, d as Record<string, unknown>);
+          }
+        }
+
+        for (const row of dailyRows) {
+          const date = String(row.date ?? '');
+          if (!date) continue;
+          existingDaily.set(date, {
+            date,
+            ...('dailyClicks' in row && row.dailyClicks ? { clicks: String(row.dailyClicks) } : {}),
+            ...('dailyImpressions' in row && row.dailyImpressions ? { impressions: String(row.dailyImpressions) } : {}),
+            ...('dailyOrders' in row && row.dailyOrders ? { orders: String(row.dailyOrders) } : {}),
+            ...('dailyGmv' in row && row.dailyGmv ? { gmv: `$${row.dailyGmv}` } : {}),
+            ...('dailyCommission' in row && row.dailyCommission ? { commission: `$${row.dailyCommission}` } : {}),
+          });
+        }
+
+        const mergedDaily = [...existingDaily.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+        if (existingCps) {
+          await prisma.cpsPerformance.update({
+            where: { campaignCreatorId_contentType: { campaignCreatorId: link.id, contentType } },
+            data: { daily: mergedDaily as unknown as Prisma.InputJsonValue },
+          });
+        } else {
+          await prisma.cpsPerformance.create({
+            data: {
+              campaignCreatorId: link.id,
+              contentType,
+              daily: mergedDaily as unknown as Prisma.InputJsonValue,
+            },
           });
         }
         updated += dailyRows.length;

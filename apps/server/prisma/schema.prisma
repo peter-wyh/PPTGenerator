@@ -269,6 +269,7 @@ model CampaignCreator {
 
   performance   CreatorPerformance?
   collaboration Collaboration?
+  cpsPerformances CpsPerformance[]
 
   @@unique([campaignId, creatorId])
   @@index([campaignId])
@@ -318,4 +319,37 @@ model Collaboration {
   updatedAt         DateTime        @updatedAt
 
   @@index([legacyId])
+}
+
+// ─── Phase 4: CPS 链接效果独立表 ────────────────────────────────────────────
+// 每条 CPS 跟踪链接 = 一行；按 (campaign × creator × contentType) 归组。
+// 汇总指标为结构化列，每日明细保留 JSON。
+
+/// CPS 链接效果（一行=一条 CPS 跟踪链接的汇总数据）。
+model CpsPerformance {
+  id                String          @id @default(cuid())
+  campaignCreatorId String
+  campaignCreator   CampaignCreator @relation(fields: [campaignCreatorId], references: [id], onDelete: Cascade)
+
+  /// 归属的合作作品类型（post / reels / video / image / live / story）。
+  contentType       String
+  /// CPS 跟踪链接 URL。
+  linkUrl           String?
+
+  /// 结构化汇总指标（直接可查、可聚合）。
+  clicks            Int             @default(0)
+  impressions       Int             @default(0)
+  orders            Int             @default(0)
+  gmv               Decimal         @default(0) @db.Decimal(14, 2)
+  commission        Decimal         @default(0) @db.Decimal(14, 2)
+  spend             Decimal         @default(0) @db.Decimal(14, 2)
+
+  /// 每日明细（CpsDaily[] JSON）。
+  daily             Json?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([campaignCreatorId, contentType])
+  @@index([campaignCreatorId])
 }

@@ -1,12 +1,14 @@
 /** 数据管理导入工具:字段定义、预览构造、模板下载。
  *
  * 支持的导入类型:
- * - campaign:       Campaign 基础数据
- * - creator:        达人基础数据（含联系方式 + 报价）
- * - creatorAudience: 达人受众画像
- * - creatorWorks:   达人频道历史作品
- * - collaboration:  合作汇总（一个作品一行，含 CPS 汇总 + 执行价格）
- * - collaborationDaily: 合作每日明细
+ * - campaign:            Campaign 基础数据
+ * - creator:             达人基础数据（含联系方式 + 报价 + 近90天数据）
+ * - creatorAudience:     达人受众画像
+ * - creatorWorks:        达人频道历史作品（含带货归因）
+ * - collaboration:       合作汇总（一个作品一行，含 CPS 汇总 + 执行价格）
+ * - collaborationDaily:  合作每日明细（互动数据）
+ * - cps:                 CPS 链接效果汇总（一条 CPS 链接一行）
+ * - cpsDaily:            CPS 链接每日明细
  */
 
 // ─── Campaign ──────────────────────────────────────────────────────────────
@@ -19,6 +21,8 @@ export const CAMPAIGN_REQUIRED = ['id', 'name', 'advertiser', 'businessLine', 'p
 export const CREATOR_FIELDS = [
   'id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region',
   'avatar', 'profileUrl', 'bio', 'tags',
+  // 近 90 天数据
+  'recentPostsCount', 'engagementMedian',
   // 联系方式
   'mcn', 'agency', 'email', 'phone', 'contactPerson',
   // 报价
@@ -42,6 +46,8 @@ export const CREATOR_WORKS_FIELDS = [
   'publishedAt', 'impressions', 'likes', 'comments', 'shares', 'saves',
   'engagementRate', 'contentType', 'hashtags', 'productLink',
   'duration', 'featured',
+  // 带货归因
+  'attrClicks', 'attrOrders', 'attrGmv', 'attrCtr', 'attrCvr',
 ] as const;
 export const CREATOR_WORKS_REQUIRED = ['creatorId', 'workId', 'title'];
 
@@ -53,8 +59,6 @@ export const COLLAB_DELIVERABLE_FIELDS = [
   'metrics', 'execPrice', 'currency', 'screenshots',
   // 达人基础信息（导入时自动 upsert 到 Creator 表）
   'creatorName', 'creatorAvatar', 'creatorHandle', 'creatorProfileUrl',
-  // CPS 汇总
-  'cpsLinkUrl', 'cpsClicks', 'cpsOrders', 'cpsGmv', 'cpsCommission',
 ] as const;
 export const COLLAB_REQUIRED = ['campaignId', 'creatorId', 'contentType'];
 
@@ -64,14 +68,31 @@ export const COLLAB_DAILY_FIELDS = [
   'campaignId', 'creatorId', 'collabId', 'contentType', 'publishedAt',
   'dailyDate', 'dailyImpressions', 'dailyLikes', 'dailyComments',
   'dailyShares', 'dailySaves',
-  'dailyCpsClicks', 'dailyCpsOrders', 'dailyCpsGmv', 'dailyCpsCommission',
 ] as const;
 export const COLLAB_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 'dailyDate'];
+
+// ─── CPS 链接效果汇总（独立表，一条链接一行）──────────────────────────────
+
+export const CPS_FIELDS = [
+  'campaignId', 'creatorId', 'collabId', 'contentType',
+  'linkUrl', 'clicks', 'impressions', 'orders',
+  'gmv', 'commission', 'spend',
+] as const;
+export const CPS_REQUIRED = ['campaignId', 'creatorId', 'contentType'];
+
+// ─── CPS 每日明细 ───────────────────────────────────────────────────────────
+
+export const CPS_DAILY_FIELDS = [
+  'campaignId', 'creatorId', 'collabId', 'contentType', 'date',
+  'dailyClicks', 'dailyImpressions', 'dailyOrders',
+  'dailyGmv', 'dailyCommission',
+] as const;
+export const CPS_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 'date'];
 
 // ─── 类型定义 ──────────────────────────────────────────────────────────────
 
 export type DataKind = 'campaign' | 'creator' | 'collaboration';
-export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily';
+export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily' | 'cps' | 'cpsDaily';
 
 export interface PreviewItem {
   data: Record<string, unknown>;
@@ -86,6 +107,8 @@ const FIELDS: Record<ImportKind, readonly string[]> = {
   creatorAudience: CREATOR_AUDIENCE_FIELDS,
   creatorWorks: CREATOR_WORKS_FIELDS,
   collaborationDaily: COLLAB_DAILY_FIELDS,
+  cps: CPS_FIELDS,
+  cpsDaily: CPS_DAILY_FIELDS,
 };
 const REQUIRED: Record<ImportKind, string[]> = {
   campaign: [...CAMPAIGN_REQUIRED],
@@ -94,6 +117,8 @@ const REQUIRED: Record<ImportKind, string[]> = {
   creatorAudience: [...CREATOR_AUDIENCE_REQUIRED],
   creatorWorks: [...CREATOR_WORKS_REQUIRED],
   collaborationDaily: [...COLLAB_DAILY_REQUIRED],
+  cps: [...CPS_REQUIRED],
+  cpsDaily: [...CPS_DAILY_REQUIRED],
 };
 
 /** 预览表格展示的列。 */
@@ -103,7 +128,9 @@ export const PREVIEW_COLUMNS: Record<ImportKind, string[]> = {
   collaboration: ['campaignId', 'creatorId', 'collabId', 'contentType', 'contentFormat', 'publishedAt', 'metrics', 'execPrice', 'currency'],
   creatorAudience: ['creatorId', 'genderMale', 'genderFemale', 'age18_24', 'age25_34', 'topCity1'],
   creatorWorks: ['creatorId', 'workId', 'title', 'platform', 'publishedAt', 'impressions', 'likes', 'engagementRate'],
-  collaborationDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'dailyDate', 'dailyImpressions', 'dailyCpsGmv'],
+  collaborationDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'dailyDate', 'dailyImpressions'],
+  cps: ['campaignId', 'creatorId', 'collabId', 'contentType', 'linkUrl', 'clicks', 'orders', 'gmv', 'commission'],
+  cpsDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'date', 'dailyClicks', 'dailyOrders', 'dailyGmv'],
 };
 
 function checkRequired(kind: ImportKind, data: Record<string, unknown>): string[] {
@@ -180,8 +207,8 @@ export function downloadTemplate(kind: ImportKind): void {
     example = 'camp-001,春季新品推广,示例品牌,FT,TikTok,2026-03-01,2026-03-31,$100K,Active,alex,cre-mia;cre-sofia,GMV:120000|ROAS:3.5|Spend:35000|Impressions:15M,TikTok:短视频;TikTok:直播';
     note = '\n# metrics 格式: label:value|label:value (|分隔多个)\n# platforms 格式: platform:form;platform:form (;分隔多个)\n# creatorIds 格式: id1;id2;id3 (;分隔)\n# 必填字段: id,name,advertiser,businessLine,platform,startDate,endDate,budget';
   } else if (kind === 'creator') {
-    example = 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,https://cdn.example.com/avatar.jpg,https://tiktok.com/@example,示例简介,标签1;标签2,示例MCN,示例Agency,contact@example.com,+1-555-0100,联系人小王,USD,5000,8000,15000,报价备注';
-    note = '\n# tags 格式: tag1;tag2;tag3 (;分隔)\n# 报价: currency=币种, ratePost=图文报价, rateVideo=视频报价, rateLive=直播报价, rateNote=备注\n# 必填字段: id,name,handle,platform,tier,followers,engagement,category,region';
+    example = 'cre-example,示例达人,@example,TikTok,mega,1.28M,8.7%,示例品类,US,https://cdn.example.com/avatar.jpg,https://tiktok.com/@example,示例简介,标签1;标签2,52,6.8%,示例MCN,示例Agency,contact@example.com,+1-555-0100,联系人小王,USD,5000,8000,15000,报价备注';
+    note = '\n# tags 格式: tag1;tag2;tag3 (;分隔)\n# recentPostsCount: 近90天新发作品数\n# engagementMedian: 近90天互动中位数\n# 报价: currency=币种, ratePost=图文报价, rateVideo=视频报价, rateLive=直播报价, rateNote=备注\n# 必填字段: id,name,handle,platform,tier,followers,engagement,category,region';
   } else if (kind === 'creatorAudience') {
     example = [
       'cre-example,45,55,5,38,42,12,3,New York,15,Los Angeles,8,Chicago,4',
@@ -189,16 +216,14 @@ export function downloadTemplate(kind: ImportKind): void {
     note = '\n# 性别: genderMale+genderFemale=100\n# 年龄: age13_17+age18_24+age25_34+age35_44+age45_64=100\n# 城市: topCity1+Pct, topCity2+Pct, topCity3+Pct\n# 数值均为百分比(0-100)\n# 必填字段: creatorId';
   } else if (kind === 'creatorWorks') {
     example = [
-      'cre-example,work-001,品牌合作短视频,https://cdn.example.com/cover1.jpg,https://tiktok.com/@example/video/123,TikTok,2026-03-15,850000,51000,3200,2800,1500,6.5%,video,品牌词1;品牌词2,https://shop.example.com/product,00:45,yes',
-      'cre-example,work-002,日常分享,https://cdn.example.com/cover2.jpg,https://tiktok.com/@example/video/456,TikTok,2026-02-20,420000,28000,1500,800,600,7.2%,post,,,00:00,no',
+      'cre-example,work-001,品牌合作短视频,https://cdn.example.com/cover1.jpg,https://tiktok.com/@example/video/123,TikTok,2026-03-15,850000,51000,3200,2800,1500,6.5%,video,品牌词1;品牌词2,https://shop.example.com/product,00:45,yes,3200,156,28000,4.2%,4.9%',
+      'cre-example,work-002,日常分享,https://cdn.example.com/cover2.jpg,https://tiktok.com/@example/video/456,TikTok,2026-02-20,420000,28000,1500,800,600,7.2%,post,,,00:00,no,,,,,',
     ].join('\n');
-    note = '\n# hashtags 格式: tag1;tag2;tag3 (;分隔)\n# featured: true/false (或 yes/no, 1/0)\n# 必填字段: creatorId,workId,title';
+    note = '\n# hashtags 格式: tag1;tag2;tag3 (;分隔)\n# featured: true/false (或 yes/no, 1/0)\n# 带货归因(可选): attrClicks=点击, attrOrders=订单, attrGmv=GMV, attrCtr=CTR%, attrCvr=CVR%\n# 必填字段: creatorId,workId,title';
   } else if (kind === 'collaboration') {
-    // 合作汇总：一个作品一行
     example = [
-      'camp-001,cre-mia,collab-001,video,短视频,2026-03-15,TikTok,https://tiktok.com/@mia/video/100,曝光:850000|点赞:51000|评论:3200|转发:2800,67500,USD,https://cdn.example.com/s1.jpg;https://cdn.example.com/s2.jpg,米娅,https://cdn.example.com/mia.jpg,@mia,https://tiktok.com/@mia,https://shop.example.com/cps/abc,12500,380,45000,4500',
-      'camp-001,cre-mia,collab-001,reels,图文,2026-03-16,TikTok,https://tiktok.com/@mia/reels/200,曝光:420000|点赞:28000|评论:1500,32500,USD,,,,米娅,,,,,,',
-      'camp-001,cre-sofia,collab-002,post,图文,2026-03-18,Instagram,https://instagram.com/p/xyz,曝光:1200000|点赞:95000|评论:4100|收藏:12000,80000,USD,https://cdn.example.com/ig.jpg,索菲亚,https://cdn.example.com/sofia.jpg,@sofia,https://instagram.com/sofia,https://shop.example.com/cps/def,8900,215,28000,2800',
+      'camp-001,cre-mia,collab-001,video,短视频,2026-03-15,TikTok,https://tiktok.com/@mia/video/100,曝光:850000|点赞:51000|评论:3200|转发:2800,67500,USD,https://cdn.example.com/s1.jpg;https://cdn.example.com/s2.jpg,米娅,https://cdn.example.com/mia.jpg,@mia,https://tiktok.com/@mia',
+      'camp-001,cre-sofia,collab-002,post,图文,2026-03-18,Instagram,https://instagram.com/p/xyz,曝光:1200000|点赞:95000|评论:4100|收藏:12000,80000,USD,https://cdn.example.com/ig.jpg,索菲亚,https://cdn.example.com/sofia.jpg,@sofia,https://instagram.com/sofia',
     ].join('\n');
     note = [
       '# 每行=一个作品(deliverable)',
@@ -209,19 +234,44 @@ export function downloadTemplate(kind: ImportKind): void {
       '# creatorName/Avatar/Handle/ProfileUrl: 导入时自动 upsert 到达人库',
       '# metrics 格式: 指标名:数值|指标名:数值 (|分隔)',
       '# screenshots 格式: url1;url2;url3 (;分隔)',
-      '# CPS 汇总(可选): cpsLinkUrl|cpsClicks|cpsOrders|cpsGmv|cpsCommission',
+      '# CPS 链接效果请用独立 CPS 导入(非本表)',
       '# 必填字段: campaignId,creatorId,contentType',
     ].join('\n');
-  } else { // collaborationDaily
+  } else if (kind === 'collaborationDaily') {
     example = [
-      'camp-001,cre-mia,collab-001,video,2026-03-15,2026-03-15,120000,8000,500,300,200,1800,55,6500,650',
-      'camp-001,cre-mia,collab-001,video,2026-03-15,2026-03-16,85000,5200,320,200,150,1600,48,5800,580',
-      'camp-001,cre-mia,collab-001,video,2026-03-15,2026-03-17,60000,3800,250,150,100,1400,42,5200,520',
+      'camp-001,cre-mia,collab-001,video,2026-03-15,2026-03-15,120000,8000,500,300,200',
+      'camp-001,cre-mia,collab-001,video,2026-03-15,2026-03-16,85000,5200,320,200,150',
+      'camp-001,cre-mia,collab-001,video,2026-03-15,2026-03-17,60000,3800,250,150,100',
     ].join('\n');
     note = [
       '# 每行=一条每日明细数据',
       '# 关联键: campaignId+creatorId+collabId+contentType+publishedAt → 对应合作汇总中的作品',
       '# 必填字段: campaignId,creatorId,contentType,dailyDate',
+    ].join('\n');
+  } else if (kind === 'cps') {
+    example = [
+      'camp-001,cre-mia,collab-001,video,https://shop.example.com/cps/abc,12500,375000,380,45000,4500,4860',
+      'camp-001,cre-sofia,collab-002,post,https://shop.example.com/cps/def,8900,267000,215,28000,2800,3024',
+    ].join('\n');
+    note = [
+      '# 每行=一条 CPS 跟踪链接的汇总数据',
+      '# 关联键: campaignId+creatorId+contentType → 自动 upsert 到 CpsPerformance 表',
+      '# collabId: 关联的合作分组ID（可选）',
+      '# linkUrl: CPS 跟踪链接 URL',
+      '# clicks/impressions/orders: 点击/曝光/订单',
+      '# gmv/commission/spend: GMV/佣金/花费(品牌侧成本)',
+      '# 必填字段: campaignId,creatorId,contentType',
+    ].join('\n');
+  } else { // cpsDaily
+    example = [
+      'camp-001,cre-mia,collab-001,video,2026-03-15,1800,54000,55,6500,650',
+      'camp-001,cre-mia,collab-001,video,2026-03-16,1600,48000,48,5800,580',
+      'camp-001,cre-mia,collab-001,video,2026-03-17,1400,42000,42,5200,520',
+    ].join('\n');
+    note = [
+      '# 每行=一条 CPS 链接在某天的归因数据',
+      '# 关联键: campaignId+creatorId+contentType+date → 合并到 CpsPerformance.daily JSON',
+      '# 必填字段: campaignId,creatorId,contentType,date',
     ].join('\n');
   }
 

@@ -131,4 +131,16 @@ export const campaignController = {
     const result = await importService.importCollaborationDaily(userId(req), items);
     res.json(result);
   }),
+
+  importCps: asyncHandler(async (req: Request, res: Response) => {
+    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const result = await importService.importCpsPerformance(userId(req), items);
+    res.json(result);
+  }),
+
+  importCpsDaily: asyncHandler(async (req: Request, res: Response) => {
+    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const result = await importService.importCpsDaily(userId(req), items);
+    res.json(result);
+  }),
 };

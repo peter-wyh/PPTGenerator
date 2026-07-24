@@ -51,5 +51,7 @@ router.post('/import/creators', campaignController.importCreators);
 router.post('/import/creator-audience', campaignController.importCreatorAudience);
 router.post('/import/creator-works', campaignController.importCreatorWorks);
 router.post('/import/collaboration-daily', campaignController.importCollaborationDaily);
+router.post('/import/cps', campaignController.importCps);
+router.post('/import/cps-daily', campaignController.importCpsDaily);
 
 export const campaignsRoutes = router;
