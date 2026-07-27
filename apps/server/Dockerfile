@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 
 ######## deps + build ########
 FROM node:20-bookworm-slim AS build
