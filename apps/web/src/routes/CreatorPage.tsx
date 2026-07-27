@@ -7,7 +7,7 @@
  * CRUD/导入保留走 dataApi 以兼容现有功能。
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode, type ChangeEvent } from 'react';
-import type { Creator } from '@mediaket/shared';
+import type { Creator } from '@mediakit/shared';
 import { listCreators } from '@/api/creators';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { campaignsApi } from '@/api/campaignsApi';

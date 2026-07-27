@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Creator, PostDaily } from '@mediaket/shared';
+import type { Creator, PostDaily } from '@mediakit/shared';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 
 interface Props {

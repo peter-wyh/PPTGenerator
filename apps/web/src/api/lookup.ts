@@ -4,7 +4,7 @@
  * 读取公开（无需登录）；写操作需登录。
  */
 import { api } from './client';
-import type { BusinessLine, Merchant, Advertiser } from '@mediaket/shared';
+import type { BusinessLine, Merchant, Advertiser } from '@mediakit/shared';
 
 // ─── DTO（后端返回的完整行，含关联）─────────────────────────────────────────
 

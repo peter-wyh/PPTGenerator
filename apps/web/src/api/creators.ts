@@ -3,8 +3,8 @@
  * Phase A: 完全走后端 DB（/api/v1/campaigns/creators），不再 fallback mock / DataRecord。
  * metrics 为达人自身频道 KPI（Avg Reach/Impressions/Follower Growth/CPM）。
  */
-import type { Creator } from '@mediaket/shared';
-import type { CollaborationData } from '@mediaket/shared';
+import type { Creator } from '@mediakit/shared';
+import type { CollaborationData } from '@mediakit/shared';
 import { campaignsApi, dtoToCreator } from './campaignsApi';
 import { getCampaign } from './campaigns';
 import { getCollaboration } from './collaborations';

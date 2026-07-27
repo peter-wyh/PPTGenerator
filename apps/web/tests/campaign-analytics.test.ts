@@ -3,7 +3,7 @@ import type { CampaignAnalytics, CampaignInsight } from '@mediakit/shared';
 import { getCreatorPerformances, getPlacementTypeSummaries, rollupCampaignMetrics } from '@/api/analytics/creatorPerformance';
 import { getCampaignAnalytics, getCampaignInsights, rollupWeekly } from '@/api/analytics/campaignAnalytics';
 import { reportCampaignFrom } from '@/api/campaigns';
-import type { Campaign } from '@mediaket/shared';
+import type { Campaign } from '@mediakit/shared';
 
 /** 内联 mock Campaign（替代历史 MOCK_CAMPAIGNS，后者已删除）。 */
 const MOCK_CAMPAIGN: Campaign = {

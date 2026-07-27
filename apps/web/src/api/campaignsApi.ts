@@ -6,7 +6,7 @@
  * 兼容策略：新 API 优先，失败时回退 DataRecord（旧路径）。
  */
 import { api } from './client';
-import type { Campaign, Creator } from '@mediaket/shared';
+import type { Campaign, Creator } from '@mediakit/shared';
 import { creatorAvatarUrl } from './creatorAvatar';
 
 // ─── DTO ─────────────────────────────────────────────────────────────────────

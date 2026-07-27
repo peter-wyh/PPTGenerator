@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Page, PageGradient, GradientStop, PageType, ReportCreator } from '@mediaket/shared';
-import { pageCategory } from '@mediaket/shared';
+import type { Page, PageGradient, GradientStop, PageType, ReportCreator } from '@mediakit/shared';
+import { pageCategory } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
 import { backgroundType, buildBackgroundTypePatch, type BackgroundType } from '../background';
 import { ImageInput } from '@/components/ImageInput';

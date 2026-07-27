@@ -8,7 +8,7 @@
  */
 import { Fragment, useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Campaign, CampaignMetric } from '@mediaket/shared';
+import type { Campaign, CampaignMetric } from '@mediakit/shared';
 import { listCampaigns } from '@/api/campaigns';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';

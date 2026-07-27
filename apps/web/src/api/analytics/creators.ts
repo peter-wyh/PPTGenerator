@@ -5,8 +5,8 @@
  * Campaign-collaboration creator data lives in creatorPerformance.ts and references these ids.
  */
 import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
-import type { CampaignMetric } from '@mediaket/shared';
-import type { PostDaily } from '@mediaket/shared';
+import type { CampaignMetric } from '@mediakit/shared';
+import type { PostDaily } from '@mediakit/shared';
 import type { Creator } from '../creators';
 import { creatorAvatarUrl, creatorProfileUrl } from '../creatorAvatar';
 

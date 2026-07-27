@@ -10,8 +10,8 @@ import type {
   PostEffect,
   PostFormat,
   WorkScreenshotItem,
-} from '@mediaket/shared';
-import { formatMoney, DEFAULT_FORMAT } from '@mediaket/shared';
+} from '@mediakit/shared';
+import { formatMoney, DEFAULT_FORMAT } from '@mediakit/shared';
 import { CREATOR_META, type Tier } from './creators';
 import { formatExecPrice, formatCPE, formatCPM } from '@/lib/format';
 import { ENGAGEMENT_RATIOS, PLAY_RATE, ORDER_RATE, CPS_DEFAULTS } from '@/lib/ratios';

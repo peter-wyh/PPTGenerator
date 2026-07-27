@@ -9,8 +9,8 @@ import type {
   WorkAudienceInsight,
   WorkMetricItem,
   WorkScreenshotItem,
-} from '@mediaket/shared';
-import { collaborationId } from '@mediaket/shared';
+} from '@mediakit/shared';
+import { collaborationId } from '@mediakit/shared';
 import { campaignCreatorWorks, creatorExecPrice } from './creatorPerformance';
 import { dataApi } from '../dataLibrary';
 import { formatCPM } from '@/lib/format';

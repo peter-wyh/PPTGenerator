@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { CollaborationData } from '@mediaket/shared';
-import { collaborationId } from '@mediaket/shared';
+import type { CollaborationData } from '@mediakit/shared';
+import { collaborationId } from '@mediakit/shared';
 
 vi.mock('@/api/dataLibrary', () => ({
   dataApi: {

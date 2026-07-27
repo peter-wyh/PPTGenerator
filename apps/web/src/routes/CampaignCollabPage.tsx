@@ -9,9 +9,9 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
-import type { Campaign, Creator } from '@mediaket/shared';
+import type { Campaign, Creator } from '@mediakit/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
-import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData } from '@mediaket/shared';
+import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData } from '@mediakit/shared';
 import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collaborationSeed';
 import { formatUSD, formatEPC } from '@/lib/format';
 import { CreatorAvatar } from '@/components/CreatorAvatar';

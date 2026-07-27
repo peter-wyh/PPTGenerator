@@ -1,4 +1,4 @@
-import type { Campaign, ReportCampaign } from '@mediaket/shared';
+import type { Campaign, ReportCampaign } from '@mediakit/shared';
 import { dataApi } from './dataLibrary';
 import { getCampaignAnalytics } from './analytics/campaignAnalytics';
 import { campaignsApi, dtoToCampaign } from './campaignsApi';

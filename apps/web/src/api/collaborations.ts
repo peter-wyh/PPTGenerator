@@ -1,6 +1,6 @@
 import { dataApi } from './dataLibrary';
 import { campaignsApi } from './campaignsApi';
-import { collaborationId, type CollaborationData, type CollaborationDeliverable } from '@mediaket/shared';
+import { collaborationId, type CollaborationData, type CollaborationDeliverable } from '@mediakit/shared';
 import { buildSeedCollaboration } from './analytics/collaborationSeed';
 
 /**

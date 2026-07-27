@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ReportCreator, ReportDataContext } from '@mediaket/shared';
+import type { ReportCreator, ReportDataContext } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import { listCampaignCreators, fetchCampaignCreatorWorks, type Creator } from '../../api/creators';
 import type { CreatorWorkPost } from '../../api/analytics/creatorPerformance';

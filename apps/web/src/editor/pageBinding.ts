@@ -1,4 +1,4 @@
-import type { Page, ReportCampaign, ReportCreator, ReportDataContext, EditorComponent, ComponentData, DataSourceMode } from '@mediaket/shared';
+import type { Page, ReportCampaign, ReportCreator, ReportDataContext, EditorComponent, ComponentData, DataSourceMode } from '@mediakit/shared';
 import { pageCategory } from '@mediakit/shared';
 import { allReportCreators } from './store';
 import {

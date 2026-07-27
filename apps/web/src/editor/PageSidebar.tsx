@@ -5,7 +5,7 @@ import { TemplateOverlay } from './components/TemplateOverlay';
 import { ScenarioOverlay } from './components/ScenarioOverlay';
 import { SaveAsTemplateOverlay } from './components/SaveAsTemplateOverlay';
 import { resolveTemplateForBusinessLine, type Template } from './templates';
-import { pageCategory } from '@mediaket/shared';
+import { pageCategory } from '@mediakit/shared';
 
 /** 页面类型 → 侧栏图标映射（27 种，与模板 1:1）。 */
 const PAGE_TYPE_ICONS: Record<string, string> = {

@@ -7,7 +7,7 @@ import {
   SCENARIO_SUB_LABELS,
   TEMPLATE_TYPES,
 } from '@/projectsMeta';
-import type { Scenario, ScenarioSub, ProjectMeta } from '@mediaket/shared';
+import type { Scenario, ScenarioSub, ProjectMeta } from '@mediakit/shared';
 
 interface SaveAsTemplateOverlayProps {
   open: boolean;
