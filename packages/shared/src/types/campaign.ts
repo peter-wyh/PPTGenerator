@@ -7,7 +7,7 @@
 /** 场景类型。 */
 export type Scenario = 'campaign-report' | 'campaign-proposal' | 'media-kit';
 /** Campaign 报告子类。 */
-export type ScenarioSub = 'weekly' | 'monthly' | 'wrap-up';
+export type ScenarioSub = 'weekly' | 'biweekly' | 'monthly' | 'wrap-up';
 
 /** Campaign 信息（仅 campaign 类型场景填写）。 */
 export interface CampaignInfo {
@@ -220,6 +220,40 @@ export interface ReportCreator {
   audience?: CreatorAudience;
 }
 
+/** DM 月报数据契约。 */
+export interface DmMonthlyData {
+  /** 主视觉图 URL。 */
+  heroImage?: string;
+  /** 渠道内容截图列表。 */
+  channelContent?: { url: string; label?: string }[];
+  /** 五个商品展示。 */
+  products?: { id: string; name: string; image?: string; sales?: string; clicks?: string; roas?: string }[];
+  /** 广告位大图。 */
+  adPlacement?: { url: string; label?: string };
+  /** 12 位推荐达人。 */
+  featuredCreators?: { id: string; name: string; avatar?: string; handle?: string; platform?: string; followers?: string }[];
+  /** 达人内容/帖子。 */
+  creatorPosts?: { id: string; cover?: string; title: string; platform?: string }[];
+}
+
+/** DM 双周报数据契约。 */
+export interface DmBiweeklyData {
+  /** 主视觉图 URL。 */
+  heroImage?: string;
+  /** 渠道内容截图。 */
+  channelContent?: { url: string; label?: string }[];
+  /** 广告位截图。 */
+  adPlacement?: { url: string; label?: string };
+  /** 达人主页截图。 */
+  creatorProfiles?: { url: string; label?: string }[];
+  /** 优化复盘截图。 */
+  optimizationReview?: { url: string; label?: string }[];
+  /** 套餐图。 */
+  packageImages?: { url: string; label?: string }[];
+  /** KPI 数据。 */
+  kpi?: { label: string; value: string; icon?: string; trend?: string }[];
+}
+
 /** 报告全局数据上下文：Campaign + 达人列表 + 商品列表。存入编辑器 store，随项目保存。 */
 export interface ReportDataContext {
   /** 绑定的 Campaign（可空）。 */
@@ -230,6 +264,10 @@ export interface ReportDataContext {
   creators?: ReportCreator[];
   /** 商品列表（campaign 关联的带货商品，可编辑）。 */
   products?: Product[];
+  /** DM 月报专用结构化数据。 */
+  dmMonthly?: DmMonthlyData;
+  /** DM 双周报专用结构化数据。 */
+  dmBiweekly?: DmBiweeklyData;
 }
 
 /* ------------------------------------------------------------------ */

@@ -88,6 +88,7 @@ export const SCENARIO_LABELS: Record<Scenario, string> = {
 
 export const SCENARIO_SUB_LABELS: Record<ScenarioSub, string> = {
   weekly: 'Weekly',
+  biweekly: 'Biweekly',
   monthly: 'Monthly',
   'wrap-up': 'Wrap-Up',
 };
@@ -100,6 +101,7 @@ export const SCENARIO_SUB_LABELS: Record<ScenarioSub, string> = {
 export const TEMPLATE_TYPES: Record<Scenario, [string, string][]> = {
   'campaign-report': [
     ['weekly', '周报'],
+    ['biweekly', '双周报'],
     ['monthly', '月报'],
     ['wrap-up', '总结'],
   ],

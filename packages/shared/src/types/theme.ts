@@ -17,6 +17,30 @@ export interface FontOption {
   loadUrl?: string; // Google Fonts <link>，按需注入 <head>
 }
 
+/**
+ * 自定义字体元数据（用户上传的本地字体）。
+ * 前后端共享：服务端 FontRecord 字段子集，前端据此生成 @font-face。
+ * 与 FontOption 互补：FontOption 是预置的 Google Fonts，CustomFontMeta 是上传的本地字体。
+ */
+export interface CustomFontMeta {
+  /** 唯一 id（服务端 FontRecord.id）。 */
+  id: string;
+  /** 字体家族名（用于 @font-face font-family 与显示）。 */
+  name: string;
+  /** 稳定 key（追加到 FontSelect 选项 value，格式 'custom-xxx-slug'）。 */
+  key: string;
+  /** 公开访问 URL（/uploads/fonts/<file> 或 OSS 绝对 URL）。 */
+  url: string;
+  /** CSS format() 值（truetype / opentype / woff / woff2）。 */
+  format: 'truetype' | 'opentype' | 'woff' | 'woff2';
+  /** 原始文件名（UI 展示）。 */
+  originalName: string;
+  /** 文件大小（字节）。 */
+  size: number;
+  /** 上传时间 ISO。 */
+  uploadedAt: string;
+}
+
 /** 整体风格预设：一整套 ProjectTheme 值，点中即填入报告设置。 */
 export interface StylePreset {
   key: string; // 'business-sober'

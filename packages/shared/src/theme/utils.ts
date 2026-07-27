@@ -6,11 +6,29 @@ import type { ProjectTheme, ThemeDensity, ThemeRadius, ProjectMeta, ThemeShadow,
 import type { PageGradient, GradientStop } from '../types/page';
 import { FONT_OPTIONS, DEFAULT_THEME, DEFAULT_FORMAT } from './presets';
 
+/**
+ * 自定义字体解析器钩子：前端在加载自定义字体后注册，
+ * 使 getFontStack 能识别上传字体的 key → stack 映射。
+ * shared 包不能 import web 层，故用反向回调注入。
+ */
+type FontResolver = (key: string) => string | undefined;
+let customResolver: FontResolver | null = null;
+
+/** 注册自定义字体 stack 解析器（前端 customFonts 模块调用）。 */
+export function setCustomFontResolver(fn: FontResolver | null): void {
+  customResolver = fn;
+}
+
 /** 按 key 查找 FontOption.stack；找不到时回退到默认 stack。 */
 export function getFontStack(key: string | undefined, fallbackKey: string): string {
   if (key) {
     const opt = FONT_OPTIONS.find((f) => f.key === key);
     if (opt) return opt.stack;
+    // 自定义字体（前端注入的 @font-face）
+    if (customResolver) {
+      const customStack = customResolver(key);
+      if (customStack) return customStack;
+    }
   }
   const fb = FONT_OPTIONS.find((f) => f.key === fallbackKey);
   return fb?.stack ?? fallbackKey;

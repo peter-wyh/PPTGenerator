@@ -5,6 +5,7 @@ import { getSharedProject } from '../api/projects';
 import { useEditorStore } from '../editor/store';
 import { PageView, fitScale } from '../editor/preview/PageView';
 import { themeToCssVars, injectFontLinks } from '../editor/theme';
+import { bootstrapCustomFonts } from '../editor/customFonts';
 import { DEFAULT_THEME } from '@mediakit/shared';
 import type { ProjectDetail } from '@mediakit/shared';
 
@@ -33,6 +34,11 @@ export function SharePage() {
   useEffect(() => {
     injectFontLinks(theme);
   }, [theme]);
+
+  // 分享页 / PDF 导出也尝试加载自定义字体（匿名时 /fonts 鉴权失败会静默跳过）。
+  useEffect(() => {
+    void bootstrapCustomFonts();
+  }, []);
 
   useEffect(() => {
     if (!token) return;

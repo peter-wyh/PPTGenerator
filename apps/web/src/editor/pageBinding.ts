@@ -1,4 +1,4 @@
-import type { Page, ReportCampaign, ReportCreator, ReportDataContext, EditorComponent, ComponentData, DataSourceMode } from '@mediakit/shared';
+import type { Page, ReportCampaign, ReportCreator, ReportDataContext, EditorComponent, ComponentData, DataSourceMode, DmMonthlyData, DmBiweeklyData } from '@mediakit/shared';
 import { pageCategory } from '@mediakit/shared';
 import { allReportCreators } from './store';
 import {
@@ -10,7 +10,7 @@ import { listPlacementTypeSummary } from '@/api/creatorPerformance';
 import { metricsToRows } from './campaignMetrics';
 
 /** 组件 → 绑定大类。未登记的组件不参与自动填充（查表得 undefined）。 */
-export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaign' | 'project'>> = {
+export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaign' | 'project' | 'dm'>> = {
   // creator 型（取 page.creatorId）
   'creator-avatar-card': 'creator',
   'meta-strip': 'creator',
@@ -39,6 +39,17 @@ export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaig
   // text 组件仅在 _dataSource==='project' 时填充（用户通过属性面板显式标记「跟随项目」）。
   'text': 'project',
   'strategy-block': 'project',
+  // dm 型（DM 月报/双周报专用，取 reportData.dmMonthly / dmBiweekly）
+  'dm-hero': 'dm',
+  'dm-channel-content': 'dm',
+  'dm-product-grid': 'dm',
+  'dm-ad-placement': 'dm',
+  'dm-featured-creators': 'dm',
+  'dm-creator-posts': 'dm',
+  'dm-creator-profiles': 'dm',
+  'dm-optimization-review': 'dm',
+  'dm-package-images': 'dm',
+  'dm-kpi-board': 'dm',
 };
 
 /** page.creatorId → 合并达人列表（campaignCreators + creators）中解析。找不到 → undefined。 */
@@ -168,6 +179,90 @@ export function campaignPatch(compType: string, campaign: ReportCampaign): Recor
 const cap = (s?: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
 /**
+ * DM 型组件填充：根据 scenarioSub 决定从 dmMonthly / dmBiweekly 读取字段。
+ * - 月报（monthly）: heroImage / channelContent / products / adPlacement / featuredCreators / creatorPosts
+ * - 双周报（biweekly）: heroImage / channelContent / adPlacement / creatorProfiles / optimizationReview / packageImages / kpi
+ * 无数据 → null（调用方跳过）。scenarioSub 缺失时按 monthly 兜底。
+ */
+export function dmPatch(
+  compType: string,
+  monthly: DmMonthlyData | undefined,
+  biweekly: DmBiweeklyData | undefined,
+  scenarioSub?: string,
+): Record<string, unknown> | null {
+  const isBiweekly = scenarioSub === 'biweekly';
+
+  if (compType === 'dm-hero') {
+    const url = isBiweekly ? biweekly?.heroImage : monthly?.heroImage;
+    if (!url) return null;
+    return { url };
+  }
+  if (compType === 'dm-channel-content') {
+    const items = isBiweekly ? biweekly?.channelContent : monthly?.channelContent;
+    if (!items?.length) return null;
+    return { items: items.map((x) => ({ url: x.url, label: x.label })) };
+  }
+  if (compType === 'dm-ad-placement') {
+    if (isBiweekly) {
+      const items = biweekly?.adPlacement;
+      if (!items) return null;
+      return { url: items.url, label: items.label };
+    }
+    const ap = monthly?.adPlacement;
+    if (!ap) return null;
+    return { url: ap.url, label: ap.label };
+  }
+  // —— 月报独有 ——
+  if (!isBiweekly && compType === 'dm-product-grid') {
+    if (!monthly?.products?.length) return null;
+    return { products: monthly.products.map((p) => ({ ...p })) };
+  }
+  if (!isBiweekly && compType === 'dm-featured-creators') {
+    if (!monthly?.featuredCreators?.length) return null;
+    return {
+      creators: monthly.featuredCreators.map((c) => ({
+        id: c.id,
+        name: c.name,
+        avatar: c.avatar ?? '',
+        handle: c.handle ?? '',
+        platform: c.platform ?? '',
+        followers: c.followers ?? '',
+      })),
+    };
+  }
+  if (!isBiweekly && compType === 'dm-creator-posts') {
+    if (!monthly?.creatorPosts?.length) return null;
+    return {
+      posts: monthly.creatorPosts.map((p) => ({
+        id: p.id,
+        cover: p.cover ?? '',
+        title: p.title,
+        platform: p.platform ?? '',
+      })),
+    };
+  }
+  // —— 双周报独有 ——
+  if (isBiweekly && compType === 'dm-creator-profiles') {
+    if (!biweekly?.creatorProfiles?.length) return null;
+    return { items: biweekly.creatorProfiles.map((x) => ({ url: x.url, label: x.label })) };
+  }
+  if (isBiweekly && compType === 'dm-optimization-review') {
+    if (!biweekly?.optimizationReview?.length) return null;
+    return { items: biweekly.optimizationReview.map((x) => ({ url: x.url, label: x.label })) };
+  }
+  if (isBiweekly && compType === 'dm-package-images') {
+    if (!biweekly?.packageImages?.length) return null;
+    return { items: biweekly.packageImages.map((x) => ({ url: x.url, label: x.label })) };
+  }
+  if (isBiweekly && compType === 'dm-kpi-board') {
+    if (!biweekly?.kpi?.length) return null;
+    return { kpi: biweekly.kpi.map((k) => ({ ...k })) };
+  }
+
+  return null;
+}
+
+/**
  * creator 型组件填充。逻辑与各 creator importer 的 apply() 1:1（DRY：importer 改调本函数）。
  * campaignId 仅 creator-works-list / work-screenshot 需要（限定该 campaign 下作品）。
  * 无可用数据 → null（调用方跳过）。
@@ -258,6 +353,7 @@ export function applyPageBinding(
   const campaign = resolvePageCampaign(page, reportData);
   // project 型不需要 creator/campaign 也能运行（直接从 reportData.campaign 取数据）
   const hasProjectData = !!reportData.campaign || !!projectMeta;
+  const hasDmData = !!reportData.dmMonthly || !!reportData.dmBiweekly;
 
   const fill = (comp: EditorComponent): EditorComponent => {
     const kind = COMPONENT_BINDING_KIND[comp.type];
@@ -273,6 +369,19 @@ export function applyPageBinding(
       // 封面页标题组件跳过
       if (page.titleComponentId === comp.id) return comp;
       const patch = projectPatch(comp.type, page, projectMeta, reportData);
+      if (!patch) return comp;
+      return { ...comp, data: { ...comp.data, ...patch, _dataSource: 'project' } as unknown as ComponentData };
+    }
+
+    // dm 型：从 reportData.dmMonthly / dmBiweekly 读取
+    if (kind === 'dm') {
+      if (!hasDmData) return comp;
+      const patch = dmPatch(
+        comp.type,
+        reportData.dmMonthly,
+        reportData.dmBiweekly,
+        projectMeta?.scenarioSub,
+      );
       if (!patch) return comp;
       return { ...comp, data: { ...comp.data, ...patch, _dataSource: 'project' } as unknown as ComponentData };
     }

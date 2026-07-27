@@ -11,6 +11,7 @@ import { PreviewOverlay } from './preview/PreviewOverlay';
 import { useAutosave } from './useAutosave';
 import { useEditorKeyboard } from './useEditorKeyboard';
 import { ThemeContext, injectFontLinks } from './theme';
+import { bootstrapCustomFonts } from './customFonts';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 interface EditorProps {
@@ -39,6 +40,11 @@ export function Editor({ detail, mode }: EditorProps) {
   useEffect(() => {
     injectFontLinks(theme);
   }, [theme]);
+
+  // 启动时从服务端加载已上传的自定义字体（注入 @font-face + 注册解析器）。幂等。
+  useEffect(() => {
+    void bootstrapCustomFonts();
+  }, []);
 
   // Context 值：chartPalette 供图表组件按 index 取色。
   const ctxValue = useMemo(

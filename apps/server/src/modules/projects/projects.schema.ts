@@ -285,13 +285,115 @@ const reportDataContextSchema = z
         }),
       )
       .optional(),
+    /** DM 月报专用结构化数据。 */
+    dmMonthly: z
+      .object({
+        heroImage: z.string().max(2048).optional(),
+        channelContent: z
+          .array(
+            z.object({
+              url: z.string(),
+              label: z.string().max(200).optional(),
+            }),
+          )
+          .optional(),
+        products: z
+          .array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              image: z.string().max(2048).optional(),
+              sales: z.string().max(50).optional(),
+              clicks: z.string().max(50).optional(),
+              roas: z.string().max(20).optional(),
+            }),
+          )
+          .optional(),
+        adPlacement: z
+          .object({ url: z.string(), label: z.string().max(200).optional() })
+          .optional(),
+        featuredCreators: z
+          .array(
+            z.object({
+              id: z.string(),
+              name: z.string(),
+              avatar: z.string().max(2048).optional(),
+              handle: z.string().max(120).optional(),
+              platform: z.string().max(100).optional(),
+              followers: z.string().max(50).optional(),
+            }),
+          )
+          .optional(),
+        creatorPosts: z
+          .array(
+            z.object({
+              id: z.string(),
+              cover: z.string().max(2048).optional(),
+              title: z.string(),
+              platform: z.string().max(100).optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
+    /** DM 双周报专用结构化数据。 */
+    dmBiweekly: z
+      .object({
+        heroImage: z.string().max(2048).optional(),
+        channelContent: z
+          .array(
+            z.object({
+              url: z.string(),
+              label: z.string().max(200).optional(),
+            }),
+          )
+          .optional(),
+        adPlacement: z
+          .object({ url: z.string(), label: z.string().max(200).optional() })
+          .optional(),
+        creatorProfiles: z
+          .array(
+            z.object({
+              url: z.string(),
+              label: z.string().max(200).optional(),
+            }),
+          )
+          .optional(),
+        optimizationReview: z
+          .array(
+            z.object({
+              url: z.string(),
+              label: z.string().max(200).optional(),
+            }),
+          )
+          .optional(),
+        packageImages: z
+          .array(
+            z.object({
+              url: z.string(),
+              label: z.string().max(200).optional(),
+            }),
+          )
+          .optional(),
+        kpi: z
+          .array(
+            z.object({
+              label: z.string(),
+              value: z.string(),
+              icon: z.string().max(50).optional(),
+              trend: z.string().max(20).optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
   })
   .optional();
 const projectMetaFields = {
   businessLine: z.string().max(40).optional(),
   creator: z.string().max(80).optional(),
   scenario: z.enum(['campaign-report', 'campaign-proposal', 'media-kit']).optional(),
-  scenarioSub: z.enum(['weekly', 'monthly', 'wrap-up']).optional(),
+  scenarioSub: z.enum(['weekly', 'biweekly', 'monthly', 'wrap-up']).optional(),
   /** 模版类型：场景下细分，松字符串，取值由前端字典约束。 */
   templateType: z.string().max(40).optional(),
   /** 样式类型：PPT 多页 / 单页面 / AI 生成 HTML。 */
