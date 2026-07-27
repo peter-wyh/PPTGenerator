@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 
 ######## build ########
 FROM harbor.duomai.com/tool/node:20-alpine AS build
