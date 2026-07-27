@@ -1,14 +1,62 @@
+import { useMemo } from 'react';
+import type { Page } from '@mediakit/shared';
 import { filterCategoriesByScenario, getTemplate, type Template } from '../templates';
 import { useEditorStore } from '../store';
+import { PageThumbnail } from './PageThumbnail';
 
 interface Props {
   onApply: (template: Template) => void;
   onClose: () => void;
 }
 
-/** 新建页面时的模板浮层：按分类分组陈列，内容区纵向滚动。 */
+/** 把模板的 components() 渲染成可用的 Page 形状（仅用于 PageThumbnail 预览，不落库）。 */
+function useTemplateThumbPage(tpl: Template) {
+  return useMemo<Page>(() => {
+    // 模板 components() 返回的是 EditorComponent[]，id 为占位符（仅预览，不落库，不会被选中/保存）。
+    return { id: `tpl-${tpl.id}`, name: tpl.name, components: tpl.components() };
+  }, [tpl]);
+}
+
+/** 单个模板卡片：名称 + 缩略图 + 描述。 */
+function TemplateCard({
+  tpl,
+  canvasWidth,
+  canvasHeight,
+  onApply,
+}: {
+  tpl: Template;
+  canvasWidth: number;
+  canvasHeight: number;
+  onApply: (tpl: Template) => void;
+}) {
+  const thumb = useTemplateThumbPage(tpl);
+  return (
+    <button
+      onClick={() => onApply(tpl)}
+      className="flex flex-col gap-1.5 rounded-lg border border-border-default p-2 text-left transition hover:border-accent-primary hover:bg-surface-hover"
+    >
+      {/* 缩略图：按画布宽高比展示，最大高度 84px。 */}
+      <div className="flex justify-center">
+        <PageThumbnail
+          page={thumb}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
+          width={Math.min(220, canvasWidth)}
+          height={84}
+        />
+      </div>
+      <div className="text-sm font-medium text-foreground-primary">{tpl.name}</div>
+      <div className="text-xs text-foreground-muted">{tpl.description}</div>
+    </button>
+  );
+}
+
+/** 新建页面时的模板浮层：按分类分组陈列（含缩略图），内容区纵向滚动。 */
 export function TemplateOverlay({ onApply, onClose }: Props) {
   const scenario = useEditorStore((s) => s.projectMeta?.scenario);
+  const canvasWidth = useEditorStore((s) => s.canvasWidth);
+  const canvasHeight = useEditorStore((s) => s.canvasHeight);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -37,14 +85,13 @@ export function TemplateOverlay({ onApply, onClose }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {templates.map((tpl) => (
-                    <button
+                    <TemplateCard
                       key={tpl.id}
-                      onClick={() => onApply(tpl)}
-                      className="rounded-lg border border-border-default p-3 text-left transition hover:border-accent-primary hover:bg-surface-hover"
-                    >
-                      <div className="text-sm font-medium text-foreground-primary">{tpl.name}</div>
-                      <div className="mt-0.5 text-xs text-foreground-muted">{tpl.description}</div>
-                    </button>
+                      tpl={tpl}
+                      canvasWidth={canvasWidth}
+                      canvasHeight={canvasHeight}
+                      onApply={onApply}
+                    />
                   ))}
                 </div>
               </section>

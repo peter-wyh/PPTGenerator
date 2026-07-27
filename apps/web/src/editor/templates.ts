@@ -263,103 +263,9 @@ export const TEMPLATES: Template[] = [
       return [tbl];
     },
   },
-  {
-    id: 'creator-page',
-    name: '达人介绍页',
-    description: '头像卡片 + 数据条 + 作品列表（试点）',
-    pageType: 'creator',
-    components: () => {
-      // Top title
-      const title = t('text', 80, 60, 900, 60);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '达人介绍';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
-      // In-page business components (each independently draggable/deletable — validates "in-page semantic block" granularity)
-      const avatar = t('creator-avatar-card', 80, 150, 360, 120);
-      const stats = t('creator-stats-strip', 460, 150, 740, 120);
-      const works = t('creator-works-list', 80, 300, 1120, 220);
-      return [title, avatar, stats, works];
-    },
-  },
-  {
-    id: 'cover-page',
-    name: '封面页',
-    description: '大标题 + 副标题',
-    pageType: 'cover',
-    pageTitleIndex: 0,
-    components: () => {
-      const title = t('text', 120, 240, 1000, 120);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
-      (title.data as { fontSize: number }).fontSize = 56;
-      (title.data as { fontWeight: number }).fontWeight = 700;
-      const sub = t('text', 120, 380, 1000, 50);
-      (sub.data as { content: string; fontSize: number }).content = '副标题 / 日期 / 品牌';
-      (sub.data as { fontSize: number }).fontSize = 20;
-      return [title, sub];
-    },
-  },
-  {
-    id: 'agenda-page',
-    name: '目录页',
-    description: '章节导航表格',
-    pageType: 'agenda',
-    components: () => {
-      const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '目录';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
-      const tbl = t('table', 80, 140, 1120, 460);
-      (tbl.data as { headers: string[]; rows: string[][] }).headers = ['章节', '内容'];
-      (tbl.data as { rows: string[][] }).rows = [
-        ['', ''],
-        ['', ''],
-        ['', ''],
-        ['', ''],
-      ];
-      return [title, tbl];
-    },
-  },
-  {
-    id: 'company-page',
-    name: '公司介绍页',
-    description: '简介 + 品牌墙',
-    pageType: 'company',
-    components: () => {
-      const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '关于我们';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
-      const intro = t('text', 80, 130, 1120, 80);
-      (intro.data as { content: string }).content = '';
-      const wall = t('brand-wall', 80, 240, 1120, 360);
-      return [title, intro, wall];
-    },
-  },
-  {
-    id: 'package-page',
-    name: '套餐方案',
-    description: '标题 + 套餐卡片 + logo 墙',
-    pageType: 'package',
-    components: () => {
-      const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '套餐方案';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
-      const cardW = 360;
-      const gap = 30;
-      const startX = (1280 - (cardW * 3 + gap * 2)) / 2;
-      const cards = [0, 1, 2].map((i) => {
-        const c = t('package-card', Math.round(startX + i * (cardW + gap)), 150, cardW, 460);
-        const data = c.data as { highlighted: boolean };
-        if (i === 1) {
-          // Middle plan marked as recommended.
-          data.highlighted = true;
-        }
-        return c;
-      });
-      return [title, ...cards];
-    },
-  },
+
+  /* -------- 投放报告模板：业务页面库中置于最前方（基础模板之后、其他分类之前） -------- */
+
   {
     id: 'report-weekly-overview',
     name: '周报 · 业绩概览',
@@ -484,6 +390,106 @@ export const TEMPLATES: Template[] = [
       const title = titleAt('渠道贴文', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
       return [title, posts];
+    },
+  },
+
+  /* -------- 公司 · 品牌 · 达人 · 案例 · 策略模板 -------- */
+
+  {
+    id: 'creator-page',
+    name: '达人介绍页',
+    description: '头像卡片 + 数据条 + 作品列表（试点）',
+    pageType: 'creator',
+    components: () => {
+      // Top title
+      const title = t('text', 80, 60, 900, 60);
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '达人介绍';
+      (title.data as { fontSize: number }).fontSize = 32;
+      (title.data as { fontWeight: number }).fontWeight = 700;
+      // In-page business components (each independently draggable/deletable — validates "in-page semantic block" granularity)
+      const avatar = t('creator-avatar-card', 80, 150, 360, 120);
+      const stats = t('creator-stats-strip', 460, 150, 740, 120);
+      const works = t('creator-works-list', 80, 300, 1120, 220);
+      return [title, avatar, stats, works];
+    },
+  },
+  {
+    id: 'cover-page',
+    name: '封面页',
+    description: '大标题 + 副标题',
+    pageType: 'cover',
+    pageTitleIndex: 0,
+    components: () => {
+      const title = t('text', 120, 240, 1000, 120);
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
+      (title.data as { fontSize: number }).fontSize = 56;
+      (title.data as { fontWeight: number }).fontWeight = 700;
+      const sub = t('text', 120, 380, 1000, 50);
+      (sub.data as { content: string; fontSize: number }).content = '副标题 / 日期 / 品牌';
+      (sub.data as { fontSize: number }).fontSize = 20;
+      return [title, sub];
+    },
+  },
+  {
+    id: 'agenda-page',
+    name: '目录页',
+    description: '章节导航表格',
+    pageType: 'agenda',
+    components: () => {
+      const title = t('text', 80, 60, 900, 50);
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '目录';
+      (title.data as { fontSize: number }).fontSize = 32;
+      (title.data as { fontWeight: number }).fontWeight = 700;
+      const tbl = t('table', 80, 140, 1120, 460);
+      (tbl.data as { headers: string[]; rows: string[][] }).headers = ['章节', '内容'];
+      (tbl.data as { rows: string[][] }).rows = [
+        ['', ''],
+        ['', ''],
+        ['', ''],
+        ['', ''],
+      ];
+      return [title, tbl];
+    },
+  },
+  {
+    id: 'company-page',
+    name: '公司介绍页',
+    description: '简介 + 品牌墙',
+    pageType: 'company',
+    components: () => {
+      const title = t('text', 80, 60, 900, 50);
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '关于我们';
+      (title.data as { fontSize: number }).fontSize = 32;
+      (title.data as { fontWeight: number }).fontWeight = 700;
+      const intro = t('text', 80, 130, 1120, 80);
+      (intro.data as { content: string }).content = '';
+      const wall = t('brand-wall', 80, 240, 1120, 360);
+      return [title, intro, wall];
+    },
+  },
+  {
+    id: 'package-page',
+    name: '套餐方案',
+    description: '标题 + 套餐卡片 + logo 墙',
+    pageType: 'package',
+    components: () => {
+      const title = t('text', 80, 60, 900, 50);
+      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '套餐方案';
+      (title.data as { fontSize: number }).fontSize = 32;
+      (title.data as { fontWeight: number }).fontWeight = 700;
+      const cardW = 360;
+      const gap = 30;
+      const startX = (1280 - (cardW * 3 + gap * 2)) / 2;
+      const cards = [0, 1, 2].map((i) => {
+        const c = t('package-card', Math.round(startX + i * (cardW + gap)), 150, cardW, 460);
+        const data = c.data as { highlighted: boolean };
+        if (i === 1) {
+          // Middle plan marked as recommended.
+          data.highlighted = true;
+        }
+        return c;
+      });
+      return [title, ...cards];
     },
   },
 

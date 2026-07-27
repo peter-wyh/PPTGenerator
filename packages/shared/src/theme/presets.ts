@@ -56,6 +56,20 @@ export const FONT_OPTIONS: FontOption[] = [
     stack: "'Noto Serif SC', serif",
     loadUrl: 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap',
   },
+  {
+    key: 'montserrat',
+    label: 'Montserrat',
+    category: 'heading',
+    stack: "'Montserrat', sans-serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap',
+  },
+  {
+    key: 'poppins',
+    label: 'Poppins',
+    category: 'text',
+    stack: "'Poppins', sans-serif",
+    loadUrl: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+  },
 ];
 
 /** 默认图表配色（6 色）。 */
@@ -103,7 +117,7 @@ export const DEFAULT_THEME: ProjectTheme = {
   },
   density: 'standard',
   radius: 'small',
-  layout: { safeMargin: 24, gridSize: 10, showGrid: true, showSafeArea: true },
+  layout: { safeMargin: 48, gridSize: 8, showGrid: true, showSafeArea: true },
   branding: {
     logo: '',
     title: '',
@@ -274,6 +288,25 @@ export const STYLE_PRESETS: StylePreset[] = [
       radius: 'large',
       layout: { safeMargin: 56, gridSize: 12, showGrid: true, showSafeArea: true },
       preset: 'playful-pastel',
+    },
+  },
+  {
+    key: 'duomai-bento',
+    name: '多麦 Bento',
+    description: 'Montserrat/Poppins 几何字体 + 中圆角舒适密度，Bento 网格卡片风格',
+    theme: {
+      color: {
+        primary: '#FF5C00',
+        secondary: '#FF8533',
+        chartPalette: ['#FF5C00', '#3B82F6', '#22C55E', '#8B5CF6', '#F59E0B', '#EC4899'],
+        neutralText: '#1A1A1A',
+        neutralBg: '#FFFFFF',
+      },
+      font: { text: 'poppins', number: 'poppins', heading: 'montserrat' },
+      density: 'comfortable',
+      radius: 'medium',
+      layout: { safeMargin: 48, gridSize: 8, showGrid: true, showSafeArea: true },
+      preset: 'duomai-bento',
     },
   },
 ];

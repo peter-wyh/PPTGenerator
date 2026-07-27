@@ -151,9 +151,14 @@ export function DataConfigOverlay({ onClose }: Props) {
         {/* Body */}
         <div className="flex-1 overflow-auto p-5">
           {!campaignId && (
-            <p className="text-sm text-foreground-muted">
-              当前项目未绑定 Campaign，无法加载数据。
-            </p>
+            <div className="rounded-lg border border-border-subtle bg-surface-hover/40 px-3 py-3">
+              <p className="text-sm text-foreground-secondary">
+                未绑定 Campaign，可手动填写数据或使用全局达人库。
+              </p>
+              <p className="mt-1 text-xs text-foreground-muted">
+                绑定 Campaign 后可自动加载该 Campaign 下的达人作品数据。
+              </p>
+            </div>
           )}
 
           {campaignId && loading && (

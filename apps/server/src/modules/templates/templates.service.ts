@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { Template, TemplateStatus, Prisma } from '@prisma/client';
+import { builtinDefaultPages } from '@mediakit/shared';
 import type {
   Page,
   ProjectMeta,
@@ -10,9 +11,13 @@ import type {
   TemplateSummary,
 } from '@mediakit/shared';
 
-/** 新建模版的默认 pages：单个空白页（与项目默认一致）。 */
+/**
+ * 新建模版的默认 pages：真实页面树（封面 + 概览页），不再是单空白页。
+ * 使用 shared 包的 builtinDefaultPages，前后端共用同一份页面数据；
+ * 服务端注入 node:crypto.randomUUID 作为 ID 生成器。
+ */
 export function defaultTemplatePages(): Page[] {
-  return [{ id: randomUUID(), name: '第 1 页', components: [] }];
+  return builtinDefaultPages(() => randomUUID());
 }
 
 function pageCount(pages: unknown): number {

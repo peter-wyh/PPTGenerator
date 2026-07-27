@@ -1,4 +1,5 @@
 import type { EditorComponent, ShapeData, ShapeKind } from '@mediakit/shared';
+import { ImageInput } from '@/components/ImageInput';
 import { useEditorStore } from '../../store';
 import { FieldGroup } from '../helpers';
 
@@ -7,6 +8,12 @@ const SHAPE_OPTIONS: { id: ShapeKind; label: string }[] = [
   { id: 'rounded', label: '圆角' },
   { id: 'circle', label: '圆形' },
   { id: 'line', label: '直线' },
+];
+
+const FIT_OPTIONS: { id: NonNullable<ShapeData['fit']>; label: string }[] = [
+  { id: 'cover', label: '裁剪填充' },
+  { id: 'contain', label: '完整显示' },
+  { id: 'fill', label: '拉伸' },
 ];
 
 export function ShapeFields({ comp }: { comp: EditorComponent }) {
@@ -50,6 +57,31 @@ export function ShapeFields({ comp }: { comp: EditorComponent }) {
           <span className="mb-1 block">填充色</span>
           <input type="color" value={data.fill ?? '#ffffff'} onChange={(e) => set({ fill: e.target.value })} className="h-8 w-full rounded border border-border-default p-1" />
         </label>
+      )}
+
+      {!isLine && (
+        <div className="block text-xs text-foreground-secondary">
+          <span className="mb-1 block">图片填充（可选）</span>
+          <ImageInput
+            value={data.src ?? ''}
+            onChange={(url) => set(url ? { src: url } : { src: undefined })}
+            aspect={data.shape === 'circle' ? 1 : undefined}
+          />
+          {data.src && (
+            <label className="mt-2 block">
+              <span className="mb-1 block">填充方式</span>
+              <select
+                value={data.fit ?? 'cover'}
+                onChange={(e) => set({ fit: e.target.value as ShapeData['fit'] })}
+                className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 outline-none focus:border-accent-primary"
+              >
+                {FIT_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>{o.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
       )}
 
       <label className="block text-xs text-foreground-secondary">

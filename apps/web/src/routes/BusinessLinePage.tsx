@@ -3,6 +3,7 @@
  * 独立路由页面（/data/business-lines）。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { lookupApi, type BusinessLineDTO } from '@/api/lookup';
 import { ImageInput } from '@/components/ImageInput';
 
@@ -28,7 +29,7 @@ export function BusinessLinePage() {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
 
-  const heads = ['#', 'Logo', '编码', '名称', '配色', '广告主数', ''];
+  const heads = ['#', 'Logo', '编码', '名称', '配色', '广告主数', '操作'];
 
   return (
     <div>
@@ -73,6 +74,7 @@ export function BusinessLinePage() {
                 <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 text-right hover:bg-surface-hover/50">
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setEditingId(bl.id)} className="text-xs text-accent-primary hover:underline">编辑</button>
+                    <Link to={`/templates?businessLine=${bl.code}`} className="text-xs text-accent-secondary hover:underline">模板管理</Link>
                     <button onClick={() => void removeBusinessLine(bl.id, bl.name)} className="text-xs text-red hover:underline">删除</button>
                   </div>
                 </td>

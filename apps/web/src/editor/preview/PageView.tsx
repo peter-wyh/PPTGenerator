@@ -59,7 +59,7 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
           </div>
         ))}
         {/* 业务线 Logo（右上角，预览/导出同步） */}
-        {blLogo && (
+        {blLogo && !page.suppressLogo && (
           <img
             src={blLogo}
             alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}

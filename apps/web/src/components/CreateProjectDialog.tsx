@@ -125,12 +125,26 @@ export function CreateProjectDialog({
     setHeight(initH);
   }, [open, initial]);
 
-  // 进入 campaign 类型场景时懒加载上游 campaign 列表。
+  // Campaign 现为可选绑定：进入 campaign 类型场景时不再自动拉取上游 campaign 列表。
+  // 下拉框仍允许用户主动选择（懒加载由"无选项但点击"或表单提交时按需触发），
+  // 这里注释掉自动 listCampaigns 以避免在用户不需要 Campaign 时强依赖上游接口。
+  // useEffect(() => {
+  //   if (open && isCampaign && campaigns.length === 0 && !campaignsLoading) {
+  //     setCampaignsLoading(true);
+  //     listCampaigns()
+  //       .then(setCampaigns)
+  //       .finally(() => setCampaignsLoading(false));
+  //   }
+  // }, [open, isCampaign, campaigns.length, campaignsLoading]);
+
+  // 改为：进入 campaign 场景时主动触发一次懒加载（用户可见但非阻塞），失败不报错。
+  // 这样既保留 Campaign 下拉体验，又不强制要求用户绑定。
   useEffect(() => {
     if (open && isCampaign && campaigns.length === 0 && !campaignsLoading) {
       setCampaignsLoading(true);
       listCampaigns()
         .then(setCampaigns)
+        .catch(() => { /* 上游接口不可用时静默，Campaign 选填不阻塞 */ })
         .finally(() => setCampaignsLoading(false));
     }
   }, [open, isCampaign, campaigns.length, campaignsLoading]);
@@ -163,10 +177,9 @@ export function CreateProjectDialog({
     setHeight(p.h);
   }
 
-  const canSubmit =
-    !!name.trim() &&
-    !!businessLine &&
-    (!scenario || !isCampaignScenario(scenario as Scenario) || !!campaignId);
+  // Campaign 现为可选绑定：不再要求 campaign 场景必须选择 Campaign。
+  // 仅校验项目名 + 业务线必填。
+  const canSubmit = !!name.trim() && !!businessLine;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -321,12 +334,12 @@ export function CreateProjectDialog({
             </label>
           )}
 
-          {/* campaign 类型：选具体 campaign（上游接口 mock） */}
+          {/* campaign 类型：选具体 campaign（上游接口，可选绑定） */}
           {isCampaign && (
             <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-hover/40 p-3">
               <label className="block text-sm text-foreground-secondary">
                 <span className="mb-1 block font-medium">
-                  Campaign <span className="text-foreground-muted">（来自上游接口）</span>
+                  Campaign <span className="text-foreground-muted">（可选 · 来自上游接口）</span>
                 </span>
                 <select
                   className={selectCls}
@@ -344,8 +357,8 @@ export function CreateProjectDialog({
                     {campaignsLoading
                       ? '加载中…'
                       : visibleCampaigns.length === 0
-                        ? '该业务线暂无可选 Campaign'
-                        : '（选择 Campaign）'}
+                        ? '该业务线暂无可选 Campaign（可不绑定）'
+                        : '（可选 · 选择 Campaign）'}
                   </option>
                   {visibleCampaigns.map((c) => (
                     <option key={c.id} value={c.id}>

@@ -31,6 +31,7 @@ import {
 const DENSITY_SPACING: Record<ThemeDensity, { sm: number; md: number; lg: number }> = {
   compact: { sm: 6, md: 10, lg: 14 },
   standard: { sm: 10, md: 16, lg: 22 },
+  comfortable: { sm: 12, md: 18, lg: 25 },
   spacious: { sm: 14, md: 20, lg: 28 },
 };
 
@@ -38,6 +39,7 @@ const DENSITY_SPACING: Record<ThemeDensity, { sm: number; md: number; lg: number
 const RADIUS_MAP: Record<ThemeRadius, { card: number; pill: number }> = {
   sharp: { card: 0, pill: 0 },
   small: { card: 8, pill: 9999 },
+  medium: { card: 12, pill: 9999 },
   large: { card: 16, pill: 9999 },
 };
 

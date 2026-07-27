@@ -89,6 +89,10 @@ export type ShapeKind = 'rectangle' | 'rounded' | 'circle' | 'line';
 export interface ShapeData {
   shape: ShapeKind;
   fill?: string;
+  /** 图片填充 URL；存在时按图片渲染覆盖 fill 色块。 */
+  src?: string;
+  /** 图片填充模式（src 存在时生效）；缺省 'cover'。 */
+  fit?: 'cover' | 'contain' | 'fill';
   stroke?: string;
   strokeWidth?: number;
   opacity?: number;

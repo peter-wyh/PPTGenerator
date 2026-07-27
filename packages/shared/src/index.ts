@@ -19,3 +19,6 @@ export * from './types/page';
 // ---- 运行时常量 / 工具函数 ----
 export * from './theme/presets';
 export * from './theme/utils';
+
+// ---- 内置模版页面（前后端共享）----
+export * from './templates/builtin-pages';

@@ -392,13 +392,27 @@ export function BusinessBlockPlaceholder({ data }: { data: { title?: string; bus
 
 /* --------------------------------- shape --------------------------------- */
 export function ShapeComponent({ data }: { data: ShapeData }) {
-  const { shape, fill, stroke, strokeWidth, opacity, rotation, borderRadius, dash } = data;
+  const { shape, fill, src, fit, stroke, strokeWidth, opacity, rotation, borderRadius, dash } = data;
   const border = strokeWidth && stroke ? `${strokeWidth}px solid ${stroke}` : undefined;
   const inner =
     shape === 'line' ? (
       <svg className="h-full w-full" preserveAspectRatio="none">
         <line x1="0" y1="50%" x2="100%" y2="50%" stroke={stroke ?? 'var(--border-default, #E5E7EB)'} strokeWidth={strokeWidth ?? 1} strokeDasharray={dash ? '8 4' : undefined} />
       </svg>
+    ) : src ? (
+      // 图片填充：复用 ImageComponent 的 fit 语义（'cover'|'contain'|'fill'），
+      // 通过 borderRadius / 圆形裁剪与几何形状保持一致。
+      <img
+        src={src}
+        alt=""
+        className="h-full w-full"
+        style={{
+          objectFit: fit ?? 'cover',
+          border,
+          borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? borderRadius ?? 12 : undefined,
+        }}
+        draggable={false}
+      />
     ) : (
       <div className="h-full w-full" style={{ backgroundColor: fill, border, borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? borderRadius ?? 12 : undefined }} />
     );

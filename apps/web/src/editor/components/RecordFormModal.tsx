@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { lookupApi, type BusinessLineDTO, type AdvertiserDTO } from '@/api/lookup';
+import { ImageInput } from '@/components/ImageInput';
 import { PLATFORMS } from '@/projectsMeta';
 import type { DataKind } from '../dataImport';
 
@@ -228,9 +229,22 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               ))}
           </div>
         ) : (
-          /* ─── Creator 表单（保持不变） ─── */
+          /* ─── Creator 表单 ─── */
           <div className="grid grid-cols-2 gap-2">
             {fields.map((f) => {
+              // avatar 用 ImageInput（文本 + 上传 + 裁剪），占整行。
+              if (f.key === 'avatar') {
+                return (
+                  <label key={f.key} className="col-span-2 flex flex-col gap-1 text-xs text-foreground-secondary">
+                    {f.label}
+                    <ImageInput
+                      value={vals[f.key] ?? ''}
+                      onChange={(url) => setVals((p) => ({ ...p, [f.key]: url }))}
+                      aspect={1}
+                    />
+                  </label>
+                );
+              }
               const idReadOnly = f.key === 'id' && !record;
               const autoLabel = f.key === 'id' && !record;
               return (

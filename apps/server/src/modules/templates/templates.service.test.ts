@@ -61,11 +61,24 @@ describe('templates.service · 序列化', () => {
     expect(toDetail(makeTemplate({ pages: null as unknown as Template['pages'] })).pages).toEqual([]);
   });
 
-  it('defaultTemplatePages: 返回单页且含 id/name', () => {
+  it('defaultTemplatePages: 返回真实页面树（含封面 + 概览页，非单空白页）', () => {
     const pages = defaultTemplatePages();
-    expect(pages).toHaveLength(1);
-    expect(pages[0].id).toBeTruthy();
-    expect(pages[0].name).toBe('第 1 页');
+    // 真实页面树：至少 2 页（封面 + 概览）
+    expect(pages.length).toBeGreaterThanOrEqual(2);
+    // 每页都有 id 和 name
+    for (const p of pages) {
+      expect(p.id).toBeTruthy();
+      expect(typeof p.name).toBe('string');
+      expect(p.name.length).toBeGreaterThan(0);
+    }
+    // 封面页应包含真实组件（标题文本）
+    const cover = pages[0];
+    expect(cover.components.length).toBeGreaterThan(0);
+    const hasTitleText = cover.components.some((c) => c.type === 'text');
+    expect(hasTitleText).toBe(true);
+    // 至少一页设置了 pageType（真实页面树语义）
+    const anyPageType = pages.some((p) => !!p.pageType);
+    expect(anyPageType).toBe(true);
   });
 });
 
@@ -134,7 +147,7 @@ describe('templates.service · 归属校验 getOwnedOrThrow', () => {
 });
 
 describe('templates.service · create / update', () => {
-  it('create: 缺省尺寸 1280×720、状态 DRAFT、缺省单页', async () => {
+  it('create: 缺省尺寸 1280×720、状态 DRAFT、缺省真实页面树（≥2 页）', async () => {
     prismaMock.template.create.mockImplementation(({ data }) => Promise.resolve(makeTemplate(data)));
     await templatesService.create('u_admin', { name: '新模板' });
     const { data } = prismaMock.template.create.mock.calls[0][0] as { data: Record<string, unknown> };
@@ -143,7 +156,8 @@ describe('templates.service · create / update', () => {
     expect(data.height).toBe(720);
     expect(data.status).toBe('DRAFT');
     expect(Array.isArray(data.pages)).toBe(true);
-    expect(data.pages).toHaveLength(1);
+    // 真实页面树：默认 ≥ 2 页（封面 + 概览），不再是单空白页
+    expect((data.pages as unknown[]).length).toBeGreaterThanOrEqual(2);
   });
 
   it('update: 非归属者 → 404，不会执行 update', async () => {

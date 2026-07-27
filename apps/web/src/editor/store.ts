@@ -22,7 +22,7 @@ import {
 } from './defaults';
 import { snapMove, snapResize, clampRect, clampResize } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
-import { getTemplateByPageType } from './templates';
+import { getTemplate, getTemplateByPageType } from './templates';
 import { applyPageBinding as applyPageBindingReducer } from './pageBinding';
 import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
@@ -1180,6 +1180,52 @@ export const useEditorStore = create<EditorState>((set, get) => {
             };
           }),
         };
+      });
+    },
+
+    /**
+     * 替换整页版式：用指定模板的 components 覆盖当前页。
+     * - 深拷贝模板 components + 重生成 id（避免引用模板常量）。
+     * - 保留页面既有 pageType / campaignId / creatorId / 背景绑定，除非模板自带 pageType。
+     * - 记录 layoutTemplateId 以追溯版式来源；落 history + 标脏。
+     * - 替换后立即跑一次 applyPageBinding（让组件按数据上下文填充）。
+     */
+    replacePageLayout: (pageId, templateId) => {
+      const tpl = getTemplate(templateId);
+      if (!tpl) return;
+      mutateAndCommit((s) => {
+        if (!s.pages.find((p) => p.id === pageId)) return {};
+        const reid = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
+        const mapped = s.pages.map((p) => {
+          if (p.id !== pageId) return p;
+          const next: Page = {
+            ...p,
+            components: reid,
+            layoutTemplateId: templateId,
+            // 模板自带 pageType 则覆盖（同步来源），否则保留原页面类型。
+            ...(tpl.pageType ? { pageType: tpl.pageType } : {}),
+          };
+          // 清理失效的 titleComponentId（旧标题组件已被替换）
+          if (p.titleComponentId && !reid.find((c) => c.id === p.titleComponentId)) {
+            next.titleComponentId = undefined;
+            next.titleOverridden = undefined;
+          }
+          // 模板标记了 pageTitleIndex → 同步标题组件 id
+          if (tpl.pageTitleIndex != null && reid[tpl.pageTitleIndex]) {
+            next.titleComponentId = reid[tpl.pageTitleIndex].id;
+            next.titleOverridden = false;
+            // media-report 类模板：用项目报告标题覆盖标题文案
+            if (pageCategory(tpl.pageType) === 'media-report') {
+              const title = buildReportTitle(s.projectMeta ?? {});
+              (reid[tpl.pageTitleIndex].data as { content?: string }).content = title;
+              next.name = title;
+            }
+          }
+          return next;
+        });
+        // 替换后立即按页面绑定把组件当「新增」填充数据
+        const patched = applyPageBindingReducer(mapped, pageId, s.reportData, new Set(reid.map((c) => c.id)), s.projectMeta);
+        return { pages: patched, selectedIds: [] };
       });
     },
 

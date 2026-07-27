@@ -25,10 +25,10 @@ export interface StylePreset {
   theme: ProjectTheme; // 一整套值
 }
 
-/** 密度：紧凑 / 标准 / 宽松。 */
-export type ThemeDensity = 'compact' | 'standard' | 'spacious';
-/** 圆角：直角 / 小圆角 / 大圆角。 */
-export type ThemeRadius = 'sharp' | 'small' | 'large';
+/** 密度：紧凑 / 标准 / 舒适 / 宽松。 */
+export type ThemeDensity = 'compact' | 'standard' | 'comfortable' | 'spacious';
+/** 圆角：直角 / 小圆角 / 中圆角 / 大圆角。 */
+export type ThemeRadius = 'sharp' | 'small' | 'medium' | 'large';
 
 /** v2 派生类型（供 theme.tsx / 测试 / 格式化器引用）。 */
 export type LineHeightMode = 'ratio' | 'fixed';
@@ -158,4 +158,6 @@ export interface ProjectMeta {
   theme?: ProjectTheme;
   /** 报告全局数据上下文（Campaign + 达人），「数据配置」面板编辑，随项目保存。 */
   reportData?: ReportDataContext;
+  /** 报告方案版本（用于追溯生成报告时所用的方案版本）。 */
+  reportSchemeVersion?: string;
 }

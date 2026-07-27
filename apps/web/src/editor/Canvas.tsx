@@ -346,7 +346,7 @@ export function Canvas() {
             />
           ))}
           {/* 业务线 Logo（右上角，仅编辑画布显示，不影响布局） */}
-          {blLogo && (
+          {blLogo && !currentPage?.suppressLogo && (
             <img
               src={blLogo}
               alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}

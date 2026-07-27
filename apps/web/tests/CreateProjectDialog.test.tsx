@@ -107,11 +107,29 @@ describe('CreateProjectDialog — campaign 按业务线过滤', () => {
     expect((screen.getByText('Campaign').parentElement!.querySelector('select') as HTMLSelectElement).value).toBe('');
   });
 
-  it('该业务线无 campaign 时下拉显示空态文案', async () => {
+  it('该业务线无 campaign 时下拉显示空态文案（可选）', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
     await user.selectOptions(screen.getByLabelText('业务线'), 'DG'); // fixture 中无 DG
     await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
-    await screen.findByText('该业务线暂无可选 Campaign');
+    await screen.findByText(/该业务线暂无可选 Campaign/);
+  });
+
+  it('campaign-report 场景不绑定 Campaign 也可提交（可选绑定）', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CreateProjectDialog open onSubmit={onSubmit} onCancel={() => {}} />);
+    await user.type(screen.getByLabelText('项目名称'), 'P');
+    await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
+    await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
+    // 不选 Campaign，直接提交
+    const submitBtn = screen.getByRole('button', { name: '创建' });
+    await waitFor(() => expect(submitBtn).not.toBeDisabled());
+    await user.click(submitBtn);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const meta = onSubmit.mock.calls[0][0].meta;
+    expect(meta.scenario).toBe('campaign-report');
+    // 未绑定 Campaign → meta.campaignId 不存在
+    expect(meta.campaignId).toBeUndefined();
   });
 });

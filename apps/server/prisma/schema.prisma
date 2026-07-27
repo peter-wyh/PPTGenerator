@@ -42,6 +42,8 @@ model Project {
   shareToken String?  @unique
   // 项目元数据（业务线/创建人/场景/广告主/campaign 信息），不透明 JSON。
   meta       Json?
+  /// 报告方案版本（追溯生成报告时所用的方案版本）。
+  reportSchemeVersion String?
   owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

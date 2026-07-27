@@ -170,6 +170,12 @@ export interface EditorState {
   setPageType: (pageId: string, pageType: PageType | undefined) => void;
   /** 「恢复自动」：清除 overridden 并重算标题。 */
   restoreReportTitle: (pageId: string) => void;
+  /**
+   * 替换整页版式：用指定模板的 components 覆盖页面（深拷贝 + 重生成 id）。
+   * 保留 pageType/campaign/creator/背景绑定；记录 layoutTemplateId；落 history。
+   * 替换后自动跑一次 applyPageBinding 让数据组件按上下文填充。
+   */
+  replacePageLayout: (pageId: string, templateId: string) => void;
   /** 把指定页（默认当前页）上所有「跟随页面」(_dataSource='project') 的数据组件，
    *  按页面 campaign/creator 绑定重新填充。改页面绑定后调用。 */
   applyPageBinding: (pageId?: string) => void;

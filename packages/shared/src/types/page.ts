@@ -145,4 +145,8 @@ export interface Page {
   campaignId?: string;
   /** 页面绑定的达人 ID（creator-case 大类用）。 */
   creatorId?: string;
+  /** 是否抑制公共右上角 Logo（用于特殊封面如 dm-biweekly-v3-cover）。 */
+  suppressLogo?: boolean;
+  /** 当前页面所使用的版式模板 ID（用于追溯页面版式来源）。 */
+  layoutTemplateId?: string;
 }

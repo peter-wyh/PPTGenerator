@@ -58,7 +58,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
-export const DEFAULT_GRID_SIZE = 10;
+export const DEFAULT_GRID_SIZE = 8;
 /** 缩放最小尺寸（demo：w≥40, h≥20）。 */
 export const MIN_W = 40;
 export const MIN_H = 20;
