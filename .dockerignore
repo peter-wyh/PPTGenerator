@@ -1,0 +1,33 @@
+# dependencies & build artifacts (built inside the image, never copied from host)
+**/node_modules
+**/dist
+**/.turbo
+**/coverage
+
+# vcs & tooling
+.git
+.gitignore
+.github
+.gitlab-ci.yml
+.claude
+.vscode
+.idea
+.DS_Store
+
+# docs don't belong in images
+docs
+**/*.md
+
+# logs & runtime
+**/*.log
+npm-debug.log*
+
+# secrets — keep examples, drop real env
+.env
+.env.*
+!.env.example
+**/.env.example
+
+# local dev infra & uploads
+docker-compose.yml
+uploads
