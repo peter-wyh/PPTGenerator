@@ -1,6 +1,6 @@
 
 ######## deps + build ########
-FROM node:20-bookworm-slim AS build
+FROM harbor.duomai.com/tool/node:20-bookworm-slim AS build
 WORKDIR /repo
 ENV CI=1 \
     PUPPETEER_CACHE_DIR=/repo/node_modules/.puppeteer-cache
@@ -24,7 +24,7 @@ COPY packages/shared packages/shared
 RUN pnpm --filter @mediakit/server exec prisma generate
 
 ######## runtime ########
-FROM node:20-bookworm-slim AS runtime
+FROM harbor.duomai.com/tool/node:20-bookworm-slim AS runtime
 
 # Puppeteer Chromium shared libraries (official pptr troubleshooting list).
 RUN apt-get update && apt-get install -y --no-install-recommends \
