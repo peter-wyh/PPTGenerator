@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ######## build ########
-FROM node:20-alpine AS build
+FROM harbor.duomai.com/tool/node:20-alpine AS build
 WORKDIR /repo
 ENV CI=1
 RUN corepack enable
@@ -25,7 +25,7 @@ COPY packages/shared packages/shared
 RUN pnpm --filter @mediakit/web build
 
 ######## runtime ########
-FROM nginx:stable-alpine AS runtime
+FROM harbor.duomai.com/tool/nginx:stable-alpine AS runtime
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 EXPOSE 80
