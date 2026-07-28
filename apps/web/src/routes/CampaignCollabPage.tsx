@@ -15,6 +15,7 @@ import { collaborationLabel, type CollaborationData, type CollaborationDeliverab
 import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collaborationSeed';
 import { formatUSD, formatEPC } from '@/lib/format';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
+import { ImageInput } from '@/components/ImageInput';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
 import type { ImportKind } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
@@ -651,8 +652,6 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
   }, []);
 
   const [collabData, setCollabData] = useState<CollaborationData>(row.collabData ?? buildSeedCollaboration(row.campaignId, row.creatorId));
-  const [collabType, setCollabType] = useState(row.collabType ?? '');
-  const [status, setStatus] = useState(row.status ?? '');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -662,10 +661,6 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
   async function save() {
     setBusy(true);
     try {
-      await campaignsApi.updateLink(row.linkId, {
-        collabType: collabType || undefined,
-        status: status || undefined,
-      });
       await saveCollaboration(collabData);
       onUpdate();
     } catch {
@@ -755,20 +750,6 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* 合作字段编辑 */}
-          {editing && (
-            <div className="mb-4 grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-                合作方式
-                <input value={collabType} onChange={(e) => setCollabType(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1" />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-                状态
-                <input value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1" />
-              </label>
             </div>
           )}
 
@@ -869,8 +850,29 @@ function DeliverableCard({
           <span className="rounded bg-surface-hover px-1.5 py-0.5 font-medium text-foreground-primary">{contentType}</span>
         )}
         <span className="text-foreground-muted text-[10px]">#{index + 1}</span>
-        {deliverable.publishedAt && (
-          <span className="text-foreground-muted text-[10px]">{deliverable.publishedAt}</span>
+        {editing ? (
+          <input
+            type="date"
+            value={deliverable.publishedAt ?? ''}
+            onChange={(e) => patch({ publishedAt: e.target.value })}
+            className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]"
+          />
+        ) : (
+          deliverable.publishedAt && (
+            <span className="text-foreground-muted text-[10px]">{deliverable.publishedAt}</span>
+          )
+        )}
+        {editing ? (
+          <input
+            value={deliverable.platform ?? ''}
+            placeholder="平台"
+            onChange={(e) => patch({ platform: e.target.value })}
+            className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]"
+          />
+        ) : (
+          deliverable.platform && (
+            <span className="text-foreground-muted text-[10px]">{deliverable.platform}</span>
+          )
         )}
         {firstLink && !editing && (
           <a href={firstLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline">↗ 作品链接</a>
@@ -894,33 +896,27 @@ function DeliverableCard({
         {screenshots.length === 0 ? (
           <span className="text-foreground-muted">—</span>
         ) : (
-          <div className="flex flex-wrap gap-1">
+          <div className="space-y-1">
             {screenshots.map((s, i) => (
-              <div key={i} className="flex items-center gap-1">
+              <div key={i} className="flex items-start gap-2">
                 {s.src ? (
-                  <a href={s.url ?? s.src} target="_blank" rel="noopener noreferrer" title={s.caption ?? ''}>
-                    <img src={s.src} alt={s.caption ?? ''} className="h-12 w-12 rounded border border-border-subtle object-cover hover:opacity-80" />
-                  </a>
+                  <img src={s.src} alt={s.caption ?? ''} className="h-12 w-12 shrink-0 rounded border border-border-subtle object-cover" />
                 ) : (
-                  <div className="h-12 w-12 rounded bg-surface-hover flex items-center justify-center text-[8px] text-foreground-muted">N/A</div>
+                  <div className="h-12 w-12 shrink-0 rounded bg-surface-hover flex items-center justify-center text-[8px] text-foreground-muted">N/A</div>
                 )}
-                {editing && (
-                  <div className="flex flex-col gap-0.5">
-                    <input
-                      value={s.src}
-                      placeholder="图片 URL"
-                      onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, src: e.target.value } : x)))}
-                      className="w-28 rounded border border-border-default bg-surface-primary px-1 py-0.5"
-                    />
-                    <input
-                      value={s.caption ?? ''}
-                      placeholder="说明"
-                      onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, caption: e.target.value } : x)))}
-                      className="w-28 rounded border border-border-default bg-surface-primary px-1 py-0.5"
-                    />
-                    <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red text-[10px]">✕ 删除</button>
-                  </div>
-                )}
+                <div className="flex-1 min-w-0">
+                  <ImageInput
+                    value={s.src}
+                    onChange={(url) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, src: url } : x)))}
+                  />
+                  <input
+                    value={s.caption ?? ''}
+                    placeholder="说明"
+                    onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, caption: e.target.value } : x)))}
+                    className="w-full mt-0.5 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
+                  />
+                </div>
+                <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red text-[10px] shrink-0">✕</button>
               </div>
             ))}
           </div>
@@ -1001,11 +997,14 @@ function DeliverableCard({
         )}
       </div>
 
-      {/* 每日效果数据 + CPS 每日明细（合并为一张表，按日期 join） */}
+      {/* 每日效果数据 + CPS 每日明细 editing 模式下行内可编辑 */}
       {(() => {
         const daily = deliverable.daily ?? [];
         const cpsDaily = deliverable.cps?.daily ?? [];
-        if (daily.length === 0 && cpsDaily.length === 0) return null;
+
+        const setDaily = (d: typeof daily) => patch({ daily: d });
+        const setCpsDaily = (c: typeof cpsDaily) =>
+          patch({ cps: { ...deliverable.cps!, daily: c } });
 
         // 按日期 join
         const byDate = new Map<string, { post?: typeof daily[number]; cps?: typeof cpsDaily[number] }>();
@@ -1021,58 +1020,125 @@ function DeliverableCard({
         });
         const hasCps = cpsDaily.length > 0;
 
+        if (daily.length === 0 && cpsDaily.length === 0 && !editing) return null;
+
+        /** 编辑模式：添加一天 post daily */
+        function addPostDay() {
+          const today = new Date().toISOString().slice(0, 10);
+          setDaily([...daily, { date: today, impressions: '0', likes: '0', comments: '0', shares: '0', saves: '0' }]);
+        }
+        /** 编辑模式：添加一天 cps daily */
+        function addCpsDay() {
+          if (!deliverable.cps) {
+            patch({ cps: { clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', spend: '$0', roas: '0', epc: '$0', daily: [] } });
+          }
+          const today = new Date().toISOString().slice(0, 10);
+          const arr = deliverable.cps?.daily ?? [];
+          setCpsDaily([...arr, { date: today, clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', roas: '0', epc: '$0' }]);
+        }
+
+        function updPost(ri: number, key: keyof typeof daily[number], val: string) {
+          const date = merged[ri].post?.date ?? merged[ri].cps?.date ?? '';
+          setDaily(daily.map((d) => (d.date === date ? { ...d, [key]: val } : d)));
+        }
+        function updCps(ri: number, key: keyof typeof cpsDaily[number], val: string) {
+          const date = merged[ri].post?.date ?? merged[ri].cps?.date ?? '';
+          setCpsDaily(cpsDaily.map((d) => (d.date === date ? { ...d, [key]: val } : d)));
+        }
+        function delDay(ri: number) {
+          const date = merged[ri].post?.date ?? merged[ri].cps?.date ?? '';
+          setDaily(daily.filter((d) => d.date !== date));
+          if (cpsDaily.length) setCpsDaily(cpsDaily.filter((d) => d.date !== date));
+        }
+
+        const EditableCell = ({ editing: ed, value, onChange, className = '' }: { editing: boolean; value: string; onChange?: (v: string) => void; className?: string }) =>
+          ed ? (
+            <td className={`px-1 py-0.5 ${className}`}>
+              <input
+                value={value}
+                onChange={(e) => onChange?.(e.target.value)}
+                className="w-full min-w-[3rem] rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] tabular-nums"
+              />
+            </td>
+          ) : (
+            <td className={`px-1.5 py-0.5 text-right tabular-nums ${className}`}>{value || '—'}</td>
+          );
+
         return (
           <div className="mb-2">
             <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
               <span>每日效果数据</span>
               <span className="text-foreground-muted">({merged.length} 天{hasCps ? ' · 含 CPS 挂链' : ''})</span>
+              {editing && (
+                <div className="ml-auto flex gap-2">
+                  <button onClick={addPostDay} className="text-accent-primary hover:underline">+ 互动</button>
+                  <button onClick={addCpsDay} className="text-accent-primary hover:underline">+ CPS</button>
+                </div>
+              )}
             </div>
-            <div className="max-h-40 overflow-auto rounded border border-border-subtle">
-              <table className="w-full text-[10px] tabular-nums whitespace-nowrap">
-                <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
-                  <tr>
-                    <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
-                    <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
-                    <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
-                    <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
-                    <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
-                    <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
-                    {hasCps && <>
-                      <th className="border-l border-border-subtle px-1.5 py-0.5 text-right font-medium text-accent-primary">点击</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">订单</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">GMV</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">佣金</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">CTR</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">CVR</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">ROAS</th>
-                      <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">EPC</th>
-                    </>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {merged.map((row, ri) => (
-                    <tr key={ri} className="border-t border-border-subtle text-foreground-secondary">
-                      <td className="whitespace-nowrap px-1.5 py-0.5">{row.post?.date ?? row.cps?.date}</td>
-                      <td className="px-1.5 py-0.5 text-right">{row.post?.impressions ?? '—'}</td>
-                      <td className="px-1.5 py-0.5 text-right">{row.post?.likes ?? '—'}</td>
-                      <td className="px-1.5 py-0.5 text-right">{row.post?.comments ?? '—'}</td>
-                      <td className="px-1.5 py-0.5 text-right">{row.post?.shares ?? '—'}</td>
-                      <td className="px-1.5 py-0.5 text-right">{row.post?.saves ?? '—'}</td>
+            {merged.length === 0 ? (
+              <span className="text-foreground-muted">—</span>
+            ) : (
+              <div className="max-h-40 overflow-auto rounded border border-border-subtle">
+                <table className="w-full text-[10px] tabular-nums whitespace-nowrap">
+                  <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                    <tr>
+                      <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
                       {hasCps && <>
-                        <td className="border-l border-border-subtle px-1.5 py-0.5 text-right">{row.cps?.clicks ?? '—'}</td>
-                        <td className="px-1.5 py-0.5 text-right">{row.cps?.orders ?? '—'}</td>
-                        <td className="px-1.5 py-0.5 text-right">{row.cps?.gmv ?? '—'}</td>
-                        <td className="px-1.5 py-0.5 text-right">{row.cps?.commission ?? '—'}</td>
-                        <td className="px-1.5 py-0.5 text-right">{row.cps?.ctr ?? '—'}</td>
-                        <td className="px-1.5 py-0.5 text-right">{row.cps?.cvr ?? '—'}</td>
-                        <td className="px-1.5 py-0.5 text-right">{row.cps?.roas ?? '—'}</td>
-                        <td className="px-1.5 py-0.5 text-right">{row.cps?.epc ?? '—'}</td>
+                        <th className="border-l border-border-subtle px-1.5 py-0.5 text-right font-medium text-accent-primary">点击</th>
+                        <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">订单</th>
+                        <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">GMV</th>
+                        <th className="px-1.5 py-0.5 text-right font-medium text-accent-primary">佣金</th>
                       </>}
+                      {editing && <th className="px-1 py-0.5"></th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {merged.map((row, ri) => (
+                      <tr key={ri} className="border-t border-border-subtle text-foreground-secondary">
+                        {editing ? (
+                          <td className="px-1 py-0.5">
+                            <input
+                              value={row.post?.date ?? row.cps?.date ?? ''}
+                              onChange={(e) => {
+                                const oldDate = row.post?.date ?? row.cps?.date ?? '';
+                                const newDate = e.target.value;
+                                setDaily(daily.map((d) => (d.date === oldDate ? { ...d, date: newDate } : d)));
+                                if (cpsDaily.length) setCpsDaily(cpsDaily.map((d) => (d.date === oldDate ? { ...d, date: newDate } : d)));
+                              }}
+                              className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]"
+                            />
+                          </td>
+                        ) : (
+                          <td className="whitespace-nowrap px-1.5 py-0.5">{row.post?.date ?? row.cps?.date}</td>
+                        )}
+                        <EditableCell editing={editing} value={row.post?.impressions ?? ''} onChange={(v) => updPost(ri, 'impressions', v)} />
+                        <EditableCell editing={editing} value={row.post?.likes ?? ''} onChange={(v) => updPost(ri, 'likes', v)} />
+                        <EditableCell editing={editing} value={row.post?.comments ?? ''} onChange={(v) => updPost(ri, 'comments', v)} />
+                        <EditableCell editing={editing} value={row.post?.shares ?? ''} onChange={(v) => updPost(ri, 'shares', v)} />
+                        <EditableCell editing={editing} value={row.post?.saves ?? ''} onChange={(v) => updPost(ri, 'saves', v)} />
+                        {hasCps && <>
+                          <EditableCell editing={editing} value={row.cps?.clicks ?? ''} onChange={(v) => updCps(ri, 'clicks', v)} className="border-l border-border-subtle" />
+                          <EditableCell editing={editing} value={row.cps?.orders ?? ''} onChange={(v) => updCps(ri, 'orders', v)} />
+                          <EditableCell editing={editing} value={row.cps?.gmv ?? ''} onChange={(v) => updCps(ri, 'gmv', v)} />
+                          <EditableCell editing={editing} value={row.cps?.commission ?? ''} onChange={(v) => updCps(ri, 'commission', v)} />
+                        </>}
+                        {editing && (
+                          <td className="px-1 py-0.5">
+                            <button onClick={() => delDay(ri)} className="text-red text-[10px]">✕</button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         );
       })()}
