@@ -42,9 +42,9 @@ RUN sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-ENV NODE_ENV=production \
-    PUPPETEER_CACHE_DIR=/app/node_modules/.puppeteer-cache \
-    HTTPS_PROXY=https://192.168.1.13:20171
+ENV NODE_ENV=production
+ENV PUPPETEER_CACHE_DIR=/app/node_modules/.puppeteer-cache
+ENV HTTPS_PROXY=https://192.168.1.13:20171
 
 # Whole-repo copy keeps workspace symlinks + devDeps (tsx) + Prisma client + Chromium intact.
 COPY --from=build /repo /app
