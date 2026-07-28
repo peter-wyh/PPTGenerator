@@ -3,6 +3,7 @@
 FROM harbor.duomai.com/tool/node:20-bookworm-slim AS build
 WORKDIR /repo
 ENV CI=1 \
+    PUPPETEER_SKIP_DOWNLOAD=1 \
     PUPPETEER_CACHE_DIR=/repo/node_modules/.puppeteer-cache
 RUN npm i -g corepack@latest && corepack enable
 # puppeteer postinstall extracts the Chromium zip → needs unzip (absent from -slim)
@@ -15,7 +16,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
-RUN pnpm config set registry https://registry.npmmirror.com && pnpm install --frozen-lockfile
+RUN pnpm config set registry https://registry.npmmirror.com && pnpm install --frozen-lockfile --filter "@mediakit/server..."
 
 # tsc/tsx read tsconfig.json which extends ../../tsconfig.base.json
 COPY tsconfig.base.json ./
@@ -48,6 +49,9 @@ ENV NODE_ENV=production \
 COPY --from=build /repo /app
 COPY apps/server/docker-entrypoint.sh /app/apps/server/docker-entrypoint.sh
 RUN chmod +x /app/apps/server/docker-entrypoint.sh
+
+# Download Chromium for Puppeteer (skipped in build stage for speed)
+RUN cd /app && npx puppeteer browsers install chrome --path /app/node_modules/.puppeteer-cache
 
 WORKDIR /app/apps/server
 EXPOSE 4000
