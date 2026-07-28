@@ -98,7 +98,7 @@ export const exportService = {
   /** 生成项目 PDF，返回 Buffer + 推荐文件名。 */
   async exportProjectPdf(ownerId: string, projectId: string): Promise<{ buffer: Buffer; filename: string; projectName: string }> {
     const detail = await projectsService.getOwnedOrThrow(ownerId, projectId);
-    const token = ensureShareToken(ownerId, projectId);
+    const token = await ensureShareToken(ownerId, projectId);
     const shareUrl = `${config.webUrl}/share/${token}?print=1`;
     const buffer = await renderPdf(shareUrl, detail.width, detail.height);
     const safeName = detail.name.replace(/[\\/:*?"<>|]/g, '_');
@@ -113,7 +113,7 @@ export const exportService = {
   }> {
     const detail = await projectsService.getOwnedOrThrow(ownerId, projectId);
     const pageCount = detail.pages?.length ?? 1;
-    const token = ensureShareToken(ownerId, projectId);
+    const token = await ensureShareToken(ownerId, projectId);
     const shareUrl = `${config.webUrl}/share/${token}?print=1`;
     const { stream } = await renderImages(shareUrl, detail.width, detail.height, pageCount);
     const safeName = detail.name.replace(/[\\/:*?"<>|]/g, '_');
