@@ -84,7 +84,7 @@ const GROUPS: { group: string; items: PaletteItem[] }[] = [
 const TABS = GROUPS.map((g) => g.group);
 
 /**
- * 组件库：顶部搜索框 + 分组页签。
+ * 组件库：分组页签 + 弱化搜索。
  * - 搜索有值时跨所有组过滤（按 label/description 模糊匹配），忽略页签。
  * - 搜索为空时按页签显示当前组的组件。
  * 点击添加到画布中央，或拖拽到画布指定位置。
@@ -135,50 +135,46 @@ export function ComponentPanel() {
   const empty = items.length === 0;
 
   return (
-    <div className="flex h-[88px] flex-none flex-col gap-1 border-b border-border-default bg-surface-primary px-3 py-1.5">
-      {/* 顶部搜索框 */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[12px] text-foreground-muted">🔍</span>
+    <div className="flex h-[120px] flex-none flex-col gap-1 border-b border-border-default bg-surface-primary px-3 py-1.5">
+      {/* 页签条 + 搜索（搜索弱化为右侧小输入） */}
+      <div className="flex flex-none items-center gap-1">
+        {!searching && (
+          <div className="flex flex-1 items-center gap-1 overflow-x-auto">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`whitespace-nowrap rounded px-2 py-0.5 text-[11px] font-medium transition ${
+                  activeTab === tab
+                    ? 'bg-accent-primary/10 text-accent-primary'
+                    : 'text-foreground-secondary hover:bg-surface-hover'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className={`relative ${searching ? 'flex-1' : 'w-28 flex-none'}`}>
+          <span className="pointer-events-none absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-foreground-muted opacity-60">🔍</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索组件名称…"
-            className="w-full rounded border border-border-default bg-surface-primary py-1 pl-7 pr-2 text-xs text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary focus:outline-none"
+            placeholder="搜索"
+            className="w-full rounded border border-border-default bg-surface-secondary py-0.5 pl-6 pr-2 text-[11px] text-foreground-primary placeholder:text-foreground-muted placeholder:text-[10px] focus:border-accent-primary focus:bg-surface-primary focus:outline-none"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[11px] text-foreground-muted hover:text-foreground-primary"
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-foreground-muted hover:text-foreground-primary"
               aria-label="清除搜索"
-            >
-              ✕
-            </button>
+            >✕</button>
           )}
         </div>
       </div>
 
-      {/* 页签条（搜索有值时隐藏） */}
-      {!searching && (
-        <div className="flex flex-none items-center gap-1 overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`whitespace-nowrap rounded px-2 py-0.5 text-[11px] font-medium transition ${
-                activeTab === tab
-                  ? 'bg-accent-primary/10 text-accent-primary'
-                  : 'text-foreground-secondary hover:bg-surface-hover'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* 组件网格 */}
-      <div className="flex flex-1 items-start gap-1.5 overflow-x-auto">
+      <div className="flex flex-1 items-start gap-1.5 overflow-x-auto pb-1">
         {empty ? (
           <div className="flex h-full w-full items-center justify-center text-[11px] text-foreground-muted">
             {searching ? '没有匹配的组件' : '该分组暂无组件'}
