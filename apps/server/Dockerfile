@@ -27,7 +27,9 @@ RUN pnpm --filter @mediakit/server exec prisma generate
 FROM harbor.duomai.com/tool/node:20-bookworm-slim AS runtime
 
 # Puppeteer Chromium shared libraries (official pptr troubleshooting list).
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \    
+    sed -i 's#http://security.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 \
     libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgbm1 \
     libgcc1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
