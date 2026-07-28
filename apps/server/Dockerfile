@@ -29,10 +29,11 @@ RUN pnpm --filter @mediakit/server exec prisma generate
 ######## runtime ########
 FROM harbor.duomai.com/tool/node:20-bookworm-slim AS runtime
 
-# Puppeteer Chromium shared libraries (official pptr troubleshooting list).
-RUN sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \    
+# Puppeteer: install system Chromium (avoids Google download in CI).
+RUN sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \
     sed -i 's#http://security.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
     ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 \
     libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgbm1 \
     libgcc1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
@@ -42,17 +43,15 @@ RUN sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-ENV NODE_ENV=production
-ENV PUPPETEER_CACHE_DIR=/app/node_modules/.puppeteer-cache
-ENV HTTPS_PROXY=https://192.168.1.13:20171
+ENV NODE_ENV=production \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    PUPPETEER_SKIP_DOWNLOAD=1 \
+    HTTPS_PROXY=https://192.168.1.13:20171
 
 # Whole-repo copy keeps workspace symlinks + devDeps (tsx) + Prisma client + Chromium intact.
 COPY --from=build /repo /app
 COPY apps/server/docker-entrypoint.sh /app/apps/server/docker-entrypoint.sh
 RUN chmod +x /app/apps/server/docker-entrypoint.sh
-
-# Download Chromium for Puppeteer (skipped in build stage for speed)
-RUN cd /app && npx puppeteer browsers install chrome --path /app/node_modules/.puppeteer-cache
 
 WORKDIR /app/apps/server
 EXPOSE 4000

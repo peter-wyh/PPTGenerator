@@ -19,6 +19,7 @@ async function ensureShareToken(ownerId: string, projectId: string): Promise<str
 async function launchBrowser(): Promise<Browser> {
   return puppeteer.launch({
     headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 }
