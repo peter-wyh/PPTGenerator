@@ -43,10 +43,15 @@ RUN sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+# HTTPS_PROXY was previously baked in here for the build-time Puppeteer Chrome
+# download; that step was removed (we `apt install chromium` now), so the var is
+# orphaned — and worse, it points at a private LAN IP (192.168.1.13) that isn't
+# reachable from the deploy host, which made npx fail at container start before
+# prisma could run. If a proxy is genuinely needed in some env, pass it via
+# runtime env (compose / .env.prod), don't bake a LAN address into the image.
 ENV NODE_ENV=production \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    PUPPETEER_SKIP_DOWNLOAD=1 \
-    HTTPS_PROXY=https://192.168.1.13:20171
+    PUPPETEER_SKIP_DOWNLOAD=1
 
 # Whole-repo copy keeps workspace symlinks + devDeps (tsx) + Prisma client + Chromium intact.
 COPY --from=build /repo /app
