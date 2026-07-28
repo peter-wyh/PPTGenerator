@@ -4,7 +4,7 @@ FROM harbor.duomai.com/tool/node:20-bookworm-slim AS build
 WORKDIR /repo
 ENV CI=1 \
     PUPPETEER_CACHE_DIR=/repo/node_modules/.puppeteer-cache
-RUN corepack enable
+RUN npm i -g corepack@latest && corepack enable
 # puppeteer postinstall extracts the Chromium zip → needs unzip (absent from -slim)
 RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates \
     && rm -rf /var/lib/apt/lists/*

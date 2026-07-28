@@ -3,7 +3,7 @@
 FROM harbor.duomai.com/tool/node:20-alpine AS build
 WORKDIR /repo
 ENV CI=1
-RUN corepack enable
+RUN npm i -g corepack@latest && corepack enable
 
 # manifests first for layer caching
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
