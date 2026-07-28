@@ -1,0 +1,221 @@
+{
+  "logo_url": "/kreatornow-logo.png",
+  "hero_image": "/manomano-hero.png",
+  "report_title": "MANOMANO / FRANCE MARKET",
+  "report_h1": "Social Media Intelligence",
+  "report_h2": "Competitive content insights from the DIY & home sector",
+  "platforms": ["Instagram", "TikTok", "YouTube"],
+  "period": "JAN-SEP 2025",
+  "edition": "BRANDTRACK / 2025",
+
+  "snapshot_headline": "Three signals that matter.",
+  "findings": [
+    { "number": "01", "title": "Video drives disproportionate response.", "description": "Instagram Reels represent 31.9% of ManoMano output, yet generate 56.6% of measured interaction share." },
+    { "number": "02", "title": "DIY dominates the brand narrative.", "description": "DIY accounts for 53% of ManoMano content angles, ahead of renovation at 30% and gardening at 12%." },
+    { "number": "03", "title": "Lifestyle remains open territory.", "description": "Competitors are beginning to test lifestyle-led content while ManoMano's mix remains almost entirely functional." }
+  ],
+
+  "landscape_headline": "Where ManoMano stands.",
+  "landscape_description": "The category is highly functional, but each competitor uses a different balance of DIY, renovation and gardening.",
+  "competitors": [
+    { "name": "MANOMANO",   "highlight_percent": "53%", "highlight_label": "DIY-led content share",       "bar_width": 88,  "focus": true },
+    { "name": "LEROY MERLIN","highlight_percent": "50%", "highlight_label": "Renovation-led content share", "bar_width": 83,  "focus": false },
+    { "name": "CASTORAMA",  "highlight_percent": "37%", "highlight_label": "DIY-led content share",        "bar_width": 62,  "focus": false },
+    { "name": "BRICO DEPOT","highlight_percent": "49%", "highlight_label": "Renovation-led content share",  "bar_width": 82,  "focus": false }
+  ],
+
+  "formats_headline": "Output versus audience response.",
+  "formats_description": "Inner bars represent post share. The second row shows interaction share by format.",
+  "formats_source": "Source: Instagram, TikTok and YouTube.",
+  "brands_formats": [
+    {
+      "brand_name": "ManoMano", "brand_type": "TRACKED BRAND", "focus": true,
+      "post_share": [
+        { "format_name": "TikTok video",      "percent": "37.0", "width": 36.97 },
+        { "format_name": "Instagram Reel",     "percent": "31.9", "width": 31.93 },
+        { "format_name": "Instagram carousel", "percent": "20.2", "width": 20.17 },
+        { "format_name": "YouTube video",      "percent": "6.7",  "width": 6.72 },
+        { "format_name": "Other short-form",   "percent": "4.2",  "width": 4.20 }
+      ],
+      "interaction_share": [
+        { "format_name": "TikTok video",      "percent": "30.0", "width": 29.97 },
+        { "format_name": "Instagram Reel",     "percent": "56.6", "width": 56.57 },
+        { "format_name": "Instagram carousel", "percent": "9.7",  "width": 9.69 },
+        { "format_name": "YouTube video",      "percent": "2.5",  "width": 2.45 },
+        { "format_name": "Other short-form",   "percent": "1.3",  "width": 1.32 }
+      ]
+    },
+    {
+      "brand_name": "Leroy Merlin", "brand_type": "COMPETITOR", "focus": false,
+      "post_share": [
+        { "format_name": "TikTok video",      "percent": "48.2", "width": 48.24 },
+        { "format_name": "Instagram Reel",     "percent": "24.6", "width": 24.60 },
+        { "format_name": "Instagram carousel", "percent": "20.9", "width": 20.93 },
+        { "format_name": "YouTube video",      "percent": "3.0",  "width": 3.04 },
+        { "format_name": "Other short-form",   "percent": "3.2",  "width": 3.20 }
+      ],
+      "interaction_share": [
+        { "format_name": "TikTok video",      "percent": "48.9", "width": 48.90 },
+        { "format_name": "Instagram Reel",     "percent": "47.8", "width": 47.84 },
+        { "format_name": "Instagram carousel", "percent": "2.7",  "width": 2.70 },
+        { "format_name": "YouTube video",      "percent": "0.3",  "width": 0.28 },
+        { "format_name": "Other short-form",   "percent": "0.3",  "width": 0.28 }
+      ]
+    },
+    {
+      "brand_name": "Castorama", "brand_type": "COMPETITOR", "focus": false,
+      "post_share": [
+        { "format_name": "TikTok video",      "percent": "39.3", "width": 39.25 },
+        { "format_name": "Instagram Reel",     "percent": "17.2", "width": 17.20 },
+        { "format_name": "Instagram carousel", "percent": "16.1", "width": 16.13 },
+        { "format_name": "YouTube video",      "percent": "15.1", "width": 15.05 },
+        { "format_name": "Other short-form",   "percent": "12.4", "width": 12.37 }
+      ],
+      "interaction_share": [
+        { "format_name": "TikTok video",      "percent": "94.4", "width": 94.37 },
+        { "format_name": "Instagram Reel",     "percent": "1.9",  "width": 1.92 },
+        { "format_name": "Instagram carousel", "percent": "2.1",  "width": 2.13 },
+        { "format_name": "YouTube video",      "percent": "0.2",  "width": 0.17 },
+        { "format_name": "Other short-form",   "percent": "1.4",  "width": 1.41 }
+      ]
+    },
+    {
+      "brand_name": "Brico Depot", "brand_type": "COMPETITOR", "focus": false,
+      "post_share": [
+        { "format_name": "TikTok video",      "percent": "35.5", "width": 35.51 },
+        { "format_name": "Instagram Reel",     "percent": "29.0", "width": 28.97 },
+        { "format_name": "Instagram carousel", "percent": "14.0", "width": 14.02 },
+        { "format_name": "YouTube video",      "percent": "9.3",  "width": 9.35 },
+        { "format_name": "Other short-form",   "percent": "12.2", "width": 12.15 }
+      ],
+      "interaction_share": [
+        { "format_name": "TikTok video",      "percent": "73.9", "width": 73.87 },
+        { "format_name": "Instagram Reel",     "percent": "17.8", "width": 17.80 },
+        { "format_name": "Instagram carousel", "percent": "7.7",  "width": 7.70 },
+        { "format_name": "YouTube video",      "percent": "0.3",  "width": 0.28 },
+        { "format_name": "Other short-form",   "percent": "0.4",  "width": 0.35 }
+      ]
+    }
+  ],
+
+  "angles_headline": "A category built on utility.",
+  "angles_description": "ManoMano leads with DIY, while competitors balance DIY and renovation more evenly.",
+  "brands_angles": [
+    {
+      "brand_name": "ManoMano", "focus": true,
+      "angles": [
+        { "angle_name": "DIY",               "percent": 53, "bar_width": 95.4 },
+        { "angle_name": "Renovation",         "percent": 30, "bar_width": 54.0 },
+        { "angle_name": "Gardening",          "percent": 12, "bar_width": 21.6 },
+        { "angle_name": "Promotion",          "percent": 4,  "bar_width": 7.2 },
+        { "angle_name": "Event",              "percent": 1,  "bar_width": 1.8 },
+        { "angle_name": "Product showcase",   "percent": 1,  "bar_width": 1.8 },
+        { "angle_name": "Lifestyle",          "percent": 0,  "bar_width": 0 },
+        { "angle_name": "Shop tour",          "percent": 0,  "bar_width": 0 }
+      ]
+    },
+    {
+      "brand_name": "Leroy Merlin", "focus": false,
+      "angles": [
+        { "angle_name": "DIY",               "percent": 33, "bar_width": 59.4 },
+        { "angle_name": "Renovation",         "percent": 50, "bar_width": 90.0 },
+        { "angle_name": "Gardening",          "percent": 10, "bar_width": 18.0 },
+        { "angle_name": "Promotion",          "percent": 2,  "bar_width": 3.6 },
+        { "angle_name": "Event",              "percent": 1,  "bar_width": 1.8 },
+        { "angle_name": "Product showcase",   "percent": 1,  "bar_width": 1.8 },
+        { "angle_name": "Lifestyle",          "percent": 0,  "bar_width": 0 },
+        { "angle_name": "Shop tour",          "percent": 1,  "bar_width": 1.8 }
+      ]
+    },
+    {
+      "brand_name": "Castorama", "focus": false,
+      "angles": [
+        { "angle_name": "DIY",               "percent": 37, "bar_width": 66.6 },
+        { "angle_name": "Renovation",         "percent": 35, "bar_width": 63.0 },
+        { "angle_name": "Gardening",          "percent": 15, "bar_width": 27.0 },
+        { "angle_name": "Promotion",          "percent": 6,  "bar_width": 10.8 },
+        { "angle_name": "Event",              "percent": 0,  "bar_width": 0 },
+        { "angle_name": "Product showcase",   "percent": 2,  "bar_width": 3.6 },
+        { "angle_name": "Lifestyle",          "percent": 4,  "bar_width": 7.2 },
+        { "angle_name": "Shop tour",          "percent": 0,  "bar_width": 0 }
+      ]
+    },
+    {
+      "brand_name": "Brico Depot", "focus": false,
+      "angles": [
+        { "angle_name": "DIY",               "percent": 34, "bar_width": 61.2 },
+        { "angle_name": "Renovation",         "percent": 49, "bar_width": 88.2 },
+        { "angle_name": "Gardening",          "percent": 13, "bar_width": 23.4 },
+        { "angle_name": "Promotion",          "percent": 3,  "bar_width": 5.4 },
+        { "angle_name": "Event",              "percent": 0,  "bar_width": 0 },
+        { "angle_name": "Product showcase",   "percent": 0,  "bar_width": 0 },
+        { "angle_name": "Lifestyle",          "percent": 0,  "bar_width": 0 },
+        { "angle_name": "Shop tour",          "percent": 1,  "bar_width": 1.8 }
+      ]
+    }
+  ],
+  "recommendation_title": "Build a diversified content pyramid.",
+  "recommendation_items": [
+    "Introduce lifestyle, product showcase and event-based content to attract non-core audiences.",
+    "Launch short-form tutorial series such as a \"3-Day Balcony Makeover\"",
+    "Use seasonal campaigns and limited-time offers to drive clicks and shopping intent."
+  ],
+
+  "keywords_headline": "What ManoMano talks about.",
+  "keywords_description": "Top extracted terms reveal a strong focus on tools, products and practical DIY.",
+  "keywords": [
+    { "word": "amzn",         "count": 607, "bar_width": 100.0 },
+    { "word": "manomano",     "count": 223, "bar_width": 36.7 },
+    { "word": "outils",       "count": 165, "bar_width": 27.2 },
+    { "word": "frettes",      "count": 122, "bar_width": 20.1 },
+    { "word": "amazon",       "count": 115, "bar_width": 18.9 },
+    { "word": "liens",        "count": 91,  "bar_width": 15.0 },
+    { "word": "thomann",      "count": 91,  "bar_width": 15.0 },
+    { "word": "calculateur",  "count": 88,  "bar_width": 14.5 },
+    { "word": "cadeau",       "count": 88,  "bar_width": 14.5 },
+    { "word": "produits",     "count": 76,  "bar_width": 12.5 },
+    { "word": "guitare",      "count": 73,  "bar_width": 12.0 },
+    { "word": "link",         "count": 70,  "bar_width": 11.5 },
+    { "word": "scie",         "count": 70,  "bar_width": 11.5 },
+    { "word": "securite",     "count": 66,  "bar_width": 10.9 },
+    { "word": "subscribe page","count": 66, "bar_width": 10.9 },
+    { "word": "nitorlack",    "count": 66,  "bar_width": 10.9 },
+    { "word": "vers",         "count": 61,  "bar_width": 10.0 },
+    { "word": "sont",         "count": 59,  "bar_width": 9.7 },
+    { "word": "bagnoles",     "count": 58,  "bar_width": 9.6 },
+    { "word": "garage",       "count": 58,  "bar_width": 9.6 }
+  ],
+  "keyword_insight_title": "Functional authority is clear.",
+  "keyword_insight_body": "High-frequency words such as outils, produits and scie reinforce ManoMano's practical expertise.",
+  "keyword_keep": "Tools | products | safety | home improvement",
+  "keyword_expand": "Transformation | small spaces | lifestyle | before & after",
+
+  "hashtags_headline": "Scale is not efficiency.",
+  "hashtags_description": "Post volume is shown by bars; the lime signal marks the relative interaction index.",
+  "hashtags_y_max": "40", "hashtags_y_mid": "20", "hashtags_y_low": "10", "hashtags_y_min": "0",
+  "hashtags": [
+    { "tag": "#manomano",        "post_count": 36, "post_height": 252, "interaction_index": 18, "interaction_bottom": 126 },
+    { "tag": "#ManoMano",        "post_count": 20, "post_height": 140, "interaction_index": 8,  "interaction_bottom": 56 },
+    { "tag": "#collablecreator", "post_count": 20, "post_height": 140, "interaction_index": 34, "interaction_bottom": 238 },
+    { "tag": "#fanstoshop",      "post_count": 14, "post_height": 98,  "interaction_index": 4,  "interaction_bottom": 28 },
+    { "tag": "#deco",            "post_count": 12, "post_height": 84,  "interaction_index": 20, "interaction_bottom": 140 },
+    { "tag": "#renovation",      "post_count": 11, "post_height": 77,  "interaction_index": 7,  "interaction_bottom": 49 },
+    { "tag": "#jardin",          "post_count": 9,  "post_height": 63,  "interaction_index": 13, "interaction_bottom": 91 },
+    { "tag": "#diy",             "post_count": 8,  "post_height": 56,  "interaction_index": 8,  "interaction_bottom": 56 },
+    { "tag": "#travaux",         "post_count": 7,  "post_height": 49,  "interaction_index": 1,  "interaction_bottom": 7 },
+    { "tag": "#tutorial",        "post_count": 6,  "post_height": 42,  "interaction_index": 3,  "interaction_bottom": 21 }
+  ],
+  "hashtag_strategy_title": "Branded tag ecosystem + contextual tags",
+  "hashtag_strategy_body": "<b>Brand system:</b> #manomanoDIY | #manomanoProjects<br/><b>Contextual reach:</b> #HomeDecor | #SmallSpaceHacks | #BeforeAndAfter",
+
+  "actions_headline": "From signal to activation.",
+  "actions": [
+    { "number": "01", "category": "FORMAT",    "title": "Scale Reels as the lead content engine.",     "description": "Package repeatable tutorials and transformations into creator-friendly vertical series." },
+    { "number": "02", "category": "ANGLE",     "title": "Add aspiration to utility.",                   "description": "Pair product proof with lifestyle outcomes, compact-space solutions and before/after stories." },
+    { "number": "03", "category": "DISCOVERY", "title": "Build a coherent hashtag system.",             "description": "Connect branded, contextual and campaign tags so content can be grouped and discovered." }
+  ],
+
+  "footer_description": "Brandtrack Social Media Intelligence<br/>ManoMano / France Market",
+  "footer_data_source": "Data source: Instagram, TikTok & YouTube",
+  "footer_period": "Reporting period: Jan-Sep 2025"
+}

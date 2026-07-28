@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>{{report_title}}</title>
+<meta name="description" content="{{report_subtitle}}"/>
+<!--
+  ═══════════════════════════════════════════════════════════════
+  BRANDTRACK REPORT TEMPLATE — Kreatornow Style
+  ═══════════════════════════════════════════════════════════════
+  用途：竞品社媒情报报告（长滚动 HTML 格式）
+  数据填充：所有 {{placeholder}} 由后端 JSON 数据渲染替换
+
+  占位符清单：
+  ── 全局 ──
+  {{logo_url}}          — 品牌 logo 图片
+  {{hero_image}}        — 封面大图
+  {{report_title}}      — 报告标题（如 "ManoMano / France Market"）
+  {{report_h1}}         — H1 大标题（如 "Social Media Intelligence"）
+  {{report_h2}}         — H2 副标题
+  {{platforms}}         — 平台列表（Instagram / TikTok / YouTube）
+  {{period}}            — 报告周期（如 "JAN-SEP 2025"）
+  {{edition}}           — 右上角版本号（如 "BRANDTRACK / 2025"）
+
+  ── 01 SNAPSHOT（3 个核心发现）──
+  {{#findings}}
+    {{number}} {{title}} {{description}}
+  {{/findings}}
+
+  ── 02 LANDSCAPE（竞品对比）──
+  {{#competitors}}
+    {{name}} {{highlight_percent}} {{highlight_label}} {{bar_width}} {{focus}}
+  {{/competitors}}
+
+  ── 03 FORMATS（内容类型分析）──
+  {{#brands_formats}}
+    {{brand_name}} {{brand_type}} {{focus}}
+    {{#post_share}} {{format_name}} {{percent}} {{width}} {{/post_share}}
+    {{#interaction_share}} {{format_name}} {{percent}} {{width}} {{/interaction_share}}
+  {{/brands_formats}}
+
+  ── 04 ANGLES（内容角度分析）──
+  {{#brands_angles}}
+    {{brand_name}} {{focus}}
+    {{#angles}} {{angle_name}} {{percent}} {{bar_width}} {{/angles}}
+  {{/brands_angles}}
+  {{recommendation_title}} {{#recommendation_items}} {{.}} {{/recommendation_items}}
+
+  ── 05 KEYWORDS（关键词分析）──
+  {{#keywords}}
+    {{word}} {{count}} {{bar_width}}
+  {{/keywords}}
+  {{keyword_insight_title}} {{keyword_insight_body}}
+  {{keyword_keep}} {{keyword_expand}}
+
+  ── 06 HASHTAGS（标签分析）──
+  {{#hashtags}}
+    {{tag}} {{post_count}} {{post_height}} {{interaction_index}} {{interaction_bottom}}
+  {{/hashtags}}
+  {{hashtag_strategy_title}} {{hashtag_brand_system}} {{hashtag_contextual}}
+
+  ── 07 ACTIONS（优先行动）──
+  {{#actions}}
+    {{number}} {{category}} {{title}} {{description}}
+  {{/actions}}
+
+  ── 页脚 ──
+  {{footer_description}} {{footer_data_source}} {{footer_period}}
+
+  色板（:root CSS 变量，可换色）：
+  --ink: #111      主色（文字/深色背景）
+  --paper: #f5f5f2 页面底色
+  --lime: #c4d39a  强调色（高亮卡/指标点）
+  --blue: #3f57c9  链接色/第二种强调
+  --line: #c6c6c0  分割线
+  ═══════════════════════════════════════════════════════════════
+-->
+
+<style>
+/* ═══ DESIGN TOKENS ═══ */
+:root {
+  --ink: #111;
+  --paper: #f5f5f2;
+  --lime: #c4d39a;
+  --blue: #3f57c9;
+  --line: #c6c6c0;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--paper); color: var(--ink); margin: 0; font-family: Arial, Helvetica, sans-serif; }
+a { color: inherit; text-decoration: none; }
+
+/* ═══ NAV ═══ */
+.mm-report { color: var(--ink); background: var(--paper); }
+.mm-nav {
+  backdrop-filter: blur(12px); z-index: 20;
+  background: rgba(245,245,242,0.94); border-bottom: 1px solid;
+  grid-template-columns: 1fr 2fr 1fr; align-items: center;
+  height: 76px; padding: 0 4vw; display: grid; position: sticky; top: 0;
+}
+.mm-nav nav {
+  font: 10px ui-monospace, monospace; text-transform: uppercase;
+  justify-content: center; gap: 25px; display: flex;
+}
+.mm-nav nav a:hover { text-decoration: underline; text-underline-offset: 5px; }
+.mm-nav > span { text-align: right; font: 9px ui-monospace, monospace; }
+.brand-logo { display: inline-flex; align-items: center; }
+.brand-logo img { height: 36px; width: auto; }
+.footer-logo { filter: invert(); }
+
+/* ═══ HERO ═══ */
+.mm-hero { border-bottom: 1px solid; height: 720px; position: relative; overflow: hidden; }
+.mm-hero > img { object-fit: cover; width: 100%; height: 100%; }
+.mm-hero::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(245,245,242,0.98) 0%, rgba(245,245,242,0.92) 34%, transparent 62%);
+}
+.mm-title { z-index: 2; flex-direction: column; max-width: 700px; display: flex; position: absolute; top: 10%; bottom: 7%; left: 4vw; }
+.mm-title > p { font: 700 10px ui-monospace, monospace; letter-spacing: 0.12em; }
+.mm-title h1 { letter-spacing: -0.075em; text-transform: uppercase; margin: 50px 0 32px; font-size: clamp(68px, 8vw, 126px); line-height: 0.84; }
+.mm-title h2 { text-transform: uppercase; margin: 0; font-size: 27px; line-height: 1.08; }
+.mm-title > div { font: 10px ui-monospace, monospace; border-top: 1px solid; gap: 20px; margin-top: auto; padding-top: 15px; display: flex; }
+.mm-title > div b { margin-left: 35px; }
+
+/* ═══ SECTION ═══ */
+.mm-section { border-bottom: 1px solid var(--line); padding: 96px 5vw; }
+.mm-head { grid-template-columns: 0.8fr 1.5fr 1fr; align-items: start; gap: 5vw; margin-bottom: 65px; display: grid; }
+.mm-head > span { font: 700 11px ui-monospace, monospace; letter-spacing: 0.12em; }
+.mm-head h2 { letter-spacing: -0.05em; text-transform: uppercase; margin: 0; font-size: clamp(40px, 4.2vw, 66px); line-height: 0.96; }
+.mm-head p { margin: 0; font-size: 14px; line-height: 1.6; }
+.mm-dark { color: #f4f4f0; background: var(--ink); }
+
+/* ═══ 01 FINDINGS ═══ */
+.mm-findings { border: 1px solid; grid-template-columns: repeat(3, 1fr); display: grid; }
+.mm-findings article { border-right: 1px solid; min-height: 300px; padding: 30px; }
+.mm-findings article:last-child { border: 0; }
+.mm-findings article > b { color: #aaa; font-size: 54px; }
+.mm-findings h3 { margin: 55px 0 20px; font-size: 26px; line-height: 1.1; }
+.mm-findings p { font-size: 13px; line-height: 1.5; }
+
+/* ═══ 02 LANDSCAPE ═══ */
+.mm-landscape-grid { border: 1px solid; grid-template-columns: repeat(4, 1fr); display: grid; }
+.mm-landscape-grid article { border-right: 1px solid; flex-direction: column; min-height: 260px; padding: 28px; display: flex; }
+.mm-landscape-grid article:last-child { border: 0; }
+.mm-landscape-grid article.focus { background: #e5ead5; }
+.mm-landscape-grid span { font: 9px ui-monospace, monospace; }
+.mm-landscape-grid strong { letter-spacing: -5px; margin: auto 0 3px; font-size: 68px; }
+.mm-landscape-grid p { font-size: 11px; }
+.mm-landscape-grid article > i { background: #ddd; height: 8px; margin-top: 18px; display: block; }
+.mm-landscape-grid article > i b { background: var(--ink); height: 100%; display: block; }
+
+/* ═══ 03 FORMATS ═══ */
+.mm-format-grid { border: 1px solid #444; grid-template-columns: 1fr 1fr; display: grid; }
+.mm-format-grid article { border-bottom: 1px solid #444; border-right: 1px solid #444; padding: 30px; }
+.mm-format-grid article:nth-child(2n) { border-right: 0; }
+.mm-format-grid article:nth-last-child(-n+2) { border-bottom: 0; }
+.mm-format-grid .focus { background: #202018; }
+.mm-format-grid header { justify-content: space-between; align-items: center; display: flex; }
+.mm-format-grid h3 { text-transform: uppercase; font-size: 25px; }
+.mm-format-grid header span, .mm-format-grid > article > p { font: 9px ui-monospace, monospace; color: #999; }
+.mm-stack { height: 38px; margin: 10px 0 25px; display: flex; }
+.mm-stack i { background: #f4f4f0; border-right: 1px solid var(--ink); display: block; }
+.mm-stack i:nth-child(2) { background: #aaa; }
+.mm-stack i:nth-child(3) { background: #777; }
+.mm-stack i:nth-child(4) { background: #555; }
+.mm-stack i:nth-child(5) { background: #333; }
+.mm-stack.buzz i:first-child { background: var(--lime); }
+.mm-format-key { grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; display: grid; }
+.mm-format-key span { grid-template-columns: 8px 1fr auto; align-items: center; gap: 8px; font-size: 10px; display: grid; }
+.mm-format-key span > i { background: #fff; width: 8px; height: 8px; }
+.mm-format-key span:nth-child(2) > i { background: #aaa; }
+.mm-format-key span:nth-child(3) > i { background: #777; }
+.mm-format-key span:nth-child(4) > i { background: #555; }
+.mm-format-key span:nth-child(5) > i { background: #333; }
+.mm-format-key em { font-style: normal; }
+.mm-source { font: 9px ui-monospace, monospace; color: #888; margin-top: 20px; }
+
+/* ═══ 04 ANGLES ═══ */
+.mm-angle-grid { border: 1px solid; grid-template-columns: repeat(4, 1fr); display: grid; }
+.mm-angle-grid article { border-right: 1px solid; padding: 25px; }
+.mm-angle-grid article:last-child { border: 0; }
+.mm-angle-grid .focus { background: #e5ead5; }
+.mm-angle-grid h3 { text-transform: uppercase; margin: 0 0 25px; font-size: 20px; }
+.mm-angle { grid-template-columns: 105px 1fr 38px; align-items: center; gap: 8px; padding: 10px 0; font-size: 10px; display: grid; }
+.mm-angle > i { background: #ddd; height: 10px; }
+.mm-angle > i b { background: #333; height: 100%; display: block; }
+.mm-angle strong { text-align: right; }
+.mm-recommend { color: #fff; background: var(--ink); grid-template-columns: 0.8fr 1.2fr 2fr; gap: 40px; margin-top: 35px; padding: 28px; display: grid; }
+.mm-recommend > span { font: 9px ui-monospace, monospace; }
+.mm-recommend h3 { margin: 0; font-size: 28px; }
+.mm-recommend ul { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.8; }
+
+/* ═══ 05 KEYWORDS ═══ */
+.mm-keyword-layout { border: 1px solid; grid-template-columns: 1fr 1fr; display: grid; }
+.mm-keyword-layout > article, .mm-keyword-layout > aside { padding: 35px; }
+.mm-keyword-layout > aside { background: var(--blue); color: #fff; }
+.mm-keyword-row { grid-template-columns: 110px 1fr 45px; align-items: center; gap: 15px; padding: 8px 0; font-size: 11px; display: grid; }
+.mm-keyword-row > i { background: #ddd; height: 10px; }
+.mm-keyword-row > i b { background: var(--ink); height: 100%; display: block; }
+.mm-keyword-row strong { text-align: right; }
+.mm-keyword-layout aside > span { font: 9px ui-monospace, monospace; }
+.mm-keyword-layout aside h3 { margin: 50px 0 25px; font-size: 36px; line-height: 1.05; }
+.mm-keyword-layout aside h3 em { color: var(--lime); font-style: normal; }
+.mm-keyword-layout aside > p { line-height: 1.6; }
+.mm-keyword-layout aside > div { border-top: 1px solid rgba(255,255,255,0.4); margin-top: 55px; padding-top: 18px; }
+.mm-keyword-layout aside > div p { font-size: 12px; }
+
+/* ═══ 06 HASHTAGS ═══ */
+.mm-hash-chart {
+  background: repeating-linear-gradient(transparent 0, transparent 76px, #292929 77px);
+  border-bottom: 1px solid #666; border-left: 1px solid #666;
+  grid-template-columns: repeat(10, 1fr); align-items: end;
+  height: 390px; padding: 0 30px 0 40px; display: grid; position: relative;
+}
+.mm-y { font: 9px ui-monospace, monospace; flex-direction: column; justify-content: space-between; display: flex; position: absolute; top: -4px; bottom: -4px; left: -28px; }
+.mm-hcol { flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; display: flex; position: relative; }
+.mm-hcol > div { background: #eee; width: 35%; position: relative; }
+.mm-hcol > div b { text-align: center; width: 100%; font: 9px ui-monospace, monospace; position: absolute; top: -17px; }
+.mm-hcol > i { background: var(--lime); border-radius: 50%; width: 12px; height: 12px; font-style: normal; position: absolute; }
+.mm-hcol > i span { font: 8px ui-monospace, monospace; position: absolute; left: 12px; }
+.mm-hcol > strong { writing-mode: vertical-rl; height: 78px; font: 9px ui-monospace, monospace; margin-top: 8px; transform: rotate(180deg); }
+.mm-hash-read { border-top: 1px solid #555; grid-template-columns: 0.7fr 1fr 1.5fr; margin-top: 45px; padding-top: 30px; display: grid; }
+.mm-hash-read > span { font: 9px ui-monospace, monospace; }
+.mm-hash-read h3 { margin: 0; font-size: 30px; }
+.mm-hash-read p { margin: 0; line-height: 1.7; }
+
+/* ═══ 07 ACTIONS ═══ */
+.mm-actions { border-top: 1px solid; grid-template-columns: repeat(3, 1fr); display: grid; }
+.mm-actions article { border-right: 1px solid; min-height: 300px; padding: 35px 35px 0 0; }
+.mm-actions article + article { padding-left: 35px; }
+.mm-actions article:last-child { border: 0; }
+.mm-actions article > b { color: #aaa; font-size: 45px; }
+.mm-actions span { font: 9px ui-monospace, monospace; margin: 25px 0; display: block; }
+.mm-actions h3 { font-size: 26px; line-height: 1.1; }
+.mm-actions p { font-size: 13px; line-height: 1.6; }
+
+/* ═══ FOOTER ═══ */
+.mm-footer { color: #fff; background: #090909; grid-template-columns: 1.1fr 1fr 1fr; gap: 30px; padding: 45px 4vw; display: grid; }
+.mm-footer p { font: 10px/1.7 ui-monospace, monospace; margin: 0; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 900px) {
+  .mm-nav { grid-template-columns: 1fr auto; }
+  .mm-nav nav { display: none; }
+  .mm-hero { height: 740px; }
+  .mm-hero::after { background: linear-gradient(90deg, rgba(245,245,242,0.96), rgba(245,245,242,0.72) 65%, transparent); }
+  .mm-head, .mm-findings, .mm-format-grid, .mm-keyword-layout, .mm-actions { grid-template-columns: 1fr; }
+  .mm-angle-grid { grid-template-columns: 1fr 1fr; }
+  .mm-findings article, .mm-format-grid article, .mm-actions article { border-bottom: 1px solid; border-right: 0; }
+  .mm-format-grid article:nth-last-child(-n+2) { border-bottom: 1px solid; }
+  .mm-format-grid article:last-child { border-bottom: 0; }
+  .mm-recommend { grid-template-columns: 1fr; }
+  .mm-footer { grid-template-columns: 1fr 1fr; }
+  .mm-landscape-grid { grid-template-columns: 1fr 1fr; }
+  .mm-landscape-grid article:nth-child(2) { border-right: 0; }
+  .mm-landscape-grid article:nth-child(-n+2) { border-bottom: 1px solid; }
+}
+@media (max-width: 560px) {
+  .mm-section { padding: 70px 20px; }
+  .mm-title { left: 20px; right: 20px; }
+  .mm-title h1 { font-size: 58px; }
+  .mm-title h2 { font-size: 20px; }
+  .mm-angle-grid { grid-template-columns: 1fr; }
+  .mm-angle-grid article { border-bottom: 1px solid; border-right: 0; }
+  .mm-footer { grid-template-columns: 1fr; }
+  .mm-landscape-grid { grid-template-columns: 1fr; }
+  .mm-landscape-grid article { border-bottom: 1px solid; border-right: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- NAV                                              -->
+<!-- ═══════════════════════════════════════════════ -->
+<main class="mm-report">
+<header class="mm-nav">
+  <span class="brand-logo"><img src="{{logo_url}}" alt="Logo"/></span>
+  <nav>
+    <a href="#snapshot">Snapshot</a>
+    <a href="#landscape">Landscape</a>
+    <a href="#formats">Formats</a>
+    <a href="#angles">Angles</a>
+    <a href="#keywords">Keywords</a>
+    <a href="#hashtags">Hashtags</a>
+    <a href="#actions">Actions</a>
+  </nav>
+  <span>{{edition}}</span>
+</header>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- HERO                                             -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-hero">
+  <img src="{{hero_image}}" alt="Hero image"/>
+  <div class="mm-title">
+    <p>{{report_title}}</p>
+    <h1>{{report_h1}}</h1>
+    <h2>{{report_h2}}</h2>
+    <div>
+      {{#platforms}}<span>{{.}}</span>{{/platforms}}
+      <b>{{period}}</b>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 01 SNAPSHOT                                      -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-section mm-overview" id="snapshot">
+  <div class="mm-head">
+    <span>01 / EXECUTIVE SNAPSHOT</span>
+    <h2>{{snapshot_headline}}</h2>
+  </div>
+  <div class="mm-findings">
+    {{#findings}}
+    <article>
+      <b>{{number}}</b>
+      <h3>{{title}}</h3>
+      <p>{{description}}</p>
+    </article>
+    {{/findings}}
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 02 LANDSCAPE                                     -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-section mm-landscape" id="landscape">
+  <div class="mm-head">
+    <span>02 / COMPETITIVE LANDSCAPE</span>
+    <h2>{{landscape_headline}}</h2>
+    <p>{{landscape_description}}</p>
+  </div>
+  <div class="mm-landscape-grid">
+    {{#competitors}}
+    <article class="{{#focus}}focus{{/focus}}">
+      <span>{{name}}</span>
+      <strong>{{highlight_percent}}</strong>
+      <p>{{highlight_label}}</p>
+      <i><b style="width:{{bar_width}}%"></b></i>
+    </article>
+    {{/competitors}}
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 03 FORMATS                                       -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-section mm-dark" id="formats">
+  <div class="mm-head">
+    <span>03 / CONTENT ANALYSIS BY TYPE</span>
+    <h2>{{formats_headline}}</h2>
+    <p>{{formats_description}}</p>
+  </div>
+  <div class="mm-format-grid">
+    {{#brands_formats}}
+    <article class="{{#focus}}focus{{/focus}}">
+      <header>
+        <h3>{{brand_name}}</h3>
+        <span>{{brand_type}}</span>
+      </header>
+      <p>POST SHARE</p>
+      <div class="mm-stack">
+        {{#post_share}}<i style="width:{{width}}%" title="{{format_name}} {{percent}}%"></i>{{/post_share}}
+      </div>
+      <p>INTERACTION SHARE</p>
+      <div class="mm-stack buzz">
+        {{#interaction_share}}<i style="width:{{width}}%" title="{{format_name}} {{percent}}%"></i>{{/interaction_share}}
+      </div>
+      <div class="mm-format-key">
+        {{#post_share}}
+        <span><i></i><b>{{format_name}}</b><em>{{percent}}%</em></span>
+        {{/post_share}}
+      </div>
+    </article>
+    {{/brands_formats}}
+  </div>
+  <p class="mm-source">{{formats_source}}</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 04 ANGLES                                        -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-section" id="angles">
+  <div class="mm-head">
+    <span>04 / CONTENT ANALYSIS BY ANGLE</span>
+    <h2>{{angles_headline}}</h2>
+    <p>{{angles_description}}</p>
+  </div>
+  <div class="mm-angle-grid">
+    {{#brands_angles}}
+    <article class="{{#focus}}focus{{/focus}}">
+      <h3>{{brand_name}}</h3>
+      {{#angles}}
+      <div class="mm-angle">
+        <span>{{angle_name}}</span>
+        <i><b style="width:{{bar_width}}%"></b></i>
+        <strong>{{percent}}%</strong>
+      </div>
+      {{/angles}}
+    </article>
+    {{/brands_angles}}
+  </div>
+  <aside class="mm-recommend">
+    <span>CONTENT STRATEGY</span>
+    <h3>{{recommendation_title}}</h3>
+    <ul>
+      {{#recommendation_items}}<li>{{.}}</li>{{/recommendation_items}}
+    </ul>
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 05 KEYWORDS                                      -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-section mm-keyword" id="keywords">
+  <div class="mm-head">
+    <span>05 / CONTENT KEYWORD ANALYSIS</span>
+    <h2>{{keywords_headline}}</h2>
+    <p>{{keywords_description}}</p>
+  </div>
+  <div class="mm-keyword-layout">
+    <article>
+      {{#keywords}}
+      <div class="mm-keyword-row">
+        <span>{{word}}</span>
+        <i><b style="width:{{bar_width}}%"></b></i>
+        <strong>{{count}}</strong>
+      </div>
+      {{/keywords}}
+    </article>
+    <aside>
+      <span>INTERPRETATION</span>
+      <h3>{{keyword_insight_title}}</h3>
+      <p>{{keyword_insight_body}}</p>
+      <div>
+        <b>KEEP</b>
+        <p>{{keyword_keep}}</p>
+      </div>
+      <div>
+        <b>EXPAND</b>
+        <p>{{keyword_expand}}</p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 06 HASHTAGS                                      -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-section mm-dark" id="hashtags">
+  <div class="mm-head">
+    <span>06 / HASHTAG ANALYSIS</span>
+    <h2>{{hashtags_headline}}</h2>
+    <p>{{hashtags_description}}</p>
+  </div>
+  <div class="mm-hash-chart">
+    <div class="mm-y">
+      <span>{{hashtags_y_max}}</span>
+      <span>{{hashtags_y_mid}}</span>
+      <span>{{hashtags_y_low}}</span>
+      <span>{{hashtags_y_min}}</span>
+      <span>0</span>
+    </div>
+    {{#hashtags}}
+    <div class="mm-hcol">
+      <div style="height:{{post_height}}px"><b>{{post_count}}</b></div>
+      <i style="bottom:{{interaction_bottom}}px"><span>{{interaction_index}}</span></i>
+      <strong>{{tag}}</strong>
+    </div>
+    {{/hashtags}}
+  </div>
+  <div class="mm-hash-read">
+    <span>HASHTAG STRATEGY</span>
+    <h3>{{hashtag_strategy_title}}</h3>
+    <p>{{{hashtag_strategy_body}}}</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- 07 ACTIONS                                       -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-section mm-action" id="actions">
+  <div class="mm-head">
+    <span>07 / PRIORITY ACTIONS</span>
+    <h2>{{actions_headline}}</h2>
+  </div>
+  <div class="mm-actions">
+    {{#actions}}
+    <article>
+      <b>{{number}}</b>
+      <span>{{category}}</span>
+      <h3>{{title}}</h3>
+      <p>{{description}}</p>
+    </article>
+    {{/actions}}
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- FOOTER                                           -->
+<!-- ═══════════════════════════════════════════════ -->
+<footer class="mm-footer">
+  <div class="brand-logo footer-logo"><img src="{{logo_url}}" alt="Logo"/></div>
+  <p>{{footer_description}}</p>
+  <p>{{footer_data_source}}<br/>{{footer_period}}</p>
+</footer>
+
+</main>
+</body>
+</html>
