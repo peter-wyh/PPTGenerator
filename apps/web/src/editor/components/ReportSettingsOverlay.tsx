@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSyncExternalStore, useState } from 'react';
 import {
   DEFAULT_THEME,
   FONT_OPTIONS,
@@ -12,6 +12,14 @@ import { useEditorStore } from '../store';
 import type { ThemePatch } from '../store';
 import { ImageInput } from '@/components/ImageInput';
 import { BUSINESS_LINE_META } from '@/projectsMeta';
+import {
+  registerCustomFonts,
+  unregisterCustomFont,
+  subscribeCustomFonts,
+  getCustomFontsSnapshot,
+  customFontToOption,
+} from '../customFonts';
+import { uploadFont, deleteFont } from '@/api/fonts';
 
 interface Props {
   onClose: () => void;
@@ -109,6 +117,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
   // 本地 draft 更新：复刻 store.setTheme 的深合并签名，但不落 store（仅改 draft）。
   const setTheme = (patch: ThemePatch) => setDraft((prev) => applyDraftPatch(prev, patch));
   const [toast, setToast] = useState<string | null>(null);
+  const customFonts = useSyncExternalStore(subscribeCustomFonts, getCustomFontsSnapshot);
+  const [uploadingFont, setUploadingFont] = useState(false);
 
   // 业务线 Logo（标题栏右上角，只读；取自 mock BUSINESS_LINE_META）
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
@@ -253,9 +263,10 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     setTimeout(() => setToast(null), 2500);
   }
 
-  const textFonts = FONT_OPTIONS.filter((f) => f.category === 'text');
-  const numberFonts = FONT_OPTIONS.filter((f) => f.category === 'number');
-  const headingFonts = FONT_OPTIONS; // 标题可选任意字体 + "跟随文本"
+  const customOpts = customFonts.map(customFontToOption);
+  const textFonts = [...FONT_OPTIONS.filter((f) => f.category === 'text'), ...customOpts];
+  const numberFonts = [...FONT_OPTIONS.filter((f) => f.category === 'number'), ...customOpts];
+  const headingFonts = [...FONT_OPTIONS, ...customOpts]; // 标题可选任意字体 + "跟随文本"
 
   return (
     <div
@@ -418,7 +429,55 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   />
                 </section>
 
-                {/* 标题样式：全局默认,标题块组件默认继承、可单组件覆盖。 */}
+                {/* 自定义字体上传 */}
+                <section className="space-y-2">
+                  <div className="text-xs font-semibold text-foreground-secondary">自定义字体</div>
+                  <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-border-subtle px-3 py-2 text-xs text-foreground-muted hover:border-accent-primary hover:text-accent-primary">
+                    {uploadingFont ? '上传中…' : '点击上传 TTF / OTF / WOFF / WOFF2 / ZIP'}
+                    <input
+                      type="file"
+                      accept=".ttf,.otf,.woff,.woff2,.zip"
+                      className="hidden"
+                      disabled={uploadingFont}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingFont(true);
+                        try {
+                          const metas = await uploadFont(file);
+                          registerCustomFonts(metas);
+                          setToast(`已上传 ${metas.length} 个字体`);
+                          setTimeout(() => setToast(null), 2500);
+                        } catch {
+                          setToast('字体上传失败');
+                          setTimeout(() => setToast(null), 2500);
+                        } finally {
+                          setUploadingFont(false);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+                  {customFonts.length > 0 && (
+                    <div className="space-y-1">
+                      {customFonts.map((cf) => (
+                        <div key={cf.id} className="flex items-center justify-between rounded-md bg-surface-secondary px-2 py-1 text-xs">
+                          <span className="truncate text-foreground-secondary">{cf.name}</span>
+                          <button
+                            type="button"
+                            className="text-red hover:underline"
+                            onClick={async () => {
+                              try { await deleteFont(cf.id); unregisterCustomFont(cf.id); }
+                              catch { setToast('删除失败'); setTimeout(() => setToast(null), 2500); }
+                            }}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
                 <section className="space-y-2">
                   <div className="text-xs font-semibold text-foreground-secondary">标题样式</div>
                   <div className="flex items-center gap-2">

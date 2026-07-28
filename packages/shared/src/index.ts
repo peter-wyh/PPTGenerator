@@ -15,6 +15,7 @@ export * from './types/theme';
 export * from './types/editor';
 export * from './types/collaboration';
 export * from './types/page';
+export * from './types/reportScheme';
 
 // ---- 运行时常量 / 工具函数 ----
 export * from './theme/presets';

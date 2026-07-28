@@ -26,6 +26,7 @@ model User {
   dataRecords  DataRecord[]
   campaigns    Campaign[]
   creators     Creator[]
+  schemes      ReportScheme[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -326,6 +327,34 @@ model Collaboration {
 // ─── Phase 4: CPS 链接效果独立表 ────────────────────────────────────────────
 // 每条 CPS 跟踪链接 = 一行；按 (campaign × creator × contentType) 归组。
 // 汇总指标为结构化列，每日明细保留 JSON。
+
+/// 报告方案：可扩展的报告类型目录（如 DM 双周报、DM 月报等）。
+model ReportScheme {
+  id          String   @id @default(cuid())
+  /// 方案编码（如 dm-biweekly, dm-monthly）
+  code        String   @unique
+  /// 方案名称
+  name        String
+  /// 方案描述
+  description String?
+  /// 所属业务线 code（如 DM）
+  businessLineCode String?
+  /// 页数
+  pageCount   Int      @default(8)
+  /// 是否启用
+  enabled     Boolean  @default(true)
+  /// 排序权重
+  sortOrder   Int      @default(0)
+  /// 默认风格预设 ID
+  defaultStyle String?
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([businessLineCode])
+}
 
 /// CPS 链接效果（一行=一条 CPS 跟踪链接的汇总数据）。
 model CpsPerformance {

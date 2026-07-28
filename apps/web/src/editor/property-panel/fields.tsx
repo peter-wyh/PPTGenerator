@@ -9,6 +9,8 @@ import { findIcon } from '../icons/catalog';
 import { IconKit } from '../icons/IconKit';
 import { sanitizeRichText } from '../richText';
 import { ImageInput } from '@/components/ImageInput';
+import { CropModal } from '@/components/CropModal';
+import { uploadImage } from '@/api/uploads';
 import { useDataUpdate, readValue, FieldGroup } from './helpers';
 
 export function NumberField({ comp, field }: { comp: EditorComponent; field: PropertyField }) {
@@ -471,6 +473,16 @@ export function TableField({ comp }: { comp: EditorComponent }) {
     return h === 'icon' || h === 'iconkey' || h === 'icon-key' || h === '图标';
   };
 
+  /**
+   * 判断某列是否为图片列。
+   * 命中：cover / avatar / logo / image / screenshot（含 "image url"、"logo url"、"screenshot url"）。
+   * 不匹配 "link"、"url"（单独）等非图片列。
+   */
+  const isImageCol = (ci: number) => {
+    const h = (headers[ci] ?? '').toLowerCase();
+    return ['cover', 'avatar', 'logo', 'image', 'screenshot'].some((kw) => h.includes(kw));
+  };
+
   const setHeader = (i: number, v: string) => {
     const headers2 = headers.map((h, idx) => (idx === i ? v : h));
     update('headers', headers2);
@@ -517,6 +529,12 @@ export function TableField({ comp }: { comp: EditorComponent }) {
             {row.map((cell, ci) =>
               isIconCol(ci) ? (
                 <TableCellIconPicker
+                  key={ci}
+                  value={cell}
+                  onChange={(v) => setCell(ri, ci, v)}
+                />
+              ) : isImageCol(ci) ? (
+                <TableCellImageInput
                   key={ci}
                   value={cell}
                   onChange={(v) => setCell(ri, ci, v)}
@@ -579,6 +597,58 @@ export function TableCellIconPicker({ value, onChange }: { value: string; onChan
           }}
           onClose={() => setOpen(false)}
         />
+      )}
+    </>
+  );
+}
+
+/**
+ * 表格图片单元格：紧凑按钮（缩略图/占位）→ 点击上传 → 裁剪 → 上传服务端 → 回填 URL。
+ * 与 TableCellIconPicker 同款尺寸（h-6 w-16），保持表格行高一致。
+ * 数据仍是字符串 URL（表格结构不变）。
+ */
+export function TableCellImageInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) setPending(f);
+    e.target.value = ''; // 允许重复选同一文件
+  }
+
+  async function onCropped(blob: Blob) {
+    setPending(null);
+    setUploading(true);
+    try {
+      const url = await uploadImage(blob);
+      onChange(url);
+    } catch {
+      // 失败静默；按钮可重试
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        title={value || '点击上传图片'}
+        className="flex h-6 w-16 items-center justify-center overflow-hidden rounded border border-border-default bg-surface-secondary hover:bg-surface-hover disabled:opacity-40"
+      >
+        {value ? (
+          <img src={value} alt="" className="h-full w-full object-cover" draggable={false} />
+        ) : (
+          <span className="text-[10px] text-foreground-muted">{uploading ? '…' : '上传'}</span>
+        )}
+      </button>
+      <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+      {pending && (
+        <CropModal file={pending} onConfirm={onCropped} onClose={() => setPending(null)} />
       )}
     </>
   );

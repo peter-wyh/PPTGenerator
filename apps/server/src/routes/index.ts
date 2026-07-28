@@ -9,6 +9,8 @@ import { lookupRoutes } from '../modules/lookup/lookup.routes';
 import { campaignsRoutes } from '../modules/campaigns/campaigns.routes';
 import { shareRoutes } from '../modules/share/share.routes';
 import { uploadRoutes } from '../modules/upload/upload.routes';
+import { fontsRoutes } from '../modules/fonts/fonts.routes';
+import { schemesRoutes } from '../modules/schemes/schemes.routes';
 
 export const apiRouter = Router();
 
@@ -24,3 +26,5 @@ apiRouter.use('/lookup', lookupRoutes);
 apiRouter.use('/campaigns', campaignsRoutes);
 apiRouter.use('/share', shareRoutes);
 apiRouter.use('/uploads', uploadRoutes);
+apiRouter.use('/fonts', fontsRoutes);
+apiRouter.use('/schemes', schemesRoutes);
