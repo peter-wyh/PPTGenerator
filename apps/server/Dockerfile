@@ -6,8 +6,9 @@ ENV CI=1 \
     PUPPETEER_CACHE_DIR=/repo/node_modules/.puppeteer-cache
 RUN npm i -g corepack@latest && corepack enable
 # puppeteer postinstall extracts the Chromium zip → needs unzip (absent from -slim)
-RUN sed -i 's#http://deb.debian.org#https://mirrors.aliyun.com/debian#g' /etc/apt/sources.list.d/debian.sources && \
-    sed -i 's#http://security.debian.org#https://mirrors.aliyun.com/debian-security#g' /etc/apt/sources.list.d/debian.sources && \
+RUN apt-get install -y --no-install-recommends ca-certificates && \
+    sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \    
+    sed -i 's#http://security.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
