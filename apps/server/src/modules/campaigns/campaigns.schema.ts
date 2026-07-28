@@ -35,6 +35,7 @@ export const createCreatorSchema = z.object({
   name: z.string().min(1),
   handle: z.string(),
   platform: z.string(),
+  partnerType: z.enum(['creator', 'community', 'content_site']).optional(),
   tier: z.string(),
   followers: z.string(),
   engagement: z.string(),
@@ -55,6 +56,7 @@ export const listCreatorsQuerySchema = z.object({
   platform: z.string().optional(),
   tier: z.string().optional(),
   category: z.string().optional(),
+  partnerType: z.enum(['creator', 'community', 'content_site']).optional(),
   search: z.string().optional(),
 });
 

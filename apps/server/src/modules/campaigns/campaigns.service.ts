@@ -52,11 +52,12 @@ export const campaignService = {
 // ─── Creator ─────────────────────────────────────────────────────────────────
 
 export const creatorService = {
-  async list(opts: { ownerId: string; platform?: string; tier?: string; category?: string; search?: string }) {
+  async list(opts: { ownerId: string; platform?: string; tier?: string; category?: string; partnerType?: string; search?: string }) {
     const where: Prisma.CreatorWhereInput = { ownerId: opts.ownerId };
     if (opts.platform) where.platform = opts.platform;
     if (opts.tier) where.tier = opts.tier;
     if (opts.category) where.category = opts.category;
+    if (opts.partnerType) where.partnerType = opts.partnerType;
     if (opts.search) {
       where.OR = [
         { name: { contains: opts.search } },

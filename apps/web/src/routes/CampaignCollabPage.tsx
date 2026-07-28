@@ -11,7 +11,7 @@ import { useSearchParams, useLocation } from 'react-router-dom';
 import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediakit/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
-import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData } from '@mediakit/shared';
+import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData, type PartnerType } from '@mediakit/shared';
 import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collaborationSeed';
 import { formatUSD, formatEPC } from '@/lib/format';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
@@ -78,6 +78,7 @@ export function CampaignCollabPage() {
   const [filterCampaign, setFilterCampaign] = useState(campaignFilterParam);
   const [filterCreator, setFilterCreator] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterPartnerType, setFilterPartnerType] = useState<PartnerType | ''>('');
   const [drawerRow, setDrawerRow] = useState<CollabRow | null>(null);
   const [tick, setTick] = useState(0);
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
@@ -412,6 +413,8 @@ export function CampaignCollabPage() {
     if (filterCampaign && !r.campaign.name.toLowerCase().includes(filterCampaign.toLowerCase()) && r.campaignId !== filterCampaign) return false;
     if (filterCreator && !r.creator.name.toLowerCase().includes(filterCreator.toLowerCase())) return false;
     if (filterStatus && (r.status ?? '—') !== filterStatus) return false;
+    const pt = r.creator.partnerType ?? 'creator';
+    if (filterPartnerType && pt !== filterPartnerType) return false;
     return true;
   });
 
@@ -422,14 +425,36 @@ export function CampaignCollabPage() {
   }
 
   const heads = [
-    '#', 'Campaign', '达人', 'Handle', '平台', '层级',
-    '粉丝', '互动率', '类目', '地区',
+    '#', 'Campaign', '合作方', 'Handle', '平台', '层级',
+    '粉丝/访问量', '互动率', '类目', '地区',
     '合作方式', '作品(截图+数据)', '',
     '状态', '',
   ];
 
   return (
     <div>
+      {/* Tab 切换合作方类型 */}
+      <div className="mb-3 flex items-center gap-1">
+        {([
+          { value: '' as const, label: '全部' },
+          { value: 'creator' as const, label: '达人' },
+          { value: 'community' as const, label: '社群' },
+          { value: 'content_site' as const, label: '内容站' },
+        ]).map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setFilterPartnerType(tab.value)}
+            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+              filterPartnerType === tab.value
+                ? 'bg-accent-primary text-white'
+                : 'bg-surface-secondary text-foreground-secondary hover:bg-surface-hover'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm text-foreground-secondary">
           共 <span className="font-medium text-foreground-primary">{filtered.length}</span> 条合作关系

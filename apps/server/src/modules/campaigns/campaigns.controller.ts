@@ -33,7 +33,7 @@ export const campaignController = {
 
   // ─── Creator ───────────────────────────────────────────────────────────────
   listCreators: asyncHandler(async (req: Request, res: Response) => {
-    const q = req.query as { platform?: string; tier?: string; category?: string; search?: string };
+    const q = req.query as { platform?: string; tier?: string; category?: string; partnerType?: string; search?: string };
     res.json({ creators: await creatorService.list({ ownerId: userId(req), ...q }) });
   }),
 

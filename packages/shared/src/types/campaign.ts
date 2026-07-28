@@ -9,6 +9,9 @@ export type Scenario = 'campaign-report' | 'campaign-proposal' | 'media-kit';
 /** Campaign 报告子类。 */
 export type ScenarioSub = 'weekly' | 'biweekly' | 'monthly' | 'wrap-up';
 
+/** 合作方类型：达人 / 社群 / 内容站 */
+export type PartnerType = 'creator' | 'community' | 'content_site';
+
 /** Campaign 信息（仅 campaign 类型场景填写）。 */
 export interface CampaignInfo {
   campaignName?: string;
@@ -79,6 +82,8 @@ export interface Creator {
   name: string;
   handle: string;
   platform: string;
+  /** 合作方类型：达人(默认) / 社群 / 内容站。 */
+  partnerType?: PartnerType;
   /** 层级：mega / macro / micro。 */
   tier: string;
   followers: string;

@@ -204,12 +204,14 @@ model Campaign {
   @@index([advertiserId])
 }
 
-/// 达人库（全局达人主表）。
+/// 合作方库（达人 / 社群 / 内容站 全局主表）。
 model Creator {
   id         String   @id
   name       String
   handle     String
   platform   String
+  /// 合作方类型：creator(达人) / community(社群) / content_site(内容站)。默认 creator。
+  partnerType String? @default("creator")
   /// 层级:mega / macro / micro。
   tier       String
   followers  String

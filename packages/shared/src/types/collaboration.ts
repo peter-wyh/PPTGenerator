@@ -4,7 +4,10 @@ import type {
   WorkMetricItem,
   WorkScreenshotItem,
 } from './editor';
-import type { PostDaily } from './campaign';
+import type { PostDaily, PartnerType } from './campaign';
+
+/** 合作方类型（re-export）。 */
+export type { PartnerType };
 
 /** 作品类型（合作方式的构成单元）。 */
 export type ContentType = 'post' | 'reels' | 'video' | 'image' | 'live' | 'story';
@@ -94,6 +97,12 @@ export interface CollaborationDeliverable {
   cpe?: string;
   /** 千次曝光成本 CPM = 执行价 ÷ 曝光量 × 1000（保留 2 位小数）。 */
   cpm?: string;
+
+  // ─── 社群 / 内容站特有数据 ────────────────────────────────────────
+  /** 社群引流效果（partnerType = community 时使用）。 */
+  communityData?: CommunityTrafficData;
+  /** 内容站引流效果（partnerType = content_site 时使用）。 */
+  contentSiteData?: ContentSiteTrafficData;
 }
 
 /** 一条合作记录的 data 载荷。id 作 DataRecord 主键 = collaborationId(campaignId, creatorId)。 */
@@ -101,12 +110,81 @@ export interface CollaborationData {
   id: string;
   campaignId: string;
   creatorId: string;
+  /** 合作方类型（默认 creator 兼容旧数据）。 */
+  partnerType?: PartnerType;
   deliverables: CollaborationDeliverable[];
 }
 
 /** 确定性记录 id，便于直接 get 与幂等导入 upsert。 */
 export function collaborationId(campaignId: string, creatorId: string): string {
   return `collab:${campaignId}:${creatorId}`;
+}
+
+/** 合作方类型：达人 / 社群 / 内容站 */
+// PartnerType re-exported from campaign.ts above
+
+/** 社群每日数据（群成员/活跃度时间序列） */
+export interface CommunityDaily {
+  /** 日期 YYYY-MM-DD */
+  date: string;
+  /** 当日群成员数 */
+  followers: string;
+  /** 当日活跃用户数 */
+  activeUsers: string;
+  /** 当日消息数 */
+  messages?: string;
+}
+
+/** 内容站每日数据（访问量时间序列） */
+export interface ContentSiteDaily {
+  /** 日期 YYYY-MM-DD */
+  date: string;
+  /** 当日访问量 */
+  visits: string;
+  /** 当日独立访客 */
+  uniqueVisitors?: string;
+  /** 当日页面浏览量 */
+  pageViews?: string;
+  /** 当日平均停留时长(秒) */
+  avgDuration?: string;
+}
+
+/** 内容站引流效果（类似达人 CPS 挂链） */
+export interface ContentSiteTrafficData {
+  /** 引流链接 URL */
+  linkUrl?: string;
+  /** 总访问量 */
+  visits: string;
+  /** 总独立访客 */
+  uniqueVisitors: string;
+  /** 总页面浏览量 */
+  pageViews: string;
+  /** 跳出率 */
+  bounceRate: string;
+  /** 平均停留时长(秒) */
+  avgDuration: string;
+  /** 引流带来的 CPS 转化（复用 CpsLinkData） */
+  cps?: CpsLinkData;
+  /** 按天拆分 */
+  daily?: ContentSiteDaily[];
+}
+
+/** 社群引流效果 */
+export interface CommunityTrafficData {
+  /** 社群链接 URL */
+  linkUrl?: string;
+  /** 总成员数 */
+  followers: string;
+  /** 总活跃用户 */
+  activeUsers: string;
+  /** 活跃率 = activeUsers / followers */
+  activeRate: string;
+  /** 总消息数 */
+  totalMessages: string;
+  /** 引流带来的 CPS 转化（复用 CpsLinkData） */
+  cps?: CpsLinkData;
+  /** 按天拆分 */
+  daily?: CommunityDaily[];
 }
 
 /** 合作方式展示标签（由 contentType 组合派生，不单独存储）。 */

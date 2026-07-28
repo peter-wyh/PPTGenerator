@@ -55,6 +55,7 @@ export interface CreatorDTO {
   name: string;
   handle: string;
   platform: string;
+  partnerType?: string | null;
   tier: string;
   followers: string;
   engagement: string;
@@ -129,6 +130,7 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     name: dto.name,
     handle: dto.handle,
     platform: dto.platform,
+    partnerType: (dto.partnerType as Creator['partnerType']) ?? 'creator',
     tier: dto.tier as Creator['tier'],
     followers: dto.followers,
     engagement: dto.engagement,
