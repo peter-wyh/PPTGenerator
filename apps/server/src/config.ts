@@ -27,6 +27,8 @@ export const config = {
   databaseUrl: required('DATABASE_URL'),
 
   redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  /** Redis DB index (0-15)，可单独指定避免与其他服务共用 DB 0。 */
+  redisDb: int('REDIS_DB', 0),
 
   jwt: {
     accessSecret: required('JWT_ACCESS_SECRET', 'dev-access-secret-change-me'),

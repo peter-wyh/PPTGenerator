@@ -12,6 +12,7 @@ export const redis: Redis =
   new Redis(config.redisUrl, {
     maxRetriesPerRequest: 3,
     lazyConnect: false,
+    db: config.redisDb,
   });
 
 if (!config.isProd) {
