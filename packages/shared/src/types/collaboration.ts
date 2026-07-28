@@ -154,15 +154,15 @@ export interface ContentSiteTrafficData {
   /** 引流链接 URL */
   linkUrl?: string;
   /** 总访问量 */
-  visits: string;
+  visits?: string;
   /** 总独立访客 */
-  uniqueVisitors: string;
+  uniqueVisitors?: string;
   /** 总页面浏览量 */
-  pageViews: string;
+  pageViews?: string;
   /** 跳出率 */
-  bounceRate: string;
+  bounceRate?: string;
   /** 平均停留时长(秒) */
-  avgDuration: string;
+  avgDuration?: string;
   /** 引流带来的 CPS 转化（复用 CpsLinkData） */
   cps?: CpsLinkData;
   /** 按天拆分 */
@@ -174,13 +174,13 @@ export interface CommunityTrafficData {
   /** 社群链接 URL */
   linkUrl?: string;
   /** 总成员数 */
-  followers: string;
+  followers?: string;
   /** 总活跃用户 */
-  activeUsers: string;
+  activeUsers?: string;
   /** 活跃率 = activeUsers / followers */
-  activeRate: string;
+  activeRate?: string;
   /** 总消息数 */
-  totalMessages: string;
+  totalMessages?: string;
   /** 引流带来的 CPS 转化（复用 CpsLinkData） */
   cps?: CpsLinkData;
   /** 按天拆分 */

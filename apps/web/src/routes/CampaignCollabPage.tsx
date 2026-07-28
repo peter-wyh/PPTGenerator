@@ -354,6 +354,14 @@ export function CampaignCollabPage() {
     }
 
     // ── 第二轮：将 daily map 写入 deliverable，构建最终 CollaborationData ──
+    // 收集 partnerType（CSV 中每行可携带，取第一个非空值）
+    const partnerTypeMap = new Map<string, PartnerType>();
+    for (const item of validItems) {
+      const cid = String(item.creatorId ?? '');
+      const pt = item.partnerType as PartnerType | undefined;
+      if (cid && pt && !partnerTypeMap.has(cid)) partnerTypeMap.set(cid, pt);
+    }
+
     let success = 0, fail = 0;
     for (const [key, delMap] of grouped) {
       const [campaignId, creatorId] = key.split('::');
@@ -399,7 +407,12 @@ export function CampaignCollabPage() {
         deliverables.push(del);
       }
       try {
-        await saveCollaboration({ id: `collab:${campaignId}:${creatorId}`, campaignId, creatorId, deliverables });
+        // 如果 CSV 中有 partnerType，同步更新 Creator 记录
+        const pt = partnerTypeMap.get(creatorId);
+        if (pt) {
+          try { await campaignsApi.updateCreator(creatorId, { partnerType: pt }); } catch { /* 忽略，不影响导入主流程 */ }
+        }
+        await saveCollaboration({ id: `collab:${campaignId}:${creatorId}`, campaignId, creatorId, partnerType: pt, deliverables });
         success++;
       } catch {
         fail++;
@@ -738,29 +751,40 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
 
         {/* 内容 */}
         <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
-          {/* 达人信息卡 */}
-          <div className="mb-4">
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">达人信息</div>
-            <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-border-subtle">
-              {([
-                ['Platform', creator.platform],
-                ['Tier', creator.tier],
-                ['Followers', creator.followers],
-                ['Engagement', creator.engagement],
-                ['Category', creator.category],
-                ['Region', creator.region],
-                ['近90天作品', String(creator.recentPostsCount ?? '—')],
-                ['互动中位数', creator.engagementMedian ?? '—'],
-                ['合作方式', collaborationLabel(collabData)],
-                ['状态', row.status ?? '—'],
-              ] as const).map(([label, value]) => (
-                <div key={label} className="bg-surface-primary p-2">
-                  <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{label}</div>
-                  <div className="text-xs font-medium text-foreground-primary truncate">{value || '—'}</div>
+          {/* 合作方信息卡（按 partnerType 差异化标签） */}
+          {(() => {
+            const pt = creator.partnerType ?? 'creator';
+            const labelMap: Record<string, Record<string, string>> = {
+              creator: { title: '达人信息', followers: 'Followers', engagement: 'Engagement', category: 'Category', recent: '近90天作品', median: '互动中位数' },
+              community: { title: '社群信息', followers: '群成员数', engagement: '活跃度', category: '社群类型', recent: '近90天帖子', median: '互动中位数' },
+              content_site: { title: '内容站信息', followers: '月访问量', engagement: '跳出率', category: '站点类型', recent: '近90天发文', median: '平均停留' },
+            };
+            const L = labelMap[pt] ?? labelMap.creator;
+            return (
+              <div className="mb-4">
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">{L.title}</div>
+                <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-border-subtle">
+                  {([
+                    ['Platform', creator.platform],
+                    ['Tier', creator.tier],
+                    [L.followers, creator.followers],
+                    [L.engagement, creator.engagement],
+                    [L.category, creator.category],
+                    ['Region', creator.region],
+                    [L.recent, String(creator.recentPostsCount ?? '—')],
+                    [L.median, creator.engagementMedian ?? '—'],
+                    ['合作方式', collaborationLabel(collabData)],
+                    ['状态', row.status ?? '—'],
+                  ] as const).map(([label, value]) => (
+                    <div key={label} className="bg-surface-primary p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{label}</div>
+                      <div className="text-xs font-medium text-foreground-primary truncate">{value || '—'}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            );
+          })()}
 
           {/* 频道 KPI */}
           {metrics.length > 0 && (
@@ -796,6 +820,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                     deliverable={del}
                     index={i}
                     editing={editing}
+                    partnerType={creator.partnerType}
                     onChange={(d) => setDeliverable(i, d)}
                     onRemove={() => removeDeliverable(i)}
                   />
@@ -839,12 +864,14 @@ function DeliverableCard({
   deliverable,
   index,
   editing,
+  partnerType,
   onChange,
   onRemove,
 }: {
   deliverable: CollaborationDeliverable;
   index: number;
   editing: boolean;
+  partnerType?: PartnerType;
   onChange: (d: CollaborationDeliverable) => void;
   onRemove: () => void;
 }) {
@@ -1211,6 +1238,139 @@ function DeliverableCard({
           </div>
         </div>
       )}
+
+      {/* 社群流量数据（followers/activeUsers 时间序列） */}
+      {partnerType === 'community' && (() => {
+        const daily = deliverable.communityData?.daily ?? [];
+        if (daily.length === 0 && !editing) return null;
+        const setCommunityDaily = (d: typeof daily) =>
+          patch({ communityData: { daily: d } });
+        return (
+          <div className="mb-2">
+            <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
+              <span>社群增长数据</span>
+              <span className="text-foreground-muted">({daily.length} 天)</span>
+              {editing && (
+                <button onClick={() => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  setCommunityDaily([...daily, { date: today, followers: '0', activeUsers: '0' }]);
+                }} className="ml-auto text-accent-primary hover:underline">+ 添加</button>
+              )}
+            </div>
+            {daily.length === 0 ? (
+              <span className="text-foreground-muted">—</span>
+            ) : (
+              <div className="max-h-32 overflow-auto rounded border border-border-subtle">
+                <table className="w-full text-[10px] tabular-nums whitespace-nowrap">
+                  <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                    <tr>
+                      <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">群成员数</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">活跃用户</th>
+                      {editing && <th className="px-1 py-0.5"></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {daily.map((d, di) => (
+                      <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
+                        {editing ? (
+                          <>
+                            <td className="px-1 py-0.5">
+                              <input value={d.date} onChange={(e) => setCommunityDaily(daily.map((x, idx) => (idx === di ? { ...x, date: e.target.value } : x)))} className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]" />
+                            </td>
+                            <td className="px-1 py-0.5">
+                              <input value={d.followers} onChange={(e) => setCommunityDaily(daily.map((x, idx) => (idx === di ? { ...x, followers: e.target.value } : x)))} className="w-full min-w-[4rem] rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] text-right" />
+                            </td>
+                            <td className="px-1 py-0.5">
+                              <input value={d.activeUsers} onChange={(e) => setCommunityDaily(daily.map((x, idx) => (idx === di ? { ...x, activeUsers: e.target.value } : x)))} className="w-full min-w-[4rem] rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] text-right" />
+                            </td>
+                            <td className="px-1 py-0.5"><button onClick={() => setCommunityDaily(daily.filter((_, idx) => idx !== di))} className="text-red">✕</button></td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
+                            <td className="px-1.5 py-0.5 text-right">{d.followers}</td>
+                            <td className="px-1.5 py-0.5 text-right">{d.activeUsers}</td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 内容站流量数据（visits/uniqueVisitors/pageViews 时间序列） */}
+      {partnerType === 'content_site' && (() => {
+        const daily = deliverable.contentSiteData?.daily ?? [];
+        if (daily.length === 0 && !editing) return null;
+        const setContentDaily = (d: typeof daily) =>
+          patch({ contentSiteData: { daily: d } });
+        return (
+          <div className="mb-2">
+            <div className="flex items-center gap-2 text-[10px] text-foreground-secondary mb-1">
+              <span>站点流量数据</span>
+              <span className="text-foreground-muted">({daily.length} 天)</span>
+              {editing && (
+                <button onClick={() => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  setContentDaily([...daily, { date: today, visits: '0', uniqueVisitors: '0', pageViews: '0' }]);
+                }} className="ml-auto text-accent-primary hover:underline">+ 添加</button>
+              )}
+            </div>
+            {daily.length === 0 ? (
+              <span className="text-foreground-muted">—</span>
+            ) : (
+              <div className="max-h-32 overflow-auto rounded border border-border-subtle">
+                <table className="w-full text-[10px] tabular-nums whitespace-nowrap">
+                  <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
+                    <tr>
+                      <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">访问次数</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">独立访客</th>
+                      <th className="px-1.5 py-0.5 text-right font-medium">页面浏览</th>
+                      {editing && <th className="px-1 py-0.5"></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {daily.map((d, di) => (
+                      <tr key={di} className="border-t border-border-subtle text-foreground-secondary">
+                        {editing ? (
+                          <>
+                            <td className="px-1 py-0.5">
+                              <input value={d.date} onChange={(e) => setContentDaily(daily.map((x, idx) => (idx === di ? { ...x, date: e.target.value } : x)))} className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]" />
+                            </td>
+                            <td className="px-1 py-0.5">
+                              <input value={d.visits} onChange={(e) => setContentDaily(daily.map((x, idx) => (idx === di ? { ...x, visits: e.target.value } : x)))} className="w-full min-w-[4rem] rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] text-right" />
+                            </td>
+                            <td className="px-1 py-0.5">
+                              <input value={d.uniqueVisitors} onChange={(e) => setContentDaily(daily.map((x, idx) => (idx === di ? { ...x, uniqueVisitors: e.target.value } : x)))} className="w-full min-w-[4rem] rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] text-right" />
+                            </td>
+                            <td className="px-1 py-0.5">
+                              <input value={d.pageViews} onChange={(e) => setContentDaily(daily.map((x, idx) => (idx === di ? { ...x, pageViews: e.target.value } : x)))} className="w-full min-w-[4rem] rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px] text-right" />
+                            </td>
+                            <td className="px-1 py-0.5"><button onClick={() => setContentDaily(daily.filter((_, idx) => idx !== di))} className="text-red">✕</button></td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="whitespace-nowrap px-1.5 py-0.5">{d.date}</td>
+                            <td className="px-1.5 py-0.5 text-right">{d.visits}</td>
+                            <td className="px-1.5 py-0.5 text-right">{d.uniqueVisitors}</td>
+                            <td className="px-1.5 py-0.5 text-right">{d.pageViews}</td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 受众画像 */}
       {audience && (audience.topCities?.length || audience.genderSplit?.length || audience.ageRange?.length) && (
