@@ -246,13 +246,13 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     const bg = theme.background;
     if (!bg || bg.type === 'none') return;
     const store = useEditorStore.getState();
-    for (const page of store.pages) {
-      store.updatePage(page.id, {
-        bgColor: bg.type === 'color' ? bg.color : undefined,
-        bgGradient: bg.type === 'gradient' ? bg.gradient : undefined,
-        bgImage: bg.type === 'image' ? bg.image : undefined,
-      });
-    }
+    // 用一次性 mutateAndCommit 替代循环 updatePage，避免推入 N 条历史快照。
+    const bgPatch = {
+      bgColor: bg.type === 'color' ? bg.color : undefined,
+      bgGradient: bg.type === 'gradient' ? bg.gradient : undefined,
+      bgImage: bg.type === 'image' ? bg.image : undefined,
+    };
+    store.applyBackgroundBatch(bgPatch);
     setToast(`已应用到 ${store.pages.length} 个页面`);
     setTimeout(() => setToast(null), 2500);
   }

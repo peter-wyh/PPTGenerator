@@ -3,6 +3,7 @@ import type {
   ComponentData,
   EditorComponent,
   Page,
+  PageGradient,
   ProjectMeta,
   ProjectTheme,
   ReportDataContext,
@@ -153,7 +154,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
   /** 变换后自动落 history + 标脏（用于离散动作：增删/改属性/页面操作）。 */
   function mutateAndCommit(updater: (s: EditorState) => Partial<EditorState>): void {
-    set(updater);
+    const result = updater(get());
+    if (Object.keys(result).length === 0) return; // 空操作不污染历史栈
+    set(result);
     pushHistory();
     markDirty();
   }
@@ -223,6 +226,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     history: [],
     historyIndex: -1,
     clipboard: null,
+    _pasteCount: 0,
     zoom: 1,
     panX: 0,
     panY: 0,
@@ -769,7 +773,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     copy: () =>
       set((s) => {
         const cur = s.currentPage()?.components ?? [];
-        return { clipboard: cur.filter((c) => s.selectedIds.includes(c.id)).map((c) => clone(c)) };
+        return { clipboard: cur.filter((c) => s.selectedIds.includes(c.id)).map((c) => clone(c)), _pasteCount: 0 };
       }),
 
     cut: () =>
@@ -777,6 +781,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const cur = s.currentPage()?.components ?? [];
         return {
           clipboard: cur.filter((c) => s.selectedIds.includes(c.id)).map((c) => clone(c)),
+          _pasteCount: 0,
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) =>
             cs.filter((c) => !s.selectedIds.includes(c.id)),
           ),
@@ -789,13 +794,17 @@ export const useEditorStore = create<EditorState>((set, get) => {
       if (!clip || clip.length === 0) return;
       mutateAndCommit((s) => {
         const clampSafe = clampSafeFrom(s.projectMeta, s.canvasWidth, s.canvasHeight);
+        // 连续粘贴时累加偏移量，避免完全重叠。
+        const pasteCount = s._pasteCount ?? 0;
+        const offset = 20 * (pasteCount + 1);
         const pasted = clip.map((c) => {
-          const cl = clampRect({ x: c.x + 20, y: c.y + 20, w: c.w, h: c.h }, clampSafe);
+          const cl = clampRect({ x: c.x + offset, y: c.y + offset, w: c.w, h: c.h }, clampSafe);
           return { ...clone(c), id: newId(), x: cl.x, y: cl.y, w: cl.w, h: cl.h };
         });
         return {
           pages: withCurrentComponents(s.pages, s.currentPageId, (cs) => [...cs, ...pasted]),
           selectedIds: pasted.map((c) => c.id),
+          _pasteCount: pasteCount + 1,
         };
       });
     },
@@ -1026,6 +1035,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
     updatePage: (id, patch) =>
       mutateAndCommit((s) => ({
         pages: s.pages.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      })),
+
+    /** 批量应用背景到所有页面（一次性 history 快照）。 */
+    applyBackgroundBatch: (patch: { bgColor?: string; bgGradient?: PageGradient; bgImage?: string }) =>
+      mutateAndCommit((s) => ({
+        pages: s.pages.map((p) => ({ ...p, ...patch })),
       })),
 
     patchPageLive: (id, patch) =>

@@ -571,9 +571,13 @@ export function ReportCreatorWorksImporter({ comp }: { comp: EditorComponent }) 
     }
     let alive = true;
     setDeliverables(null);
-    getCollaboration(campaignId, creatorId).then((c) => {
-      if (alive) setDeliverables(c?.deliverables ?? []);
-    });
+    getCollaboration(campaignId, creatorId)
+      .then((c) => {
+        if (alive) setDeliverables(c?.deliverables ?? []);
+      })
+      .catch(() => {
+        if (alive) setDeliverables([]);
+      });
     return () => {
       alive = false;
     };

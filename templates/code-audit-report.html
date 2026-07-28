@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PPTGenerator — 全局代码质量审计报告</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2128;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --red: #f85149;
+  --orange: #ff9b4a;
+  --yellow: #e3b341;
+  --green: #3fb950;
+  --blue: #58a6ff;
+  --purple: #bc8cff;
+  --teal: #39d0d8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding: 48px 24px 80px; }
+
+/* ═══ HEADER ═══ */
+.header { text-align: center; margin-bottom: 56px; }
+.header .badge {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--blue); background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3);
+  padding: 4px 12px; border-radius: 4px; margin-bottom: 16px; text-transform: uppercase;
+}
+.header h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
+.header .subtitle { color: var(--text-dim); font-size: 15px; }
+.header .meta {
+  display: flex; justify-content: center; gap: 24px; margin-top: 20px;
+  font-size: 12px; color: var(--text-dim); font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ═══ SCORE CARD ═══ */
+.score-section { display: flex; gap: 20px; margin-bottom: 48px; justify-content: center; flex-wrap: wrap; }
+.score-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 28px 36px; text-align: center; min-width: 140px;
+}
+.score-card .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.score-card .value { font-size: 42px; font-weight: 800; letter-spacing: -0.02em; }
+.score-card .detail { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.score-overall .value { color: var(--green); }
+.score-security .value { color: var(--orange); }
+.score-quality .value { color: var(--yellow); }
+
+/* ═══ KPI GRID ═══ */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 56px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 20px; display: flex; flex-direction: column; gap: 4px;
+}
+.kpi .k { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.kpi .v { font-size: 24px; font-weight: 700; }
+.kpi .v.green { color: var(--green); }
+.kpi .v.red { color: var(--red); }
+.kpi .v.yellow { color: var(--yellow); }
+.kpi .v.blue { color: var(--blue); }
+
+/* ═══ SECTION ═══ */
+.section { margin-bottom: 48px; }
+.section-title {
+  font-size: 20px; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
+}
+.section-title .icon { font-size: 22px; }
+
+/* ═══ ISSUE CARD ═══ */
+.issue {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: 16px; overflow: hidden;
+}
+.issue-header {
+  display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px; cursor: pointer;
+}
+.issue-header:hover { background: var(--surface2); }
+.issue-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em; padding: 3px 8px;
+  border-radius: 4px; text-transform: uppercase; white-space: nowrap; margin-top: 2px;
+}
+.badge-critical { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+.badge-high { background: rgba(255,155,74,0.15); color: var(--orange); border: 1px solid rgba(255,155,74,0.3); }
+.badge-medium { background: rgba(227,179,65,0.15); color: var(--yellow); border: 1px solid rgba(227,179,65,0.3); }
+.badge-low { background: rgba(139,148,158,0.15); color: var(--text-dim); border: 1px solid rgba(139,148,158,0.3); }
+.badge-pass { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.issue-title { flex: 1; font-size: 15px; font-weight: 600; line-height: 1.4; }
+.issue-body { padding: 0 20px 20px 20px; }
+.issue-body p { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.65; }
+.issue-body strong { color: var(--text); }
+.issue-body code {
+  background: var(--bg); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px;
+  font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; color: var(--teal);
+}
+.issue-body .file {
+  display: inline-block; background: var(--bg); border: 1px solid var(--border);
+  padding: 2px 8px; border-radius: 4px; font-size: 11px;
+  font-family: 'SF Mono', 'Fira Code', monospace; color: var(--blue); margin-bottom: 8px;
+}
+.issue-body ul { margin: 8px 0 8px 20px; font-size: 13px; color: var(--text-dim); }
+.issue-body ul li { margin-bottom: 4px; line-height: 1.6; }
+.issue-body .code-block {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px 16px; margin: 10px 0; font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px; color: var(--text); overflow-x: auto; white-space: pre; line-height: 1.5;
+}
+.fix {
+  background: rgba(63,185,80,0.05); border-left: 3px solid var(--green);
+  padding: 10px 14px; border-radius: 0 6px 6px 0; margin-top: 8px; font-size: 13px;
+}
+.fix strong { color: var(--green); }
+
+/* ═══ TABLE ═══ */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+.tbl th { text-align: left; color: var(--text-dim); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.tbl td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.tbl td code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
+/* ═══ TEST RESULTS ═══ */
+.test-bar { height: 24px; border-radius: 4px; overflow: hidden; display: flex; margin: 12px 0; }
+.test-bar .pass { background: var(--green); }
+.test-bar .fail { background: var(--red); }
+.test-bar span { color: #fff; font-size: 11px; font-weight: 600; text-align: center; line-height: 24px; }
+
+/* ═══ GOOD LIST ═══ */
+.good-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.good-item {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.good-item .check { color: var(--green); font-size: 16px; margin-top: 1px; }
+.good-item .text { font-size: 13px; line-height: 1.5; }
+.good-item .text strong { color: var(--text); }
+
+/* ═══ ROADMAP ═══ */
+.roadmap { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.roadmap-item {
+  display: grid; grid-template-columns: 50px 1fr auto; align-items: center; gap: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px;
+}
+.roadmap-num { font-size: 24px; font-weight: 800; color: var(--text-dim); text-align: center; }
+.roadmap-title { font-size: 14px; font-weight: 600; }
+.roadmap-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.roadmap-effort {
+  font-size: 11px; padding: 3px 10px; border-radius: 4px; white-space: nowrap;
+}
+.effort-s { background: rgba(63,185,80,0.15); color: var(--green); }
+.effort-m { background: rgba(227,179,65,0.15); color: var(--yellow); }
+.effort-l { background: rgba(248,81,73,0.15); color: var(--red); }
+
+/* ═══ BAR CHART ═══ */
+.dist-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.dist-label { width: 80px; font-size: 12px; color: var(--text-dim); text-align: right; }
+.dist-bar { flex: 1; height: 20px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+.dist-fill { height: 100%; border-radius: 4px; }
+.dist-val { width: 60px; font-size: 12px; font-weight: 600; font-family: monospace; }
+
+footer { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 12px; border-top: 1px solid var(--border); margin-top: 40px; }
+
+@media (max-width: 640px) {
+  .header h1 { font-size: 26px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- HEADER                                       -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="header">
+  <div class="badge">📊 Code Quality Audit</div>
+  <h1>PPTGenerator 全局代码质量审计报告</h1>
+  <div class="subtitle">MediaKit Monorepo — apps/web · apps/server · packages/shared</div>
+  <div class="meta">
+    <span>📅 2026-07-28</span>
+    <span>📝 246 TS/TSX · 54,691 行</span>
+    <span>🔍 3-Agent 并行审计</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SCORE CARDS                                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="score-section">
+  <div class="score-card score-overall">
+    <div class="label">综合评分</div>
+    <div class="value">B+</div>
+    <div class="detail">良好，有改进空间</div>
+  </div>
+  <div class="score-card score-security">
+    <div class="label">安全</div>
+    <div class="value">B</div>
+    <div class="detail">1 Critical · 3 High</div>
+  </div>
+  <div class="score-card score-quality">
+    <div class="label">代码质量</div>
+    <div class="value">B+</div>
+    <div class="detail">类型安全优秀</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- KPI GRID                                     -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="kpi-grid">
+  <div class="kpi"><div class="k">TypeScript Strict</div><div class="v green">✓ ON</div></div>
+  <div class="kpi"><div class="k">TypeCheck</div><div class="v green">✓ PASS</div></div>
+  <div class="kpi"><div class="k">测试用例</div><div class="v blue">792</div></div>
+  <div class="kpi"><div class="k">测试通过率</div><div class="v yellow">95.5%</div></div>
+  <div class="kpi"><div class="k">失败测试</div><div class="v red">36</div></div>
+  <div class="kpi"><div class="k">any 类型</div><div class="v green">4</div></div>
+  <div class="kpi"><div class="k">TODO/FIXME</div><div class="v green">0</div></div>
+  <div class="kpi"><div class="k">ESLint</div><div class="v red">✗ 未配置</div></div>
+  <div class="kpi"><div class="k">代码行数</div><div class="v blue">54.7K</div></div>
+  <div class="kpi"><div class="k">测试覆盖文件</div><div class="v blue">117</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- ISSUE DISTRIBUTION                           -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">📈</span> 问题分布概览</div>
+  <div class="dist-row">
+    <div class="dist-label">🔴 Critical</div>
+    <div class="dist-bar"><div class="dist-fill" style="width:12.5%;background:var(--red);"></div></div>
+    <div class="dist-val" style="color:var(--red)">3</div>
+  </div>
+  <div class="dist-row">
+    <div class="dist-label">🟠 High</div>
+    <div class="dist-bar"><div class="dist-fill" style="width:50%;background:var(--orange);"></div></div>
+    <div class="distdist-val" style="color:var(--orange)">7</div>
+  </div>
+  <div class="dist-row">
+    <div class="dist-label">🟡 Medium</div>
+    <div class="dist-bar"><div class="dist-fill" style="width:100%;background:var(--yellow);"></div></div>
+    <div class="dist-val" style="color:var(--yellow)">11</div>
+  </div>
+  <div class="dist-row">
+    <div class="dist-label">🟢 Low</div>
+    <div class="dist-bar"><div class="dist-fill" style="width:62.5%;background:var(--text-dim);"></div></div>
+    <div class="dist-val">5</div>
+  </div>
+  <div class="dist-row">
+    <div class="dist-label">✅ Good</div>
+    <div class="dist-bar"><div class="dist-fill" style="width:100%;background:var(--green);"></div></div>
+    <div class="dist-val" style="color:var(--green)">15+</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TEST RESULTS                                 -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">🧪</span> 测试与编译状态</div>
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-pass">PASS</span>
+      <div class="issue-title">TypeScript TypeCheck — 全部通过</div>
+    </div>
+    <div class="issue-body">
+      <p>三个 workspace 包（<code>shared</code>、<code>web</code>、<code>server</code>）<code>tsc --noEmit</code> 全部零错误。<code>strict: true</code> 全量开启。</p>
+    </div>
+  </div>
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-medium">WARN</span>
+      <div class="issue-title">Vitest — 792 用例，756 通过，36 失败（通过率 95.5%）</div>
+    </div>
+    <div class="issue-body">
+      <div class="test-bar">
+        <div class="pass" style="width:95.5%">756 PASS</div>
+        <div class="fail" style="width:4.5%">36 FAIL</div>
+      </div>
+      <p><strong>失败分类：</strong></p>
+      <table class="tbl">
+        <thead><tr><th>类别</th><th>数量</th><th>典型原因</th></tr></thead>
+        <tbody>
+          <tr><td>CSS 颜色断言（TitleBlock / theme）</td><td>~12</td><td>jsdom 不解析 CSS 变量，<code>getComputedStyle</code> 返回 <code>var(--surface-primary)</code> 而非 <code>rgb(...)</code></td></tr>
+          <tr><td>Theme schema 偏移</td><td>~10</td><td><code>normalizeTheme</code> 新增 layout 字段后，旧测试断言未同步更新</td></tr>
+          <tr><td>DataManagement / Layout</td><td>~8</td><td>路由/导航结构变更后 mock 路径不匹配</td></tr>
+          <tr><td>Editor store / palette</td><td>~6</td><td>坐标对齐逻辑变更（snap grid）后边界值断言失效</td></tr>
+        </tbody>
+      </table>
+      <p><strong>server 端测试</strong>：因 Prisma migration 状态不一致（<code>P3009</code> — 上次迁移失败标记未清除）导致 global-setup 崩溃，0 个测试执行。<strong>根因是本地测试数据库状态问题，非代码缺陷</strong>。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- CRITICAL ISSUES                              -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">🔴</span> Critical（3 项 — 立即修复）</div>
+
+  <!-- C-1 -->
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-critical">C-1 安全</span>
+      <div class="issue-title">生产环境使用弱默认 JWT 密钥 — 可伪造任意用户 Token</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/config.ts:34-35 · .env.prod:5-6</div>
+      <p><code>config.ts</code> 中 JWT 密钥在环境变量缺失时<strong>静默回退</strong>到 <code>'dev-access-secret-change-me'</code>。而 <code>.env.prod</code> 声明 <code>NODE_ENV=production</code>，却使用了这个公开默认值。任何人知道此值即可伪造 access/refresh token，完全绕过认证。</p>
+      <div class="code-block">JWT_ACCESS_SECRET=dev-access-secret-change-me  ← .env.prod 第5行</div>
+      <div class="fix"><strong>修复：</strong>① 生产环境 <code>config.ts</code> 强制要求密钥（无回退值，缺失即 <code>throw</code>）；② <code>.env.prod</code> 替换为 ≥32 字节随机密钥（<code>openssl rand -hex 32</code>）。</div>
+    </div>
+  </div>
+
+  <!-- C-2 -->
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-critical">C-2 Bug</span>
+      <div class="issue-title">导出服务缺少 await — PDF/图片导出功能完全失效</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/modules/export/export.service.ts:101, 116</div>
+      <p><code>ensureShareToken()</code> 返回 Promise，但调用处<strong>缺少 <code>await</code></strong>。模板字符串拼接后 token 变为 <code>"[object Promise]"</code>，puppeteer 访问的 URL 永远是错误的 → 所有导出请求返回 404。</p>
+      <div class="code-block">const token = ensureShareToken(ownerId, projectId);  // ← 缺少 await
+const shareUrl = `${config.webUrl}/share/${token}?print=1`;  // → ".../[object Promise]"</div>
+      <div class="fix"><strong>修复：</strong>添加 <code>await</code> — <code>const token = await ensureShareToken(ownerId, projectId);</code>（两处：exportProjectPdf L101 + exportProjectImages L116）。</div>
+    </div>
+  </div>
+
+  <!-- C-3 -->
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-critical">C-3 架构</span>
+      <div class="issue-title">CampaignCollabPage.tsx — 1457 行 God Component，最复杂函数 ~200 行</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/web/src/routes/CampaignCollabPage.tsx</div>
+      <p>单文件包含 1 主组件 + 6 内联子组件 + 3 工具函数。核心函数 <code>confirmCollabImport</code>（L236-440+）约 200 行，含两轮遍历 + 嵌套 Map + 6 层缩进。<code>DeliverableCard</code>（L863-1413）550 行、4 个 return JSX 块。</p>
+      <p><strong>拆分建议：</strong></p>
+      <ul>
+        <li><code>CampaignCollabPage/</code>（主页面壳）</li>
+        <li><code>CollabDrawer.tsx</code>（抽屉组件）</li>
+        <li><code>DeliverableCard.tsx</code>（交付物卡片）</li>
+        <li><code>collabImport.ts</code>（导入逻辑）+ <code>collabMetrics.ts</code>（聚合工具）</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- HIGH ISSUES                                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">🟠</span> High（7 项 — 尽快修复）</div>
+
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-high">H-1 安全</span>
+      <div class="issue-title">Campaigns 模块 8 个写入端点缺少 Zod 输入验证</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/modules/campaigns/campaigns.routes.ts:44-55</div>
+      <p>Performance/Collaboration 的 PUT 端点 + 6 个 <code>POST /import/*</code> 端点<strong>均无 <code>validate()</code> 中间件</strong>。<code>req.body</code> 直接透传到 service 入库。同模块的 Campaign/Creator CRUD 路由均挂了 validate，唯独这批遗漏。</p>
+      <p>controller 中 <code>campaigns.controller.ts:86</code> 直接 <code>{ campaignCreatorId: linkId, ...req.body }</code> 展开 — 任意结构 JSON 可注入 <code>summary</code> 等 <code>object</code> 类型字段。</p>
+      <div class="fix"><strong>修复：</strong>为 8 个端点添加 zod schema + <code>validate(&#123; body: xxxSchema &#125;)</code>。工作量：半天。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-high">H-2 安全</span>
+      <div class="issue-title">生产环境 Cookie 未设置 Secure 标志 — Refresh Token 可被中间人窃取</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">.env.prod:9 → config.ts:43 → auth.controller.ts:11</div>
+      <p><code>.env.prod</code> 中 <code>COOKIE_SECURE=false</code>。Refresh token cookie 将通过 HTTP 明文传输。</p>
+      <div class="fix"><strong>修复：</strong><code>.env.prod</code> 设置 <code>COOKIE_SECURE=true</code>。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-high">H-3 重复</span>
+      <div class="issue-title">RichTextField 组件存在两份实现（命名冲突）</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/web/src/editor/property-panel/fields.tsx:194-323 vs fields/RichTextField.tsx:12-95</div>
+      <p>旧版（130 行，含高亮功能）被 <code>custom-fields.tsx</code> 使用；新版（95 行，改用 <code>highlights</code> prop）被 <code>StrategyBlockFields.tsx</code> 使用。useEffect 同步逻辑、exec() 函数、toolbar JSX 几乎逐字相同。</p>
+      <div class="fix"><strong>修复：</strong>统一到 <code>fields/RichTextField.tsx</code>（新版），删除旧版或 re-export。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-high">H-4 重复</span>
+      <div class="issue-title">analytics/ 目录大量跨文件重复 helper（fmt/money/compact 等 × 4 文件）</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">affiliate.ts · creators.ts · creatorPerformance.ts · collaborationSeed.ts</div>
+      <p><code>fmt</code>、<code>money</code>、<code>money2</code>、<code>compact</code>、<code>addDays</code>、<code>VIDEO_PLATFORMS</code> 在 2-4 个文件中各自重复定义。<code>collaborationSeed.ts</code> 甚至在<strong>同一文件内</strong>重复 3 次（L271、L355、L404）。</p>
+      <div class="fix"><strong>修复：</strong>新建 <code>analytics/format.ts</code> 统一导出，各文件改为 import。消除约 30+ 行重复。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-high">H-5 架构</span>
+      <div class="issue-title">defaults.ts — getDefaultData() 770 行巨型 switch（48 个 case）</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/web/src/editor/defaults.ts:86-857</div>
+      <p>典型 "switch + 数据" 反模式，48 个 case 分支每个返回不同的默认数据对象。新增组件类型须修改此函数。难以扩展、难以测试。</p>
+      <div class="fix"><strong>修复：</strong>改为数据表 <code>const DEFAULT_DATA: Record&lt;ComponentType, ComponentData&gt; = &#123;...&#125;</code> + <code>getDefaultData = (type) => clone(DEFAULT_DATA[type])</code>。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-high">H-6 竞态</span>
+      <div class="issue-title">nextCampaignId() 存在 TOCTOU 竞态 — 并发下主键冲突</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/modules/data/data.service.ts:21-31</div>
+      <p><code>list → max+1 → create</code> 非原子操作。两个并发请求会读到同一 max 值，<code>prisma.dataRecord.create</code> 撞主键。非 import 路径直接 500。</p>
+      <div class="fix"><strong>修复：</strong>用 DB 自增列、事务内 <code>SELECT FOR UPDATE</code>、或 UPSERT + 重试。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header">
+      <span class="issue-badge badge-high">H-7 残留</span>
+      <div class="issue-title">__validate.ts — 根目录调试脚本残留（7 处 console.log）</div>
+    </div>
+    <div class="issue-body">
+      <div class="file">apps/server/__validate.ts</div>
+      <p>一次性调试脚本，读取 <code>/tmp/proj.json</code> 调用 schema 打印错误，未被任何代码引用。</p>
+      <div class="fix"><strong>修复：</strong>删除，或移至 <code>scripts/</code> 目录。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MEDIUM ISSUES                                -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">🟡</span> Medium（11 项 — 计划改进）</div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-1 安全</span><div class="issue-title">无 API 速率限制 — 暴力破解风险</div></div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/app.ts（全局）</div>
+      <p>全局搜索 <code>rateLimit</code> → 0 结果。<code>/auth/login</code> 无任何速率限制。</p>
+      <div class="fix">添加 <code>express-rate-limit</code>（如 10 次/分钟/IP）到 auth 路由。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-2 安全</span><div class="issue-title">SVG 上传可导致存储型 XSS</div></div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/modules/upload/upload.routes.ts:13-16</div>
+      <p>MIME 检查仅基于客户端 <code>Content-Type</code>（可伪造），<code>image/svg+xml</code> 在允许列表中。SVG 可内嵌 <code>&lt;script&gt;</code>，通过 <code>express.static</code> 以原始 Content-Type 返回 → 浏览器执行 JS。</p>
+      <div class="fix">禁止 SVG 上传，或上传后 sanitize + <code>Content-Disposition: attachment</code>。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-3 性能</span><div class="issue-title">批量导入逐条 upsert — 经典 N+1（2N 次 roundtrip）</div></div>
+    <div class="issue-body">
+      <div class="file">campaigns.service.ts · data.service.ts:90-119</div>
+      <p><code>importMany</code> 每条记录先 <code>findUnique</code> 再 <code>update/create</code>，全部串行 <code>await</code>。N 条记录 = 2N 次数据库往返。</p>
+      <div class="fix">改用 <code>prisma.$transaction([...])</code> 或 <code>createMany(&#123; skipDuplicates: true &#125;)</code>。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-4 性能</span><div class="issue-title">全项目无分页实现 — list 端点全表扫描</div></div>
+    <div class="issue-body">
+      <div class="file">data.service.ts:42-49 · projects/templates/campaigns service .list()</div>
+      <p><code>findMany(&#123; where &#125;)</code> 无 <code>take/skip</code>。数据增长后单次响应体积爆炸。<strong>全项目 0 处分页</strong>。</p>
+      <div class="fix">统一加 <code>?page=&pageSize=</code>，返回 <code>&#123; items, total, page &#125;</code>。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-5 类型</span><div class="issue-title">registry.tsx 的 <code>data: any</code> — 类型安全缺口</div></div>
+    <div class="issue-body">
+      <div class="file">apps/web/src/editor/registry.tsx:119</div>
+      <p>所有组件的 <code>props.data</code> 退化为 <code>any</code>，组件内部 <code>data.foo</code> 无编译期检查。store.ts 中大量 <code>c.data as object</code> 断言即源于此。</p>
+      <div class="fix">定义判别联合 <code>type AnyComponentData = TextData | BarChartData | ...</code>，或使用 shared 已导出的 <code>ComponentData</code>。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-6 校验</span><div class="issue-title">campaigns.schema.ts 大量 z.any() — 校验形同虚设</div></div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/modules/campaigns/campaigns.schema.ts:18-19,46-50</div>
+      <p><code>metrics</code>、<code>analytics</code>、<code>contact</code>、<code>rate</code>、<code>audience</code>、<code>works</code> 均用 <code>z.any().optional()</code>。对照：同项目的 <code>data.schema.ts</code> 已有精确的 <code>creatorContactSchema</code>/<code>creatorRateSchema</code> 可复用。</p>
+      <div class="fix">复用 data.schema.ts 的精确 schema 替换 z.any()。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-7 校验</span><div class="issue-title">projects.schema.ts components 零校验</div></div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/modules/projects/projects.schema.ts:55</div>
+      <p><code>pageSchema.components</code> = <code>z.array(z.any())</code>。组件树（核心数据）的 type/坐标/data 完全不校验。</p>
+      <div class="fix">定义 <code>componentSchema</code>，至少校验 type 和几何字段存在。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-8 复杂度</span><div class="issue-title">store.ts — 1309 行 Zustand 巨型 store</div></div>
+    <div class="issue-body">
+      <div class="file">apps/web/src/editor/store.ts</div>
+      <p>组件 CRUD、对齐分布、页面管理、历史栈、主题、预览、保存、HMR 全部集中在 <code>create()</code> 闭包内。<code>updateTheme</code> 嵌套展开达 9 层缩进。</p>
+      <div class="fix">按 slice 拆分：history slice / theme slice / project slice / report slice。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-9 复杂度</span><div class="issue-title">templates.ts (1407 行) — 33 个模板对象内联</div></div>
+    <div class="issue-body">
+      <div class="file">apps/web/src/editor/templates.ts:216+</div>
+      <p>数据声明与组件构建逻辑交织。单文件过长，可读性受限。</p>
+      <div class="fix">按业务线拆分为 templates/weekly.ts、templates/monthly.ts 等。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-10 安全</span><div class="issue-title">Puppeteer --no-sandbox + Helmet CSP 图片源过宽</div></div>
+    <div class="issue-body">
+      <div class="file">export.service.ts:23 · app.ts:24-28</div>
+      <p>Puppeteer 禁用 sandbox 增加容器逃逸风险。Helmet CSP <code>imgSrc: ['self', 'data:', 'blob:', 'https:']</code> — 允许任意 HTTPS 图片源，削弱数据外泄防护。</p>
+      <div class="fix">收紧 CSP 为已知 CDN/OSS 域名白名单。</div>
+    </div>
+  </div>
+
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-medium">M-11 架构</span><div class="issue-title">campaigns.service.ts — 5 个 service class 堆叠 576 行单文件</div></div>
+    <div class="issue-body">
+      <div class="file">apps/server/src/modules/campaigns/campaigns.service.ts</div>
+      <p>CampaignService / CreatorService / CampaignCreatorService / CollaborationService / CollaborationDeliverableService 全部在一个文件内。违反单一职责。</p>
+      <div class="fix">按领域拆为 services/campaign.service.ts、creator.service.ts 等。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- LOW ISSUES                                   -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">🟢</span> Low（5 项 — 可选优化）</div>
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-low">L-1</span><div class="issue-title">fontParser.ts 3 处 <code>(result as any)._platformID</code></div></div>
+    <div class="issue-body"><div class="file">apps/server/src/modules/fonts/fontParser.ts:83,111,113</div><p>临时字段标记，可改为 <code>Record&lt;string, unknown&gt;</code>。</p></div>
+  </div>
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-low">L-2</span><div class="issue-title">CORS 配置需确保生产环境不用通配 <code>*</code></div></div>
+    <div class="issue-body"><div class="file">apps/server/src/app.ts:16-21</div><p>config.ts 默认按逗号分割，不支持 <code>*</code>，当前安全。建议部署文档强调。</p></div>
+  </div>
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-low">L-3</span><div class="issue-title">FontStorage 使用 JSON 文件存储元数据（非原子、无并发保护）</div></div>
+    <div class="issue-body"><div class="file">apps/server/src/modules/fonts/fontStorage.ts:126-132</div><p>多实例部署时并发写 <code>fonts.json</code> 可能损坏文件。</p></div>
+  </div>
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-low">L-4</span><div class="issue-title">路由命名不统一 — 部分用动词路径（RESTful 一致性）</div></div>
+    <div class="issue-body"><div class="file">campaigns.routes.ts:30 <code>/creators/list</code> · projects.routes.ts:19 <code>/from-template</code></div></div>
+  </div>
+  <div class="issue">
+    <div class="issue-header"><span class="issue-badge badge-low">L-5</span><div class="issue-title">CreateProjectDialog.tsx 残留注释代码（2 行）</div></div>
+    <div class="issue-body"><div class="file">apps/web/src/components/CreateProjectDialog.tsx:132-133</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- GOOD PRACTICES                               -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">✅</span> 做得好的地方（15+ 项确认）</div>
+  <div class="good-grid">
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>TypeScript strict 全量开启</strong> — noUnusedLocals/Parameters 全开，全项目仅 4 处显式 any</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>JWT 实现正确</strong> — jose 库 + 强制 HS256 防降级攻击，access 15min / refresh 7d</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>Refresh token 轮换</strong> — 每次刷新作废旧 jti + Redis 白名单/黑名单机制</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>密码哈希</strong> — scrypt(64B key) + 16B 随机 salt + 常量时间比较</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>零原始 SQL</strong> — $queryRaw/$executeRaw 搜索结果为 0，全部 Prisma 类型安全查询</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>XSS 防护</strong> — sanitizeRichText 白名单标签 + 4 处 dangerouslySetInnerHTML 均经过此函数</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>无硬编码密钥</strong> — sk-/AKIA/ghp_/BEGIN PRIVATE KEY 搜索为 0 结果</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>路由→控制器→服务清晰分层</strong> — 零跨层违规，route 文件无 Prisma 引用</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>统一错误处理</strong> — asyncHandler + errorHandler + ApiError，ZodError 自动 400</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>Prisma 单例</strong> — globalThis 防热重载重复实例化</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>ownerId 数据隔离</strong> — 所有查询按 ownerId 过滤，404 不泄露资源存在性</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>0 TODO/FIXME/HACK</strong> — 代码库卫生状况优秀</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>117 个测试文件 / 792 用例</strong> — 前端测试覆盖率较好</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>Zod 验证覆盖主体</strong> — projects/templates/schemes/data/lookup 的 CRUD 全部挂载</div></div>
+    <div class="good-item"><span class="check">✓</span><div class="text"><strong>Cookie httpOnly + sameSite:strict</strong> — refresh token cookie 安全配置正确</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- ROADMAP                                      -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon">🗺️</span> 修复路线图（按 ROI 排序）</div>
+  <div class="roadmap">
+    <div class="roadmap-item">
+      <div class="roadmap-num">1</div>
+      <div>
+        <div class="roadmap-title">替换 .env.prod 弱 JWT 密钥 + config.ts 生产强制要求</div>
+        <div class="roadmap-desc">C-1 · 安全 Critical · openssl rand -hex 32 生成强密钥</div>
+      </div>
+      <div class="roadmap-effort effort-s">0.5h</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">2</div>
+      <div>
+        <div class="roadmap-title">修复 export.service.ts 缺失的 await</div>
+        <div class="roadmap-desc">C-2 · 功能性 Bug · 两处加 await 即可</div>
+      </div>
+      <div class="roadmap-effort effort-s">5min</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">3</div>
+      <div>
+        <div class="roadmap-title">.env.prod 设置 COOKIE_SECURE=true</div>
+        <div class="roadmap-desc">H-2 · 安全 High · 一行配置</div>
+      </div>
+      <div class="roadmap-effort effort-s">1min</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">4</div>
+      <div>
+        <div class="roadmap-title">为 campaigns 模块 8 个端点补 validate()</div>
+        <div class="roadmap-desc">H-1 · 安全 High · 参照同模块 Campaign CRUD 路由</div>
+      </div>
+      <div class="roadmap-effort effort-s">0.5d</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">5</div>
+      <div>
+        <div class="roadmap-title">删除 __validate.ts 调试残留</div>
+        <div class="roadmap-desc">H-7 · 代码卫生 · git rm</div>
+      </div>
+      <div class="roadmap-effort effort-s">1min</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">6</div>
+      <div>
+        <div class="roadmap-title">统一 RichTextField + 抽取 analytics/format.ts</div>
+        <div class="roadmap-desc">H-3/H-4 · 消除重复代码 ~50 行</div>
+      </div>
+      <div class="roadmap-effort effort-m">1d</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">7</div>
+      <div>
+        <div class="roadmap-title">配置 ESLint + ts-prune 死代码检测</div>
+        <div class="roadmap-desc">缺失项 · 防止技术债增长</div>
+      </div>
+      <div class="roadmap-effort effort-m">1d</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">8</div>
+      <div>
+        <div class="roadmap-title">拆分 CampaignCollabPage + store.ts + getDefaultData</div>
+        <div class="roadmap-desc">C-3/M-8/H-5 · 架构重构</div>
+      </div>
+      <div class="roadmap-effort effort-l">3-5d</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">9</div>
+      <div>
+        <div class="roadmap-title">补充分页 + 修复 N+1 批量导入 + 竞态</div>
+        <div class="roadmap-desc">M-3/M-4/H-6 · 性能优化</div>
+      </div>
+      <div class="roadmap-effort effort-l">2-3d</div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-num">10</div>
+      <div>
+        <div class="roadmap-title">registry 判别联合 + campaigns.schema 替换 z.any()</div>
+        <div class="roadmap-desc">M-5/M-6 · 类型安全强化</div>
+      </div>
+      <div class="roadmap-effort effort-l">2-3d</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  PPTGenerator Code Quality Audit · Generated 2026-07-28 · 3-Agent Parallel Audit (Security + Complexity + API/Types)
+</footer>
+
+</div>
+</body>
+</html>

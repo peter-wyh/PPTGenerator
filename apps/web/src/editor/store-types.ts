@@ -5,6 +5,7 @@
 import type {
   EditorComponent,
   Page,
+  PageGradient,
   PageType,
   ProjectDetail,
   ProjectMeta,
@@ -60,6 +61,8 @@ export interface EditorState {
   history: Snapshot[];
   historyIndex: number;
   clipboard: EditorComponent[] | null;
+  /** 连续 paste 累计次数（实现累加偏移），copy/cut 时重置。 */
+  _pasteCount: number;
 
   zoom: number;
   panX: number;
@@ -160,6 +163,8 @@ export interface EditorState {
   deletePage: (id: string) => void;
   renamePage: (id: string, name: string) => void;
   updatePage: (id: string, patch: Partial<Pick<Page, 'name' | 'bgColor' | 'bgGradient' | 'bgImage' | 'pageType' | 'titleComponentId' | 'titleOverridden' | 'campaignId' | 'creatorId'>>) => void;
+  /** 批量应用背景到所有页面（一次性 history 快照，用于「应用到所有页面」）。 */
+  applyBackgroundBatch: (patch: { bgColor?: string; bgGradient?: PageGradient; bgImage?: string }) => void;
   /** 页面属性的实时预览更新（不落 history）：用于色板拖动/文本输入过程中。
    *  仅改 pages + 标脏，让画布即时反馈；调用方需在交互结束时（onBlur/onChange 提交）
    *  再调 updatePage() 推一次 history，否则无法撤销。 */

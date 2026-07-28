@@ -65,6 +65,9 @@ export function Canvas() {
   }
 
   /* ----------------------------- 拖动编排 ----------------------------- */
+  const marqueeRectRef = useRef(marqueeRect);
+  marqueeRectRef.current = marqueeRect;
+
   useEffect(() => {
     function onMove(e: MouseEvent) {
       const drag = dragRef.current;
@@ -109,7 +112,7 @@ export function Canvas() {
       if (drag?.kind === 'move' || drag?.kind === 'resize') {
         useEditorStore.getState().commit();
       } else if (drag?.kind === 'marquee') {
-        const rect = marqueeRect;
+        const rect = marqueeRectRef.current;
         const st = useEditorStore.getState();
         if (rect && (rect.w > 5 || rect.h > 5)) {
           // 框选：选中完全落入矩形的组件。
@@ -144,7 +147,7 @@ export function Canvas() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [marqueeRect]);
+  }, []);
 
   /* ----------------------------- wheel 缩放 ---------------------------- */
   useEffect(() => {
