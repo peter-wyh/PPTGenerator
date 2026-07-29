@@ -37,6 +37,7 @@ export type PageType =
   | 'report-wrapup-review'
   | 'content-analysis'
   | 'funnel'
+  | 'report-single-page'
   // ── 公司 · 品牌 ──
   | 'cover'
   | 'agenda'
@@ -96,6 +97,7 @@ const PAGE_CATEGORY_MAP: Record<PageType, PageCategory> = {
   'report-wrapup-review': 'campaign-report',
   'content-analysis': 'campaign-report',
   funnel: 'campaign-report',
+  'report-single-page': 'campaign-report',
   // 公司 · 品牌
   cover: 'media-report',
   agenda: 'media-report',

@@ -70,6 +70,7 @@ export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
     ids: [
       'report-weekly-overview',
       'report-monthly-overview',
+      'report-single-page',
       'report-channel',
       'report-product',
       'report-creator-collab',
@@ -390,6 +391,45 @@ export const TEMPLATES: Template[] = [
       const title = titleAt('渠道贴文', 80, 40);
       const posts = t('post-list', 80, 110, 1120, 320);
       return [title, posts];
+    },
+  },
+  {
+    id: 'report-single-page',
+    name: '单页 · Campaign 综合月报',
+    description: 'KPI + 渠道表现 + 达人明细 + 合作方明细 + 趋势图 + 洞察（单页全览）',
+    pageType: 'report-single-page',
+    scenario: ['campaign-report'],
+    components: () => {
+      const comps: EditorComponent[] = [];
+
+      // ── Row 0: 标题 ──
+      const title = titleAt('Campaign 月报 · 综合概览', 80, 40);
+      comps.push(title);
+
+      // ── Row 1: KPI 看板（满宽）──
+      const kpi = t('kpi-board', 80, 100, 1120, 120);
+      comps.push(kpi);
+
+      // ── Row 2: 趋势图(左) + 转化漏斗(右) ──
+      const trend = t('bar-chart', 80, 240, 660, 200);
+      (trend.data as { title: string }).title = '';
+      comps.push(trend);
+      const funnel = t('funnel-chart', 780, 240, 420, 200);
+      comps.push(funnel);
+
+      // ── Row 3: 渠道表现表格（满宽）──
+      const channelTitle = textAt(80, 460, 1120, 24, '渠道 / 合作方表现', 16);
+      comps.push(channelTitle);
+      const channelTable = tableAt(80, 490, 1120, 200, ['合作方', '类型', '平台', '粉丝/访问量', '互动率', 'GMV', 'ROAS', '状态'], [
+        ['', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', ''],
+      ]);
+      comps.push(channelTable);
+
+      return comps;
     },
   },
 
