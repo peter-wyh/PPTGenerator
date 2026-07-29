@@ -13,6 +13,7 @@ import {
 } from '@/components/SchemeFormDialog';
 import { BUSINESS_LINES } from '@/projectsMeta';
 import { STYLE_PRESETS, type ReportScheme } from '@mediakit/shared';
+import { toast } from '../components/Toast';
 
 /** 风格预设 key → 名称查找表。 */
 const PRESET_LABEL: Record<string, string> = Object.fromEntries(
@@ -100,7 +101,7 @@ export function SchemesPage() {
       const updated = await schemesApi.update(s.id, { enabled: !s.enabled });
       setSchemes((prev) => prev.map((x) => (x.id === s.id ? updated : x)));
     } catch {
-      /* 失败静默 */
+      toast.error('操作失败');
     } finally {
       setTogglingId(null);
     }
@@ -113,6 +114,8 @@ export function SchemesPage() {
       await schemesApi.remove(pendingDelete.id);
       setSchemes((prev) => prev.filter((s) => s.id !== pendingDelete.id));
       setPendingDelete(null);
+    } catch {
+      toast.error('删除失败');
     } finally {
       setDeleting(false);
     }

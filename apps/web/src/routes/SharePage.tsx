@@ -91,9 +91,32 @@ export function SharePage() {
   }
 
   const page = pages[pageIndex];
-  const viewportW = Math.min(window.innerWidth - 80, 1280);
-  const viewportH = Math.min(window.innerHeight - 140, 720);
-  const scale = fitScale(canvasWidth, canvasHeight, viewportW, viewportH);
+
+  // fitScale 需要根据视口实时重算：监听 resize 并 debounce 存入 state。
+  const [scale, setScale] = useState(() => {
+    const viewportW = Math.min(window.innerWidth - 80, 1280);
+    const viewportH = Math.min(window.innerHeight - 140, 720);
+    return fitScale(canvasWidth, canvasHeight, viewportW, viewportH);
+  });
+
+  useEffect(() => {
+    const recalc = () => {
+      const viewportW = Math.min(window.innerWidth - 80, 1280);
+      const viewportH = Math.min(window.innerHeight - 140, 720);
+      setScale(fitScale(canvasWidth, canvasHeight, viewportW, viewportH));
+    };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onResize = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(recalc, 150); // debounce：避免拖拽 resize 时频繁重算
+    };
+    window.addEventListener('resize', onResize);
+    recalc(); // canvas 尺寸变化时也立即重算
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (timer) clearTimeout(timer);
+    };
+  }, [canvasWidth, canvasHeight]);
 
   return (
     <div className="flex h-screen flex-col bg-neutral-900" style={themeStyle}>

@@ -36,11 +36,18 @@ export function EditorTopbar() {
   if (meta?.scenario)
     metaTags.push(SCENARIO_LABELS[meta.scenario] + (meta.scenarioSub ? `·${SCENARIO_SUB_LABELS[meta.scenarioSub]}` : ''));
 
+  const handleBack = () => {
+    if (useEditorStore.getState().dirty) {
+      if (!window.confirm('有未保存的更改，确定离开吗？')) return;
+    }
+    navigate('/projects');
+  };
+
   return (
     <header className="flex h-12 items-center justify-between border-b border-border-default bg-surface-primary px-3">
       <div className="flex min-w-0 items-center gap-2">
         <button
-          onClick={() => navigate('/projects')}
+          onClick={handleBack}
           className="flex items-center gap-1 rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
           title="返回项目列表"
         >

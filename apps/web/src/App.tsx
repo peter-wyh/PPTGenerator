@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Login } from './routes/Login';
 import { ProtectedLayout, useRestoreSession } from './routes/ProtectedLayout';
+import { ToastContainer } from './components/Toast';
 
 // 路由级 lazy load —— 编辑器(ProjectShell)是最大模块，延迟到进入 /projects/:id 才加载
 const Projects = lazy(() => import('./routes/Projects').then((m) => ({ default: m.Projects })));
@@ -55,6 +56,7 @@ export function App() {
           <Route path="*" element={<Login />} />
         </Routes>
       </Suspense>
+      <ToastContainer />
     </BrowserRouter>
   );
 }

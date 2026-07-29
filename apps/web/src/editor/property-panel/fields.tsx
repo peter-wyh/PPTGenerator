@@ -463,6 +463,8 @@ export function ListField({ comp, field }: { comp: EditorComponent; field: Prope
 
 export function TableField({ comp }: { comp: EditorComponent }) {
   const update = useDataUpdate(comp);
+  const updateComponentData = useEditorStore.getState().updateComponentData;
+  const commit = useEditorStore.getState().commit;
   const data = comp.data as { headers: string[]; rows: string[][] };
   const headers = data.headers;
   const rows = data.rows;
@@ -494,12 +496,19 @@ export function TableField({ comp }: { comp: EditorComponent }) {
   const addRow = () => update('rows', [...rows, headers.map(() => '--')]);
   const removeRow = (r: number) => update('rows', rows.filter((_, idx) => idx !== r));
   const addCol = () => {
-    update('headers', [...headers, `列${headers.length + 1}`]);
-    update('rows', rows.map((r) => [...r, '--']));
+    // ⚠️ 必须一次性原子更新 headers + rows——分两次 update 会因
+    //    useDataUpdate 闭包里的 comp.data 旧快照导致第二次覆盖第一次（表头丢失）。
+    const newHeaders = [...headers, `列${headers.length + 1}`];
+    const newRows = rows.map((r) => [...r, '--']);
+    updateComponentData(comp.id, { headers: newHeaders, rows: newRows });
+    commit();
   };
   const removeCol = (c: number) => {
-    update('headers', headers.filter((_, idx) => idx !== c));
-    update('rows', rows.map((r) => r.filter((_, idx) => idx !== c)));
+    // 同理，合并为一次 update 避免 headers / rows 不同步。
+    const newHeaders = headers.filter((_, idx) => idx !== c);
+    const newRows = rows.map((r) => r.filter((_, idx) => idx !== c));
+    updateComponentData(comp.id, { headers: newHeaders, rows: newRows });
+    commit();
   };
 
   return (

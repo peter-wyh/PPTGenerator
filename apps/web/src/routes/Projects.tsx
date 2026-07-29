@@ -8,6 +8,7 @@ import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
 import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 import type { ProjectMeta, ProjectSummary, Scenario } from '@mediakit/shared';
+import { toast } from '../components/Toast';
 
 export function Projects() {
   const navigate = useNavigate();
@@ -121,7 +122,7 @@ export function Projects() {
       await projectsApi.duplicate(p.id);
       await refresh();
     } catch {
-      /* 复制失败静默；可按需加 toast */
+      toast.error('复制失败');
     }
   }
 
@@ -132,6 +133,8 @@ export function Projects() {
       await projectsApi.remove(pendingDelete.id);
       setProjects((prev) => prev.filter((p) => p.id !== pendingDelete.id));
       setPendingDelete(null);
+    } catch {
+      toast.error('删除失败');
     } finally {
       setDeleting(false);
     }

@@ -11,6 +11,7 @@ import {
 } from '@/components/TemplateFormDialog';
 import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS, TEMPLATE_TYPES, TEMPLATE_TYPE_LABELS } from '@/projectsMeta';
 import type { ProjectMeta, Scenario, TemplateStatus, TemplateSummary } from '@mediakit/shared';
+import { toast } from '../components/Toast';
 
 /** 模板管理（管理后台）：仅 ADMIN 可见。列表 / 筛选 / 新建 / 编辑 / 发布·取消 / 复制 / 删除。 */
 export function Templates() {
@@ -132,7 +133,7 @@ export function Templates() {
       const updated = await templatesApi.setStatus(t.id, next);
       setTemplates((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: updated.status } : x)));
     } catch {
-      /* 失败静默；可按需加 toast */
+      toast.error('操作失败');
     } finally {
       setTogglingId(null);
     }
@@ -158,7 +159,7 @@ export function Templates() {
         }),
       );
     } catch {
-      /* 失败静默 */
+      toast.error('操作失败');
     } finally {
       setTogglingId(null);
     }
@@ -169,7 +170,7 @@ export function Templates() {
       await templatesApi.duplicate(t.id);
       await refresh();
     } catch {
-      /* 复制失败静默 */
+      toast.error('复制失败');
     }
   }
 
@@ -180,6 +181,8 @@ export function Templates() {
       await templatesApi.remove(pendingDelete.id);
       setTemplates((prev) => prev.filter((t) => t.id !== pendingDelete.id));
       setPendingDelete(null);
+    } catch {
+      toast.error('删除失败');
     } finally {
       setDeleting(false);
     }

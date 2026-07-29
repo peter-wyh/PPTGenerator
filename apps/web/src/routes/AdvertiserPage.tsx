@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { lookupApi, type AdvertiserDTO, type BusinessLineDTO, type MerchantDTO } from '@/api/lookup';
 import { ImageInput } from '@/components/ImageInput';
+import { toast } from '../components/Toast';
 
 export function AdvertiserPage() {
   const [list, setList] = useState<AdvertiserDTO[]>([]);
@@ -23,6 +24,17 @@ export function AdvertiserPage() {
     }
   }, []);
   useEffect(() => { void reload(); }, [reload]);
+
+  async function removeAdvertiser(id: string, name: string) {
+    if (!window.confirm(`确认删除广告主「${name}」?`)) return;
+    try {
+      await lookupApi.removeAdvertiser(id);
+      setList((prev) => prev.filter((a) => a.id !== id));
+      toast.success('删除成功');
+    } catch {
+      toast.error('删除失败');
+    }
+  }
 
   if (loading) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
@@ -145,9 +157,10 @@ function AdvertiserFormModal({
       } else {
         await lookupApi.createAdvertiser(payload);
       }
+      toast.success(isEdit ? '更新成功' : '创建成功');
       onSaved();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '保存失败');
+      toast.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setBusy(false);
     }
@@ -204,10 +217,4 @@ function AdvertiserFormModal({
       </div>
     </div>
   );
-}
-
-async function removeAdvertiser(id: string, name: string) {
-  if (!window.confirm(`确认删除广告主「${name}」?`)) return;
-  await lookupApi.removeAdvertiser(id);
-  window.location.reload();
 }

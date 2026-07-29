@@ -20,6 +20,7 @@ import {
   type PreviewItem,
 } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
+import { toast } from '../components/Toast';
 
 export function CampaignPage() {
   const { records, loading, reload } = useCampaignRecords();
@@ -34,8 +35,13 @@ export function CampaignPage() {
 
   async function del(id: string) {
     if (!window.confirm('确认删除该 Campaign?')) return;
-    await dataApi.remove(id);
-    await reload();
+    try {
+      await dataApi.remove(id);
+      toast.success('删除成功');
+      await reload();
+    } catch {
+      toast.error('删除失败');
+    }
   }
 
   async function onCsv(e: ChangeEvent<HTMLInputElement>) {

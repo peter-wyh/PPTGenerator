@@ -1,4 +1,5 @@
 import type { ComponentData, EditorComponent } from '@mediakit/shared';
+import { useRef } from 'react';
 import { useEditorStore } from '../store';
 import type { PropertyField, VariantOption } from '../registry';
 
@@ -9,14 +10,41 @@ export function readValue(comp: EditorComponent, field: PropertyField): unknown 
   return (comp.data as unknown as Record<string, unknown>)[field.key];
 }
 
+/**
+ * useDataUpdate：返回一个 (key, value) 更新函数。
+ *
+ * store 更新（updateComponent，仅标脏、不落 history）立即执行 → 实时预览无延迟。
+ * 但 commit()（落 undo history）被 debounce 500ms → 连续按键只产生一条 undo 记录，
+ * 避免瞬间打满 50 步 undo 栈。组件卸载时若有 pending commit 会 flush。
+ */
 export function useDataUpdate(comp: EditorComponent) {
   const updateComponent = useEditorStore((s) => s.updateComponent);
   const commit = useEditorStore((s) => s.commit);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flush = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+      commit();
+    }
+  };
+
+  // 复用闭包：组件卸载时 flush 最后一次 pending commit，避免漏落 history。
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+
   return (key: string, value: unknown) => {
+    // 1. 立即更新 store（标脏、刷新预览），但不落 history
     updateComponent(comp.id, {
       data: { ...(comp.data as object), [key]: value } as unknown as ComponentData,
     });
-    commit();
+    // 2. debounce commit：500ms 内连续调用合并为一条 undo 记录
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      commit();
+    }, 500);
   };
 }
 

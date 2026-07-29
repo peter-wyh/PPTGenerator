@@ -29,6 +29,7 @@ import { projectsApi } from '@/api/projects';
 import { templatesApi } from '@/api/templates';
 import { creatorAvatarUrl } from '@/api/creatorAvatar';
 import { getAccessToken } from '@/api/client';
+import { toast } from '../components/Toast';
 
 // 拆分的类型 + 工具函数（re-export 保持向后兼容）
 export type { ThemePatch, Snapshot, ResizeDir, Alignment, EditorState } from './store-types';
@@ -369,15 +370,35 @@ export const useEditorStore = create<EditorState>((set, get) => {
           : `/api/v1/projects/${s.projectId}`;
       const token = getAccessToken();
       // 故意不 await / 不动 saving·dirty：调用点即 unload，store 即将销毁。
+      // keepalive fetch 对 body 有 ~64KB 限制；大 payload 静默丢失。
+      // 超过阈值 → 回退同步 XMLHttpRequest（能携带任意大小，且阻塞 unload 直到发出）。
+      const LARGE = 60_000; // 60KB 安全阈值（留余量）
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      if (body.length > LARGE) {
+        console.warn(
+          `[autosave] payload ${body.length}B 超过 keepalive 阈值，回退同步 XHR`,
+        );
+        toast.warning('数据较大，请手动保存');
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PATCH', url, false); // 同步：阻塞 unload 直到请求发出
+          for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+          xhr.withCredentials = true;
+          xhr.send(body);
+        } catch {
+          // best-effort：忽略。
+        }
+        return;
+      }
       try {
         void fetch(url, {
           method: 'PATCH',
           keepalive: true,
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
+          headers,
           body,
         }).catch(() => {});
       } catch {

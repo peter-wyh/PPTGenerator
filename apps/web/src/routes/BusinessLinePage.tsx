@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { lookupApi, type BusinessLineDTO } from '@/api/lookup';
 import { ImageInput } from '@/components/ImageInput';
+import { toast } from '../components/Toast';
 
 export function BusinessLinePage() {
   const [list, setList] = useState<BusinessLineDTO[]>([]);
@@ -24,6 +25,17 @@ export function BusinessLinePage() {
     }
   }, []);
   useEffect(() => { void reload(); }, [reload]);
+
+  async function removeBusinessLine(id: string, name: string) {
+    if (!window.confirm(`确认删除业务线「${name}」?`)) return;
+    try {
+      await lookupApi.removeBusinessLine(id);
+      setList((prev) => prev.filter((bl) => bl.id !== id));
+      toast.success('删除成功');
+    } catch {
+      toast.error('删除失败');
+    }
+  }
 
   if (loading) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
@@ -157,9 +169,10 @@ function BusinessLineFormModal({
       } else {
         await lookupApi.createBusinessLine(payload);
       }
+      toast.success(isEdit ? '更新成功' : '创建成功');
       onSaved();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '保存失败');
+      toast.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setBusy(false);
     }
@@ -225,10 +238,4 @@ function BusinessLineFormModal({
       </div>
     </div>
   );
-}
-
-async function removeBusinessLine(id: string, name: string) {
-  if (!window.confirm(`确认删除业务线「${name}」?`)) return;
-  await lookupApi.removeBusinessLine(id);
-  window.location.reload();
 }

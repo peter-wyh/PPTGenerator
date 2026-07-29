@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useEditorStore } from './store';
 import { PageThumbnail } from './components/PageThumbnail';
 import { TemplateOverlay } from './components/TemplateOverlay';
@@ -6,6 +6,7 @@ import { ScenarioOverlay } from './components/ScenarioOverlay';
 import { SaveAsTemplateOverlay } from './components/SaveAsTemplateOverlay';
 import { resolveTemplateForBusinessLine, type Template } from './templates';
 import { pageCategory } from '@mediakit/shared';
+import { toast } from '../components/Toast';
 
 /** 页面类型 → 侧栏图标映射（27 种，与模板 1:1）。 */
 const PAGE_TYPE_ICONS: Record<string, string> = {
@@ -67,6 +68,28 @@ export function PageSidebar() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   // 存为模板
   const [saveTplPage, setSaveTplPage] = useState<{ id: string; name: string } | null>(null);
+
+  // 删除确认：两击模式。第一次点击进入"确认删除?"态，3s 内再次点击才真删。
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDeleteClick = useCallback(
+    (pageId: string) => {
+      if (confirmDeleteId === pageId) {
+        // 第二次点击 → 确认删除
+        if (deleteTimer.current) clearTimeout(deleteTimer.current);
+        setConfirmDeleteId(null);
+        deletePage(pageId);
+        toast.success('页面已删除');
+      } else {
+        // 第一次点击 → 进入确认态，3s 后自动复位
+        if (deleteTimer.current) clearTimeout(deleteTimer.current);
+        setConfirmDeleteId(pageId);
+        deleteTimer.current = setTimeout(() => setConfirmDeleteId(null), 3000);
+      }
+    },
+    [confirmDeleteId, deletePage],
+  );
 
   function applyTemplate(tpl: Template) {
     if (tpl.id === 'blank') {
@@ -185,14 +208,18 @@ export function PageSidebar() {
                 </button>
                 {pages.length > 1 && (
                   <button
-                    title="删除页面"
+                    title={confirmDeleteId === p.id ? '再次点击确认删除' : '删除页面'}
                     onClick={(e) => {
                       e.stopPropagation();
-                      deletePage(p.id);
+                      handleDeleteClick(p.id);
                     }}
-                    className="text-foreground-muted hover:text-red"
+                    className={`whitespace-nowrap rounded px-1 py-0.5 text-xs ${
+                      confirmDeleteId === p.id
+                        ? 'bg-red/15 text-red'
+                        : 'text-foreground-muted hover:text-red'
+                    }`}
                   >
-                    ✕
+                    {confirmDeleteId === p.id ? '确认删除?' : '✕'}
                   </button>
                 )}
               </div>

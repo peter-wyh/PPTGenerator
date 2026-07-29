@@ -23,6 +23,7 @@ import {
   type PreviewItem,
 } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
+import { toast } from '../components/Toast';
 
 /** 简单字符串哈希，用于派生确定性 mock 值（与 campaignsApi 中同款逻辑一致）。 */
 function hashStr(s: string): number {
@@ -139,8 +140,13 @@ export function CreatorPage() {
 
   async function del(id: string) {
     if (!window.confirm('确认删除该达人?')) return;
-    await dataApi.remove(id);
-    await reload();
+    try {
+      await dataApi.remove(id);
+      toast.success('删除成功');
+      await reload();
+    } catch {
+      toast.error('删除失败');
+    }
   }
 
   async function onCsv(e: ChangeEvent<HTMLInputElement>) {
@@ -199,19 +205,24 @@ export function CreatorPage() {
   }
 
   async function confirmImport(validItems: Record<string, unknown>[]) {
-    setPreview(null);
     const k = previewKind;
-    if (k === 'creator') {
-      const r = await dataApi.importMany('creator', validItems);
-      window.alert(`导入完成:新增 ${r.created},更新 ${r.updated},跳过 ${r.skipped}`);
-    } else if (k === 'creatorAudience') {
-      const r = await campaignsApi.importCreatorAudience(validItems);
-      window.alert(`画像导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
-    } else if (k === 'creatorWorks') {
-      const r = await campaignsApi.importCreatorWorks(validItems);
-      window.alert(`作品导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+    try {
+      if (k === 'creator') {
+        const r = await dataApi.importMany('creator', validItems);
+        toast.success(`导入完成:新增 ${r.created},更新 ${r.updated},跳过 ${r.skipped}`);
+      } else if (k === 'creatorAudience') {
+        const r = await campaignsApi.importCreatorAudience(validItems);
+        toast.success(`画像导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      } else if (k === 'creatorWorks') {
+        const r = await campaignsApi.importCreatorWorks(validItems);
+        toast.success(`作品导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      }
+      setPreview(null);
+      await reload();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '导入失败');
+      // 不关闭预览 modal，让用户可以重试
     }
-    await reload();
   }
 
   return (

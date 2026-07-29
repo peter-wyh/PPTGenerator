@@ -20,6 +20,7 @@ import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/edit
 import type { ImportKind } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
+import { toast } from '../components/Toast';
 
 /** 从每日 CPS 明细累加出汇总 CpsLinkData。 */
 function cpsDailyToSummary(daily: CpsDaily[]): CpsLinkData {
@@ -150,7 +151,7 @@ export function CampaignCollabPage() {
       setPreviewKind('collaboration');
       setPreview(buildPreviewFromRows('collaboration', sheets[0]?.rows ?? []));
     } catch {
-      window.alert('文件解析失败');
+      toast.error('文件解析失败');
     }
   }
 
@@ -164,7 +165,7 @@ export function CampaignCollabPage() {
       setPreviewKind('collaborationDaily');
       setPreview(buildPreviewFromRows('collaborationDaily', sheets[0]?.rows ?? []));
     } catch {
-      window.alert('文件解析失败');
+      toast.error('文件解析失败');
     }
   }
 
@@ -173,10 +174,10 @@ export function CampaignCollabPage() {
     setPreview(null);
     try {
       const r = await campaignsApi.importCollaborationDaily(validItems);
-      window.alert(`每日明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      toast.success(`每日明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
       setTick((t) => t + 1);
     } catch {
-      window.alert('每日明细导入失败');
+      toast.error('每日明细导入失败');
     }
   }
 
@@ -190,7 +191,7 @@ export function CampaignCollabPage() {
       setPreviewKind('cps');
       setPreview(buildPreviewFromRows('cps', sheets[0]?.rows ?? []));
     } catch {
-      window.alert('文件解析失败');
+      toast.error('文件解析失败');
     }
   }
 
@@ -204,7 +205,7 @@ export function CampaignCollabPage() {
       setPreviewKind('cpsDaily');
       setPreview(buildPreviewFromRows('cpsDaily', sheets[0]?.rows ?? []));
     } catch {
-      window.alert('文件解析失败');
+      toast.error('文件解析失败');
     }
   }
 
@@ -212,10 +213,10 @@ export function CampaignCollabPage() {
     setPreview(null);
     try {
       const r = await campaignsApi.importCps(validItems);
-      window.alert(`CPS 汇总导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      toast.success(`CPS 汇总导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
       setTick((t) => t + 1);
     } catch {
-      window.alert('CPS 导入失败');
+      toast.error('CPS 导入失败');
     }
   }
 
@@ -223,10 +224,10 @@ export function CampaignCollabPage() {
     setPreview(null);
     try {
       const r = await campaignsApi.importCpsDaily(validItems);
-      window.alert(`CPS 每日明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      toast.success(`CPS 每日明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
       setTick((t) => t + 1);
     } catch {
-      window.alert('CPS 每日明细导入失败');
+      toast.error('CPS 每日明细导入失败');
     }
   }
 
@@ -418,7 +419,7 @@ export function CampaignCollabPage() {
         fail++;
       }
     }
-    window.alert(`导入完成: ${success} 条合作记录成功${fail > 0 ? `, ${fail} 条失败` : ''}`);
+    toast.success(`导入完成: ${success} 条合作记录成功${fail > 0 ? `, ${fail} 条失败` : ''}`);
     setTick((t) => t + 1);
   }
 
@@ -703,7 +704,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
       await saveCollaboration(collabData);
       onUpdate();
     } catch {
-      window.alert('保存失败');
+      toast.error('保存失败');
     } finally {
       setBusy(false);
     }

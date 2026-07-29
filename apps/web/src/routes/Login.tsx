@@ -7,8 +7,8 @@ import { Input } from '@/components/Input';
 export function Login() {
   const navigate = useNavigate();
   const { login, status, loginError } = useAuthStore();
-  const [email, setEmail] = useState('admin@mediakit.local');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState(import.meta.env.DEV ? 'admin@mediakit.local' : '');
+  const [password, setPassword] = useState(import.meta.env.DEV ? 'admin123' : '');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
