@@ -545,8 +545,8 @@ export const importService = {
             ...('dailyClicks' in row && row.dailyClicks ? { clicks: String(row.dailyClicks) } : {}),
             ...('dailyImpressions' in row && row.dailyImpressions ? { impressions: String(row.dailyImpressions) } : {}),
             ...('dailyOrders' in row && row.dailyOrders ? { orders: String(row.dailyOrders) } : {}),
-            ...('dailyGmv' in row && row.dailyGmv ? { gmv: `$${row.dailyGmv}` } : {}),
-            ...('dailyCommission' in row && row.dailyCommission ? { commission: `$${row.dailyCommission}` } : {}),
+            ...('dailyGmv' in row && row.dailyGmv ? { gmv: String(row.dailyGmv).replace(/^[$]/, '') } : {}),
+            ...('dailyCommission' in row && row.dailyCommission ? { commission: String(row.dailyCommission).replace(/^[$]/, '') } : {}),
           });
         }
 

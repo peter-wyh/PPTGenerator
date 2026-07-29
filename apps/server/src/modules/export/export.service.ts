@@ -77,18 +77,25 @@ async function renderImages(
     let totalSize = 0;
     archive.on('data', (chunk: Buffer) => { totalSize += chunk.length; });
 
-    for (let i = 0; i < pageCount; i++) {
-      const clip = { x: 0, y: i * heightPx, width: widthPx, height: heightPx };
-      const png = await page.screenshot({ clip, type: 'png' });
-      archive.append(Buffer.from(png), { name: `page-${String(i + 1).padStart(2, '0')}.png` });
+    try {
+      for (let i = 0; i < pageCount; i++) {
+        const clip = { x: 0, y: i * heightPx, width: widthPx, height: heightPx };
+        const png = await page.screenshot({ clip, type: 'png' });
+        archive.append(Buffer.from(png), { name: `page-${String(i + 1).padStart(2, '0')}.png` });
+      }
+
+      await archive.finalize();
+      const sizePromise = new Promise<number>((resolve) => {
+        passthrough.on('end', () => resolve(totalSize));
+      });
+
+      return { stream: passthrough, totalSize: sizePromise };
+    } catch (err) {
+      // 截图失败时确保 archive/passthrough 被关闭，防止下游 response 挂住。
+      archive.destroy();
+      passthrough.destroy();
+      throw err;
     }
-
-    await archive.finalize();
-    const sizePromise = new Promise<number>((resolve) => {
-      passthrough.on('end', () => resolve(totalSize));
-    });
-
-    return { stream: passthrough, totalSize: sizePromise };
   } finally {
     if (browser) await browser.close();
   }

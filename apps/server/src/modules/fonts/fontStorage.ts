@@ -133,19 +133,19 @@ export class FontStorage {
     return record;
   }
 
-  /** 删除一条：移除文件 + 元数据。 */
+  /** 删除一条：移除文件 + 元数据。整个读-改-写在 writeChain 内串行执行，避免并发竞态。 */
   async remove(id: string): Promise<FontRecord | null> {
-    const all = await this.list();
-    const idx = all.findIndex((f) => f.id === id);
-    if (idx < 0) return null;
-    const [removed] = all.splice(idx, 1);
-
+    let removed: FontRecord | null = null;
     writeChain = writeChain.then(async () => {
+      const all = await this.list();
+      const idx = all.findIndex((f) => f.id === id);
+      if (idx < 0) return;
+      [removed] = all.splice(idx, 1);
       this.cache = all;
       await fs.writeFile(this.metaPath(), JSON.stringify(all, null, 2), 'utf8');
       // 删文件（容错：文件可能已被外部移除）。
       try {
-        await fs.unlink(resolve(this.dir, removed.filename));
+        await fs.unlink(resolve(this.dir, removed!.filename));
       } catch {
         /* ignore */
       }

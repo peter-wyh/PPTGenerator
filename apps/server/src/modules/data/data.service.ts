@@ -41,9 +41,11 @@ export const dataService = {
     });
   },
 
-  async getOrThrow(id: string) {
+  async getOrThrow(id: string, ownerId?: string) {
     const rec = await prisma.dataRecord.findUnique({ where: { id } });
     if (!rec) throw ApiError.notFound('Data record not found');
+    // 若指定 ownerId，校验归属（防止跨用户操作）。
+    if (ownerId && rec.ownerId !== ownerId) throw ApiError.notFound('Data record not found');
     return rec;
   },
 
@@ -117,8 +119,8 @@ export const dataService = {
     return { created, updated, skipped };
   },
 
-  async update(id: string, data: unknown) {
-    const rec = await this.getOrThrow(id);
+  async update(id: string, ownerId: string, data: unknown) {
+    const rec = await this.getOrThrow(id, ownerId);
     const kind: Kind =
       rec.kind === 'CAMPAIGN' ? 'campaign' : rec.kind === 'COLLABORATION' ? 'collaboration' : 'creator';
     const parsed = this.validateData(kind, data);
@@ -130,8 +132,8 @@ export const dataService = {
     });
   },
 
-  async remove(id: string) {
-    await this.getOrThrow(id);
+  async remove(id: string, ownerId: string) {
+    await this.getOrThrow(id, ownerId);
     await prisma.dataRecord.delete({ where: { id } });
   },
 

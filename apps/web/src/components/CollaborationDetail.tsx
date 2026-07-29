@@ -43,11 +43,15 @@ export function CollaborationDetail({
 
   useEffect(() => {
     let cancelled = false;
-    getCollaboration(campaignId, creatorId).then((c) => {
-      if (cancelled) return;
-      // 后端无合作记录时，用 mock seed 生成 fallback（不自动落库，仅展示）
-      setData(c ?? buildSeedCollaboration(campaignId, creatorId));
-    });
+    getCollaboration(campaignId, creatorId)
+      .then((c) => {
+        if (cancelled) return;
+        // 后端无合作记录时，用 mock seed 生成 fallback（不自动落库，仅展示）
+        setData(c ?? buildSeedCollaboration(campaignId, creatorId));
+      })
+      .catch(() => {
+        if (!cancelled) setData(buildSeedCollaboration(campaignId, creatorId));
+      });
     return () => {
       cancelled = true;
     };

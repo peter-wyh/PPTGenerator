@@ -33,11 +33,11 @@ export const dataController = {
 
   update: asyncHandler(async (req: Request, res: Response) => {
     const { data } = req.body as { data: unknown };
-    res.json({ record: await dataService.update(req.params.id, data) });
+    res.json({ record: await dataService.update(req.params.id, owner(req), data) });
   }),
 
   remove: asyncHandler(async (req: Request, res: Response) => {
-    await dataService.remove(req.params.id);
+    await dataService.remove(req.params.id, owner(req));
     res.status(204).end();
   }),
 

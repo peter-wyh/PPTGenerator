@@ -127,12 +127,12 @@ describe('dataService · importMany', () => {
 describe('dataService · update', () => {
   it('记录不存在 → 404', async () => {
     prismaMock.dataRecord.findUnique.mockResolvedValue(null);
-    await expect(dataService.update('nope', validCampaign)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(dataService.update('nope', 'u1', validCampaign)).rejects.toMatchObject({ statusCode: 404 });
   });
   it('按记录既有 kind 校验 data 后更新', async () => {
     prismaMock.dataRecord.findUnique.mockResolvedValue(makeRecord());
     prismaMock.dataRecord.update.mockResolvedValue(makeRecord({ data: { ...validCampaign, name: '改名' } }));
-    await dataService.update('camp-x', { ...validCampaign, name: '改名' });
+    await dataService.update('camp-x', 'u1', { ...validCampaign, name: '改名' });
     const arg = prismaMock.dataRecord.update.mock.calls[0][0] as { where: { id: string }; data: { data: { name: string } } };
     expect(arg.where.id).toBe('camp-x');
     expect(arg.data.data.name).toBe('改名');
@@ -140,7 +140,7 @@ describe('dataService · update', () => {
   it('campaign update:强制 data.id = 主键,客户端改 id 无效(不可编辑)', async () => {
     prismaMock.dataRecord.findUnique.mockResolvedValue(makeRecord()); // 既有 PK = camp-x
     prismaMock.dataRecord.update.mockImplementation(({ data }) => Promise.resolve(makeRecord({ data: data.data })));
-    await dataService.update('camp-x', { ...validCampaign, id: 'hacked', name: '改名' });
+    await dataService.update('camp-x', 'u1', { ...validCampaign, id: 'hacked', name: '改名' });
     const arg = prismaMock.dataRecord.update.mock.calls[0][0] as { where: { id: string }; data: { data: { id: string; name: string } } };
     expect(arg.where.id).toBe('camp-x');
     expect(arg.data.data.id).toBe('camp-x'); // 不被 'hacked' 覆盖
@@ -148,19 +148,19 @@ describe('dataService · update', () => {
   });
   it('data 与记录 kind 不符(creator 数据塞 campaign 记录)→ 400', async () => {
     prismaMock.dataRecord.findUnique.mockResolvedValue(makeRecord()); // kind CAMPAIGN
-    await expect(dataService.update('camp-x', { id: 'x', name: 'Mia', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(dataService.update('camp-x', 'u1', { id: 'x', name: 'Mia', handle: '@m', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] })).rejects.toMatchObject({ statusCode: 400 });
   });
 });
 
 describe('dataService · remove / clear', () => {
   it('remove: 不存在 → 404', async () => {
     prismaMock.dataRecord.findUnique.mockResolvedValue(null);
-    await expect(dataService.remove('nope')).rejects.toMatchObject({ statusCode: 404 });
+    await expect(dataService.remove('nope', 'u1')).rejects.toMatchObject({ statusCode: 404 });
   });
   it('remove: 存在 → delete', async () => {
     prismaMock.dataRecord.findUnique.mockResolvedValue(makeRecord());
     prismaMock.dataRecord.delete.mockResolvedValue(makeRecord());
-    await dataService.remove('camp-x');
+    await dataService.remove('camp-x', 'u1');
     expect(prismaMock.dataRecord.delete).toHaveBeenCalledWith({ where: { id: 'camp-x' } });
   });
   it('clear: deleteMany by kind,返回 count', async () => {
