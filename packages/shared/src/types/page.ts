@@ -38,6 +38,9 @@ export type PageType =
   | 'content-analysis'
   | 'funnel'
   | 'report-single-page'
+  | 'report-single-page-classic'
+  | 'report-single-page-dashboard'
+  | 'report-single-page-narrative'
   // ── 公司 · 品牌 ──
   | 'cover'
   | 'agenda'
@@ -98,6 +101,9 @@ const PAGE_CATEGORY_MAP: Record<PageType, PageCategory> = {
   'content-analysis': 'campaign-report',
   funnel: 'campaign-report',
   'report-single-page': 'campaign-report',
+  'report-single-page-classic': 'campaign-report',
+  'report-single-page-dashboard': 'campaign-report',
+  'report-single-page-narrative': 'campaign-report',
   // 公司 · 品牌
   cover: 'media-report',
   agenda: 'media-report',

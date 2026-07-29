@@ -71,6 +71,9 @@ export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
       'report-weekly-overview',
       'report-monthly-overview',
       'report-single-page',
+      'report-single-page-classic',
+      'report-single-page-dashboard',
+      'report-single-page-narrative',
       'report-channel',
       'report-product',
       'report-creator-collab',
@@ -428,6 +431,126 @@ export const TEMPLATES: Template[] = [
         ['', '', '', '', '', '', '', ''],
       ]);
       comps.push(channelTable);
+
+      return comps;
+    },
+  },
+  {
+    // ── 风格 B: 经典商务风 ──
+    // 标题块分隔 + Campaign 摘要卡 + 左右双栏（发布者表 + 地域分布）+ 收入趋势
+    id: 'report-single-page-classic',
+    name: '单页 · 经典商务风',
+    description: '标题块 + Campaign 摘要 + 发布者表 + 地域分布 + 收入趋势线',
+    pageType: 'report-single-page-classic',
+    scenario: ['campaign-report'],
+    components: () => {
+      const comps: EditorComponent[] = [];
+
+      // ── 标题块（带副标题 + 分割线）──
+      const hero = t('title-block', 80, 40, 1120, 80);
+      const hd = hero.data as { text: string; subtitle: string; variant: string; fontSize: number };
+      hd.text = 'Campaign 月度报告';
+      hd.subtitle = '经典商务风 · 综合数据概览';
+      hd.variant = 'bar-left';
+      hd.fontSize = 32;
+      comps.push(hero);
+
+      // ── Campaign 摘要卡（满宽）──
+      const summary = t('campaign-summary', 80, 140, 1120, 160);
+      comps.push(summary);
+
+      // ── 左栏: 发布者表(640) ──
+      const publisher = t('publisher-table', 80, 320, 640, 340);
+      comps.push(publisher);
+
+      // ── 右栏: 地域分布(420) ──
+      const geo = t('geo-distribution', 760, 320, 440, 340);
+      comps.push(geo);
+
+      return comps;
+    },
+  },
+  {
+    // ── 风格 C: 数据仪表盘风 ──
+    // 4 指标卡顶部排列 + 漏斗图 + 设备分布 + 内容话题 + 搜索词表
+    id: 'report-single-page-dashboard',
+    name: '单页 · 数据仪表盘风',
+    description: '指标卡阵列 + 漏斗 + 设备分布 + 内容话题 + 搜索词',
+    pageType: 'report-single-page-dashboard',
+    scenario: ['campaign-report'],
+    components: () => {
+      const comps: EditorComponent[] = [];
+
+      // ── Row 0: 标题 ──
+      const title = titleAt('数据仪表盘 · Campaign 实时概览', 80, 35, 1120, 40);
+      comps.push(title);
+
+      // ── Row 1: 4 个指标卡横排（紧凑型）──
+      const cardW = 265;
+      const gap = 20;
+      for (let i = 0; i < 4; i++) {
+        const c = t('indicator-card', 80 + i * (cardW + gap), 90, cardW, 90);
+        const d = c.data as { title: string; value: string; colorTheme: string };
+        d.title = `指标 ${i + 1}`;
+        d.value = '---';
+        d.colorTheme = ['orange', 'blue', 'green', 'purple'][i];
+        comps.push(c);
+      }
+
+      // ── Row 2: 转化漏斗(左 540) + 设备分布(右 540) ──
+      const funnel = t('funnel-chart', 80, 200, 540, 230);
+      comps.push(funnel);
+      const device = t('device-breakdown', 660, 200, 540, 230);
+      comps.push(device);
+
+      // ── Row 3: 内容话题表现(左 540) + 搜索词表(右 540) ──
+      const topics = t('content-topic-performance', 80, 450, 540, 230);
+      comps.push(topics);
+      const search = t('search-term-table', 660, 450, 540, 230);
+      comps.push(search);
+
+      return comps;
+    },
+  },
+  {
+    // ── 风格 D: 叙事分析风 ──
+    // Campaign 摘要 → 多维分析雷达 → 时间线对比 → 策略洞察文本 → SWOT
+    id: 'report-single-page-narrative',
+    name: '单页 · 叙事分析风',
+    description: 'Campaign 摘要 + 雷达分析 + 周期对比 + 策略洞察 + SWOT 矩阵',
+    pageType: 'report-single-page-narrative',
+    scenario: ['campaign-report'],
+    components: () => {
+      const comps: EditorComponent[] = [];
+
+      // ── 标题 ──
+      const title = titleAt('叙事分析 · Campaign 深度洞察', 80, 35, 1120, 40);
+      comps.push(title);
+
+      // ── Row 1: Campaign 摘要(左 680) + 多维雷达分析(右 420) ──
+      const summary = t('campaign-summary', 80, 90, 680, 180);
+      comps.push(summary);
+      const radar = t('campaign-analysis', 800, 90, 400, 280);
+      comps.push(radar);
+
+      // ── Row 2: 周期对比时间线（满宽）──
+      const timeline = t('timeline-compare', 80, 290, 1120, 170);
+      (timeline.data as { variant: string }).variant = 'with-bar';
+      comps.push(timeline);
+
+      // ── Row 3: 策略洞察文本(左 540) + SWOT 矩阵(右 540) ──
+      const strategy = t('strategy-block', 80, 480, 540, 200);
+      comps.push(strategy);
+      const swot = t('swot-matrix', 660, 480, 540, 200);
+      (swot.data as { variant: string; title: string }).variant = 'grid';
+      (swot.data as { title: string }).title = '';
+      (swot.data as { quadrants: { title: string; items: string[] }[] }).quadrants = [
+        { title: 'Opportunities', items: [] },
+        { title: 'Strengths', items: [] },
+        { title: 'Challenges', items: [] },
+        { title: 'Threats', items: [] },
+      ];
+      comps.push(swot);
 
       return comps;
     },
