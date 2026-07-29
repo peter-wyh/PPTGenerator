@@ -2,7 +2,8 @@
 // 对齐 design spec §3.3 — pages 为不透明 JSON，组件类型扩展不触发迁移。
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

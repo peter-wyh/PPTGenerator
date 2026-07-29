@@ -4,7 +4,8 @@ FROM harbor.duomai.com/tool/node:20-bookworm-slim AS build
 WORKDIR /repo
 ENV CI=1 \
     PUPPETEER_SKIP_DOWNLOAD=1 \
-    PUPPETEER_CACHE_DIR=/repo/node_modules/.puppeteer-cache
+    PUPPETEER_CACHE_DIR=/repo/node_modules/.puppeteer-cache \
+    PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
 RUN npm i -g corepack@latest && corepack enable
 # puppeteer postinstall extracts the Chromium zip → needs unzip (absent from -slim)
 RUN sed -i 's#http://deb.debian.org#http://mirrors.tuna.tsinghua.edu.cn#g' /etc/apt/sources.list.d/debian.sources && \    
