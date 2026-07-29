@@ -231,11 +231,11 @@ export const TEMPLATES: Template[] = [
     description: '大标题 + 副标题',
     pageType: 'title',
     components: () => {
-      const title = t('text', 120, 200, 900, 120);
+      const title = t('text', 80, 200, 900, 120);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
       (title.data as { fontSize: number }).fontSize = 48;
       (title.data as { fontWeight: number }).fontWeight = 700;
-      const sub = t('text', 120, 340, 900, 60);
+      const sub = t('text', 80, 340, 900, 60);
       (sub.data as { content: string; fontSize: number }).content = '副标题 / 摘要';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
@@ -248,7 +248,7 @@ export const TEMPLATES: Template[] = [
     pageType: 'overview',
     components: () => {
       const cards = [0, 1, 2].map((i) => {
-        const c = t('indicator-card', 80 + i * 300, 80, 260, 110);
+        const c = t('indicator-card', 80 + i * 380, 80, 360, 110);
         (c.data as { title: string; value: string }).title = `指标 ${i + 1}`;
         (c.data as { value: string }).value = '---';
         return c;
@@ -343,7 +343,7 @@ export const TEMPLATES: Template[] = [
     scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('商品表现', 80, 40);
-      const products = t('product-performance', 80, 110, 1120, 360);
+      const products = t('product-performance', 80, 110, 1120, 520);
       return [title, products];
     },
   },
@@ -366,7 +366,7 @@ export const TEMPLATES: Template[] = [
       const fanAge = t('creator-fan-age', 660, 440, 540, 220);
       (fanAge.data as { title: string; subtitle: string }).title = '';
       (fanAge.data as { subtitle: string }).subtitle = '';
-      const note = t('text', 80, 680, 1120, 70);
+      const note = t('text', 80, 650, 1120, 60);
       (note.data as { content: string }).content = '';
       return [title, avatar, stats, works, fanGender, fanAge, note];
     },
@@ -379,7 +379,7 @@ export const TEMPLATES: Template[] = [
     scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('广告位展示', 80, 40);
-      const placement = t('placement-display', 80, 110, 1120, 320);
+      const placement = t('placement-display', 80, 110, 1120, 480);
       (placement.data as { variant: string }).variant = 'with-text';
       return [title, placement];
     },
@@ -392,7 +392,7 @@ export const TEMPLATES: Template[] = [
     scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('渠道贴文', 80, 40);
-      const posts = t('post-list', 80, 110, 1120, 320);
+      const posts = t('post-list', 80, 110, 1120, 480);
       return [title, posts];
     },
   },
@@ -534,14 +534,14 @@ export const TEMPLATES: Template[] = [
       comps.push(radar);
 
       // ── Row 2: 周期对比时间线（满宽）──
-      const timeline = t('timeline-compare', 80, 290, 1120, 170);
+      const timeline = t('timeline-compare', 80, 380, 1120, 170);
       (timeline.data as { variant: string }).variant = 'with-bar';
       comps.push(timeline);
 
       // ── Row 3: 策略洞察文本(左 540) + SWOT 矩阵(右 540) ──
-      const strategy = t('strategy-block', 80, 480, 540, 200);
+      const strategy = t('strategy-block', 80, 570, 540, 130);
       comps.push(strategy);
-      const swot = t('swot-matrix', 660, 480, 540, 200);
+      const swot = t('swot-matrix', 660, 570, 540, 130);
       (swot.data as { variant: string; title: string }).variant = 'grid';
       (swot.data as { title: string }).title = '';
       (swot.data as { quadrants: { title: string; items: string[] }[] }).quadrants = [
@@ -572,7 +572,7 @@ export const TEMPLATES: Template[] = [
       // In-page business components (each independently draggable/deletable — validates "in-page semantic block" granularity)
       const avatar = t('creator-avatar-card', 80, 150, 360, 120);
       const stats = t('creator-stats-strip', 460, 150, 740, 120);
-      const works = t('creator-works-list', 80, 300, 1120, 220);
+      const works = t('creator-works-list', 80, 300, 1120, 300);
       return [title, avatar, stats, works];
     },
   },
@@ -583,11 +583,11 @@ export const TEMPLATES: Template[] = [
     pageType: 'cover',
     pageTitleIndex: 0,
     components: () => {
-      const title = t('text', 120, 240, 1000, 120);
+      const title = t('text', 80, 240, 1000, 120);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
       (title.data as { fontSize: number }).fontSize = 56;
       (title.data as { fontWeight: number }).fontWeight = 700;
-      const sub = t('text', 120, 380, 1000, 50);
+      const sub = t('text', 80, 380, 1000, 50);
       (sub.data as { content: string; fontSize: number }).content = '副标题 / 日期 / 品牌';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
@@ -641,10 +641,10 @@ export const TEMPLATES: Template[] = [
       (title.data as { fontSize: number }).fontSize = 32;
       (title.data as { fontWeight: number }).fontWeight = 700;
       const cardW = 360;
-      const gap = 30;
-      const startX = (1280 - (cardW * 3 + gap * 2)) / 2;
+      const gap = 20;
+      const startX = 80;
       const cards = [0, 1, 2].map((i) => {
-        const c = t('package-card', Math.round(startX + i * (cardW + gap)), 150, cardW, 460);
+        const c = t('package-card', startX + i * (cardW + gap), 150, cardW, 460);
         const data = c.data as { highlighted: boolean };
         if (i === 1) {
           // Middle plan marked as recommended.
@@ -785,7 +785,7 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const title = titleAt('案例展示', 80, 50);
       const cards = [0, 1, 2, 3].map((i) => {
-        const c = t('indicator-card', 80 + i * 280, 130, 260, 90);
+        const c = t('indicator-card', 80 + i * 285, 130, 265, 90);
         const d = c.data as { title: string; value: string; colorTheme: string };
         d.title = `指标 ${i + 1}`;
         d.value = '---';
@@ -804,9 +804,9 @@ export const TEMPLATES: Template[] = [
     pageType: 'content-analysis',
     components: () => {
       const title = titleAt('内容分析', 80, 50);
-      const chart = t('bar-chart', 80, 130, 560, 260);
+      const chart = t('bar-chart', 80, 130, 560, 460);
       (chart.data as { title: string }).title = '';
-      const tbl = tableAt(680, 130, 520, 260, ['类型', '观看占比', '热门关键词'], [
+      const tbl = tableAt(680, 130, 520, 460, ['类型', '观看占比', '热门关键词'], [
         ['', '', ''],
         ['', '', ''],
         ['', '', ''],
@@ -822,7 +822,7 @@ export const TEMPLATES: Template[] = [
     scenario: ['campaign-report', 'campaign-proposal'],
     components: () => {
       const title = titleAt('增长漏斗', 80, 50);
-      const chart = t('bar-chart', 80, 130, 1120, 360);
+      const chart = t('bar-chart', 80, 130, 1120, 500);
       (chart.data as { title: string }).title = '';
       return [title, chart];
     },
@@ -838,7 +838,7 @@ export const TEMPLATES: Template[] = [
       const profile = t('creator-audience-profile', 80, 110, 1120, 360);
       const interest = t('creator-fan-interest', 80, 490, 1120, 160);
       (interest.data as { title: string }).title = '';
-      const note = t('text', 80, 670, 1120, 70);
+      const note = t('text', 80, 650, 1120, 60);
       (note.data as { content: string }).content = '';
       return [title, profile, interest, note];
     },
