@@ -669,6 +669,7 @@ export function CampaignCollabPage() {
       {/* 右侧浮窗 */}
       {drawerRow && (
         <CollabDrawer
+          key={drawerRow.linkId}
           row={drawerRow}
           onClose={() => setDrawerRow(null)}
           onUpdate={() => { setDrawerRow(null); setTick((t) => t + 1); }}
@@ -838,6 +839,9 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
 
 const CONTENT_TYPES: string[] = ['post', 'reels', 'video', 'image', 'live', 'story'];
 
+/** 平台下拉选项 */
+const PLATFORM_OPTIONS: string[] = ['TikTok', 'Instagram', 'YouTube', 'Douyin', 'RED', 'Weibo', 'Bilibili', 'Twitter', 'Facebook'];
+
 /** 指标解释说明 — 鼠标 hover title 显示 */
 const METRIC_HINTS: Record<string, string> = {
   曝光: '内容被展示的总次数（impressions）',
@@ -915,12 +919,16 @@ function DeliverableCard({
           )
         )}
         {editing ? (
-          <input
+          <select
             value={deliverable.platform ?? ''}
-            placeholder="平台"
             onChange={(e) => patch({ platform: e.target.value })}
-            className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]"
-          />
+            className="rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]"
+          >
+            <option value="">平台</option>
+            {PLATFORM_OPTIONS.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
         ) : (
           deliverable.platform && (
             <span className="text-foreground-muted text-[10px]">{deliverable.platform}</span>
@@ -956,19 +964,34 @@ function DeliverableCard({
                 ) : (
                   <div className="h-12 w-12 shrink-0 rounded bg-surface-hover flex items-center justify-center text-[8px] text-foreground-muted">N/A</div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <ImageInput
-                    value={s.src}
-                    onChange={(url) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, src: url } : x)))}
-                  />
-                  <input
-                    value={s.caption ?? ''}
-                    placeholder="说明"
-                    onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, caption: e.target.value } : x)))}
-                    className="w-full mt-0.5 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
-                  />
-                </div>
-                <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red text-[10px] shrink-0">✕</button>
+                {editing ? (
+                  <div className="flex-1 min-w-0">
+                    <ImageInput
+                      value={s.src}
+                      onChange={(url) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, src: url } : x)))}
+                    />
+                    <input
+                      value={s.caption ?? ''}
+                      placeholder="说明"
+                      onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, caption: e.target.value } : x)))}
+                      className="w-full mt-0.5 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex-1 min-w-0">
+                    {s.caption && (
+                      <p className="text-xs text-foreground-secondary leading-tight line-clamp-2">{s.caption}</p>
+                    )}
+                    {s.src && (
+                      <a href={s.src} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline break-all line-clamp-1">
+                        {s.src}
+                      </a>
+                    )}
+                  </div>
+                )}
+                {editing && (
+                  <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red text-[10px] shrink-0">✕</button>
+                )}
               </div>
             ))}
           </div>
