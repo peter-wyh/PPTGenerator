@@ -57,6 +57,15 @@ const GROUPS: { group: string; items: PaletteItem[] }[] = [
       { type: 'timeline-compare', label: '周期对比', icon: '↔', description: '同比环比对比' },
       { type: 'product-performance', label: '商品表现', icon: '▣', description: '商品销售排行' },
       { type: 'campaign-analysis', label: '分析图表', icon: '◈', description: '投放效果分析' },
+      { type: 'campaign-summary', label: 'Campaign概要', icon: '◈', description: 'Campaign综合评分卡' },
+      { type: 'funnel-chart', label: '转化漏斗', icon: '▽', description: '转化漏斗图' },
+      { type: 'revenue-timeline', label: '收入趋势', icon: '╱', description: '收入趋势线' },
+      { type: 'publisher-table', label: '合作方表现', icon: '▦', description: 'Publisher 收入/ROAS 表' },
+      { type: 'geo-distribution', label: '地域分布', icon: '◈', description: '地域分布图' },
+      { type: 'device-breakdown', label: '设备分布', icon: '◑', description: '设备占比分布' },
+      { type: 'content-topic-performance', label: '内容话题', icon: '▦', description: '内容话题效果' },
+      { type: 'search-term-table', label: '搜索词', icon: '▦', description: '搜索词表现表' },
+      { type: 'hourly-heatmap', label: '时段热力图', icon: '▦', description: '24h 时段热力图' },
       { type: 'creator-list', label: '达人列表', icon: '◳', description: '合作达人列表' },
       { type: 'creator-work-metrics', label: '作品指标', icon: '▣', description: '单作品数据' },
       { type: 'creator-works-table', label: '作品列表', icon: '▦', description: '作品表格' },
@@ -69,7 +78,15 @@ const GROUPS: { group: string; items: PaletteItem[] }[] = [
     group: '渠道·广告',
     items: [
       { type: 'placement-display', label: '广告位', icon: '▤', description: '广告位展示' },
+      { type: 'placement-wide-table', label: '广告位宽表', icon: '▦', description: '广告位明细宽表' },
+      { type: 'placement-type-summary', label: '广告位类型', icon: '▦', description: '广告位类型汇总' },
       { type: 'post-list', label: '贴文列表', icon: '☲', description: '渠道贴文列表' },
+    ],
+  },
+  {
+    group: '策略·内容',
+    items: [
+      { type: 'swot-matrix', label: 'SWOT矩阵', icon: '⊞', description: 'SWOT 四象限矩阵' },
     ],
   },
   {
