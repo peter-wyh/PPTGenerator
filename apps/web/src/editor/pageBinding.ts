@@ -365,9 +365,18 @@ export function creatorPatch(
       if (rows.length === 0) rows.push(['tag', 'NAME', cr.name]);
       return { rows };
     }
-    case 'creator-stats-strip':
-      if (!cr.stats?.length) return null;
-      return { stats: cr.stats.map((s) => ({ ...s })) };
+    case 'creator-stats-strip': {
+      // 优先使用达人自带的 stats；为空时从 followers/engagement/platform/tier 派生
+      const stats = cr.stats?.length
+        ? cr.stats.map((s) => ({ ...s }))
+        : [
+            { key: 'followers', label: 'Followers', value: cr.followers ?? '—', color: 'auto', selected: true },
+            { key: 'engagement', label: 'Engagement Rate', value: cr.engagement ?? '—', color: 'auto', selected: true },
+            { key: 'platform', label: 'Platform', value: cr.platform ?? '—', color: 'auto', selected: true },
+            { key: 'tier', label: 'Tier', value: cr.tier ? cr.tier.charAt(0).toUpperCase() + cr.tier.slice(1) : '—', color: 'auto', selected: true },
+          ];
+      return { stats };
+    }
     case 'creator-fan-gender':
       if (!cr.audience?.genderSplit?.length) return null;
       return { slices: cr.audience.genderSplit.map((g) => ({ label: g.label, value: g.value, color: g.color ?? 'auto' })) };

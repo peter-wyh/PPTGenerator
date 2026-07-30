@@ -1298,9 +1298,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
     applyPageBinding: (pageId) => {
       const pid = pageId ?? get().currentPageId;
       if (!pid) return;
-      mutateAndCommit((s) => ({
-        pages: applyPageBindingReducer(s.pages, pid, s.reportData, new Set(), s.projectMeta),
-      }));
+      mutateAndCommit((s) => {
+        const page = s.pages.find((p) => p.id === pid);
+        // 用户主动触发绑定（切换达人/Campaign）→ 强制所有组件重新填充
+        const forceIds = new Set(page?.components.map((c) => c.id) ?? []);
+        return {
+          pages: applyPageBindingReducer(s.pages, pid, s.reportData, forceIds, s.projectMeta),
+        };
+      });
     },
 
     undo: () => {
