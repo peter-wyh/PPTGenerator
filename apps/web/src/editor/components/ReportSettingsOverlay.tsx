@@ -937,31 +937,40 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                         <summary className="cursor-pointer hover:text-foreground-primary">位置与尺寸</summary>
                         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                           {([
-                            ['width', '宽度', 40, 8, 200],
-                            ['right', '右边距', 24, 0, 600],
-                            ['top', '顶距', 24, 0, 600],
-                            ['opacity', '透明度', 0.8, 0, 1],
-                            ['radius', '圆角', 8, 0, 100],
-                          ] as const).map(([key, label, fallback, min, max]) => (
-                            <label key={key} className="flex items-center gap-1">
-                              <span className="w-10 flex-none">{label}</span>
-                              <input
-                                type="number"
-                                min={min}
-                                max={max}
-                                step={key === 'opacity' ? 0.1 : 1}
-                                value={theme.branding?.blBadge?.[key] ?? fallback}
-                                onChange={(e) => {
-                                  const v = key === 'opacity'
-                                    ? Math.max(0, Math.min(1, Number(e.target.value) || fallback))
-                                    : Math.max(min as number, Math.min(max as number, Number(e.target.value) || fallback));
-                                  updateBranding('blBadge', { ...theme.branding?.blBadge, [key]: v });
-                                }}
-                                className="w-14 rounded border border-border-default px-1 py-0.5 text-[11px] text-foreground-primary"
-                              />
-                              {key === 'opacity' ? '' : 'px'}
-                            </label>
-                          ))}
+                            ['width', '宽度', 40, 8, 200, 1],
+                            ['right', '右边距', 24, 0, 600, 1],
+                            ['top', '顶距', 24, 0, 600, 1],
+                            ['opacity', '透明度', 0.8, 0, 1, 0.1],
+                            ['radius', '圆角', 8, 0, 100, 1],
+                          ] as const).map(([key, label, fallback, min, max, step]) => {
+                            const current = theme.branding?.blBadge?.[key];
+                            return (
+                              <label key={key} className="flex items-center gap-1">
+                                <span className="w-10 flex-none">{label}</span>
+                                <input
+                                  type="number"
+                                  min={min}
+                                  max={max}
+                                  step={step}
+                                  value={current ?? fallback}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    // 允许输入框为空（用户正在编辑中间态）
+                                    if (raw === '') {
+                                      updateBranding('blBadge', { ...theme.branding?.blBadge, [key]: min });
+                                      return;
+                                    }
+                                    const parsed = Number(raw);
+                                    if (Number.isNaN(parsed)) return;
+                                    const clamped = Math.max(min as number, Math.min(max as number, parsed));
+                                    updateBranding('blBadge', { ...theme.branding?.blBadge, [key]: clamped });
+                                  }}
+                                  className="w-14 rounded border border-border-default px-1 py-0.5 text-[11px] text-foreground-primary"
+                                />
+                                {key === 'opacity' ? '' : 'px'}
+                              </label>
+                            );
+                          })}
                         </div>
                         <div className="mt-1.5">
                           <label className="mb-0.5 block text-[11px] text-foreground-muted">自定义 Logo（留空=跟随业务线）</label>
