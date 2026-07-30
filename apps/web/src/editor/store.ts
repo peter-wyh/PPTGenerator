@@ -68,9 +68,29 @@ export function allReportCreators(reportData: ReportDataContext): ReportCreator[
     if (!enriched.audience || (!enriched.audience.ageRange?.length && !enriched.audience.genderSplit?.length)) {
       enriched = { ...enriched, audience: buildFallbackAudience(c.id) };
     }
+    // 旧项目达人数据可能缺少 stats（creator-stats-strip 用）
+    // 从 followers/engagement/platform/tier 派生 fallback stats
+    if (!enriched.stats?.length) {
+      enriched = { ...enriched, stats: buildFallbackStats(enriched) };
+    }
     return enriched;
   };
   return [...cc, ...lc.filter((c) => !seen.has(c.id))].map(enrich);
+}
+
+/**
+ * 基于达人 ID + followers/engagement 的确定性 fallback stats。
+ * 当达人数据缺少 stats 字段时，从 followers/engagement 派生 KPI 数据条。
+ */
+function buildFallbackStats(c: ReportCreator): NonNullable<ReportCreator['stats']> {
+  const followers = c.followers ?? '—';
+  const engagement = c.engagement ?? '—';
+  return [
+    { key: 'followers', label: 'Followers', value: followers, color: 'auto', selected: true },
+    { key: 'engagement', label: 'Engagement Rate', value: engagement, color: 'auto', selected: true },
+    { key: 'platform', label: 'Platform', value: c.platform ?? '—', color: 'auto', selected: true },
+    { key: 'tier', label: 'Tier', value: c.tier ? c.tier.charAt(0).toUpperCase() + c.tier.slice(1) : '—', color: 'auto', selected: true },
+  ];
 }
 
 /**
