@@ -12,6 +12,7 @@ import { ImageInput } from '@/components/ImageInput';
 import { CropModal } from '@/components/CropModal';
 import { uploadImage } from '@/api/uploads';
 import { useDataUpdate, readValue, FieldGroup } from './helpers';
+import { MultiSelectField } from './fields/MultiSelectField';
 
 export function NumberField({ comp, field }: { comp: EditorComponent; field: PropertyField }) {
   const updateComponent = useEditorStore((s) => s.updateComponent);
@@ -57,6 +58,8 @@ export function FieldEditor({ comp, field }: { comp: EditorComponent; field: Pro
       return <DataNumberField comp={comp} field={field} />;
     case 'select':
       return <SelectField comp={comp} field={field} />;
+    case 'multi-select':
+      return <MultiSelectField comp={comp} field={field} />;
     case 'list':
       return <ListField comp={comp} field={field} />;
     case 'table':

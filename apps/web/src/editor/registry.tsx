@@ -77,6 +77,7 @@ export type PropertyFieldKind =
   | 'number'
   | 'color'
   | 'select'
+  | 'multi-select' // 多选标签（值存为 string[]）
   | 'image-url' // 图片 URL（文本 + 上传 + 裁剪）
   | 'list' // {label,value,color}[] —— 柱状/饼图
   | 'table' // TableData headers+rows
@@ -318,7 +319,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { key: 'avatar', label: '头像 URL', kind: 'image-url' },
       { key: 'name', label: '名称', kind: 'text' },
       { key: 'platform', label: '主平台', kind: 'select', options: PLATFORMS },
-      { key: 'platforms', label: '全部平台（逗号分隔）', kind: 'text' },
+      { key: 'platforms', label: '全部平台', kind: 'multi-select', options: PLATFORMS },
       { key: 'tier', label: '层级', kind: 'select', options: TIERS },
       { key: 'intro', label: '简介', kind: 'textarea' },
       { key: 'handle', label: 'Handle', kind: 'text' },

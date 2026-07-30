@@ -5,6 +5,7 @@ import { ImageUrlField } from './ImageUrlField';
 import { TextareaField } from './TextareaField';
 import { DataNumberField } from './DataNumberField';
 import { SelectField } from './SelectField';
+import { MultiSelectField } from './MultiSelectField';
 import { ListField } from './ListField';
 import { TableField } from './TableField';
 import { IconPickerField } from './IconPickerField';
@@ -22,6 +23,8 @@ export function FieldEditor({ comp, field }: { comp: EditorComponent; field: Pro
       return <DataNumberField comp={comp} field={field} />;
     case 'select':
       return <SelectField comp={comp} field={field} />;
+    case 'multi-select':
+      return <MultiSelectField comp={comp} field={field} />;
     case 'list':
       return <ListField comp={comp} field={field} />;
     case 'table':

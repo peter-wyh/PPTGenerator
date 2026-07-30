@@ -10,7 +10,6 @@ import { DataSourceSection } from './DataSourceSection';
 import {
   ReportCreatorFanGenderImporter,
   ReportCreatorFanAgeImporter,
-  CreatorLinkImporter,
   KpiImportButton,
 } from './importers';
 import {
@@ -151,7 +150,7 @@ export function PropertyPanel() {
         )}
       </FieldGroup>
 
-      {comp.type === 'creator-avatar-card' && <CreatorLinkImporter comp={comp} />}
+      {/* creator-avatar-card 的链接解析已在 DataSourceSection 中统一渲染，此处不再重复 */}
       {comp.type === 'business-block' && <BusinessFields comp={comp} />}
       {comp.type === 'creator-stats-strip' && <CreatorStatsFields comp={comp} />}
       {comp.type === 'creator-audience-profile' && <CreatorAudienceProfileFields comp={comp} />}
