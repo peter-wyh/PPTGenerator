@@ -137,6 +137,18 @@ export function ReportSettingsOverlay({ onClose }: Props) {
   /** 保存：把 draft 整体提交到 store（深合并等价整体替换），然后关闭浮层。 */
   function handleSave() {
     commitTheme(draft);
+    // 保存时如果背景类型非 none，自动应用到所有未单独设置背景的页面
+    const bg = draft.background;
+    if (bg && bg.type !== 'none') {
+      const store = useEditorStore.getState();
+      const bgPatch = {
+        bgColor: bg.type === 'color' ? bg.color : undefined,
+        bgGradient: bg.type === 'gradient' ? bg.gradient : undefined,
+        bgImage: bg.type === 'image' ? bg.image : undefined,
+      };
+      // 仅更新没有独立背景设置的页面（保留用户手动设置过的）
+      store.applyBackgroundToPagesWithoutOwn(bgPatch);
+    }
     onClose();
   }
 

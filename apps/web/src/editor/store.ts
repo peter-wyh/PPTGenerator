@@ -1064,6 +1064,16 @@ export const useEditorStore = create<EditorState>((set, get) => {
         pages: s.pages.map((p) => ({ ...p, ...patch })),
       })),
 
+    /** 批量应用背景到未单独设置背景的页面（保留用户手动设过的，一次性 history 快照）。 */
+    applyBackgroundToPagesWithoutOwn: (patch: { bgColor?: string; bgGradient?: PageGradient; bgImage?: string }) =>
+      mutateAndCommit((s) => ({
+        pages: s.pages.map((p) =>
+          p.bgColor || p.bgGradient || p.bgImage
+            ? p // 已有独立背景 → 跳过
+            : { ...p, ...patch },
+        ),
+      })),
+
     patchPageLive: (id, patch) =>
       set((s) => ({
         dirty: true,
