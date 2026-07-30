@@ -30,7 +30,7 @@ export function DataSourceSection({
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
 
-  const currentMode = ((comp.data as { _dataSource?: DataSourceMode })._dataSource ?? 'manual') as DataSourceMode;
+  const currentMode = ((comp.data as { _dataSource?: DataSourceMode })._dataSource ?? 'project') as DataSourceMode;
   const modes: DataSourceMode[] = config.modes.length > 0 ? config.modes : ['manual'];
 
   function switchMode(mode: DataSourceMode) {

@@ -19,10 +19,14 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
 
   if (variant === 'cards') {
     // 卡片：每行数据用独立卡片展示，2 列网格。指标名在顶部，本期/上期并列大数值，状态在底部色块。
-    const curLabel = headers[1] ?? 'Current';
-    const prevLabel = headers[2] ?? 'Previous';
+    const curLabel = headers[1] ?? '本期';
+    const prevLabel = headers[2] ?? '上期';
+    const colCount = rows.length <= 2 ? rows.length : rows.length <= 4 ? 2 : 3;
     return (
-      <div className="grid h-full w-full grid-cols-2 gap-3 overflow-auto">
+      <div
+        className="grid h-full w-full gap-3 overflow-auto"
+        style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`, gridAutoRows: '1fr' }}
+      >
         {rows.map((row, ri) => {
           const label = row[0] ?? '';
           const cur = row[1] ?? '';
@@ -30,16 +34,16 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
           const status = row[3] ?? '';
           const chip = statusChip(status);
           return (
-            <div key={ri} className="flex flex-col gap-2 skin-card skin-pad-sm">
-              <div className="text-xs font-medium text-foreground-secondary">{label}</div>
+            <div key={ri} className="flex min-h-0 flex-col gap-1.5 skin-card skin-pad-sm">
+              <div className="truncate text-xs font-medium text-foreground-secondary" title={label}>{label}</div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col">
+                <div className="flex min-w-0 flex-col">
                   <span className="text-[10px] text-foreground-muted">{curLabel}</span>
-                  <span className="font-data text-lg font-bold text-foreground-primary">{cur}</span>
+                  <span className="font-data text-lg font-bold text-foreground-primary break-all">{cur}</span>
                 </div>
-                <div className="flex flex-col">
+                <div className="flex min-w-0 flex-col">
                   <span className="text-[10px] text-foreground-muted">{prevLabel}</span>
-                  <span className="font-data text-lg font-semibold text-foreground-secondary">{prev}</span>
+                  <span className="font-data text-lg font-semibold text-foreground-secondary break-all">{prev}</span>
                 </div>
               </div>
               {status && (

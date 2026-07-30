@@ -24,7 +24,7 @@ const pageTypeSchema = z.preprocess(
       'report-weekly-overview', 'report-monthly-overview', 'report-channel',
       'report-product', 'report-creator-collab', 'report-placement',
       'report-posts', 'report-wrapup-review', 'content-analysis', 'funnel',
-      'report-single-page', 'report-single-page-classic', 'report-single-page-dashboard', 'report-single-page-narrative',
+      'report-single-page', 'report-single-page-classic', 'report-single-page-dashboard', 'report-single-page-narrative', 'report-single-page-settlement', 'report-single-page-digchic',
       // 公司 · 品牌
       'cover', 'agenda', 'company', 'package', 'milestone', 'global', 'org', 'service',
       // 达人 · 案例

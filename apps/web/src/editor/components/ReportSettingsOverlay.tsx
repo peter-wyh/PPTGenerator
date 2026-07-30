@@ -820,6 +820,57 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                     })}
                   </div>
 
+                  {/* 预设背景模板 */}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] text-foreground-muted">预设背景模板</div>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {([
+                        { label: '纯白', type: 'color' as const, color: '#ffffff' },
+                        { label: '浅灰', type: 'color' as const, color: '#f5f7fa' },
+                        { label: '深空蓝', type: 'gradient' as const, from: '#0a0e18', to: '#131a2c', angle: 155 },
+                        { label: '品牌粉', type: 'gradient' as const, from: '#fff6f9', to: '#ffe0ef', angle: 160 },
+                        { label: '商务金', type: 'gradient' as const, from: '#fdfaf3', to: '#f5edd6', angle: 160 },
+                        { label: '极光绿', type: 'gradient' as const, from: '#f0fdf4', to: '#dcfce7', angle: 160 },
+                        { label: '海洋蓝', type: 'gradient' as const, from: '#eff6ff', to: '#dbeafe', angle: 160 },
+                        { label: '暗夜紫', type: 'gradient' as const, from: '#1a1033', to: '#2d1b4e', angle: 155 },
+                        { label: '星空黑', type: 'gradient' as const, from: '#0d0d0d', to: '#1a1a1a', angle: 155 },
+                        { label: '暖米色', type: 'gradient' as const, from: '#faf8f5', to: '#f0ebe0', angle: 160 },
+                      ]).map((preset) => (
+                        <button
+                          key={preset.label}
+                          onClick={() => {
+                            if (preset.type === 'color') {
+                              updateBackground('type', 'color');
+                              updateBackground('color', preset.color);
+                            } else {
+                              updateBackground('type', 'gradient');
+                              updateBackground('gradient', {
+                                type: 'linear' as const,
+                                angle: preset.angle,
+                                stops: [
+                                  { color: preset.from, position: 0 },
+                                  { color: preset.to, position: 100 },
+                                ],
+                              });
+                            }
+                          }}
+                          className="flex flex-col items-center gap-1 rounded border border-border-subtle p-1.5 hover:border-accent-primary hover:bg-surface-hover transition"
+                          title={preset.label}
+                        >
+                          <div
+                            className="h-8 w-full rounded-sm border border-border-subtle"
+                            style={
+                              preset.type === 'color'
+                                ? { backgroundColor: preset.color }
+                                : { background: `linear-gradient(${preset.angle}deg, ${preset.from}, ${preset.to})` }
+                            }
+                          />
+                          <span className="text-[9px] text-foreground-muted">{preset.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {theme.background?.type === 'color' && (
                     <div className="flex items-center gap-2">
                       <input

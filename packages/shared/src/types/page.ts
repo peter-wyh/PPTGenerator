@@ -41,6 +41,8 @@ export type PageType =
   | 'report-single-page-classic'
   | 'report-single-page-dashboard'
   | 'report-single-page-narrative'
+  | 'report-single-page-settlement'
+  | 'report-single-page-digchic'
   // ── 公司 · 品牌 ──
   | 'cover'
   | 'agenda'
@@ -104,6 +106,8 @@ const PAGE_CATEGORY_MAP: Record<PageType, PageCategory> = {
   'report-single-page-classic': 'campaign-report',
   'report-single-page-dashboard': 'campaign-report',
   'report-single-page-narrative': 'campaign-report',
+  'report-single-page-settlement': 'campaign-report',
+  'report-single-page-digchic': 'campaign-report',
   // 公司 · 品牌
   cover: 'media-report',
   agenda: 'media-report',

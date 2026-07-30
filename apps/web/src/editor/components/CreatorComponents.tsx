@@ -602,7 +602,7 @@ function WorksCards({
     <div className="flex h-full w-full gap-2 overflow-auto skin-card p-2">
       {items.map((it, ri) => (
         <div key={ri} className="flex w-[200px] flex-none flex-col gap-1 rounded-lg border border-border-subtle p-2">
-          <Cover url={it.cover} alt={it.title} cls="h-[72px] w-full" />
+          <Cover url={it.cover} alt={it.title} cls="w-full aspect-[3/4] rounded" />
           <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{it.title}</div>
           <div className="flex gap-2 text-[10px] text-foreground-secondary">
             {it.metrics.map((m, ci) => (
@@ -1067,12 +1067,13 @@ function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers
   return (
     <div className="flex h-full w-full flex-col overflow-auto skin-card">
       {/* 表头 */}
-      <div className="flex items-center border-b border-border-default bg-surface-subtle px-3 py-2 text-[11px] font-medium text-foreground-secondary">
-        <div className="min-w-0 flex-1">{headers[1] ?? 'Creator'}</div>
-        <div className="w-20 flex-none text-center">{headers[2] ?? 'Platform'}</div>
-        <div className="w-20 flex-none text-right">{headers[3] ?? 'Followers'}</div>
-        <div className="w-16 flex-none text-right">{headers[4] ?? 'Engagement'}</div>
-        <div className="w-16 flex-none text-right">{headers[5] ?? 'Category'}</div>
+      <div className="flex items-center gap-2 border-b border-border-default bg-surface-subtle px-3 py-2 text-[11px] font-medium text-foreground-secondary">
+        <div className="w-8 flex-none" />
+        <div className="min-w-0 flex-1">{headers[1] ?? '达人'}</div>
+        <div className="w-20 flex-none text-center">{headers[2] ?? '平台'}</div>
+        <div className="w-20 flex-none text-right">{headers[3] ?? '粉丝数'}</div>
+        <div className="w-16 flex-none text-right">{headers[4] ?? '互动率'}</div>
+        <div className="w-16 flex-none text-right">{headers[5] ?? '分类'}</div>
       </div>
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-2 border-b border-border-subtle px-3 py-2 last:border-b-0 hover:bg-surface-hover">

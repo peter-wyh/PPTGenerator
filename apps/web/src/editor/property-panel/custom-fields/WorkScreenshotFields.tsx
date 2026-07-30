@@ -6,7 +6,6 @@ import type {
 import { useEditorStore } from '../../store';
 import { ImageInput } from '@/components/ImageInput';
 import { FieldGroup } from '../helpers';
-import { ReportWorkScreenshotImporter } from '../importers';
 import { MOSAIC_LAYOUT_OPTIONS } from '@/editor/components/WorksComponents';
 
 const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string; hint: string }[] = [
@@ -44,8 +43,6 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
 
   return (
     <>
-      <ReportWorkScreenshotImporter comp={comp} />
-
       {/* 视觉样式 */}
       <FieldGroup title="视觉样式">
         <div className="flex flex-wrap gap-1.5">

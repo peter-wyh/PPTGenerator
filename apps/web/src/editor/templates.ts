@@ -74,6 +74,8 @@ export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
       'report-single-page-classic',
       'report-single-page-dashboard',
       'report-single-page-narrative',
+      'report-single-page-settlement',
+      'report-single-page-digchic',
       'report-channel',
       'report-product',
       'report-creator-collab',
@@ -597,6 +599,240 @@ export const TEMPLATES: Template[] = [
         { title: 'Threats', items: [] },
       ];
       comps.push(swot);
+
+      return comps;
+    },
+  },
+
+  /* ---------------- 风格 E: FT H1 复盘看板（深色金融结算仪表盘） ---------------- */
+  {
+    id: 'report-single-page-settlement',
+    name: '单页 · H1 复盘看板',
+    description: '结算收入/毛利 + 佣金预估 + 季度对比 + 月度走势 + 运营动作（深色金融风）',
+    pageType: 'report-single-page-settlement',
+    scenario: ['campaign-report'],
+    components: () => {
+      const comps: EditorComponent[] = [];
+
+      // ── Row 0: 标题块（带副标题：数据周期）──
+      const hero = t('title-block', 80, 30, 1120, 66);
+      const hd = hero.data as { text: string; subtitle: string; variant: string; fontSize: number; divider: boolean };
+      hd.text = '2026 H1 业务结算复盘看板';
+      hd.subtitle = 'SETTLEMENT REVIEW · 收入 / 毛利 / 佣金 / 商户拓展 全景回顾（2026-01 至 2026-06）';
+      hd.variant = 'bar-left';
+      hd.fontSize = 26;
+      hd.divider = true;
+      comps.push(hero);
+
+      // ── Row 1: KPI 看板（5 项核心结算指标 + 目标完成率）──
+      const kpi = t('kpi-board', 80, 106, 1120, 150);
+      (kpi.data as { variant: string }).variant = 'grid';
+      (kpi.data as { headers: string[] }).headers = ['指标', 'H1 实际', '目标'];
+      (kpi.data as { rows: string[][] }).rows = [
+        ['总开票收入', '¥42,323,821', '¥47,510,000'],
+        ['结算毛利', '¥11,670,096', '—'],
+        ['毛利率', '28.0%', '—'],
+        ['收入 YOY', '+7%', '—'],
+        ['目标完成率', '89.1%', '89%'],
+        ['正式员工', '5 人', '—'],
+      ];
+      comps.push(kpi);
+
+      // ── Row 2: 月度收入 vs 目标 柱状图（左 540）+ 月度毛利 vs 毛利率 柱状图（右 540）──
+      const revChart = t('bar-chart', 80, 270, 540, 150);
+      const rd = revChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
+      rd.title = '月度开票收入 (¥)';
+      rd.variant = 'vertical';
+      rd.bars = [
+        { label: '1月', value: 8418072, color: '#d8a657' },
+        { label: '2月', value: 4332347, color: '#d8a657' },
+        { label: '3月', value: 8388930, color: '#d8a657' },
+        { label: '4月', value: 7227780, color: '#d8a657' },
+        { label: '5月', value: 4217202, color: '#d8a657' },
+        { label: '6月', value: 9739490, color: '#d8a657' },
+      ];
+      comps.push(revChart);
+
+      const marginChart = t('bar-chart', 660, 270, 540, 150);
+      const md = marginChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
+      md.title = '月度结算毛利 (¥)';
+      md.variant = 'vertical';
+      md.bars = [
+        { label: '1月', value: 2675614, color: '#4fd1c5' },
+        { label: '2月', value: 1219355, color: '#4fd1c5' },
+        { label: '3月', value: 2083769, color: '#4fd1c5' },
+        { label: '4月', value: 2011731, color: '#4fd1c5' },
+        { label: '5月', value: 1026599, color: '#4fd1c5' },
+        { label: '6月', value: 2653028, color: '#4fd1c5' },
+      ];
+      comps.push(marginChart);
+
+      // ── Row 3: 预估佣金对比柱状图（左 540）+ 上线/出单商户漏斗对比柱状图（右 540）──
+      const commChart = t('bar-chart', 80, 434, 540, 150);
+      const cd = commChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
+      cd.title = '2026 预估佣金 vs 2025 (¥)';
+      cd.variant = 'vertical';
+      cd.bars = [
+        { label: '1月', value: 11232845, color: '#d8a657' },
+        { label: '2月', value: 9439398, color: '#d8a657' },
+        { label: '3月', value: 10793979, color: '#d8a657' },
+        { label: '4月', value: 10414269, color: '#d8a657' },
+        { label: '5月', value: 6817707, color: '#d8a657' },
+        { label: '6月', value: 6393568, color: '#d8a657' },
+      ];
+      comps.push(commChart);
+
+      const plansChart = t('bar-chart', 660, 434, 540, 150);
+      const pd = plansChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
+      pd.title = '上线计划数（红）/ 出单计划数（金）';
+      pd.variant = 'vertical';
+      pd.bars = [
+        { label: '1月', value: 87, color: '#e2503f' },
+        { label: '2月', value: 42, color: '#e2503f' },
+        { label: '3月', value: 74, color: '#e2503f' },
+        { label: '4月', value: 87, color: '#e2503f' },
+        { label: '5月', value: 161, color: '#e2503f' },
+        { label: '6月', value: 221, color: '#e2503f' },
+      ];
+      comps.push(plansChart);
+
+      // ── Row 4: 月度明细数据表（满宽）──
+      const table = tableAt(80, 598, 1120, 92, ['月份', '收入目标', '开票收入', '完成率', '结算毛利', '毛利率', '收入YOY', '毛利YOY'], [
+        ['1月', '¥6,114,000', '¥8,418,072', '137.6%', '¥2,675,614', '31.8%', '+28%', '+61%'],
+        ['2月', '¥8,001,000', '¥4,332,347', '54.1%', '¥1,219,355', '28.2%', '-63%', '-62%'],
+        ['3月', '¥10,600,000', '¥8,388,930', '79.1%', '¥2,083,769', '24.8%', '+9%', '-7%'],
+        ['4月', '¥6,895,000', '¥7,227,780', '104.8%', '¥2,011,731', '27.8%', '+86%', '+73%'],
+        ['5月', '¥7,750,000', '¥4,217,202', '54.4%', '¥1,026,599', '24.3%', '-3%', '-10%'],
+        ['6月', '¥8,150,000', '¥9,739,490', '119.5%', '¥2,653,028', '27.2%', '+89%', '+58%'],
+      ]);
+      comps.push(table);
+
+      return comps;
+    },
+  },
+
+  /* ---------------- 风格 F: DG DIGCHIC Campaign Report（粉色品牌活动报告） ---------------- */
+  {
+    id: 'report-single-page-digchic',
+    name: '单页 · DIGCHIC 品牌报告',
+    description: '5 KPI + 趋势图 + 发布者表 + 品类/商品/市场洞察 + 行动建议（粉品牌风）',
+    pageType: 'report-single-page-digchic',
+    scenario: ['campaign-report'],
+    components: () => {
+      const comps: EditorComponent[] = [];
+
+      // ── Row 0: 标题块（品牌 + 日期范围）──
+      const hero = t('title-block', 80, 30, 1120, 60);
+      const hd = hero.data as { text: string; subtitle: string; variant: string; fontSize: number; divider: boolean };
+      hd.text = 'DIGCHIC × GlowLab · Campaign Report';
+      hd.subtitle = 'Performance Period: Oct 12 - Nov 10, 2026';
+      hd.variant = 'bar-left';
+      hd.fontSize = 24;
+      hd.divider = true;
+      comps.push(hero);
+
+      // ── Row 1: 5 个 KPI 指标卡（横排，粉色品牌色）──
+      const cardW = 208;
+      const gap = 22;
+      const kpiCards: [string, string][] = [
+        ['Total Revenue', '$876,360'],
+        ['Clicks', '348,619'],
+        ['Orders', '4,636'],
+        ['New Customers', '1,604'],
+        ['AOV', '$189'],
+      ];
+      kpiCards.forEach(([label, value], i) => {
+        const c = t('indicator-card', 80 + i * (cardW + gap), 102, cardW, 86);
+        const d = c.data as { title: string; value: string; colorTheme: string };
+        d.title = label;
+        d.value = value;
+        d.colorTheme = i === 3 ? 'pink' : 'orange';
+        comps.push(c);
+      });
+
+      // ── Row 2: 业绩趋势折线图（满宽：Revenue + Clicks + Orders）──
+      const trend = t('line-chart', 80, 204, 1120, 150);
+      const td = trend.data as {
+        title: string;
+        series: { name: string; color: string; points: { label: string; value: number }[] }[];
+      };
+      td.title = 'Performance Trend';
+      td.series = [
+        {
+          name: 'Revenue ($)',
+          color: '#ff099e',
+          points: [
+            { label: 'Oct 12', value: 50000 },
+            { label: 'Oct 16', value: 75000 },
+            { label: 'Oct 20', value: 90000 },
+            { label: 'Oct 24', value: 110000 },
+            { label: 'Oct 28', value: 105000 },
+            { label: 'Nov 01', value: 130000 },
+            { label: 'Nov 05', value: 150000 },
+            { label: 'Nov 10', value: 166360 },
+          ],
+        },
+        {
+          name: 'Clicks',
+          color: '#1e1c24',
+          points: [
+            { label: 'Oct 12', value: 15000 },
+            { label: 'Oct 16', value: 25000 },
+            { label: 'Oct 20', value: 32000 },
+            { label: 'Oct 24', value: 40000 },
+            { label: 'Oct 28', value: 38000 },
+            { label: 'Nov 01', value: 50000 },
+            { label: 'Nov 05', value: 65000 },
+            { label: 'Nov 10', value: 83619 },
+          ],
+        },
+        {
+          name: 'Orders',
+          color: 'rgba(255,9,158,0.4)',
+          points: [
+            { label: 'Oct 12', value: 250 },
+            { label: 'Oct 16', value: 380 },
+            { label: 'Oct 20', value: 460 },
+            { label: 'Oct 24', value: 600 },
+            { label: 'Oct 28', value: 550 },
+            { label: 'Nov 01', value: 720 },
+            { label: 'Nov 05', value: 800 },
+            { label: 'Nov 10', value: 876 },
+          ],
+        },
+      ];
+      comps.push(trend);
+
+      // ── Row 3: 发布者表现表（满宽）──
+      const publisher = t('publisher-table', 80, 370, 1120, 180);
+      (publisher.data as { title: string }).title = 'Publisher Performance Overview';
+      (publisher.data as { rows: { publisher: string; clicks: string; conversions: string; revenue: string; status: string }[] }).rows = [
+        { publisher: 'Mia Chen (@miaglowup, Creator)', clicks: '124,678', conversions: '1,016', revenue: '$192,000', status: 'good' },
+        { publisher: 'Beauty Deals Daily (FB Group)', clicks: '86,520', conversions: '768', revenue: '$145,230', status: 'good' },
+        { publisher: 'Nora Kim (@nora.kim, Creator)', clicks: '42,955', conversions: '696', revenue: '$131,600', status: 'good' },
+      ];
+      comps.push(publisher);
+
+      // ── Row 4: 品类占比饼图（左 360）+ Top 市场地域分布（右 720）──
+      const catPie = t('pie-chart', 80, 568, 360, 132);
+      const cpd = catPie.data as { title: string; slices: { label: string; value: number; color: string }[] };
+      cpd.title = 'Top-Selling Categories';
+      cpd.slices = [
+        { label: 'Skincare', value: 72, color: '#ff099e' },
+        { label: 'Bodycare', value: 18, color: '#1e1c24' },
+        { label: 'Others', value: 10, color: '#dddddd' },
+      ];
+      comps.push(catPie);
+
+      const geo = t('geo-distribution', 460, 568, 740, 132);
+      (geo.data as { title: string }).title = 'Top Market (By Sales)';
+      (geo.data as { variant: string }).variant = 'bars';
+      (geo.data as { items: { code: string; name: string; value: number; display: string; share: string }[] }).items = [
+        { code: 'US', name: 'United States', value: 481998, display: '$481,998', share: '55%' },
+        { code: 'CN', name: 'China (CN)', value: 200200, display: '$200,200', share: '23%' },
+        { code: 'UK', name: 'United Kingdom', value: 105163, display: '$105,163', share: '12%' },
+      ];
+      comps.push(geo);
 
       return comps;
     },

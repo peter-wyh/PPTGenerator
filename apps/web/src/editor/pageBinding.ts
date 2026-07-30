@@ -40,6 +40,11 @@ export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaig
   'creator-audience-profile': 'creator',
   'creator-works-list': 'creator',
   'creator-works-table': 'creator',
+  'creator-list': 'creator',
+  'comment-wordcloud': 'creator',
+  'work-metrics': 'creator',
+  'creator-work-metrics': 'creator',
+  'work-screenshot': 'creator',
   // project 型（取 projectMeta + reportData.campaign，无 page 级绑定键）
   // text 组件仅在 _dataSource==='project' 时填充（用户通过属性面板显式标记「跟随项目」）。
   'text': 'project',
@@ -424,6 +429,59 @@ export function creatorPatch(
           p.likes ?? '--',
           p.comments ?? '--',
         ]),
+      };
+    }
+    case 'creator-list': {
+      // 用当前 page-bound creator 填充达人列表
+      return {
+        variant: 'table',
+        headers: ['Avatar', 'Name', 'Platform', 'Followers', 'Engagement', 'Category'],
+        rows: [[
+          cr.avatar ?? '',
+          cr.name,
+          cr.platform ?? '',
+          cr.followers ?? '',
+          cr.engagement ?? '',
+          cr.category ?? '',
+        ]],
+      };
+    }
+    case 'comment-wordcloud': {
+      // 默认英文词云
+      if (!cr.name) return null;
+      return {
+        title: 'Comment Word Cloud',
+        subtitle: cr.name,
+        words: [
+          { text: 'love', value: 64, color: 'auto' },
+          { text: 'amazing', value: 52, color: 'auto' },
+          { text: 'perfect', value: 45, color: 'auto' },
+          { text: 'beautiful', value: 38, color: 'auto' },
+          { text: 'recommend', value: 35, color: 'auto' },
+          { text: 'great', value: 30, color: 'auto' },
+          { text: 'awesome', value: 28, color: 'auto' },
+          { text: 'must buy', value: 24, color: 'auto' },
+        ],
+      };
+    }
+    case 'work-metrics':
+    case 'creator-work-metrics': {
+      // 从 campaign + creator 获取作品数据 → 填充封面和指标
+      const works = campaignCreatorWorks(_campaignId);
+      const cw = works.find((w) => w.creatorId === cr.id) ?? works[0];
+      if (!cw || !cw.posts.length) return null;
+      const post = cw.posts[0];
+      return {
+        title: 'Work Performance',
+        subtitle: cr.name,
+        workName: post.title ?? '',
+        cover: post.cover ?? '',
+        headers: ['Metric', 'Value'],
+        rows: [
+          ['Impressions', post.impressions ?? '--'],
+          ['Likes', post.likes ?? '--'],
+          ['Comments', post.comments ?? '--'],
+        ],
       };
     }
     case 'work-screenshot':

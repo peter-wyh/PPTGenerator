@@ -458,14 +458,14 @@ export function getDefaultData(type: ComponentType): ComponentData {
         title: 'Comment Word Cloud',
         subtitle: '',
         words: [
-          { text: '词条一', weight: 50, sentiment: 'pos' },
-          { text: '词条二', weight: 50, sentiment: 'pos' },
-          { text: '词条三', weight: 50, sentiment: 'pos' },
-          { text: '词条四', weight: 50, sentiment: 'pos' },
-          { text: '词条五', weight: 50, sentiment: 'neutral' },
-          { text: '词条六', weight: 50, sentiment: 'neutral' },
-          { text: '词条七', weight: 50, sentiment: 'neg' },
-          { text: '词条八', weight: 50, sentiment: 'neg' },
+          { text: 'love', weight: 80, sentiment: 'pos' },
+          { text: 'amazing', weight: 65, sentiment: 'pos' },
+          { text: 'perfect', weight: 55, sentiment: 'pos' },
+          { text: 'beautiful', weight: 48, sentiment: 'pos' },
+          { text: 'recommend', weight: 42, sentiment: 'pos' },
+          { text: 'great quality', weight: 38, sentiment: 'pos' },
+          { text: 'must buy', weight: 30, sentiment: 'neutral' },
+          { text: 'fast shipping', weight: 25, sentiment: 'neutral' },
         ],
       };
     case 'shape':

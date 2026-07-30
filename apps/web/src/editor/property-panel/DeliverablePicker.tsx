@@ -39,12 +39,18 @@ export function DeliverablePicker({
       if (!alive) return;
       const ds = c?.deliverables ?? [];
       setDeliverables(ds);
-      setContentType(ds[0]?.contentType ?? '');
+      const firstType = ds[0]?.contentType ?? '';
+      setContentType(firstType);
+      // 自动导入：换达人时自动选中第一个作品并触发 onPick
+      if (firstType) {
+        const chosen = ds.find((d) => d.contentType === firstType);
+        if (chosen) onPick(chosen);
+      }
     });
     return () => {
       alive = false;
     };
-  }, [campaignId, creatorId]);
+  }, [campaignId, creatorId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!campaignId) {
     return (
