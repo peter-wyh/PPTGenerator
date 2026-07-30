@@ -36,6 +36,13 @@ function resolveColor(color: string | undefined, index: number, palette: string[
   return color;
 }
 
+/** Y 轴数值紧凑格式化：28500 → '28.5K', 1280000 → '1.28M' */
+function formatCompactNum(v: number): string {
+  if (Math.abs(v) >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (Math.abs(v) >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(v);
+}
+
 
 /* ---------------------------------- text --------------------------------- */
 export function TextComponent({ data }: { data: TextData }) {
@@ -237,7 +244,7 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
             <BarChart data={data.stackBars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
               {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle, #F3F4F6)" />}
               <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={56} hide={!cs.showAxis} tickFormatter={formatCompactNum} />
               <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
               {cs.legend && <Legend {...cs.legend} />}
               {keys.map((k, i) => (
@@ -271,7 +278,7 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
             ) : (
               <>
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
-                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={56} hide={!cs.showAxis} tickFormatter={formatCompactNum} />
               </>
             )}
             <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
