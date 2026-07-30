@@ -69,7 +69,13 @@ export function EditorTopbar() {
     } catch (err: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const e = err as any;
-      setEditError(e?.response?.data?.message ?? '保存失败，请重试');
+      console.error('[handleEdit] 保存失败:', err);
+      const msg =
+        e?.response?.data?.message ??
+        e?.response?.data?.error?.message ??
+        e?.message ??
+        '保存失败，请重试';
+      setEditError(typeof msg === 'string' ? msg : '保存失败，请重试');
     } finally {
       setEditSubmitting(false);
     }

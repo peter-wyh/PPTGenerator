@@ -13,7 +13,7 @@ const LEGACY_CATEGORY_AS_PAGE_TYPE = new Set([
   'creator-collab',
 ]);
 
-/** 页面类型（27 种，与前端 PageType 对齐；与模板 1:1）。 */
+/** 页面类型（31 种，与前端 PageType 对齐；与模板 1:1）。 */
 const pageTypeSchema = z.preprocess(
   (v) => (typeof v === 'string' && LEGACY_CATEGORY_AS_PAGE_TYPE.has(v) ? undefined : v),
   z
@@ -24,6 +24,7 @@ const pageTypeSchema = z.preprocess(
       'report-weekly-overview', 'report-monthly-overview', 'report-channel',
       'report-product', 'report-creator-collab', 'report-placement',
       'report-posts', 'report-wrapup-review', 'content-analysis', 'funnel',
+      'report-single-page', 'report-single-page-classic', 'report-single-page-dashboard', 'report-single-page-narrative',
       // 公司 · 品牌
       'cover', 'agenda', 'company', 'package', 'milestone', 'global', 'org', 'service',
       // 达人 · 案例

@@ -206,10 +206,9 @@ export function CreateProjectDialog({
     // reportSub 兜底取 scenarioSub(默认 'weekly'),保证即使用户没动报告类型也带 templateType。
     const reportSub: ScenarioSub | undefined =
       scenario === 'campaign-report' ? ((templateType || scenarioSub) as ScenarioSub) : undefined;
-    // 编辑模式：保留现有 theme/reportData（编辑表单不应覆盖这些字段）。
-    const preservedFields = initial?.meta
-      ? { theme: initial.meta.theme, reportData: initial.meta.reportData }
-      : {};
+    // 编辑模式：保留现有 meta 的所有字段（theme/reportData/campaignId/campaignInfo/advertiser 等），
+    // 仅覆盖对话框管理的字段，避免重建 meta 时丢失已有数据导致保存失败。
+    const preservedFields = initial?.meta ? { ...initial.meta } : {};
     const meta: ProjectMeta = {
       ...preservedFields,
       creator: creator || undefined,
@@ -220,6 +219,8 @@ export function CreateProjectDialog({
       styleType,
     };
 
+    // campaign-report 场景：仅在用户确实选择了 Campaign 时覆盖 campaignId 等字段。
+    // 否则保留 preservedFields 中已有的 campaignId/campaignInfo（编辑模式不应丢失已有数据）。
     if (isCampaignScenario(scenario as Scenario) && selectedCampaign) {
       meta.campaignId = selectedCampaign.id;
       meta.advertiser = selectedCampaign.advertiser;
@@ -232,8 +233,6 @@ export function CreateProjectDialog({
       };
     } else if (scenario === 'media-kit') {
       meta.advertiser = mkAdvertiser || undefined;
-    } else {
-      meta.businessLine = businessLine || undefined;
     }
 
     onSubmit({ name: trimmed, width: w, height: h, meta });

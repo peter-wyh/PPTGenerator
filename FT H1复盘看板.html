@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 H1 业务结算复盘看板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e18;
+    --bg-alt:#0d1220;
+    --panel:#131a2c;
+    --panel-2:#111726;
+    --line:rgba(255,255,255,0.07);
+    --line-strong:rgba(255,255,255,0.14);
+    --text:#e9ecf5;
+    --text-mid:#a7b0c4;
+    --text-dim:#6b748c;
+    --seal:#c0392b;
+    --seal-bright:#e2503f;
+    --gold:#d8a657;
+    --gold-dim:#8a744a;
+    --green:#3fcf8e;
+    --red:#ff6b6b;
+    --teal:#4fd1c5;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 12% -5%, rgba(216,166,87,0.08), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(192,57,43,0.07), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans SC', sans-serif;
+    font-weight:300;
+    line-height:1.5;
+    padding-bottom:80px;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  .serif{font-family:'Noto Serif SC', serif;}
+
+  /* ---------- ledger background texture ---------- */
+  .wrap{max-width:1240px; margin:0 auto; padding:0 28px;}
+
+  /* ---------- header ---------- */
+  header.top{
+    border-bottom:1px solid var(--line);
+    padding:36px 0 28px;
+    position:relative;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.32em;
+    text-transform:uppercase;
+    color:var(--gold);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{content:''; width:22px; height:1px; background:var(--gold);}
+  h1.title{
+    font-family:'Noto Serif SC', serif;
+    font-weight:900;
+    font-size:clamp(28px,4.2vw,46px);
+    letter-spacing:0.01em;
+    color:var(--text);
+  }
+  h1.title span{color:var(--gold);}
+  .top-meta{
+    display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;
+    margin-top:10px;
+  }
+  .subtitle{color:var(--text-mid); font-size:14.5px; max-width:560px;}
+  .top-right{text-align:right; font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-dim);}
+  .top-right div{margin-bottom:3px;}
+
+  /* ---------- section shell ---------- */
+  section{padding:52px 0;}
+  section + section{border-top:1px solid var(--line);}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:26px; flex-wrap:wrap;}
+  .sec-num{font-family:'JetBrains Mono',monospace; color:var(--gold-dim); font-size:13px;}
+  .sec-title{font-family:'Noto Serif SC', serif; font-weight:700; font-size:24px; color:var(--text);}
+  .sec-desc{color:var(--text-dim); font-size:13px; margin-left:auto; max-width:380px; text-align:right;}
+
+  /* ---------- HERO ---------- */
+  .hero-grid{
+    display:grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap:28px;
+    align-items:stretch;
+  }
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr;} }
+
+  .hero-left{
+    background:linear-gradient(155deg, var(--panel) 0%, var(--panel-2) 100%);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:34px 32px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-left::before{
+    content:'结算';
+    position:absolute; right:-6px; bottom:-38px;
+    font-family:'Noto Serif SC',serif; font-weight:900;
+    font-size:150px; color:rgba(255,255,255,0.025);
+    line-height:1; pointer-events:none;
+  }
+  .hero-label{font-size:12.5px; color:var(--text-dim); letter-spacing:0.05em; margin-bottom:6px;}
+  .hero-figure{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:clamp(38px,5.5vw,58px);
+    color:var(--text);
+    display:flex; align-items:baseline; gap:10px;
+  }
+  .hero-figure small{font-size:16px; color:var(--text-dim); font-weight:400;}
+  .hero-sub-row{display:flex; gap:34px; margin-top:26px; flex-wrap:wrap;}
+  .hero-stat .k{font-size:11.5px; color:var(--text-dim); margin-bottom:4px;}
+  .hero-stat .v{font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:500;}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+
+  /* the seal / chop badge */
+  .seal-wrap{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px;
+    padding:28px;
+    position:relative;
+  }
+  .seal{
+    width:172px; height:172px;
+    border-radius:50%;
+    border:3px solid var(--seal);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:var(--seal-bright);
+    transform:rotate(-8deg);
+    position:relative;
+    box-shadow:0 0 0 1px rgba(226,80,63,0.15), 0 0 34px rgba(192,57,43,0.12);
+  }
+  .seal::before{
+    content:'';
+    position:absolute; inset:9px;
+    border:1px solid var(--seal);
+    border-radius:50%;
+    opacity:0.55;
+  }
+  .seal .pct{font-family:'Noto Serif SC',serif; font-weight:900; font-size:38px; letter-spacing:-0.01em;}
+  .seal .pct sub{font-size:16px;}
+  .seal .cap{font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.12em; margin-top:2px;}
+  .seal .stars{font-size:9px; letter-spacing:4px; margin-top:6px; opacity:0.8;}
+  .seal-caption{font-size:12.5px; color:var(--text-mid); text-align:center; max-width:220px;}
+  .seal-caption b{color:var(--text);}
+
+  /* ---------- quarter cards ---------- */
+  .q-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  @media (max-width:900px){ .q-grid{grid-template-columns:1fr;} }
+  .qcard{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:24px 22px;
+    position:relative;
+  }
+  .qcard.h1card{border-color:rgba(216,166,87,0.35); background:linear-gradient(160deg, rgba(216,166,87,0.06), var(--panel));}
+  .qcard .qtag{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; color:var(--gold);
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;
+  }
+  .qcard .qtag .badge{
+    font-size:10px; padding:2px 8px; border-radius:20px; border:1px solid var(--line-strong); color:var(--text-mid);
+  }
+  .qcard .big{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:26px; margin-bottom:2px;}
+  .qcard .big-label{font-size:11.5px; color:var(--text-dim); margin-bottom:16px;}
+  .bar-track{height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; margin-bottom:4px;}
+  .bar-fill{height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold));}
+  .bar-label{display:flex; justify-content:space-between; font-size:10.5px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; margin-bottom:16px;}
+  .qcard .row-mini{display:flex; justify-content:space-between; padding:7px 0; border-top:1px dashed var(--line); font-size:12.5px;}
+  .qcard .row-mini .k{color:var(--text-dim);}
+  .qcard .row-mini .v{font-family:'JetBrains Mono',monospace; color:var(--text);}
+
+  /* note / analysis callouts */
+  .note{
+    margin-top:16px;
+    background:rgba(216,166,87,0.05);
+    border-left:2px solid var(--gold);
+    padding:10px 14px;
+    font-size:12px;
+    color:var(--text-mid);
+    white-space:pre-line;
+  }
+  .note.warn{background:rgba(255,107,107,0.06); border-left-color:var(--red); color:#e3b9b9;}
+  .note b{color:var(--text);}
+
+  /* ---------- benchmark strip ---------- */
+  .bench-strip{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:var(--line); border:1px solid var(--line); border-radius:4px; overflow:hidden; margin-top:20px;
+  }
+  @media (max-width:700px){ .bench-strip{grid-template-columns:repeat(2,1fr);} }
+  .bench-cell{background:var(--panel-2); padding:18px 20px;}
+  .bench-cell .k{font-size:11px; color:var(--text-dim); margin-bottom:6px;}
+  .bench-cell .v{font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:500;}
+
+  /* ---------- charts ---------- */
+  .chart-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:900px){ .chart-grid{grid-template-columns:1fr;} }
+  .chart-card{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:22px 22px 14px;}
+  .chart-card .ct{font-family:'Noto Serif SC',serif; font-weight:700; font-size:15.5px; margin-bottom:2px;}
+  .chart-card .cs{font-size:11.5px; color:var(--text-dim); margin-bottom:14px;}
+  .chart-holder{height:250px; position:relative;}
+  .legend-row{display:flex; gap:16px; font-size:11px; color:var(--text-mid); margin-top:10px; flex-wrap:wrap;}
+  .legend-row span{display:inline-flex; align-items:center; gap:6px;}
+  .legend-row i{width:9px; height:9px; border-radius:2px; display:inline-block;}
+
+  /* ---------- FT ops summary ---------- */
+  .ops-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:4px; overflow:hidden;}
+  @media (max-width:820px){ .ops-grid{grid-template-columns:repeat(2,1fr);} }
+  .ops-cell{background:var(--panel-2); padding:22px 18px; text-align:center;}
+  .ops-cell .v{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; color:var(--text);}
+  .ops-cell .k{font-size:11px; color:var(--text-dim); margin-top:6px;}
+
+  /* ---------- table ---------- */
+  table.data{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.data th{
+    text-align:right; font-family:'JetBrains Mono',monospace; font-weight:500; font-size:10.5px;
+    color:var(--text-dim); letter-spacing:0.04em; padding:10px 12px; border-bottom:1px solid var(--line-strong);
+    text-transform:uppercase;
+  }
+  table.data th:first-child, table.data td:first-child{text-align:left;}
+  table.data td{padding:10px 12px; border-bottom:1px solid var(--line); font-family:'JetBrains Mono',monospace; text-align:right; color:var(--text-mid);}
+  table.data tr:hover td{background:rgba(255,255,255,0.02); color:var(--text);}
+  table.data td:first-child{color:var(--text); font-family:'Noto Sans SC',sans-serif;}
+
+  footer{
+    margin-top:40px; padding-top:24px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">SETTLEMENT REVIEW · 结算复盘台账</div>
+    <h1 class="title">2026 <span>H1</span> 业务结算复盘看板</h1>
+    <div class="top-meta">
+      <p class="subtitle">收入 / 毛利 / 佣金 / 商户拓展 全景数据回顾 — 按季度、按月双视角呈现结算与预估口径。</p>
+      <div class="top-right">
+        <div>数据来源：H1复盘数据.xlsx</div>
+        <div>覆盖周期：2026-01 至 2026-06</div>
+        <div>生成日期：2026-07-16</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <span class="sec-title">H1 整体结算总览</span>
+      <span class="sec-desc">上半年整体完成情况与同比表现</span>
+    </div>
+
+    <div class="hero-grid">
+      <div class="hero-left">
+        <div class="hero-label">H1 实际开票收入 / 收入目标</div>
+        <div class="hero-figure">¥42,323,821 <small>/ 目标 ¥47,510,000</small></div>
+        <div class="hero-sub-row">
+          <div class="hero-stat"><div class="k">实际结算毛利</div><div class="v">¥11,670,096</div></div>
+          <div class="hero-stat"><div class="k">毛利率</div><div class="v">28.0%</div></div>
+          <div class="hero-stat"><div class="k">收入 YOY</div><div class="v pos">+7%</div></div>
+          <div class="hero-stat"><div class="k">毛利 YOY</div><div class="v pos">+5%</div></div>
+        </div>
+        <div class="hero-sub-row" style="margin-top:18px;">
+          <div class="hero-stat"><div class="k">正式员工数量</div><div class="v">5 人</div></div>
+          <div class="hero-stat"><div class="k">收入人效 / 月</div><div class="v">¥1,175,662</div></div>
+          <div class="hero-stat"><div class="k">毛利人效 / 月</div><div class="v">¥324,169</div></div>
+        </div>
+      </div>
+
+      <div class="seal-wrap">
+        <div class="seal">
+          <div class="pct">89<sub>%</sub></div>
+          <div class="cap">收入目标完成率</div>
+          <div class="stars">★ H1 结算 ★</div>
+        </div>
+        <div class="seal-caption">H1 实际开票收入达成目标的 <b>89.1%</b>，毛利同比与收入同比双双转正，结束此前同比下滑趋势。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUARTERS ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <span class="sec-title">季度结算完成情况</span>
+      <span class="sec-desc">Q1 · Q2 · H1 三段对比</span>
+    </div>
+
+    <div class="q-grid">
+      <div class="qcard">
+        <div class="qtag">Q1 2026 <span class="badge">JAN–MAR</span></div>
+        <div class="big">¥21,139,349</div>
+        <div class="big-label">实际开票收入 · 目标 ¥24,715,000</div>
+        <div class="bar-track"><div class="bar-fill" style="width:85.5%"></div></div>
+        <div class="bar-label"><span>完成率</span><span>85.5%</span></div>
+        <div class="row-mini"><span class="k">实际结算毛利</span><span class="v">¥5,978,738（毛利率 28%）</span></div>
+        <div class="row-mini"><span class="k">收入 / 毛利 YOY</span><span class="v neg">-19% / -16%</span></div>
+        <div class="row-mini"><span class="k">收入人效 / 毛利人效</span><span class="v">¥1,006,636 / ¥284,702</span></div>
+        <div class="note">结算收入目标完成率约 <b>89%</b>（原表标注口径）；算上主管，团队<b>收入人效超过 100 万</b>，毛利人效接近 30 万。</div>
+      </div>
+
+      <div class="qcard">
+        <div class="qtag">Q2 2026 <span class="badge">APR–JUN</span></div>
+        <div class="big">¥21,184,472</div>
+        <div class="big-label">实际开票收入 · 目标 ¥22,795,000</div>
+        <div class="bar-track"><div class="bar-fill" style="width:92.9%"></div></div>
+        <div class="bar-label"><span>完成率</span><span>92.9%</span></div>
+        <div class="row-mini"><span class="k">实际结算毛利</span><span class="v">¥5,691,358（毛利率 27%）</span></div>
+        <div class="row-mini"><span class="k">收入 / 毛利 YOY</span><span class="v pos">+58% / +43%</span></div>
+        <div class="row-mini"><span class="k">收入人效 / 毛利人效</span><span class="v">¥1,176,915 / ¥316,187</span></div>
+        <div class="note">Q2 收入与毛利同比大幅反弹，人效环比 Q1 继续提升，5 人团队人效领先。</div>
+      </div>
+
+      <div class="qcard h1card">
+        <div class="qtag" style="color:var(--gold);">H1 2026 合计 <span class="badge">1H</span></div>
+        <div class="big">¥42,323,821</div>
+        <div class="big-label">实际开票收入 · 目标 ¥47,510,000</div>
+        <div class="bar-track"><div class="bar-fill" style="width:89.1%"></div></div>
+        <div class="bar-label"><span>完成率</span><span>89.1%</span></div>
+        <div class="row-mini"><span class="k">实际结算毛利</span><span class="v">¥11,670,096（毛利率 28%）</span></div>
+        <div class="row-mini"><span class="k">收入 / 毛利 YOY</span><span class="v pos">+7% / +5%</span></div>
+        <div class="row-mini"><span class="k">收入人效 / 毛利人效</span><span class="v">¥1,175,662 / ¥324,169</span></div>
+        <div class="note">H1 目标完成率 89.1%，同比由负转正，Q2 增速显著快于 Q1，团队人效稳步提升。</div>
+      </div>
+    </div>
+
+    <div class="bench-strip">
+      <div class="bench-cell"><div class="k">去年同期 · Q2 结算收入</div><div class="v">¥13,393,340</div></div>
+      <div class="bench-cell"><div class="k">去年同期 · Q2 结算毛利</div><div class="v">¥3,974,620</div></div>
+      <div class="bench-cell"><div class="k">去年同期 · H1 结算收入</div><div class="v">¥39,542,650</div></div>
+      <div class="bench-cell"><div class="k">去年同期 · H1 结算毛利</div><div class="v">¥11,115,624</div></div>
+    </div>
+  </section>
+
+  <!-- ============ MONTHLY SETTLEMENT ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <span class="sec-title">按月结算分析</span>
+      <span class="sec-desc">开票收入 / 结算毛利 · 目标达成与同比走势</span>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="ct">月度开票收入 vs 收入目标</div>
+        <div class="cs">柱状对比 + 收入 YOY 折线（右轴）</div>
+        <div class="chart-holder"><canvas id="chartRevenue"></canvas></div>
+        <div class="legend-row"><span><i style="background:rgba(255,255,255,0.25)"></i>收入目标</span><span><i style="background:#d8a657"></i>开票收入</span><span><i style="background:#e2503f"></i>收入YOY（右轴）</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="ct">月度结算毛利 vs 毛利目标</div>
+        <div class="cs">柱状对比 + 毛利率折线（右轴）</div>
+        <div class="chart-holder"><canvas id="chartMargin"></canvas></div>
+        <div class="legend-row"><span><i style="background:rgba(255,255,255,0.25)"></i>毛利目标</span><span><i style="background:#4fd1c5"></i>结算毛利</span><span><i style="background:#d8a657"></i>毛利率（右轴）</span></div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:22px;">月平均结算佣金约 <b>700 万</b>；六个月中，收入同比为正的月份数量多于同比为负的月份，全年增长动能整体健康。</div>
+
+    <div style="margin-top:26px; overflow-x:auto;">
+      <table class="data">
+        <thead>
+          <tr><th>月份</th><th>收入目标</th><th>毛利目标</th><th>开票收入</th><th>完成率</th><th>结算毛利</th><th>毛利率</th><th>收入YOY</th><th>毛利YOY</th><th>2025年收入</th><th>2025年毛利</th></tr>
+        </thead>
+        <tbody id="tblMonthly"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ COMMISSION FORECAST ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <span class="sec-title">按月预估佣金分析</span>
+      <span class="sec-desc">预估佣金规模 · 商户上线与出单节奏</span>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="ct">预估佣金：本年 vs 2025 年同期</div>
+        <div class="cs">柱状对比 + 佣金 YOY 折线（右轴）</div>
+        <div class="chart-holder"><canvas id="chartCommission"></canvas></div>
+        <div class="legend-row"><span><i style="background:rgba(255,255,255,0.25)"></i>2025年预估佣金</span><span><i style="background:#d8a657"></i>2026年预估佣金</span><span><i style="background:#3fcf8e"></i>佣金YOY（右轴）</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="ct">上线计划数量 vs 出单计划数</div>
+        <div class="cs">商户漏斗：新上线与实际出单节奏</div>
+        <div class="chart-holder"><canvas id="chartPlans"></canvas></div>
+        <div class="legend-row"><span><i style="background:#e2503f"></i>上线计划数量</span><span><i style="background:#d8a657"></i>出单计划数</span></div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:22px;">按月预估佣金收入维持在约 <b>918 万</b> 左右，且各月同比均为正数；上线商户数量增长较快，5–6 月尤为显著。</div>
+
+    <div style="margin-top:26px; overflow-x:auto;">
+      <table class="data">
+        <thead>
+          <tr><th>月份</th><th>预估佣金</th><th>预估佣金YOY</th><th>上线计划数量</th><th>出单计划数</th><th>2025年预估佣金</th></tr>
+        </thead>
+        <tbody id="tblCommission"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ OPS / FT LINE ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <span class="sec-title">业务动作复盘 · FT 业务线</span>
+      <span class="sec-desc">2026 全年累计 · 电话 / 邮件 / 联盟活动 / 新商户</span>
+    </div>
+
+    <div class="ops-grid">
+      <div class="ops-cell"><div class="v">36</div><div class="k">电话会议次数</div></div>
+      <div class="ops-cell"><div class="v">0</div><div class="k">NQ 电话次数</div></div>
+      <div class="ops-cell"><div class="v">8,934</div><div class="k">邮件数量</div></div>
+      <div class="ops-cell"><div class="v">672</div><div class="k">新上线商户数量</div></div>
+      <div class="ops-cell"><div class="v">24</div><div class="k">联盟活动</div></div>
+    </div>
+
+    <div class="note warn">电话次数和邮件数量不足，<b>老员工发力不够</b>——触达动作与商户增长规模不匹配，需关注存量团队的主动触达节奏。</div>
+
+    <div class="chart-grid" style="margin-top:26px;">
+      <div class="chart-card">
+        <div class="ct">月度触达动作：电话会议 / 邮件</div>
+        <div class="cs">双轴对比：会议次数（左）· 邮件数量（右）</div>
+        <div class="chart-holder"><canvas id="chartOutreach"></canvas></div>
+        <div class="legend-row"><span><i style="background:#d8a657"></i>电话会议次数</span><span><i style="background:#4fd1c5"></i>邮件数量（右轴）</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="ct">月度新上线商户数量</div>
+        <div class="cs">5–6 月新增商户显著提速</div>
+        <div class="chart-holder"><canvas id="chartMerchants"></canvas></div>
+        <div class="legend-row"><span><i style="background:#d8a657"></i>新上线商户数量（5–6月高亮）</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:26px; overflow-x:auto;">
+      <table class="data">
+        <thead>
+          <tr><th>月份</th><th>电话会议次数</th><th>邮件数量</th><th>新上线商户数量</th></tr>
+        </thead>
+        <tbody id="tblOutreach"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <div>H1 SETTLEMENT REVIEW BOARD — 内部复盘资料，请勿外传</div>
+    <div>NEXT FILE READY · 后续文件将采用相同看板模板生成</div>
+  </footer>
+</div>
+
+<script>
+// Self-contained canvas chart engine — no external library / CDN required,
+// so the dashboard still renders when cdnjs / Google Fonts are unreachable.
+
+const months = ['1月','2月','3月','4月','5月','6月'];
+const GOLD = '#d8a657', GOLD_DIM='rgba(216,166,87,0.35)';
+const SEAL = '#e2503f', SEAL_DIM='rgba(226,80,63,0.35)';
+const TEAL = '#4fd1c5';
+const GREEN = '#3fcf8e';
+const GRID = 'rgba(255,255,255,0.05)';
+
+const monthly = [
+  {m:'1月', tgt:6114000, tgtMargin:1711920, rev:8418072, margin:2675614, marginRate:0.3178, revYoy:0.28, marginYoy:0.61, rev2025:6599464, margin2025:1662195},
+  {m:'2月', tgt:8001000, tgtMargin:2240280, rev:4332347, margin:1219355, marginRate:0.2815, revYoy:-0.63, marginYoy:-0.62, rev2025:11828042, margin2025:3244636},
+  {m:'3月', tgt:10600000, tgtMargin:2968000, rev:8388930, margin:2083769, marginRate:0.2484, revYoy:0.09, marginYoy:-0.07, rev2025:7721802, margin2025:2234173},
+  {m:'4月', tgt:6895000, tgtMargin:1930600, rev:7227780, margin:2011731, marginRate:0.2783, revYoy:0.86, marginYoy:0.73, rev2025:3887098, margin2025:1161997},
+  {m:'5月', tgt:7750000, tgtMargin:2170000, rev:4217202, margin:1026599, marginRate:0.2434, revYoy:-0.03, marginYoy:-0.10, rev2025:4340753, margin2025:1135608},
+  {m:'6月', tgt:8150000, tgtMargin:2282000, rev:9739490, margin:2653028, marginRate:0.2724, revYoy:0.89, marginYoy:0.58, rev2025:5165489, margin2025:1677015},
+];
+
+const commission = [
+  {m:'1月', est:11232845, yoy:0.87, listings:87, orders:267, est2025:5996270},
+  {m:'2月', est:9439398, yoy:0.15, listings:42, orders:234, est2025:8196810},
+  {m:'3月', est:10793979, yoy:0.27, listings:74, orders:220, est2025:8511361},
+  {m:'4月', est:10414269, yoy:0.54, listings:87, orders:249, est2025:6767071},
+  {m:'5月', est:6817707, yoy:0.15, listings:161, orders:245, est2025:5938988},
+  {m:'6月', est:6393568, yoy:0.11, listings:221, orders:269, est2025:5759644},
+];
+
+const outreach = [
+  {m:'1月', calls:3, emails:1201, merchants:87},
+  {m:'2月', calls:7, emails:790, merchants:42},
+  {m:'3月', calls:6, emails:1227, merchants:74},
+  {m:'4月', calls:8, emails:1364, merchants:87},
+  {m:'5月', calls:3, emails:1791, merchants:161},
+  {m:'6月', calls:9, emails:2205, merchants:221},
+];
+
+const fmtMoney = v => '¥' + Math.round(v).toLocaleString('en-US');
+const fmtPct = v => (v>=0?'+':'') + (v*100).toFixed(1) + '%';
+
+const GRAY = 'rgba(255,255,255,0.14)';
+const FONT = '10.5px "JetBrains Mono", ui-monospace, Consolas, monospace';
+
+function roundRect(ctx,x,y,w,h,r){
+  const neg = h < 0;
+  if (neg){ y += h; h = -h; }
+  r = Math.max(0, Math.min(r, w/2, h/2));
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// bars: [{data:[...], color}], line (optional): {data:[...], color, fmt:v=>str, min, max}
+function drawChart(canvasId, {labels, bars, line, barFmt=v=>Math.round(v).toLocaleString('en-US'), yTicks=4}){
+  const canvas = document.getElementById(canvasId);
+  const holder = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const W = holder.clientWidth || 400, H = holder.clientHeight || 250;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  ctx.font = FONT;
+
+  const padL = 54, padR = line ? 50 : 12, padT = 10, padB = 22;
+  const plotW = Math.max(10, W - padL - padR);
+  const plotH = Math.max(10, H - padT - padB);
+
+  let maxBar = 0;
+  bars.forEach(b => b.data.forEach(v => { if (v > maxBar) maxBar = v; }));
+  maxBar = maxBar <= 0 ? 1 : maxBar * 1.18;
+
+  let minLine, maxLine;
+  if (line){
+    minLine = line.min !== undefined ? line.min : Math.min(0, ...line.data);
+    maxLine = line.max !== undefined ? line.max : Math.max(...line.data);
+    if (line.min === undefined && line.max === undefined){
+      const pad = (maxLine - minLine) * 0.3 || 1;
+      minLine -= pad; maxLine += pad;
+    }
+  }
+
+  const n = labels.length;
+  const groupW = plotW / n;
+
+  // gridlines + left axis
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillStyle = '#8891a6';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 1;
+  for (let i=0;i<=yTicks;i++){
+    const v = maxBar * i / yTicks;
+    const y = padT + plotH - (v/maxBar)*plotH;
+    ctx.beginPath();
+    ctx.moveTo(padL, Math.round(y)+0.5);
+    ctx.lineTo(padL+plotW, Math.round(y)+0.5);
+    ctx.stroke();
+    ctx.fillText(barFmt(v), padL-8, y);
+  }
+
+  // x labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#8891a6';
+  labels.forEach((lab,i) => {
+    const x = padL + groupW*i + groupW/2;
+    ctx.fillText(lab, x, padT+plotH+16);
+  });
+
+  // bars
+  const barCount = bars.length;
+  const barW = Math.max(4, Math.min(24, (groupW*0.72) / barCount));
+  bars.forEach((b, bi) => {
+    ctx.fillStyle = b.color;
+    b.data.forEach((v,i) => {
+      const cx = padL + groupW*i + groupW/2;
+      const x = cx - (barCount*barW)/2 + bi*barW;
+      const h = (v/maxBar)*plotH;
+      const y = padT + plotH - h;
+      roundRect(ctx, x, y, barW-2, h, 2);
+      ctx.fill();
+    });
+  });
+
+  // line + right axis
+  if (line){
+    const pts = line.data.map((v,i) => ({
+      x: padL + groupW*i + groupW/2,
+      y: padT + plotH - ((v-minLine)/(maxLine-minLine))*plotH
+    }));
+    ctx.strokeStyle = line.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    pts.forEach((p,i)=> i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+    ctx.stroke();
+    ctx.fillStyle = line.color;
+    pts.forEach(p => { ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); });
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = line.color;
+    const lineFmt = line.fmt || (v=>Math.round(v));
+    for (let i=0;i<=yTicks;i++){
+      const v = minLine + (maxLine-minLine)*i/yTicks;
+      const y = padT + plotH - (i/yTicks)*plotH;
+      ctx.fillText(lineFmt(v), padL+plotW+8, y);
+    }
+  }
+}
+
+function renderAllCharts(){
+  drawChart('chartRevenue', {
+    labels: months,
+    bars: [
+      {data: monthly.map(d=>d.tgt), color: GRAY},
+      {data: monthly.map(d=>d.rev), color: GOLD}
+    ],
+    line: {data: monthly.map(d=>d.revYoy*100), color: SEAL, fmt: v=>Math.round(v)+'%'},
+    barFmt: v => (v/1e6).toFixed(0)+'M'
+  });
+
+  drawChart('chartMargin', {
+    labels: months,
+    bars: [
+      {data: monthly.map(d=>d.tgtMargin), color: GRAY},
+      {data: monthly.map(d=>d.margin), color: TEAL}
+    ],
+    line: {data: monthly.map(d=>d.marginRate*100), color: GOLD, fmt: v=>v.toFixed(0)+'%', min:0, max:40},
+    barFmt: v => (v/1e6).toFixed(1)+'M'
+  });
+
+  drawChart('chartCommission', {
+    labels: months,
+    bars: [
+      {data: commission.map(d=>d.est2025), color: GRAY},
+      {data: commission.map(d=>d.est), color: GOLD}
+    ],
+    line: {data: commission.map(d=>d.yoy*100), color: GREEN, fmt: v=>Math.round(v)+'%'},
+    barFmt: v => (v/1e6).toFixed(0)+'M'
+  });
+
+  drawChart('chartPlans', {
+    labels: months,
+    bars: [
+      {data: commission.map(d=>d.listings), color: SEAL},
+      {data: commission.map(d=>d.orders), color: GOLD}
+    ],
+    barFmt: v => Math.round(v)
+  });
+
+  drawChart('chartOutreach', {
+    labels: months,
+    bars: [ {data: outreach.map(d=>d.calls), color: GOLD} ],
+    line: {data: outreach.map(d=>d.emails), color: TEAL, fmt: v=>Math.round(v).toLocaleString('en-US')},
+    barFmt: v => Math.round(v)
+  });
+
+  drawChart('chartMerchants', {
+    labels: months,
+    bars: [ {data: outreach.map(d=>d.merchants), color: GOLD} ],
+    barFmt: v => Math.round(v)
+  });
+}
+
+renderAllCharts();
+let resizeT;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(renderAllCharts, 120); });
+
+// ---- monthly table ----
+const tbl = document.getElementById('tblMonthly');
+monthly.forEach(d=>{
+  const completion = (d.rev/d.tgt*100).toFixed(1)+'%';
+  const yoyClass = d.revYoy>=0 ? 'pos' : 'neg';
+  const myoyClass = d.marginYoy>=0 ? 'pos' : 'neg';
+  tbl.innerHTML += `<tr>
+    <td>${d.m}</td>
+    <td>${fmtMoney(d.tgt)}</td>
+    <td>${fmtMoney(d.tgtMargin)}</td>
+    <td>${fmtMoney(d.rev)}</td>
+    <td>${completion}</td>
+    <td>${fmtMoney(d.margin)}</td>
+    <td>${(d.marginRate*100).toFixed(1)}%</td>
+    <td class="${yoyClass}">${fmtPct(d.revYoy)}</td>
+    <td class="${myoyClass}">${fmtPct(d.marginYoy)}</td>
+    <td>${fmtMoney(d.rev2025)}</td>
+    <td>${fmtMoney(d.margin2025)}</td>
+  </tr>`;
+});
+
+// ---- commission table ----
+const tblC = document.getElementById('tblCommission');
+commission.forEach(d=>{
+  const yoyClass = d.yoy>=0 ? 'pos' : 'neg';
+  tblC.innerHTML += `<tr>
+    <td>${d.m}</td>
+    <td>${fmtMoney(d.est)}</td>
+    <td class="${yoyClass}">${fmtPct(d.yoy)}</td>
+    <td>${d.listings}</td>
+    <td>${d.orders}</td>
+    <td>${fmtMoney(d.est2025)}</td>
+  </tr>`;
+});
+
+// ---- outreach table ----
+const tblO = document.getElementById('tblOutreach');
+outreach.forEach(d=>{
+  tblO.innerHTML += `<tr>
+    <td>${d.m}</td>
+    <td>${d.calls}</td>
+    <td>${d.emails.toLocaleString('en-US')}</td>
+    <td>${d.merchants}</td>
+  </tr>`;
+});
+</script>
+</body>
+</html>

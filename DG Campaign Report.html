@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIGCHIC - Campaign Report</title>
+    
+    <!-- 引入 DIGCHIC 指定字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Noto+Sans:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS & 图标库 & Chart.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { primary: '#ff099e', 85: '#fff6f9', 95: 'rgba(255,9,158,0.05)' },
+                        grey: { primary: '#1e1c24', secondary: '#626166', tertiary: '#999999', disabled: '#dddddd' },
+                        bg: { layout: '#f5f7fa', card: '#ffffff' },
+                        stroke: { line: 'rgba(0,0,0,0.08)', card: '#ebebeb' }
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                        number: ['Barlow Condensed', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f5f7fa; color: #1e1c24; font-family: 'Outfit', sans-serif; -webkit-font-smoothing: antialiased; }
+        
+        .card { background: #ffffff; border-radius: 8px; border: 1px solid #ebebeb; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .module-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: #1e1c24; margin-bottom: 16px; display: flex; align-items: center; }
+        .module-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background-color: #ff099e; border-radius: 2px; margin-right: 8px; }
+        
+        /* 表格样式 */
+        .digchic-table { width: 100%; text-align: left; border-collapse: collapse; }
+        .digchic-table th { border-bottom: 1px solid rgba(0,0,0,0.08); font-weight: 600; color: #626166; font-size: 13px; padding: 12px 16px; }
+        .digchic-table td { border-bottom: 1px solid rgba(0,0,0,0.08); font-weight: 400; color: #1e1c24; font-size: 14px; padding: 12px 16px; vertical-align: middle; }
+        .digchic-table tbody tr:hover td { background-color: #fff6f9; transition: background-color 0.2s; cursor: pointer; }
+        
+        /* 标签样式 */
+        .tag { border-radius: 4px; padding: 4px 8px; font-weight: 600; font-size: 12px; }
+        .tag-creator { background: rgba(255,9,158,0.1); color: #ff099e; }
+        .tag-fb { background: #eef2ff; color: #4f46e5; }
+        .tag-tg { background: #f0fdf4; color: #16a34a; }
+        .tag-site { background: #fffbeb; color: #d97706; }
+
+        /* Insight 卡片内部样式优化 */
+        .insight-ol { padding-left: 16px; margin-bottom: 16px; }
+        .insight-ol li { margin-bottom: 8px; font-size: 13px; color: #1e1c24; padding-left: 4px; }
+        .insight-ol li span.highlight { color: #ff099e; font-weight: 500; }
+        .insight-ol li span.sub { display: block; color: #626166; font-size: 12px; margin-top: 2px; }
+    </style>
+</head>
+<body class="py-6">
+
+    <div class="max-w-[1280px] mx-auto px-4 md:px-[72px] space-y-6">
+        
+        <!-- ================= 1. HEADER ================= -->
+        <div class="card flex justify-between items-center !py-4">
+            <!-- Logos -->
+            <div class="flex items-center gap-6">
+                <!-- 商家 Logo -->
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-grey-primary text-white rounded-full flex items-center justify-center font-bold font-poppins">GL</div>
+                    <span class="font-bold text-[18px] tracking-tight">GlowLab</span>
+                </div>
+                
+                <div class="h-6 w-px bg-stroke-line"></div>
+                
+                <!-- DIGCHIC 图片 Logo -->
+                <img src="digchic-logo.png" alt="digchic" class="h-7 w-auto object-contain" onerror="this.outerHTML='<span class=\'font-bold font-poppins text-[20px] tracking-wide text-black lowercase\'>digchic</span>'">
+            </div>
+            
+            <div class="text-sm font-medium text-grey-secondary bg-bg-layout px-4 py-2 rounded-md">
+                Oct 12 - Nov 10, 2026
+            </div>
+        </div>
+
+        <!-- ================= 2. KPI OVERVIEW ================= -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Total Revenues</p>
+                <h3 class="font-number font-semibold text-[32px] text-grey-primary leading-tight">$876,360</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Clicks</p>
+                <h3 class="font-number font-semibold text-[32px] text-grey-primary leading-tight">348,619</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Orders</p>
+                <h3 class="font-number font-semibold text-[32px] text-grey-primary leading-tight">4,636</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">New Customer Acquisition</p>
+                <h3 class="font-number font-semibold text-[32px] text-brand-primary leading-tight">1,604</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">AOV</p>
+                <h3 class="font-number font-semibold text-[32px] text-grey-primary leading-tight">$189</h3>
+            </div>
+        </div>
+
+        <!-- ================= 3. PERFORMANCE TREND ================= -->
+        <div class="card">
+            <h2 class="module-title">Performance Trend</h2>
+            <div class="h-[300px] w-full">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ================= 4. PUBLISHER PERFORMANCE OVERVIEW ================= -->
+        <div class="card !px-0">
+            <div class="px-5">
+                <h2 class="module-title">Publisher Performance Overview</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="digchic-table">
+                    <thead class="bg-bg-layout">
+                        <tr>
+                            <th>Publisher</th>
+                            <th>Type</th>
+                            <th>Screenshot</th>
+                            <th class="text-right">Sales (Revenue)</th>
+                            <th class="text-right">Clicks</th>
+                            <th class="text-right">Conversion</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr onclick="window.open('https://tiktok.com/@miaglowup', '_blank')" title="Click to view Publisher">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <img src="https://picsum.photos/seed/Mia%20Chen/200/200" class="w-10 h-10 rounded-[4px] object-cover">
+                                    <div>
+                                        <div class="font-semibold text-grey-primary">Mia Chen</div>
+                                        <div class="text-[12px] text-grey-tertiary">@miaglowup</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="tag tag-creator">Creator</span></td>
+                            <td><img src="https://placehold.co/120x68/f5f7fa/1e1c24?text=TikTok+Video" class="h-[34px] rounded border border-stroke-card"></td>
+                            <td class="text-right font-number font-semibold text-[18px]">$192,000</td>
+                            <td class="text-right">124,678</td>
+                            <td class="text-right">1,016</td>
+                            <td class="text-center"><i class="fas fa-external-link-alt text-grey-tertiary hover:text-brand-primary"></i></td>
+                        </tr>
+                        <tr onclick="window.open('#', '_blank')">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-[4px] bg-blue-100 text-blue-600 flex items-center justify-center font-bold">BD</div>
+                                    <div>
+                                        <div class="font-semibold text-grey-primary">Beauty Deals Daily</div>
+                                        <div class="text-[12px] text-grey-tertiary">Community</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="tag tag-fb">FB Group</span></td>
+                            <td><img src="https://placehold.co/120x68/f5f7fa/1e1c24?text=FB+Post" class="h-[34px] rounded border border-stroke-card"></td>
+                            <td class="text-right font-number font-semibold text-[18px]">$145,230</td>
+                            <td class="text-right">86,520</td>
+                            <td class="text-right">768</td>
+                            <td class="text-center"><i class="fas fa-external-link-alt text-grey-tertiary hover:text-brand-primary"></i></td>
+                        </tr>
+                        <tr onclick="window.open('#', '_blank')">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <img src="https://picsum.photos/seed/Nora%20Kim/200/200" class="w-10 h-10 rounded-[4px] object-cover">
+                                    <div>
+                                        <div class="font-semibold text-grey-primary">Nora Kim</div>
+                                        <div class="text-[12px] text-grey-tertiary">@nora.kim</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="tag tag-creator">Creator</span></td>
+                            <td><img src="https://placehold.co/120x68/f5f7fa/1e1c24?text=IG+Story" class="h-[34px] rounded border border-stroke-card"></td>
+                            <td class="text-right font-number font-semibold text-[18px]">$131,600</td>
+                            <td class="text-right">42,955</td>
+                            <td class="text-right">696</td>
+                            <td class="text-center"><i class="fas fa-external-link-alt text-grey-tertiary hover:text-brand-primary"></i></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= 5. INSIGHT & ANALYSIS (Original 5 Modules) ================= -->
+        <h2 class="module-title !mb-0 mt-8">Insight & Analysis</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 1. Top-Selling Categories -->
+            <div class="card">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase">1. Top-Selling Categories</h3>
+                <div class="flex items-center justify-center h-[180px]">
+                    <div class="w-[150px] relative">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="ml-6 space-y-3">
+                        <div class="flex items-center gap-2 text-sm"><div class="w-3 h-3 rounded-full bg-brand-primary"></div>Skincare (72%)</div>
+                        <div class="flex items-center gap-2 text-sm"><div class="w-3 h-3 rounded-full bg-grey-primary"></div>Bodycare (18%)</div>
+                        <div class="flex items-center gap-2 text-sm"><div class="w-3 h-3 rounded-full bg-grey-disabled"></div>Others (10%)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Top-Selling Products -->
+            <div class="card !px-0 flex flex-col">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-2 px-5 uppercase">2. Top-Selling Products</h3>
+                <div class="flex-1 overflow-y-auto">
+                    <table class="digchic-table text-[13px]">
+                        <tbody>
+                            <tr>
+                                <td>Sensitive Skin Serum 30ml</td>
+                                <td class="text-right font-number font-semibold text-[16px]">$368,071</td>
+                            </tr>
+                            <tr>
+                                <td>Gentle Cleanser 150ml</td>
+                                <td class="text-right font-number font-semibold text-[16px]">$262,908</td>
+                            </tr>
+                            <tr>
+                                <td>Vit C Brightening Mask</td>
+                                <td class="text-right font-number font-semibold text-[16px]">$157,745</td>
+                            </tr>
+                            <tr>
+                                <td>Sunscreen SPF50+</td>
+                                <td class="text-right font-number font-semibold text-[16px]">$87,636</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. Top Market -->
+            <div class="card">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase">3. Top Market (By Sales)</h3>
+                <div class="space-y-4 mt-4">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold">United States</span><span class="font-number text-[16px]">$481,998</span></div>
+                        <div class="w-full bg-bg-layout rounded-full h-2"><div class="bg-brand-primary h-2 rounded-full" style="width: 55%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold">China (CN)</span><span class="font-number text-[16px]">$200,200</span></div>
+                        <div class="w-full bg-bg-layout rounded-full h-2"><div class="bg-grey-primary h-2 rounded-full" style="width: 23%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold">United Kingdom</span><span class="font-number text-[16px]">$105,163</span></div>
+                        <div class="w-full bg-bg-layout rounded-full h-2"><div class="bg-grey-secondary h-2 rounded-full" style="width: 12%"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Top Promotion Offer -->
+            <div class="card lg:col-span-2 !px-0">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-2 px-5 uppercase">4. Top Promotion Offer</h3>
+                <table class="digchic-table">
+                    <thead class="bg-bg-layout">
+                        <tr>
+                            <th>Offer Name</th>
+                            <th>Type</th>
+                            <th class="text-right">Revenue Driven</th>
+                            <th class="text-right">Usage Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="tag-creator text-[13px]">Creator Exclusive 15% OFF</span></td>
+                            <td>Code</td>
+                            <td class="text-right font-number font-semibold text-[16px]">$340,500</td>
+                            <td class="text-right">1,802</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag-fb text-[13px]">Buy 2 Serum Get 1 Free</span></td>
+                            <td>Bundle</td>
+                            <td class="text-right font-number font-semibold text-[16px]">$210,000</td>
+                            <td class="text-right">740</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 5. New Customer Rate -->
+            <div class="card flex flex-col justify-center items-center text-center">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase w-full text-left">5. New Customer Rate</h3>
+                <div class="relative w-[120px] h-[120px] mb-2">
+                    <canvas id="newCustChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="font-number font-semibold text-[32px] text-brand-primary leading-none">34.6%</span>
+                    </div>
+                </div>
+                <p class="text-[13px] text-grey-secondary mt-2">1,604 New / 4,636 Total Orders</p>
+                <div class="mt-2 text-[12px] bg-green-50 text-green-600 px-3 py-1 rounded">
+                    <i class="fas fa-arrow-up mr-1"></i> 6.2% vs last period
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 6. INSIGHTS (5-Column Layout Based on Screenshot) ================= -->
+        <h2 class="module-title !mb-0 mt-8">Actionable Insights</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            
+            <!-- 1. Top Performers -->
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-green-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-green-50 text-green-500 flex items-center justify-center text-xs"><i class="fas fa-trophy"></i></div>
+                    <h3 class="font-bold text-[13px] text-green-600 uppercase tracking-wide">Top Performers</h3>
+                </div>
+                <div class="flex-1">
+                    <ol class="list-decimal insight-ol">
+                        <li><span class="highlight">Instagram Influencer C</span><span class="sub">(ROAS 4.10)</span></li>
+                        <li><span class="highlight">TikTok Creator A</span><span class="sub">(Revenue $24,800)</span></li>
+                        <li><span class="highlight">Blog Website D</span><span class="sub">(Consistent growth)</span></li>
+                    </ol>
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">Focus on scaling these top publishers.</p>
+            </div>
+
+            <!-- 2. High Traffic / Low CVR -->
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-orange-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-xs"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h3 class="font-bold text-[13px] text-orange-600 uppercase tracking-wide">High Traffic / Low CVR</h3>
+                </div>
+                <div class="flex-1">
+                    <ol class="list-decimal insight-ol">
+                        <li>YouTube Channel B<span class="sub">(CVR 1.70%)</span></li>
+                        <li>Email Newsletter E<span class="sub">(CVR 1.20%)</span></li>
+                    </ol>
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">Optimize landing pages and offer alignment to improve conversion.</p>
+            </div>
+
+            <!-- 3. Best Performing Placement -->
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-blue-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-xs"><i class="fas fa-star"></i></div>
+                    <h3 class="font-bold text-[13px] text-blue-600 uppercase tracking-wide leading-tight">Best Performing<br>Placement</h3>
+                </div>
+                <div class="flex-1">
+                    <ol class="list-decimal insight-ol">
+                        <li><span class="highlight">Story Swipe-up</span><span class="sub">(ROAS 4.10)</span></li>
+                        <li><span class="highlight">Bio Link</span><span class="sub">(ROAS 2.46)</span></li>
+                        <li><span class="highlight">Article Inline</span><span class="sub">(ROAS 2.20)</span></li>
+                    </ol>
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">Increase investment in high ROAS placements.</p>
+            </div>
+
+            <!-- 4. Creative Insight -->
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-purple-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center text-xs"><i class="fas fa-images"></i></div>
+                    <h3 class="font-bold text-[13px] text-purple-600 uppercase tracking-wide">Creative Insight</h3>
+                </div>
+                <div class="flex-1 mb-4 flex gap-1 justify-between">
+                    <!-- 生成三个纵向手机比例的占位图 -->
+                    <img src="https://placehold.co/120x213/f5f7fa/1e1c24?text=Ad+1" class="w-[31%] aspect-[9/16] object-cover rounded shadow-sm border border-gray-100">
+                    <img src="https://placehold.co/120x213/f5f7fa/1e1c24?text=Ad+2" class="w-[31%] aspect-[9/16] object-cover rounded shadow-sm border border-gray-100">
+                    <img src="https://placehold.co/120x213/f5f7fa/1e1c24?text=Ad+3" class="w-[31%] aspect-[9/16] object-cover rounded shadow-sm border border-gray-100">
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">Offer + testimonial and creatives are converting best.</p>
+            </div>
+
+            <!-- 5. Action Required -->
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-red-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-xs font-bold font-poppins">A</div>
+                    <h3 class="font-bold text-[13px] text-red-600 uppercase tracking-wide">Action Required</h3>
+                </div>
+                <div class="flex-1">
+                    <ul class="list-disc pl-4 space-y-3 text-[13px] text-grey-primary marker:text-red-500">
+                        <li>Improve blog article CTAs</li>
+                        <li>Test new angles for YouTube</li>
+                        <li>Scale top creators & placements</li>
+                    </ul>
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">Address these to boost performance next period.</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 图表渲染脚本 -->
+    <script>
+        // 1. Performance Trend (混合图表)
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctxTrend, {
+            type: 'line', 
+            data: {
+                labels: ['Oct 12', 'Oct 16', 'Oct 20', 'Oct 24', 'Oct 28', 'Nov 01', 'Nov 05', 'Nov 10'],
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Revenue ($)',
+                        data: [50000, 75000, 90000, 110000, 105000, 130000, 150000, 166360],
+                        borderColor: '#ff099e', 
+                        backgroundColor: '#ff099e',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        yAxisID: 'yRevenue',
+                        order: 1
+                    },
+                    {
+                        type: 'line',
+                        label: 'Clicks',
+                        data: [15000, 25000, 32000, 40000, 38000, 50000, 65000, 83619],
+                        borderColor: '#1e1c24', 
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.4,
+                        yAxisID: 'yCount',
+                        pointRadius: 0,
+                        order: 2
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Orders',
+                        data: [250, 380, 460, 600, 550, 720, 800, 876],
+                        backgroundColor: 'rgba(255, 9, 158, 0.15)', 
+                        borderRadius: 4,
+                        yAxisID: 'yCount',
+                        order: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, font: { family: 'Outfit', size: 12 } } },
+                    tooltip: { titleFont: { family: 'Outfit' }, bodyFont: { family: 'Outfit' } }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    yRevenue: { 
+                        type: 'linear', display: true, position: 'left',
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        title: { display: true, text: 'Revenue (USD)', font: { size: 11, family: 'Outfit' } },
+                        ticks: { callback: v => '$' + v/1000 + 'k', font: { family: 'Barlow Condensed', size: 13 } }
+                    },
+                    yCount: { 
+                        type: 'linear', display: true, position: 'right',
+                        grid: { drawOnChartArea: false }, 
+                        title: { display: true, text: 'Clicks / Orders', font: { size: 11, family: 'Outfit' } },
+                        ticks: { font: { family: 'Barlow Condensed', size: 13 } }
+                    }
+                }
+            }
+        });
+
+        // 2. Top-Selling Categories (Doughnut)
+        new Chart(document.getElementById('categoryChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Skincare', 'Bodycare', 'Others'],
+                datasets: [{
+                    data: [72, 18, 10],
+                    backgroundColor: ['#ff099e', '#1e1c24', '#dddddd'],
+                    borderWidth: 0,
+                    cutout: '65%'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // 3. New Customer Rate (Doughnut)
+        new Chart(document.getElementById('newCustChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['New Customer', 'Returning'],
+                datasets: [{
+                    data: [34.6, 65.4],
+                    backgroundColor: ['#ff099e', '#f5f7fa'],
+                    borderWidth: 0,
+                    cutout: '80%'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: {enabled: false} } }
+        });
+    </script>
+</body>
+</html>
