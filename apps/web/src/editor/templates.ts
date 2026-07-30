@@ -176,12 +176,12 @@ function t(type: ComponentType, x: number, y: number, w: number, h: number): Edi
 }
 
 /** Page title text block (large, bold). */
-function titleAt(content: string, x: number, y: number, w = 1120, h = 50): EditorComponent {
-  const title = t('text', x, y, w, h);
-  const data = title.data as { content: string; fontSize: number; fontWeight: number };
-  data.content = content;
-  data.fontSize = 28;
-  data.fontWeight = 700;
+function titleAt(content: string, x: number, y: number, w = 1120, h = 56): EditorComponent {
+  const title = t('title-block', x, y, w, h);
+  const data = title.data as { text: string; subtitle: string; divider: boolean };
+  data.text = content;
+  data.subtitle = '';
+  data.divider = false;
   return title;
 }
 
@@ -413,7 +413,6 @@ export const TEMPLATES: Template[] = [
     scenario: ['campaign-report'],
     components: () => {
       const title = titleAt('达人合作详情', 80, 40);
-      // Orchestrate the existing creator trio (validates cross-page reuse of business components).
       const avatar = t('creator-avatar-card', 80, 110, 440, 120);
       const stats = t('creator-stats-strip', 560, 110, 640, 120);
       const works = t('creator-works-list', 80, 250, 1120, 170);
@@ -424,10 +423,7 @@ export const TEMPLATES: Template[] = [
       const fanAge = t('creator-fan-age', 660, 440, 540, 220);
       (fanAge.data as { title: string }).title = '年龄段';
       (fanAge.data as { subtitle: string }).subtitle = '粉丝年龄分布';
-      const note = t('text', 80, 650, 1120, 60);
-      (note.data as { content: string }).content =
-        '合作达人内容质量稳定，视频类内容互动率高于图文 1.8x。建议下期增加 Micro 达人比例，提升内容多样性。';
-      return [title, avatar, stats, works, fanGender, fanAge, note];
+      return [title, avatar, stats, works, fanGender, fanAge];
     },
   },
   {
@@ -615,10 +611,7 @@ export const TEMPLATES: Template[] = [
     pageType: 'creator',
     components: () => {
       // Top title
-      const title = t('text', 80, 60, 900, 60);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '达人介绍';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
+      const title = titleAt('达人介绍', 80, 60);
       // In-page business components (each independently draggable/deletable — validates "in-page semantic block" granularity)
       const avatar = t('creator-avatar-card', 80, 150, 360, 120);
       const stats = t('creator-stats-strip', 460, 150, 740, 120);
@@ -649,10 +642,7 @@ export const TEMPLATES: Template[] = [
     description: '章节导航表格',
     pageType: 'agenda',
     components: () => {
-      const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '目录';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
+      const title = titleAt('目录', 80, 60);
       const tbl = t('table', 80, 140, 1120, 460);
       (tbl.data as { headers: string[]; rows: string[][] }).headers = ['章节', '内容'];
       (tbl.data as { rows: string[][] }).rows = [
@@ -670,10 +660,7 @@ export const TEMPLATES: Template[] = [
     description: '简介 + 品牌墙',
     pageType: 'company',
     components: () => {
-      const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '关于我们';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
+      const title = titleAt('关于我们', 80, 60);
       const intro = t('text', 80, 130, 1120, 80);
       (intro.data as { content: string }).content = '';
       const wall = t('brand-wall', 80, 240, 1120, 360);
@@ -686,10 +673,7 @@ export const TEMPLATES: Template[] = [
     description: '标题 + 套餐卡片 + logo 墙',
     pageType: 'package',
     components: () => {
-      const title = t('text', 80, 60, 900, 50);
-      (title.data as { content: string; fontSize: number; fontWeight: number }).content = '套餐方案';
-      (title.data as { fontSize: number }).fontSize = 32;
-      (title.data as { fontWeight: number }).fontWeight = 700;
+      const title = titleAt('套餐方案', 80, 60);
       const cardW = 360;
       const gap = 20;
       const startX = 80;
@@ -1027,11 +1011,11 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
 
   /* ---------- helper: 带风格的大标题 ---------- */
   const blTitle = (content: string, y: number): EditorComponent => {
-    const comp = t('text', mx, y, cw, 50);
-    const data = comp.data as { content: string; fontSize: number; fontWeight: number };
-    data.content = content;
-    data.fontSize = style.titleFontSize;
-    data.fontWeight = 700;
+    const comp = t('title-block', mx, y, cw, 56);
+    const data = comp.data as { text: string; subtitle: string; divider: boolean };
+    data.text = content;
+    data.subtitle = '';
+    data.divider = false;
     return comp;
   };
 

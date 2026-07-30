@@ -6,7 +6,7 @@ import {
   getGeoPerformance, getPlacementWideRows, getDeviceBreakdown, getContentTopics,
   getSearchTerms, getHourlyPerformance,
 } from '@/api/affiliate';
-import { listPlacementTypeSummary } from '@/api/creatorPerformance';
+import { listPlacementTypeSummary, campaignCreatorWorks } from '@/api/creatorPerformance';
 import { metricsToRows } from './campaignMetrics';
 
 /** 组件 → 绑定大类。未登记的组件不参与自动填充（查表得 undefined）。 */
@@ -38,6 +38,8 @@ export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaig
   'creator-fan-city': 'creator',
   'creator-fan-interest': 'creator',
   'creator-audience-profile': 'creator',
+  'creator-works-list': 'creator',
+  'creator-works-table': 'creator',
   // project 型（取 projectMeta + reportData.campaign，无 page 级绑定键）
   // text 组件仅在 _dataSource==='project' 时填充（用户通过属性面板显式标记「跟随项目」）。
   'text': 'project',
@@ -399,7 +401,22 @@ export function creatorPatch(
       };
     }
     case 'creator-works-list':
-    case 'creator-works-table':
+    case 'creator-works-table': {
+      // 从 campaign + creator 获取作品数据
+      const works = campaignCreatorWorks(_campaignId);
+      const cw = works.find((w) => w.creatorId === cr.id) ?? works[0];
+      if (!cw || !cw.posts.length) return null;
+      return {
+        headers: ['Cover', 'Title', 'Impressions', 'Likes', 'Comments'],
+        rows: cw.posts.slice(0, 5).map((p) => [
+          p.cover ?? '',
+          p.title ?? '',
+          p.impressions ?? '--',
+          p.likes ?? '--',
+          p.comments ?? '--',
+        ]),
+      };
+    }
     case 'work-screenshot':
       // 作品数据不再走同步 mock——改为在属性面板的 importer 中异步从 DB 获取
       return null;
