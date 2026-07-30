@@ -69,7 +69,7 @@ const GROUPS: { group: string; items: PaletteItem[] }[] = [
     group: '渠道·广告',
     items: [
       { type: 'placement-display', label: '广告位', icon: '▤', description: '广告位展示' },
-      { type: 'post-list', label: 'Post 列表', icon: '☲', description: '渠道贴文列表' },
+      { type: 'post-list', label: '贴文列表', icon: '☲', description: '渠道贴文列表' },
     ],
   },
   {
