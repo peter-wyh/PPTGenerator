@@ -231,11 +231,11 @@ export const TEMPLATES: Template[] = [
     description: '大标题 + 副标题',
     pageType: 'title',
     components: () => {
-      const title = t('text', 80, 200, 900, 120);
+      const title = t('text', 80, 180, 900, 160);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
       (title.data as { fontSize: number }).fontSize = 48;
       (title.data as { fontWeight: number }).fontWeight = 700;
-      const sub = t('text', 80, 340, 900, 60);
+      const sub = t('text', 80, 360, 900, 60);
       (sub.data as { content: string; fontSize: number }).content = '副标题 / 摘要';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
@@ -583,11 +583,11 @@ export const TEMPLATES: Template[] = [
     pageType: 'cover',
     pageTitleIndex: 0,
     components: () => {
-      const title = t('text', 80, 240, 1000, 120);
+      const title = t('text', 80, 220, 1000, 180);
       (title.data as { content: string; fontSize: number; fontWeight: number }).content = '报告标题';
       (title.data as { fontSize: number }).fontSize = 56;
       (title.data as { fontWeight: number }).fontWeight = 700;
-      const sub = t('text', 80, 380, 1000, 50);
+      const sub = t('text', 80, 420, 1000, 50);
       (sub.data as { content: string; fontSize: number }).content = '副标题 / 日期 / 品牌';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
@@ -1011,9 +1011,9 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageTitleIndex: 0,
     components: () => {
       // FT/KN 留白更大（标题更靠下）；DG/DM 紧凑（标题靠上）
-      const titleY = style.largeVisual ? 300 : 240;
-      const subY = titleY + 140;
-      const title = t('text', mx + 20, titleY, cw - 40, 120);
+      const titleY = style.largeVisual ? 280 : 220;
+      const subY = titleY + 200;
+      const title = t('text', mx + 20, titleY, cw - 40, 180);
       const td = title.data as { content: string; fontSize: number; fontWeight: number };
       td.content = '报告标题';
       td.fontSize = style.code === 'FT' ? 52 : 56;
@@ -1382,12 +1382,12 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'title',
     businessLine,
     components: () => {
-      const title = t('text', mx + 20, 200, cw - 40, 120);
+      const title = t('text', mx + 20, 180, cw - 40, 160);
       const td = title.data as { content: string; fontSize: number; fontWeight: number };
       td.content = '报告标题';
       td.fontSize = 48;
       td.fontWeight = 700;
-      const sub = t('text', mx + 20, 340, cw - 40, 60);
+      const sub = t('text', mx + 20, 360, cw - 40, 60);
       (sub.data as { content: string; fontSize: number }).content = '';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
