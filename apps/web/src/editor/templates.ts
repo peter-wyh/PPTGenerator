@@ -418,11 +418,11 @@ export const TEMPLATES: Template[] = [
       const works = t('creator-works-list', 80, 250, 1120, 170);
       // 粉丝画像：性别占比 + 年龄段分布
       const fanGender = t('creator-fan-gender', 80, 440, 540, 240);
-      (fanGender.data as { title: string }).title = '性别占比';
-      (fanGender.data as { subtitle: string }).subtitle = '粉丝性别分布';
+      (fanGender.data as { title: string }).title = 'Fan Gender Breakdown';
+      (fanGender.data as { subtitle: string }).subtitle = 'Gender Distribution';
       const fanAge = t('creator-fan-age', 660, 440, 540, 240);
-      (fanAge.data as { title: string }).title = '年龄段';
-      (fanAge.data as { subtitle: string }).subtitle = '粉丝年龄分布';
+      (fanAge.data as { title: string }).title = 'Fan Age Groups';
+      (fanAge.data as { subtitle: string }).subtitle = 'Age Distribution';
       return [title, avatar, stats, works, fanGender, fanAge];
     },
   },
@@ -1116,9 +1116,9 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
         const worksComp = t('creator-works-list', mx, worksY, cw, worksHeight);
         const fanGenderY = worksY + worksHeight + style.gapY;
         const fanGender = t('creator-fan-gender', mx, fanGenderY, Math.floor(cw / 2) - 10, 150);
-        (fanGender.data as { title: string }).title = '';
+        (fanGender.data as { title: string }).title = 'Fan Gender Breakdown';
         const fanAge = t('creator-fan-age', mx + Math.floor(cw / 2) + 10, fanGenderY, Math.floor(cw / 2) - 10, 150);
-        (fanAge.data as { title: string }).title = '';
+        (fanAge.data as { title: string }).title = 'Fan Age Groups';
         return [title, avatar, stats, worksComp, fanGender, fanAge];
       }
 

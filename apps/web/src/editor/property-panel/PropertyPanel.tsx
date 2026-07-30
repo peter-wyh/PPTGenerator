@@ -12,7 +12,6 @@ import {
   ReportCreatorFanAgeImporter,
   CreatorLinkImporter,
   KpiImportButton,
-  ReportCreatorWorksImporter,
 } from './importers';
 import {
   FieldEditor,
@@ -168,9 +167,6 @@ export function PropertyPanel() {
       {comp.type === 'shape' && <ShapeFields comp={comp} />}
       {comp.type === 'image-group' && <ImageGroupFields comp={comp} />}
       {comp.type === 'strategy-block' && <StrategyBlockFields comp={comp} />}
-      {(comp.type === 'creator-works-list' || comp.type === 'creator-works-table') && (
-        <ReportCreatorWorksImporter comp={comp} />
-      )}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button
