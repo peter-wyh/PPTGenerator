@@ -10,6 +10,7 @@ import { themeToCssVars } from './theme';
 import { DEFAULT_GRID_SIZE } from './defaults';
 import { snapMove, clampRect, safeRectFrom } from './snap';
 import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { useBusinessLineLogo } from './useBusinessLineLogo';
 
 type DragState =
   | {
@@ -52,7 +53,8 @@ export function Canvas() {
   // 业务线 Logo（右上角渲染）— 位置/尺寸可由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
   const blBadge = theme.branding?.blBadge;
-  const blLogoSrc = blBadge?.logo || (businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined);
+  const blLogoFromDb = useBusinessLineLogo(businessLine);
+  const blLogoSrc = blBadge?.logo || blLogoFromDb;
   const blLogoVisible = blBadge?.visible !== false;
   const safeRect = useMemo(
     () => safeRectFrom(safeMargin, canvasWidth, canvasHeight),

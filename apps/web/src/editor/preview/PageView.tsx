@@ -3,6 +3,7 @@ import { ComponentRenderer } from '../components/ComponentRenderer';
 import { resolvePageBackground } from '../background';
 import { useEditorStore } from '../store';
 import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { useBusinessLineLogo } from '../useBusinessLineLogo';
 
 /**
  * 只读单页渲染（M6 预览 / 分享页 / PDF 共用）。
@@ -28,7 +29,8 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
   // 业务线 Logo（与编辑器 Canvas 同步渲染，右上角）— 位置/尺寸由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
   const blBadge = useEditorStore((s) => s.projectMeta?.theme?.branding?.blBadge);
-  const blLogoSrc = blBadge?.logo || (businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined);
+  const blLogoFromDb = useBusinessLineLogo(businessLine);
+  const blLogoSrc = blBadge?.logo || blLogoFromDb;
   const blLogoVisible = blBadge?.visible !== false;
 
   return (
