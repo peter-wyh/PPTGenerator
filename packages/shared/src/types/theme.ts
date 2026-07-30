@@ -100,6 +100,28 @@ export interface ProjectTheme {
     logoHeight?: number;
     /** Logo 圆角 px；缺省 0。 */
     logoRadius?: number;
+    /**
+     * 业务线标识（Badge）配置：页面右上角的业务线 Logo 水印。
+     * 默认取"数据管理-业务线"的 logo 数据；以下字段可覆盖位置/尺寸/透明度。
+     */
+    blBadge?: {
+      /** 是否显示；缺省 true。 */
+      visible?: boolean;
+      /** Logo URL；留空=跟随项目 businessLine。 */
+      logo?: string;
+      /** 宽度 px；缺省 40。 */
+      width?: number;
+      /** 高度 px；缺省 40。 */
+      height?: number;
+      /** 距右边缘 px；缺省 24。 */
+      right?: number;
+      /** 距顶部 px；缺省 24。 */
+      top?: number;
+      /** 透明度 0-1；缺省 0.8。 */
+      opacity?: number;
+      /** 圆角 px；缺省 8。 */
+      radius?: number;
+    };
   };
   /**
    * 默认页面背景：新建页面时的初始背景配置。

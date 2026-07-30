@@ -917,6 +917,63 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                       className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
                     />
                   </div>
+
+                  {/* 业务线标识配置 */}
+                  <div className="space-y-1.5 border-t border-border-subtle pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-foreground-secondary">业务线标识</span>
+                      <label className="flex items-center gap-1 text-[10px] text-foreground-muted">
+                        <input
+                          type="checkbox"
+                          checked={theme.branding?.blBadge?.visible !== false}
+                          onChange={(e) => updateBranding('blBadge', { ...theme.branding?.blBadge, visible: e.target.checked })}
+                          className="h-3 w-3"
+                        />
+                        显示
+                      </label>
+                    </div>
+                    {theme.branding?.blBadge?.visible !== false && (
+                      <details className="text-[11px] text-foreground-muted">
+                        <summary className="cursor-pointer hover:text-foreground-primary">位置与尺寸</summary>
+                        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                          {([
+                            ['width', '宽度', 40, 8, 200],
+                            ['height', '高度', 40, 8, 200],
+                            ['right', '右边距', 24, 0, 600],
+                            ['top', '顶距', 24, 0, 600],
+                            ['opacity', '透明度', 0.8, 0, 1],
+                            ['radius', '圆角', 8, 0, 100],
+                          ] as const).map(([key, label, fallback, min, max]) => (
+                            <label key={key} className="flex items-center gap-1">
+                              <span className="w-10 flex-none">{label}</span>
+                              <input
+                                type="number"
+                                min={min}
+                                max={max}
+                                step={key === 'opacity' ? 0.1 : 1}
+                                value={theme.branding?.blBadge?.[key] ?? fallback}
+                                onChange={(e) => {
+                                  const v = key === 'opacity'
+                                    ? Math.max(0, Math.min(1, Number(e.target.value) || fallback))
+                                    : Math.max(min as number, Math.min(max as number, Number(e.target.value) || fallback));
+                                  updateBranding('blBadge', { ...theme.branding?.blBadge, [key]: v });
+                                }}
+                                className="w-14 rounded border border-border-default px-1 py-0.5 text-[11px] text-foreground-primary"
+                              />
+                              {key === 'opacity' ? '' : 'px'}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="mt-1.5">
+                          <label className="mb-0.5 block text-[11px] text-foreground-muted">自定义 Logo（留空=跟随业务线）</label>
+                          <ImageInput
+                            value={theme.branding?.blBadge?.logo ?? ''}
+                            onChange={(url) => updateBranding('blBadge', { ...theme.branding?.blBadge, logo: url || undefined })}
+                          />
+                        </div>
+                      </details>
+                    )}
+                  </div>
                 </section>
               </>
             )}

@@ -49,9 +49,11 @@ export function Canvas() {
   const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
   const themeStyle = useMemo(() => themeToCssVars(theme), [theme]);
 
-  // 业务线 Logo（右上角渲染）
+  // 业务线 Logo（右上角渲染）— 位置/尺寸可由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
-  const blLogo = businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined;
+  const blBadge = theme.branding?.blBadge;
+  const blLogoSrc = blBadge?.logo || (businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined);
+  const blLogoVisible = blBadge?.visible !== false;
   const safeRect = useMemo(
     () => safeRectFrom(safeMargin, canvasWidth, canvasHeight),
     [safeMargin, canvasWidth, canvasHeight],
@@ -348,12 +350,20 @@ export function Canvas() {
               onHoverDelete={handleHoverDelete}
             />
           ))}
-          {/* 业务线 Logo（右上角，仅编辑画布显示，不影响布局） */}
-          {blLogo && !currentPage?.suppressLogo && (
+          {/* 业务线 Logo（右上角，位置/尺寸由 theme.branding.blBadge 配置） */}
+          {blLogoVisible && blLogoSrc && !currentPage?.suppressLogo && (
             <img
-              src={blLogo}
+              src={blLogoSrc}
               alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}
-              className="pointer-events-none absolute right-4 top-4 z-50 h-10 w-10 rounded-lg object-contain opacity-80"
+              className="pointer-events-none absolute z-50 object-contain"
+              style={{
+                right: blBadge?.right ?? 24,
+                top: blBadge?.top ?? 24,
+                width: blBadge?.width ?? 40,
+                height: blBadge?.height ?? 40,
+                borderRadius: blBadge?.radius ?? 8,
+                opacity: blBadge?.opacity ?? 0.8,
+              }}
               draggable={false}
             />
           )}

@@ -25,9 +25,11 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
   // 背景与编辑器 Canvas 一致：统一走 resolvePageBackground（图 > 渐变 > 纯色 > 白）。
   const background = resolvePageBackground(page);
 
-  // 业务线 Logo（与编辑器 Canvas 同步渲染，右上角）
+  // 业务线 Logo（与编辑器 Canvas 同步渲染，右上角）— 位置/尺寸由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
-  const blLogo = businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined;
+  const blBadge = useEditorStore((s) => s.projectMeta?.theme?.branding?.blBadge);
+  const blLogoSrc = blBadge?.logo || (businessLine ? BUSINESS_LINE_META[businessLine]?.logo : undefined);
+  const blLogoVisible = blBadge?.visible !== false;
 
   return (
     <div
@@ -58,22 +60,22 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
             <ComponentRenderer comp={comp} />
           </div>
         ))}
-        {/* 业务线 Logo（右上角，预览/导出同步） */}
-        {blLogo && !page.suppressLogo && (
+        {/* 业务线 Logo（右上角，位置/尺寸由 theme.branding.blBadge 配置） */}
+        {blLogoVisible && blLogoSrc && !page.suppressLogo && (
           <img
-            src={blLogo}
+            src={blLogoSrc}
             alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}
             style={{
               position: 'absolute',
-              right: 24,
-              top: 24,
-              width: 40,
-              height: 40,
+              right: blBadge?.right ?? 24,
+              top: blBadge?.top ?? 24,
+              width: blBadge?.width ?? 40,
+              height: blBadge?.height ?? 40,
+              borderRadius: blBadge?.radius ?? 8,
               objectFit: 'contain',
-              opacity: 0.8,
+              opacity: blBadge?.opacity ?? 0.8,
               pointerEvents: 'none',
               zIndex: 50,
-              borderRadius: 8,
             }}
             draggable={false}
           />
