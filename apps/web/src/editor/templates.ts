@@ -1315,9 +1315,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       const fanAge = t('creator-fan-age', mx + halfW + 20, 440, halfW, 220);
       (fanAge.data as { title: string; subtitle: string }).title = '';
       (fanAge.data as { subtitle: string }).subtitle = '';
-      const note = t('text', mx, 680, cw, 70);
-      (note.data as { content: string }).content = '';
-      return [title, avatar, stats, works, fanGender, fanAge, note];
+      return [title, avatar, stats, works, fanGender, fanAge];
     },
   });
 
