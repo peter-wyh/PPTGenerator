@@ -279,8 +279,17 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const title = titleAt('周报 · 业绩概览', 80, 50);
       const kpi = t('kpi-board', 80, 130, 1120, 200);
+      (kpi.data as { variant: string }).variant = 'grid';
+      (kpi.data as { headers: string[] }).headers = ['指标', '本周', '环比'];
+      (kpi.data as { rows: string[][] }).rows = [
+        ['GMV', '$32,500', '+12.3%'],
+        ['Spend', '$8,200', '-3.1%'],
+        ['ROAS', '3.96x', '+0.4x'],
+        ['订单', '1,240', '+8.7%'],
+      ];
       const plan = t('text', 80, 360, 1120, 280);
-      (plan.data as { content: string; fontSize: number }).content = '';
+      (plan.data as { content: string; fontSize: number }).content =
+        '下周计划：\n1. 扩大 Top 3 达人投放预算 +20%\n2. 新增 5 位 Micro 达人合作\n3. 优化广告位素材 A/B Test';
       (plan.data as { fontSize: number }).fontSize = 16;
       return [title, kpi, plan];
     },
@@ -294,11 +303,32 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const title = titleAt('月报 · 业绩概览', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
+      (kpi.data as { headers: string[] }).headers = ['指标', '本月', '环比'];
+      (kpi.data as { rows: string[][] }).rows = [
+        ['GMV', '$128,500', '+18.2%'],
+        ['Spend', '$32,400', '+5.1%'],
+        ['ROAS', '3.97x', '+0.6x'],
+        ['新客占比', '62%', '+4pp'],
+      ];
       const chart = t('bar-chart', 80, 300, 640, 240);
-      (chart.data as { title: string }).title = '';
+      (chart.data as { title: string }).title = '周度 GMV';
+      (chart.data as { bars: { label: string; value: number; color: string }[] }).bars = [
+        { label: 'W1', value: 28500, color: 'auto' },
+        { label: 'W2', value: 31200, color: 'auto' },
+        { label: 'W3', value: 34800, color: 'auto' },
+        { label: 'W4', value: 34000, color: 'auto' },
+      ];
       const timeline = t('timeline-compare', 760, 300, 440, 240);
+      (timeline.data as { headers: string[] }).headers = ['指标', '本月', '上月', '变化'];
+      (timeline.data as { rows: string[][] }).rows = [
+        ['GMV', '$128.5K', '$108.7K', '↗+18%'],
+        ['Spend', '$32.4K', '$30.8K', '↗+5%'],
+        ['ROAS', '3.97x', '3.53x', '↗+0.4x'],
+        ['新客', '7,950', '6,820', '↗+17%'],
+      ];
       const insight = t('text', 80, 560, 1120, 80);
-      (insight.data as { content: string }).content = '';
+      (insight.data as { content: string }).content =
+        '本月 Campaign 整体表现优于上月，GMV 增长 18%，主要驱动因素：达人内容质量提升 + 广告位优化。建议下月持续扩大 Micro 达人矩阵。';
       return [title, kpi, chart, timeline, insight];
     },
   },
@@ -313,9 +343,22 @@ export const TEMPLATES: Template[] = [
       // Channel big numbers: reuse kpi-board (compact) to carry Engaged Publishers / Est Impression etc.
       const channelKpi = t('kpi-board', 80, 110, 1120, 90);
       (channelKpi.data as { variant: string }).variant = 'compact';
-      (channelKpi.data as { headers: string[] }).headers = ['指标', '数值', '对比'];
+      (channelKpi.data as { headers: string[] }).headers = ['指标', '数值', '环比'];
+      (channelKpi.data as { rows: string[][] }).rows = [
+        ['活跃渠道', '8', '+2'],
+        ['合作发布者', '45', '+12'],
+        ['总曝光', '2.3M', '+25%'],
+        ['互动率', '4.8%', '+0.6pp'],
+      ];
       const table = t('table', 80, 230, 1120, 320);
-      (table.data as { headers: string[] }).headers = ['渠道', '销量', '点击', 'CVR', '发布者'];
+      (table.data as { headers: string[] }).headers = ['渠道', '销量', '点击', 'CVR', '发布者数', 'GMV', 'ROAS'];
+      (table.data as { rows: string[][] }).rows = [
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+      ];
       return [title, channelKpi, table];
     },
   },
@@ -328,10 +371,25 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const title = titleAt('业绩复盘', 80, 40);
       const kpi = t('kpi-board', 80, 110, 1120, 170);
+      (kpi.data as { headers: string[] }).headers = ['指标', '本期', '上期', '变化'];
+      (kpi.data as { rows: string[][] }).rows = [
+        ['总GMV', '$385K', '$325K', '↗+18%'],
+        ['总Spend', '$97K', '$92K', '↗+5%'],
+        ['综合ROAS', '3.97x', '3.53x', '↗+0.4x'],
+        ['总订单', '3,720', '3,280', '↗+13%'],
+      ];
       const timeline = t('timeline-compare', 80, 300, 1120, 220);
       (timeline.data as { variant: string }).variant = 'with-bar';
+      (timeline.data as { headers: string[] }).headers = ['指标', '本期', '上期', '趋势'];
+      (timeline.data as { rows: string[][] }).rows = [
+        ['GMV', '$385K', '$325K', '↗'],
+        ['ROAS', '3.97x', '3.53x', '↗'],
+        ['新客率', '62%', '58%', '↗'],
+        ['复购率', '38%', '42%', '↘'],
+      ];
       const works = t('text', 80, 540, 1120, 100);
-      (works.data as { content: string }).content = '';
+      (works.data as { content: string }).content =
+        '本期亮点：\n• Top 3 达人贡献 45% GMV\n• 视频内容 ROI 高于图文 2.3x\n• 新客占比提升至 62%\n\n待改进：\n• 复购率下降 4pp，需加强老客运营\n• 广告位 CTR 有下降趋势';
       return [title, kpi, timeline, works];
     },
   },
@@ -361,13 +419,14 @@ export const TEMPLATES: Template[] = [
       const works = t('creator-works-list', 80, 250, 1120, 170);
       // 粉丝画像：性别占比 + 年龄段分布
       const fanGender = t('creator-fan-gender', 80, 440, 540, 220);
-      (fanGender.data as { title: string; subtitle: string }).title = '';
-      (fanGender.data as { subtitle: string }).subtitle = '';
+      (fanGender.data as { title: string }).title = '性别占比';
+      (fanGender.data as { subtitle: string }).subtitle = '粉丝性别分布';
       const fanAge = t('creator-fan-age', 660, 440, 540, 220);
-      (fanAge.data as { title: string; subtitle: string }).title = '';
-      (fanAge.data as { subtitle: string }).subtitle = '';
+      (fanAge.data as { title: string }).title = '年龄段';
+      (fanAge.data as { subtitle: string }).subtitle = '粉丝年龄分布';
       const note = t('text', 80, 650, 1120, 60);
-      (note.data as { content: string }).content = '';
+      (note.data as { content: string }).content =
+        '合作达人内容质量稳定，视频类内容互动率高于图文 1.8x。建议下期增加 Micro 达人比例，提升内容多样性。';
       return [title, avatar, stats, works, fanGender, fanAge, note];
     },
   },
