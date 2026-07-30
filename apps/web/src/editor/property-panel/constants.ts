@@ -40,6 +40,19 @@ export const LABELS: Record<string, string> = {
   // 渠道·广告
   'placement-display': '渠道·广告-广告位',
   'post-list': '渠道·广告-贴文列表',
+  // 业绩·商品 — Campaign 强关联
+  'campaign-summary': '业绩·商品-Campaign概要',
+  'funnel-chart': '业绩·商品-转化漏斗',
+  'revenue-timeline': '业绩·商品-收入趋势',
+  'publisher-table': '业绩·商品-合作方表现',
+  'geo-distribution': '业绩·商品-地域分布',
+  'device-breakdown': '业绩·商品-设备分布',
+  'content-topic-performance': '业绩·商品-内容话题',
+  'search-term-table': '业绩·商品-搜索词',
+  'hourly-heatmap': '业绩·商品-时段热力图',
+  'placement-wide-table': '渠道·广告-广告位宽表',
+  'placement-type-summary': '渠道·广告-广告位类型',
+  'swot-matrix': '策略·内容-SWOT矩阵',
   // 商务·品牌
   'brand-wall': '商务·品牌-品牌墙',
   'package-card': '商务·品牌-套餐卡',
