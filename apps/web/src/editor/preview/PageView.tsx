@@ -72,7 +72,7 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
               right: blBadge?.right ?? 24,
               top: blBadge?.top ?? 24,
               width: blBadge?.width ?? 40,
-              height: blBadge?.height ?? 40,
+              height: 'auto',
               borderRadius: blBadge?.radius ?? 8,
               objectFit: 'contain',
               opacity: blBadge?.opacity ?? 0.8,

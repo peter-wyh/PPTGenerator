@@ -938,7 +938,6 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                           {([
                             ['width', '宽度', 40, 8, 200],
-                            ['height', '高度', 40, 8, 200],
                             ['right', '右边距', 24, 0, 600],
                             ['top', '顶距', 24, 0, 600],
                             ['opacity', '透明度', 0.8, 0, 1],
