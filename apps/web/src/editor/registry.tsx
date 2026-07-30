@@ -67,6 +67,7 @@ import {
   KpiBoardImporter,
   CampaignReportImporter,
 } from './property-panel/importers';
+import { CampaignSummaryImporter } from './property-panel/CampaignSummaryImporter';
 
 /* ---------------------------- property schema ---------------------------- */
 
@@ -745,7 +746,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     ],
     dataSource: {
       modes: ['manual', 'project'],
-      projectImporter: CampaignReportImporter,
+      projectImporter: CampaignSummaryImporter,
     },
   },
   'funnel-chart': {

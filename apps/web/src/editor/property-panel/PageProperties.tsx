@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Page, PageGradient, GradientStop, PageType, ReportCreator, Scenario } from '@mediakit/shared';
+import type { Page, PageGradient, GradientStop, PageType, ReportCreator } from '@mediakit/shared';
 import { pageCategory } from '@mediakit/shared';
 import { useEditorStore, allReportCreators } from '../store';
 import { backgroundType, buildBackgroundTypePatch, type BackgroundType } from '../background';
@@ -7,8 +7,6 @@ import { ImageInput } from '@/components/ImageInput';
 import { GRADIENT_ANGLE_PRESETS } from './constants';
 import { FieldGroup } from './helpers';
 import { listCampaignCreators } from '@/api/creators';
-import { filterCategoriesByScenario, getTemplate, type Template } from '../templates';
-import { PageThumbnail } from '../components/PageThumbnail';
 
 export function PageProperties() {
   const page = useEditorStore((s) => s.currentPage());
@@ -141,8 +139,6 @@ export function PageProperties() {
           </button>
         )}
       </FieldGroup>
-
-      <PageLayoutSection page={page} />
 
       <p className="mt-auto text-xs text-foreground-muted">提示：点选画布上的组件以编辑组件属性。</p>
     </div>
@@ -287,139 +283,6 @@ export function GradientFields({ page }: { page: Page }) {
 }
 
 /* --------------------------- 通用样式变体 ---------------------------- */
-
-/* ------------------------- 当前页版式 / 替换 ------------------------- */
-
-/**
- * 当前页版式区域：显示版式名称（来自 layoutTemplateId 或 pageType）+ 「替换版式」按钮。
- * 点「替换版式」打开模板选择浮层 → 选中后二次确认 → 调 replacePageLayout 覆盖页面 components。
- */
-function PageLayoutSection({ page }: { page: Page }) {
-  const replacePageLayout = useEditorStore((s) => s.replacePageLayout);
-  const scenario = useEditorStore((s) => s.projectMeta?.scenario);
-  const canvasWidth = useEditorStore((s) => s.canvasWidth);
-  const canvasHeight = useEditorStore((s) => s.canvasHeight);
-  const [picking, setPicking] = useState(false);
-  const [pending, setPending] = useState<Template | null>(null);
-
-  // 当前版式名称：优先 layoutTemplateId → pageType 对应模板 → 兜底「自定义」
-  const currentTpl = page.layoutTemplateId ? getTemplate(page.layoutTemplateId) : undefined;
-  const layoutName = currentTpl?.name ?? '自定义版式';
-
-  function confirmReplace() {
-    if (!pending) return;
-    replacePageLayout(page.id, pending.id);
-    setPending(null);
-    setPicking(false);
-  }
-
-  return (
-    <FieldGroup title="当前页版式">
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs text-foreground-secondary" title={layoutName}>
-          {layoutName}
-        </span>
-        <button
-          onClick={() => setPicking(true)}
-          className="flex-none rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:border-accent-primary hover:bg-accent-primary/5 hover:text-accent-primary"
-        >
-          替换版式
-        </button>
-      </div>
-
-      {picking && (
-        <LayoutPickerOverlay
-          scenario={scenario}
-          canvasWidth={canvasWidth}
-          canvasHeight={canvasHeight}
-          onClose={() => setPicking(false)}
-          onPick={(tpl) => setPending(tpl)}
-        />
-      )}
-
-      {pending && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40" onClick={() => setPending(null)}>
-          <div className="flex w-[360px] flex-col gap-3 rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="font-headings text-sm font-semibold text-foreground-primary">确认替换版式</div>
-            <p className="text-xs text-foreground-secondary">
-              将用模板「<span className="font-medium text-foreground-primary">{pending.name}</span>」覆盖当前页的全部组件，此操作可撤销。是否继续？
-            </p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setPending(null)} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">
-                取消
-              </button>
-              <button onClick={confirmReplace} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary">
-                替换
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </FieldGroup>
-  );
-}
-
-/** 版式选择浮层：按分类列出可用模板（带缩略图）。 */
-function LayoutPickerOverlay({
-  scenario,
-  canvasWidth,
-  canvasHeight,
-  onClose,
-  onPick,
-}: {
-  scenario: Scenario | undefined;
-  canvasWidth: number;
-  canvasHeight: number;
-  onClose: () => void;
-  onPick: (tpl: Template) => void;
-}) {
-  const categories = filterCategoriesByScenario(scenario);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose} role="presentation">
-      <div
-        className="flex max-h-[80vh] w-full max-w-xl flex-col rounded-xl bg-surface-primary p-5 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="mb-3 flex-none font-headings text-sm font-semibold text-foreground-primary">选择新版式</div>
-        <div className="-mr-2 flex-1 overflow-y-auto pr-2">
-          {categories.map((cat) => {
-            const templates = cat.ids.map((id) => getTemplate(id)).filter((t): t is Template => !!t);
-            if (templates.length === 0) return null;
-            return (
-              <section key={cat.category} className="mb-3">
-                <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">{cat.category}</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {templates.map((tpl) => {
-                    const thumb: Page = { id: `pick-${tpl.id}`, name: tpl.name, components: tpl.components() };
-                    return (
-                      <button
-                        key={tpl.id}
-                        onClick={() => onPick(tpl)}
-                        className="flex flex-col gap-1 rounded-lg border border-border-default p-1.5 text-left transition hover:border-accent-primary hover:bg-surface-hover"
-                      >
-                        <div className="flex justify-center">
-                          <PageThumbnail page={thumb} canvasWidth={canvasWidth} canvasHeight={canvasHeight} width={160} height={56} />
-                        </div>
-                        <div className="truncate text-xs font-medium text-foreground-primary">{tpl.name}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-        <div className="mt-2 flex flex-none justify-end border-t border-border-subtle pt-2">
-          <button onClick={onClose} className="rounded-lg px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">
-            取消
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ------------------------- 页面类型 + 业务上下文 ------------------------ */
 
