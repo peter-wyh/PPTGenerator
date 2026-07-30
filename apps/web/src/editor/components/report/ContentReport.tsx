@@ -16,7 +16,7 @@ import { STATUS_DOT_STYLES } from './shared';
 /* ============================ Device Breakdown ============================ */
 
 export function DeviceBreakdownView({ data }: { data: DeviceBreakdownData }) {
-  const { title, items } = data;
+  const { title, items = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -38,7 +38,7 @@ export function DeviceBreakdownView({ data }: { data: DeviceBreakdownData }) {
 /* ============================ Content Topic Performance ============================ */
 
 export function ContentTopicView({ data }: { data: ContentTopicPerformanceData }) {
-  const { title, items } = data;
+  const { title, items = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -74,7 +74,7 @@ export function ContentTopicView({ data }: { data: ContentTopicPerformanceData }
 /* ============================ Search Term Table ============================ */
 
 export function SearchTermTableView({ data }: { data: SearchTermTableData }) {
-  const { title, items } = data;
+  const { title, items = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -109,7 +109,7 @@ export function SearchTermTableView({ data }: { data: SearchTermTableData }) {
 /* ============================ Hourly Heatmap ============================ */
 
 export function HourlyHeatmapView({ data }: { data: HourlyHeatmapData }) {
-  const { title, subtitle, hours, metric = 'clicks' } = data;
+  const { title, subtitle, hours = [], metric = 'clicks' } = data;
   const values = hours.map((h) => h[metric]);
   const max = Math.max(...values, 1);
   const min = Math.min(...values, 0);

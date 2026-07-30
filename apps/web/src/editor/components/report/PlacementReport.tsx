@@ -10,7 +10,7 @@ import { STATUS_DOT_STYLES } from './shared';
 /* ============================ Placement Wide Table ============================ */
 
 export function PlacementWideTableView({ data }: { data: PlacementWideTableData }) {
-  const { title, rows } = data;
+  const { title, rows = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
@@ -50,7 +50,7 @@ export function PlacementWideTableView({ data }: { data: PlacementWideTableData 
 /* ============================ Placement Type Summary ============================ */
 
 export function PlacementTypeSummaryView({ data }: { data: PlacementTypeSummaryData }) {
-  const { title, subtitle, items } = data;
+  const { title, subtitle, items = [] } = data;
 
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">

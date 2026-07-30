@@ -57,12 +57,44 @@ async function main() {
       fontFamily: '',
       color: '#1A1A1A',
     }),
-    // KPI 看板（满宽）
-    cmp('kpi-board', 80, 100, 1120, 120, {}),
+    // KPI 看板（满宽）— 带 GlowLab Q4 示例数据
+    cmp('kpi-board', 80, 100, 1120, 120, {
+      variant: 'grid',
+      headers: ['Metric', 'Value', 'Compare'],
+      rows: [
+        ['GMV', '¥1,285,000', '+18.5%'],
+        ['Commission', '¥128,500', '+12.3%'],
+        ['ROAS', '4.2x', '+0.6'],
+        ['Conversions', '3,842', '+15.2%'],
+      ],
+      icons: ['currency', 'currency', 'target', 'cart'],
+      valueColors: [null, null, null, null],
+      compareLabel: 'vs last month',
+    }),
     // 趋势柱状图（左）
-    cmp('bar-chart', 80, 240, 660, 200, { title: '' }),
+    cmp('bar-chart', 80, 240, 660, 200, {
+      title: 'GMV 趋势',
+      variant: 'vertical',
+      bars: [
+        { label: 'W1', value: 280000 },
+        { label: 'W2', value: 320000 },
+        { label: 'W3', value: 295000 },
+        { label: 'W4', value: 390000 },
+      ],
+    }),
     // 转化漏斗（右）
-    cmp('funnel-chart', 780, 240, 420, 200, {}),
+    cmp('funnel-chart', 780, 240, 420, 200, {
+      title: '转化漏斗',
+      subtitle: '曝光 → 购买',
+      steps: [
+        { label: '曝光', value: 1850000, rate: '100%' },
+        { label: '点击', value: 142000, rate: '7.7%' },
+        { label: '加购', value: 18900, rate: '13.3%' },
+        { label: '下单', value: 8600, rate: '45.5%' },
+        { label: '成交', value: 3842, rate: '44.7%' },
+      ],
+      insight: '整体转化率 0.21%，加购→下单转化率偏低，建议优化详情页',
+    }),
     // 渠道表格标题
     cmp('text', 80, 460, 1120, 24, {
       content: '渠道 / 合作方表现',

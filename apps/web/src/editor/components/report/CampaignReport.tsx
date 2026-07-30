@@ -28,7 +28,7 @@ import { useChartColors, STATUS_DOT_STYLES } from './shared';
 /* ============================ Campaign Summary ============================ */
 
 export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
-  const { title, campaignName, period, metrics, customerSplit } = data;
+  const { title, campaignName, period, metrics = [], customerSplit } = data;
   return (
     <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-md">
       {(title || campaignName) && (
@@ -78,7 +78,7 @@ export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
 /* ============================ Funnel Chart ============================ */
 
 export function FunnelChartView({ data }: { data: FunnelChartData }) {
-  const { title, subtitle, steps, insight } = data;
+  const { title, subtitle, steps = [], insight } = data;
   const max = Math.max(...steps.map((s) => s.value), 1);
 
   return (
@@ -132,7 +132,7 @@ export function FunnelChartView({ data }: { data: FunnelChartData }) {
 /* ============================ Revenue Timeline ============================ */
 
 export function RevenueTimelineChart({ data }: { data: RevenueTimelineData }) {
-  const { title, subtitle, points, series = ['revenue', 'spend'] } = data;
+  const { title, subtitle, points = [], series = ['revenue', 'spend'] } = data;
   const colors = useChartColors();
   const seriesConfig: Record<string, { color: string; label: string }> = {
     revenue: { color: colors[0] ?? 'var(--color-primary)', label: 'Revenue' },
@@ -185,7 +185,7 @@ export function RevenueTimelineChart({ data }: { data: RevenueTimelineData }) {
 /* ============================ Publisher Table ============================ */
 
 export function PublisherTable({ data }: { data: PublisherTableData }) {
-  const { title, columns, rows } = data;
+  const { title, columns, rows = [] } = data;
   const cols = columns ?? [
     { key: 'publisher', label: 'Publisher' },
     { key: 'clicks', label: 'Clicks' },
@@ -233,7 +233,7 @@ export function PublisherTable({ data }: { data: PublisherTableData }) {
 /* ============================ Geo Distribution ============================ */
 
 export function GeoDistribution({ data }: { data: GeoDistributionData }) {
-  const { title, subtitle, items, variant = 'bars' } = data;
+  const { title, subtitle, items = [], variant = 'bars' } = data;
   const max = Math.max(...items.map((d) => d.value), 1);
 
   if (variant === 'list') {
