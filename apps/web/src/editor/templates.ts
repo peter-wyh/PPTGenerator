@@ -468,28 +468,19 @@ export const TEMPLATES: Template[] = [
       const title = titleAt('Campaign 月报 · 综合概览', 80, 40);
       comps.push(title);
 
-      // ── Row 1: KPI 看板（满宽）──
-      const kpi = t('kpi-board', 80, 100, 1120, 120);
-      comps.push(kpi);
+      // ── Row 1: Campaign 摘要（满宽）──
+      const summary = t('campaign-summary', 80, 100, 1120, 140);
+      comps.push(summary);
 
-      // ── Row 2: 趋势图(左) + 转化漏斗(右) ──
-      const trend = t('bar-chart', 80, 240, 660, 200);
-      (trend.data as { title: string }).title = '';
-      comps.push(trend);
-      const funnel = t('funnel-chart', 780, 240, 420, 200);
+      // ── Row 2: 转化漏斗(左) + 周期对比表(右) ──
+      const funnel = t('funnel-chart', 80, 260, 540, 200);
       comps.push(funnel);
+      const timeline = t('timeline-compare', 660, 260, 540, 200);
+      comps.push(timeline);
 
-      // ── Row 3: 渠道表现表格（满宽）──
-      const channelTitle = textAt(80, 460, 1120, 24, '渠道 / 合作方表现', 16);
-      comps.push(channelTitle);
-      const channelTable = tableAt(80, 490, 1120, 200, ['合作方', '类型', '平台', '粉丝/访问量', '互动率', 'GMV', 'ROAS', '状态'], [
-        ['', '', '', '', '', '', '', ''],
-        ['', '', '', '', '', '', '', ''],
-        ['', '', '', '', '', '', '', ''],
-        ['', '', '', '', '', '', '', ''],
-        ['', '', '', '', '', '', '', ''],
-      ]);
-      comps.push(channelTable);
+      // ── Row 3: 合作方表现表（满宽）──
+      const publisher = t('publisher-table', 80, 480, 1120, 200);
+      comps.push(publisher);
 
       return comps;
     },
