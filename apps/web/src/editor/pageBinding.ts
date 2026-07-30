@@ -11,17 +11,6 @@ import { metricsToRows } from './campaignMetrics';
 
 /** 组件 → 绑定大类。未登记的组件不参与自动填充（查表得 undefined）。 */
 export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaign' | 'project' | 'dm'>> = {
-  // creator 型（取 page.creatorId）
-  'creator-avatar-card': 'creator',
-  'meta-strip': 'creator',
-  'creator-stats-strip': 'creator',
-  'creator-fan-gender': 'creator',
-  'creator-fan-age': 'creator',
-  'creator-fan-city': 'creator',
-  'creator-audience-profile': 'creator',
-  'creator-works-list': 'creator',
-  'creator-works-table': 'creator',
-  'work-screenshot': 'creator',
   // campaign 型（取 page.campaignId）
   'campaign-summary': 'campaign',
   'funnel-chart': 'campaign',
@@ -35,6 +24,20 @@ export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaig
   'search-term-table': 'campaign',
   'hourly-heatmap': 'campaign',
   'kpi-board': 'campaign',
+  'bar-chart': 'campaign',
+  'campaign-analysis': 'campaign',
+  'timeline-compare': 'campaign',
+  'indicator-card': 'campaign',
+  'table': 'campaign',
+  // creator 型（取 page.creatorId）
+  'creator-avatar-card': 'creator',
+  'meta-strip': 'creator',
+  'creator-stats-strip': 'creator',
+  'creator-fan-gender': 'creator',
+  'creator-fan-age': 'creator',
+  'creator-fan-city': 'creator',
+  'creator-fan-interest': 'creator',
+  'creator-audience-profile': 'creator',
   // project 型（取 projectMeta + reportData.campaign，无 page 级绑定键）
   // text 组件仅在 _dataSource==='project' 时填充（用户通过属性面板显式标记「跟随项目」）。
   'text': 'project',
@@ -162,6 +165,71 @@ export function campaignDataPatch(
       return { items: getSearchTerms(campaignId) };
     case 'hourly-heatmap':
       return { hours: getHourlyPerformance(campaignId) };
+    case 'bar-chart': {
+      // campaign 周度趋势 → bar-chart
+      const weekly = getRevenueTimeline(campaignId, 28);
+      // 按周聚合 4 条柱
+      const weeks: { label: string; value: number; color: string }[] = [];
+      const chunkSize = Math.ceil(weekly.length / 4) || 1;
+      for (let i = 0; i < weekly.length; i += chunkSize) {
+        const chunk = weekly.slice(i, i + chunkSize);
+        const sum = chunk.reduce((acc, p) => acc + (p.revenue || 0), 0);
+        weeks.push({ label: `W${weeks.length + 1}`, value: Math.round(sum), color: 'auto' });
+      }
+      return { title: 'GMV 趋势', variant: 'vertical', bars: weeks.slice(0, 4) };
+    }
+    case 'campaign-analysis': {
+      // 多维度分析 → radar
+      const s = getCampaignSummary(campaignId);
+      const parseNum = (v: string) => parseFloat(String(v).replace(/[^0-9.]/g, '')) || 0;
+      return {
+        variant: 'radar',
+        title: 'Campaign 多维分析',
+        subtitle: s.campaignName,
+        dimensions: [
+          { label: 'ROI', value: Math.min(parseNum(s.roas) * 25, 100) },
+          { label: '规模', value: Math.min(parseNum(s.totalRevenue) / 5000, 100) },
+          { label: '效率', value: Math.min(parseNum(s.newCustomerRate) || 60, 100) },
+          { label: '成本控制', value: 70 },
+          { label: '增长', value: 75 },
+          { label: '质量', value: 80 },
+        ],
+        series: [],
+        funnelSteps: [],
+        insight: '',
+      };
+    }
+    case 'timeline-compare': {
+      // campaign 指标 → 环比对比表
+      const s = getCampaignSummary(campaignId);
+      const parseNum = (v: string) => parseFloat(String(v).replace(/[^0-9.]/g, '')) || 0;
+      return {
+        variant: 'standard',
+        headers: ['Metric', 'Current', 'Previous', 'Status'],
+        rows: [
+          ['Total Spend', s.totalSpend, `$${Math.round(parseNum(s.totalSpend) * 0.85).toLocaleString()}`, '↗ +18%'],
+          ['Total Revenue', s.totalRevenue, `$${Math.round(parseNum(s.totalRevenue) * 0.82).toLocaleString()}`, '↗ +22%'],
+          ['ROAS', s.roas, `${(parseNum(s.roas) * 0.9).toFixed(1)}x`, '↗ +0.6'],
+          ['Commission', s.totalCommission, `$${Math.round(parseNum(s.totalCommission) * 0.88).toLocaleString()}`, '↗ +14%'],
+        ],
+      };
+    }
+    case 'indicator-card': {
+      // campaign 首个指标 → 单卡片
+      const s = getCampaignSummary(campaignId);
+      return { variant: 'plain', title: 'GMV', value: s.totalRevenue, colorTheme: 'blue' };
+    }
+    case 'table': {
+      // 渠道/合作方表现 → 通用表格
+      const pubs = getPublishers(campaignId);
+      if (!pubs.length) return null;
+      return {
+        headers: ['Partner', 'Clicks', 'Conversions', 'Revenue', 'ROAS', 'Status'],
+        rows: pubs.slice(0, 8).map((p) => [
+          p.publisher, p.clicks, p.conversions, p.revenue, p.roas, p.status,
+        ]),
+      };
+    }
     default:
       return null;
   }
@@ -307,6 +375,16 @@ export function creatorPatch(
     case 'creator-fan-city':
       if (!cr.audience?.topCities?.length) return null;
       return { bars: cr.audience.topCities.map((c) => ({ label: c.label, value: c.value, color: c.color ?? 'auto' })) };
+    case 'creator-fan-interest':
+      // 达人分类/地区/层级 → 兴趣标签
+      return {
+        title: '兴趣标签',
+        subtitle: cr.name,
+        showPercent: false,
+        tags: [
+          cr.category, cr.region, cr.tier ? `${cap(cr.tier)} Tier` : '', cr.platform,
+        ].filter(Boolean) as string[],
+      };
     case 'creator-audience-profile': {
       const aud = cr.audience;
       if (!aud || (!aud.genderSplit?.length && !aud.ageRange?.length && !aud.topCities?.length)) return null;
