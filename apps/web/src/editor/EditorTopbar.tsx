@@ -4,6 +4,9 @@ import { useEditorStore } from './store';
 import { ExportMenu } from './components/ExportMenu';
 import { ReportSettingsOverlay } from './components/ReportSettingsOverlay';
 import { DataConfigOverlay } from './components/DataConfigOverlay';
+import { CreateProjectDialog } from '@/components/CreateProjectDialog';
+import { projectsApi } from '@/api/projects';
+import { toast } from '@/components/Toast';
 import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 
 /** 顶栏：返回 + 项目名（可编辑）+ meta 标签、撤销/重做、报告设置、预览、导出/分享（M6）。 */
@@ -22,8 +25,14 @@ export function EditorTopbar() {
   const saving = useEditorStore((s) => s.saving);
   const saveError = useEditorStore((s) => s.saveError);
   const save = useEditorStore((s) => s.save);
+  const projectId = useEditorStore((s) => s.projectId);
+  const canvasWidth = useEditorStore((s) => s.canvasWidth);
+  const canvasHeight = useEditorStore((s) => s.canvasHeight);
   const [showSettings, setShowSettings] = useState(false);
   const [showDataConfig, setShowDataConfig] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const hasReportData = useEditorStore((s) => {
     const rd = s.reportData;
     return !!rd.campaign || (rd.creators?.length ?? 0) > 0;
@@ -42,6 +51,29 @@ export function EditorTopbar() {
     }
     navigate('/projects');
   };
+
+  async function handleEdit(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta }) {
+    if (!projectId) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      await projectsApi.update(projectId, values);
+      // 更新 store 中的 name/meta
+      useEditorStore.getState().setProjectName(values.name);
+      useEditorStore.setState({ projectMeta: values.meta });
+      if (values.width !== canvasWidth || values.height !== canvasHeight) {
+        useEditorStore.setState({ canvasWidth: values.width, canvasHeight: values.height });
+      }
+      setShowEdit(false);
+      toast.success('项目信息已更新');
+    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = err as any;
+      setEditError(e?.response?.data?.message ?? '保存失败，请重试');
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
 
   return (
     <header className="flex h-12 items-center justify-between border-b border-border-default bg-surface-primary px-3">
@@ -122,6 +154,13 @@ export function EditorTopbar() {
           数据配置{hasReportData ? ' ●' : ''}
         </button>
         <button
+          onClick={() => { setEditError(null); setShowEdit(true); }}
+          className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+          title="编辑项目信息（名称 / 尺寸 / 场景 / 业务线）"
+        >
+          编辑
+        </button>
+        <button
           onClick={() => setShowSettings(true)}
           className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
           title="全局样式设置（风格 / 布局）"
@@ -140,6 +179,24 @@ export function EditorTopbar() {
       </div>
       {showSettings && <ReportSettingsOverlay onClose={() => setShowSettings(false)} />}
       {showDataConfig && <DataConfigOverlay onClose={() => setShowDataConfig(false)} />}
+      {showEdit && (
+        <CreateProjectDialog
+          open={showEdit}
+          loading={editSubmitting}
+          error={editError}
+          title="编辑项目"
+          submitLabel="保存"
+          lockScenario
+          initial={{
+            name: projectName,
+            width: canvasWidth,
+            height: canvasHeight,
+            meta: meta ?? undefined,
+          }}
+          onCancel={() => !editSubmitting && setShowEdit(false)}
+          onSubmit={handleEdit}
+        />
+      )}
     </header>
   );
 }

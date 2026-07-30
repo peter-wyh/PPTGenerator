@@ -142,6 +142,18 @@ const projectThemeSchema = z
         subtitle: z.string().max(200).optional(),
         logoHeight: z.number().min(8).max(200).optional(),
         logoRadius: z.number().min(0).max(64).optional(),
+        blBadge: z
+          .object({
+            visible: z.boolean().optional(),
+            logo: z.string().max(2048).optional(),
+            width: z.number().min(8).max(500).optional(),
+            height: z.number().min(8).max(500).optional(),
+            right: z.number().min(0).max(2000).optional(),
+            top: z.number().min(0).max(2000).optional(),
+            opacity: z.number().min(0).max(1).optional(),
+            radius: z.number().min(0).max(200).optional(),
+          })
+          .optional(),
       })
       .optional(),
     background: z

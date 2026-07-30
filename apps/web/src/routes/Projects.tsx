@@ -110,8 +110,14 @@ export function Projects() {
         ),
       );
       setEditing(null);
-    } catch {
-      setEditError('保存失败，请重试');
+    } catch (err: unknown) {
+      const msg = err instanceof Error && 'response' in err
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? (err as any)?.response?.data?.error?.issues?.[0]?.message
+          ?? (err as any)?.response?.data?.message
+          ?? '保存失败，请重试'
+        : '保存失败，请重试';
+      setEditError(msg);
     } finally {
       setEditSubmitting(false);
     }

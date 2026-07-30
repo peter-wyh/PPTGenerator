@@ -27,6 +27,14 @@ const PRESETS: SizePreset[] = [
   { id: '1080x1920', label: '1080 × 1920', hint: '竖版', w: 1080, h: 1920 },
 ];
 
+/** 单页面模式预设宽度（高度由用户自定义）。 */
+const SINGLE_WIDTHS: { label: string; w: number }[] = [
+  { label: '800px · 海报', w: 800 },
+  { label: '1080px · 竖版海报', w: 1080 },
+  { label: '1280px · 标准横版', w: 1280 },
+  { label: '1920px · 宽屏', w: 1920 },
+];
+
 const selectCls =
   'w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary';
 
@@ -89,6 +97,9 @@ export function CreateProjectDialog({
   const [custom, setCustom] = useState(false);
   const [width, setWidth] = useState(PRESETS[0].w);
   const [height, setHeight] = useState(PRESETS[0].h);
+  // 单页面模式：选择宽度 + 自定义高度
+  const [singleWidth, setSingleWidth] = useState(SINGLE_WIDTHS[2].w); // 默认 1280
+  const isSingle = styleType === 'single';
 
   const isCampaign = isCampaignScenario(scenario as Scenario);
   const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
@@ -123,6 +134,7 @@ export function CreateProjectDialog({
     }
     setWidth(initW);
     setHeight(initH);
+    setSingleWidth(initW >= 1000 ? initW : SINGLE_WIDTHS[2].w);
   }, [open, initial]);
 
   // Campaign 现为可选绑定：进入 campaign 类型场景时不再自动拉取上游 campaign 列表。
@@ -185,14 +197,21 @@ export function CreateProjectDialog({
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed || !canSubmit) return;
-    const w = Math.max(1, Math.min(8192, Math.round(Number(width) || 0)));
-    const h = Math.max(1, Math.min(8192, Math.round(Number(height) || 0)));
+    const finalWidth = isSingle ? singleWidth : Math.max(1, Math.min(8192, Math.round(Number(width) || 0)));
+    const finalHeight = Math.max(1, Math.min(8192, Math.round(Number(height) || 0)));
+    const w = finalWidth;
+    const h = finalHeight;
 
     // campaign-report 的模版类型取值与 scenarioSub 同集合;报告类型下拉双写两者。
     // reportSub 兜底取 scenarioSub(默认 'weekly'),保证即使用户没动报告类型也带 templateType。
     const reportSub: ScenarioSub | undefined =
       scenario === 'campaign-report' ? ((templateType || scenarioSub) as ScenarioSub) : undefined;
+    // 编辑模式：保留现有 theme/reportData（编辑表单不应覆盖这些字段）。
+    const preservedFields = initial?.meta
+      ? { theme: initial.meta.theme, reportData: initial.meta.reportData }
+      : {};
     const meta: ProjectMeta = {
+      ...preservedFields,
       creator: creator || undefined,
       businessLine: businessLine || undefined,
       scenario: (scenario || undefined) as Scenario | undefined,
@@ -436,44 +455,78 @@ export function CreateProjectDialog({
           {styleType !== 'ai-html' && (
           <div>
             <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">画布尺寸</span>
-            <div className="grid grid-cols-2 gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  type="button"
-                  key={p.id}
-                  onClick={() => pickPreset(p)}
-                  className={`rounded-lg border px-3 py-2 text-left transition ${
-                    !custom && presetId === p.id
-                      ? 'border-accent-primary bg-accent-primary/5'
-                      : 'border-border-default hover:bg-surface-hover'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-foreground-primary">{p.label}</div>
-                  <div className="text-[11px] text-foreground-muted">{p.hint}</div>
-                </button>
-              ))}
-            </div>
-            <label className="mt-2 flex items-center gap-2 text-xs text-foreground-secondary">
-              <input
-                type="checkbox"
-                checked={custom}
-                onChange={(e) => {
-                  setCustom(e.target.checked);
-                  if (!e.target.checked) {
-                    const p = PRESETS.find((x) => x.id === presetId) ?? PRESETS[0];
-                    setWidth(p.w);
-                    setHeight(p.h);
-                  }
-                }}
-              />
-              自定义尺寸
-            </label>
-            {custom && (
-              <div className="mt-2 flex items-center gap-2">
-                <Input name="width" type="number" label="宽" value={width} onChange={(e) => setWidth(Number(e.target.value))} />
-                <span className="mt-5 text-foreground-muted">×</span>
-                <Input name="height" type="number" label="高" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
+
+            {/* 单页面模式：选择宽度 + 自定义高度 */}
+            {isSingle ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-[11px] text-foreground-muted">宽度</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {SINGLE_WIDTHS.map((s) => (
+                      <button
+                        type="button"
+                        key={s.w}
+                        onClick={() => setSingleWidth(s.w)}
+                        className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
+                          singleWidth === s.w
+                            ? 'border-accent-primary bg-accent-primary/5 text-foreground-primary'
+                            : 'border-border-default hover:bg-surface-hover text-foreground-secondary'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] text-foreground-muted">高度（自定义）</label>
+                  <Input name="height" type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
+                </div>
+                <p className="text-[11px] text-foreground-muted">当前尺寸：{singleWidth} × {height} px</p>
               </div>
+            ) : (
+              <>
+                {/* PPT 多页模式：预设 + 自定义 */}
+                <div className="grid grid-cols-2 gap-2">
+                  {PRESETS.map((p) => (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => pickPreset(p)}
+                      className={`rounded-lg border px-3 py-2 text-left transition ${
+                        !custom && presetId === p.id
+                          ? 'border-accent-primary bg-accent-primary/5'
+                          : 'border-border-default hover:bg-surface-hover'
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-foreground-primary">{p.label}</div>
+                      <div className="text-[11px] text-foreground-muted">{p.hint}</div>
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-2 flex items-center gap-2 text-xs text-foreground-secondary">
+                  <input
+                    type="checkbox"
+                    checked={custom}
+                    onChange={(e) => {
+                      setCustom(e.target.checked);
+                      if (!e.target.checked) {
+                        const p = PRESETS.find((x) => x.id === presetId) ?? PRESETS[0];
+                        setWidth(p.w);
+                        setHeight(p.h);
+                      }
+                    }}
+                  />
+                  自定义尺寸
+                </label>
+                {custom && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input name="width" type="number" label="宽" value={width} onChange={(e) => setWidth(Number(e.target.value))} />
+                    <span className="mt-5 text-foreground-muted">×</span>
+                    <Input name="height" type="number" label="高" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
+                  </div>
+                )}
+              </>
             )}
           </div>
           )}
