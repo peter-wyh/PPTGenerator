@@ -26,6 +26,11 @@ export interface Template {
    * 缺省 = 所有场景可见（向后兼容）；仅当数组包含当前项目场景时，模版在选择器中可见。
    */
   scenario?: Scenario[];
+  /**
+   * 推荐画板高度。单页超长模板（如 H1 复盘看板）内容超出默认 720px，
+   * 应用模板时自动将项目画板高度调整为该值，使所有组件可见。
+   */
+  canvasHeight?: number;
 }
 
 /** Get a page template by id. */
@@ -611,6 +616,7 @@ export const TEMPLATES: Template[] = [
     description: '结算收入/毛利 + 佣金预估 + 季度对比 + 月度走势 + 运营动作（深色金融风）',
     pageType: 'report-single-page-settlement',
     scenario: ['campaign-report'],
+    canvasHeight: 900,
     components: () => {
       const comps: EditorComponent[] = [];
 
@@ -707,6 +713,22 @@ export const TEMPLATES: Template[] = [
       ]);
       comps.push(table);
 
+      // ── Row 5: 业务动作 KPI（FT 业务线运营触达）──
+      const opsKpi = t('kpi-board', 80, 706, 1120, 80);
+      (opsKpi.data as { variant: string }).variant = 'compact';
+      (opsKpi.data as { headers: string[] }).headers = ['指标', '数值'];
+      (opsKpi.data as { rows: string[][] }).rows = [
+        ['电话会议', '36 次'],
+        ['邮件触达', '8,934 封'],
+        ['新上线商户', '672 家'],
+        ['联盟活动', '24 场'],
+      ];
+      comps.push(opsKpi);
+
+      // ── Row 6: 运营洞察文字 ──
+      const opsNote = textAt(80, 802, 1120, 70, '⚠ 运营动作复盘：电话次数和邮件数量不足，老员工发力不够——触达动作与商户增长规模不匹配（5–6 月新增商户提速），需关注存量团队的主动触达节奏。', 14);
+      comps.push(opsNote);
+
       return comps;
     },
   },
@@ -718,6 +740,7 @@ export const TEMPLATES: Template[] = [
     description: '5 KPI + 趋势图 + 发布者表 + 品类/商品/市场洞察 + 行动建议（粉品牌风）',
     pageType: 'report-single-page-digchic',
     scenario: ['campaign-report'],
+    canvasHeight: 900,
     components: () => {
       const comps: EditorComponent[] = [];
 
@@ -833,6 +856,17 @@ export const TEMPLATES: Template[] = [
         { code: 'UK', name: 'United Kingdom', value: 105163, display: '$105,163', share: '12%' },
       ];
       comps.push(geo);
+
+      // ── Row 5: Top Promotion Offer 表（满宽）──
+      const promoTable = tableAt(80, 720, 1120, 80, ['Offer Name', 'Type', 'Revenue Driven', 'Usage Count'], [
+        ['Creator Exclusive 15% OFF', 'Code', '$340,500', '1,802'],
+        ['Buy 2 Serum Get 1 Free', 'Bundle', '$210,000', '740'],
+      ]);
+      comps.push(promoTable);
+
+      // ── Row 6: Actionable Insights 文字 ──
+      const insights = textAt(80, 820, 1120, 60, 'Actionable Insights: 1) Scale top creators (Mia Chen, Nora Kim)  2) Optimize low-CVR placements (YouTube, Email)  3) Increase investment in Story Swipe-up & Bio Link  4) Scale Creator Exclusive 15% OFF code', 14);
+      comps.push(insights);
 
       return comps;
     },

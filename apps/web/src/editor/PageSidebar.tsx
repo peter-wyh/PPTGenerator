@@ -99,6 +99,13 @@ export function PageSidebar() {
       // 页面名仍取通用模板的描述性名称（如「月报 · 达人合作详情」），仅组件布局/变体走业务线。
       const bl = useEditorStore.getState().projectMeta?.businessLine;
       const resolved = resolveTemplateForBusinessLine(tpl, bl);
+      // 单页超长模板：自动调整画板高度以容纳所有组件
+      if (resolved.canvasHeight) {
+        const cur = useEditorStore.getState().canvasHeight;
+        if (resolved.canvasHeight > cur) {
+          useEditorStore.setState({ canvasHeight: resolved.canvasHeight });
+        }
+      }
       useEditorStore
         .getState()
         .addPageWithComponents(

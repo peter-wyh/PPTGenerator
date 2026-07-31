@@ -153,26 +153,29 @@ export function Canvas() {
     };
   }, []);
 
-  /* ----------------------------- wheel 缩放 ---------------------------- */
+  /* ----------------------------- wheel 缩放 + 滚动 ---------------------------- */
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
+        // Ctrl/Cmd + 滚轮 → 缩放
         e.preventDefault();
         useEditorStore.getState().zoomByDelta(e.deltaY);
       }
+      // 不拦截普通滚轮 → 让外层容器自然滚动（画板高度超出视口时上下浏览）
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  /* ----------------------- 首次挂载：fit 到视口 ------------------------ */
+  /* ----------------------- 首次挂载：fit 到视口（宽度优先） ------------------------ */
   useEffect(() => {
     const area = viewportRef.current?.parentElement;
     if (!area) return;
-    const { canvasWidth: cw, canvasHeight: ch } = useEditorStore.getState();
-    const fit = Math.min((area.clientWidth - 48) / cw, (area.clientHeight - 48) / ch, 1);
+    const { canvasWidth: cw } = useEditorStore.getState();
+    // 宽度优先 fit：保证宽度刚好放入视口（高度溢出则通过滚动查看）
+    const fit = Math.min((area.clientWidth - 72) / cw, 1);
     useEditorStore.getState().setZoom(Math.max(0.1, fit));
   }, []);
 
@@ -286,8 +289,14 @@ export function Canvas() {
 
   return (
     <div
-      className="relative flex flex-1 items-center justify-center overflow-hidden bg-surface-subtle"
-      style={{ cursor: isPanning ? 'grab' : 'default' }}
+      className="relative flex flex-1 overflow-auto bg-surface-subtle"
+      style={{
+        cursor: isPanning ? 'grab' : 'default',
+        // 画板高度 > 视口高度 → 顶部对齐允许滚动；否则居中
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: '24px',
+      }}
     >
       <div
         ref={viewportRef}
