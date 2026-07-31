@@ -819,7 +819,9 @@ export function ReportWorkMetricsImporter({ comp }: { comp: EditorComponent }) {
     <DeliverablePicker
       pickLabel="导入效果数据"
       onPick={(d) => {
-        updateComponentData(comp.id, { metrics: d.metrics ?? [], workName: d.contentType });
+        // 封面优先取第一张作品截图
+        const cover = d.screenshots?.[0]?.src ?? '';
+        updateComponentData(comp.id, { metrics: d.metrics ?? [], workName: d.contentType, cover });
         commit();
       }}
     />

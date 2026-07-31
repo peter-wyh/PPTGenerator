@@ -346,6 +346,7 @@ export function creatorPatch(
   compType: string,
   cr: ReportCreator,
   _campaignId: string,
+  allCreators?: ReportCreator[],
 ): Record<string, unknown> | null {
   switch (compType) {
     case 'creator-avatar-card':
@@ -432,18 +433,19 @@ export function creatorPatch(
       };
     }
     case 'creator-list': {
-      // 用当前 page-bound creator 填充达人列表
+      // 默认填充项目下所有达人（无达人时回退到 page-bound creator）
+      const list = (allCreators && allCreators.length > 0) ? allCreators : [cr];
       return {
         variant: 'table',
         headers: ['Avatar', 'Name', 'Platform', 'Followers', 'Engagement', 'Category'],
-        rows: [[
-          cr.avatar ?? '',
-          cr.name,
-          cr.platform ?? '',
-          cr.followers ?? '',
-          cr.engagement ?? '',
-          cr.category ?? '',
-        ]],
+        rows: list.map((c) => [
+          c.avatar ?? '',
+          c.name,
+          c.platform ?? '',
+          c.followers ?? '',
+          c.engagement ?? '',
+          c.category ?? '',
+        ]),
       };
     }
     case 'comment-wordcloud': {
@@ -550,9 +552,10 @@ export function applyPageBinding(
 
     // creator / campaign 型：需要对应的 page 级绑定
     if (!creator && !campaign) return comp;
+    const allCr = allReportCreators(reportData);
     const patch =
       kind === 'creator' && creator
-        ? creatorPatch(comp.type, creator, page.campaignId ?? '')
+        ? creatorPatch(comp.type, creator, page.campaignId ?? '', allCr)
         : kind === 'campaign' && campaign
           ? campaignPatch(comp.type, campaign)
           : null;
