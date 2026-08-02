@@ -1080,7 +1080,7 @@ function DeliverableCard({
 
         const setDaily = (d: typeof daily) => patch({ daily: d });
         const setCpsDaily = (c: typeof cpsDaily) =>
-          patch({ cps: { ...deliverable.cps!, daily: c } });
+          patch({ cps: { ...(deliverable.cps ?? { clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', spend: '$0', roas: '0', epc: '$0' }), daily: c } });
 
         // 按日期 join
         const byDate = new Map<string, { post?: typeof daily[number]; cps?: typeof cpsDaily[number] }>();
@@ -1103,14 +1103,15 @@ function DeliverableCard({
           const today = new Date().toISOString().slice(0, 10);
           setDaily([...daily, { date: today, impressions: '0', likes: '0', comments: '0', shares: '0', saves: '0' }]);
         }
-        /** 编辑模式：添加一天 cps daily */
+        /** 编辑模式：添加一天 cps daily（确保 cps 对象存在且 daily 列表完整） */
         function addCpsDay() {
-          if (!deliverable.cps) {
-            patch({ cps: { clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', spend: '$0', roas: '0', epc: '$0', daily: [] } });
-          }
           const today = new Date().toISOString().slice(0, 10);
-          const arr = deliverable.cps?.daily ?? [];
-          setCpsDaily([...arr, { date: today, clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', roas: '0', epc: '$0' }]);
+          const newRow = { date: today, clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', roas: '0', epc: '$0' };
+          if (!deliverable.cps) {
+            patch({ cps: { clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', spend: '$0', roas: '0', epc: '$0', daily: [newRow] } });
+          } else {
+            setCpsDaily([...(deliverable.cps.daily ?? []), newRow]);
+          }
         }
 
         function updPost(ri: number, key: keyof typeof daily[number], val: string) {

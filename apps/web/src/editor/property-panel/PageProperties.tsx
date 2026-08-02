@@ -309,6 +309,12 @@ const PAGE_TYPE_GROUPS: { label: string; options: { value: PageType; label: stri
       { value: 'report-wrapup-review', label: '总结 · 业绩复盘', icon: '🔎', desc: 'KPI + 周期对比 + 策略' },
       { value: 'content-analysis', label: '内容分析', icon: '📊', desc: '内容类型分布 + 明细' },
       { value: 'funnel', label: '增长漏斗', icon: '🔻', desc: '漏斗阶段柱状图' },
+      { value: 'report-single-page', label: '单页 · 综合报告', icon: '📄', desc: '单页长图：KPI + 图表 + 表格' },
+      { value: 'report-single-page-classic', label: '单页 · 经典版', icon: '📄', desc: '经典单页报告布局' },
+      { value: 'report-single-page-dashboard', label: '单页 · 仪表盘', icon: '📊', desc: '仪表盘风格单页报告' },
+      { value: 'report-single-page-narrative', label: '单页 · 叙事版', icon: '📄', desc: '叙事流单页报告' },
+      { value: 'report-single-page-settlement', label: '单页 · H1 复盘看板', icon: '💹', desc: '结算收入/毛利 + 佣金预估 + 月度走势（深色金融风）' },
+      { value: 'report-single-page-digchic', label: '单页 · DIGCHIC 品牌报告', icon: '🌸', desc: '5 KPI + 趋势图 + 品类/商品/市场洞察（粉品牌风）' },
     ],
   },
   {

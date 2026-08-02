@@ -637,7 +637,7 @@ export const TEMPLATES: Template[] = [
       (kpi.data as { rows: string[][] }).rows = [
         ['总开票收入', '¥42,323,821', '¥47,510,000'],
         ['结算毛利', '¥11,670,096', '—'],
-        ['毛利率', '28.0%', '—'],
+        ['毛利率', '27.6%', '—'],
         ['收入 YOY', '+7%', '—'],
         ['目标完成率', '89.1%', '89%'],
         ['正式员工', '5 人', '—'],
@@ -673,10 +673,10 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(marginChart);
 
-      // ── Row 3: 预估佣金对比柱状图（左 540）+ 上线/出单商户漏斗对比柱状图（右 540）──
+      // ── Row 3: 预估佣金月度走势柱状图（左 540）+ 上线/出单商户漏斗对比柱状图（右 540）──
       const commChart = t('bar-chart', 80, 434, 540, 150);
       const cd = commChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
-      cd.title = '2026 预估佣金 vs 2025 (¥)';
+      cd.title = '2026 预估佣金月度走势 (¥)';
       cd.variant = 'vertical';
       cd.bars = [
         { label: '1月', value: 11232845, color: '#d8a657' },
@@ -690,15 +690,21 @@ export const TEMPLATES: Template[] = [
 
       const plansChart = t('bar-chart', 660, 434, 540, 150);
       const pd = plansChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
-      pd.title = '上线计划数（红）/ 出单计划数（金）';
+      pd.title = '上线计划数 vs 出单计划数';
       pd.variant = 'vertical';
       pd.bars = [
         { label: '1月', value: 87, color: '#e2503f' },
+        { label: '1月', value: 52, color: '#d8a657' },
         { label: '2月', value: 42, color: '#e2503f' },
+        { label: '2月', value: 28, color: '#d8a657' },
         { label: '3月', value: 74, color: '#e2503f' },
+        { label: '3月', value: 45, color: '#d8a657' },
         { label: '4月', value: 87, color: '#e2503f' },
+        { label: '4月', value: 61, color: '#d8a657' },
         { label: '5月', value: 161, color: '#e2503f' },
+        { label: '5月', value: 98, color: '#d8a657' },
         { label: '6月', value: 221, color: '#e2503f' },
+        { label: '6月', value: 134, color: '#d8a657' },
       ];
       comps.push(plansChart);
 

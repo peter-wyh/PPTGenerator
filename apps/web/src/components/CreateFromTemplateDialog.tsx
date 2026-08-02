@@ -129,43 +129,68 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
           )}
         </div>
 
-        <div className="mt-4 min-h-[160px] flex-1 overflow-auto rounded-lg border border-border-default">
+        <div className="mt-4 min-h-[200px] flex-1 overflow-auto">
           {fetching ? (
             <p className="p-4 text-sm text-foreground-muted">加载模板…</p>
           ) : templates.length === 0 ? (
             <p className="p-4 text-sm text-foreground-muted">暂无已发布模板。</p>
           ) : (
-            <ul className="divide-y divide-border-subtle">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {templates.map((t) => {
                 const active = t.id === selectedId;
+                const bl = t.meta?.businessLine ?? '';
+                const sc = t.meta?.scenario ? SCENARIO_LABELS[t.meta.scenario] : '';
                 return (
-                  <li key={t.id}>
-                    <button
-                      onClick={() => setSelectedId(t.id)}
-                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${
-                        active ? 'bg-accent-primary/10' : 'hover:bg-surface-hover'
-                      }`}
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedId(t.id)}
+                    className={`flex flex-col overflow-hidden rounded-lg border text-left transition ${
+                      active
+                        ? 'border-accent-primary ring-2 ring-accent-primary/20'
+                        : 'border-border-default hover:border-border-hover hover:bg-surface-hover'
+                    }`}
+                  >
+                    {/* 缩略图占位区：用业务线/场景色做视觉区分 */}
+                    <div
+                      className="flex aspect-video items-center justify-center"
+                      style={{
+                        background: active
+                          ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary, #6366f1))'
+                          : 'linear-gradient(135deg, #f0f0f0, #e8e8e8)',
+                      }}
                     >
-                      <span>
-                        <span className="font-medium text-foreground-primary">{t.name}</span>
-                        <span className="ml-2 text-xs text-foreground-muted">
-                          {t.meta?.businessLine ? `${t.meta.businessLine} · ` : ''}
-                          {t.meta?.scenario ? SCENARIO_LABELS[t.meta.scenario] : ''}
-                          {t.meta?.businessLine || t.meta?.scenario ? ' · ' : ''}
-                          {t.meta?.isDefault && (
-                            <span className="ml-1 inline-block rounded-full bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
-                              默认
-                            </span>
-                          )}
-                          {t.width}×{t.height} · {t.pageCount} 页
-                        </span>
+                      <span
+                        className="text-2xl font-bold"
+                        style={{ color: active ? '#fff' : '#bbb' }}
+                      >
+                        {bl.slice(0, 2).toUpperCase() || 'TPL'}
                       </span>
-                      {active && <span className="text-xs font-medium text-accent-primary">已选</span>}
-                    </button>
-                  </li>
+                    </div>
+                    {/* 信息区：只保留名称 + 业务线/场景标签 */}
+                    <div className="flex flex-1 flex-col gap-1 p-2.5">
+                      <span className="line-clamp-1 text-sm font-medium text-foreground-primary">{t.name}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {bl && (
+                          <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
+                            {bl}
+                          </span>
+                        )}
+                        {sc && (
+                          <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
+                            {sc}
+                          </span>
+                        )}
+                        {t.meta?.isDefault && (
+                          <span className="rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
+                            默认
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
                 );
               })}
-            </ul>
+            </div>
           )}
         </div>
 

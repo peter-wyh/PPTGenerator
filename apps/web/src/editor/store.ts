@@ -1185,6 +1185,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         }
         const patchCampaign = pageCategory(pageType) === 'campaign-report' || pageCategory(pageType) === 'creator-collab';
         const patchCreator = pageCategory(pageType) === 'creator-case' || pageCategory(pageType) === 'creator-collab';
+        let canvasHeightOverride: number | undefined;
         const mapped = s.pages.map((p) => {
           if (p.id !== pageId) return p;
           const next: Page = { ...p, pageType };
@@ -1202,6 +1203,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
             if (tpl) {
               const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
               next.components = comps;
+              // 单页超长模板：自动调整画板高度以容纳所有组件
+              if (tpl.canvasHeight && tpl.canvasHeight > s.canvasHeight) {
+                canvasHeightOverride = tpl.canvasHeight;
+              }
               // 如果模板有 pageTitleIndex，设置标题组件
               if (tpl.pageTitleIndex != null && comps[tpl.pageTitleIndex]) {
                 next.titleComponentId = comps[tpl.pageTitleIndex].id;
@@ -1218,7 +1223,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
         const patched = target
           ? applyPageBindingReducer(mapped, pageId, s.reportData, new Set(target.components.map((c) => c.id)), s.projectMeta)
           : mapped;
-        return { pages: patched };
+        return {
+          pages: patched,
+          ...(canvasHeightOverride ? { canvasHeight: canvasHeightOverride } : {}),
+        };
       });
     },
 

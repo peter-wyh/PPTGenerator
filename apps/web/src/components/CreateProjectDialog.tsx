@@ -12,28 +12,30 @@ import {
 import { listCampaigns } from '@/api/campaigns';
 import { lookupApi } from '@/api/lookup';
 
-interface SizePreset {
+/** PPT 多页固定 16:9（1920×1080），不支持自定义。 */
+const PPT_SIZE = { w: 1920, h: 1080 };
+
+interface SinglePreset {
   id: string;
   label: string;
-  hint: string;
+  ratio: string;
   w: number;
   h: number;
 }
 
-const PRESETS: SizePreset[] = [
-  { id: '1280x720', label: '1280 × 720', hint: '横版 · 投放报告', w: 1280, h: 720 },
-  { id: '1920x1080', label: '1920 × 1080', hint: '宽屏', w: 1920, h: 1080 },
-  { id: '1024x768', label: '1024 × 768', hint: '标准 4:3', w: 1024, h: 768 },
-  { id: '1080x1920', label: '1080 × 1920', hint: '竖版', w: 1080, h: 1920 },
+/** 单页面预设尺寸（参考 Canva 逻辑），第一个为自定义。 */
+const SINGLE_PRESETS: SinglePreset[] = [
+  { id: 'custom', label: '自定义', ratio: '—', w: 0, h: 0 },
+  { id: 'xhs', label: '小红书竖图', ratio: '3:4', w: 1242, h: 1656 },
+  { id: 'ig-story', label: 'Instagram Story', ratio: '9:16', w: 1080, h: 1920 },
+  { id: 'ig-square', label: 'Instagram 正方形', ratio: '1:1', w: 1080, h: 1080 },
+  { id: 'wechat-header', label: '公众号头图', ratio: '2.35:1', w: 900, h: 383 },
+  { id: 'a4-landscape', label: '报告 A4 横版', ratio: '√2:1', w: 1754, h: 1240 },
+  { id: 'a4-portrait', label: '报告 A4 竖版', ratio: '1:√2', w: 1240, h: 1754 },
 ];
 
-/** 单页面模式预设宽度（高度由用户自定义）。 */
-const SINGLE_WIDTHS: { label: string; w: number }[] = [
-  { label: '800px · 海报', w: 800 },
-  { label: '1080px · 竖版海报', w: 1080 },
-  { label: '1280px · 标准横版', w: 1280 },
-  { label: '1920px · 宽屏', w: 1920 },
-];
+/** 创建人建议列表（可自由输入）。 */
+const CREATOR_SUGGESTIONS = ['alex', 'stella', 'reese', 'stacey'];
 
 const selectCls =
   'w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary';
@@ -92,13 +94,10 @@ export function CreateProjectDialog({
   const [blOptions, setBlOptions] = useState<{ code: string; name: string }[]>(BUSINESS_LINES.map((b) => ({ code: b, name: b })));
   const [advOptions, setAdvOptions] = useState<{ name: string }[]>(ADVERTISERS.map((a) => ({ name: a })));
 
-  // 画布尺寸
-  const [presetId, setPresetId] = useState(PRESETS[0].id);
-  const [custom, setCustom] = useState(false);
-  const [width, setWidth] = useState(PRESETS[0].w);
-  const [height, setHeight] = useState(PRESETS[0].h);
-  // 单页面模式：选择宽度 + 自定义高度
-  const [singleWidth, setSingleWidth] = useState(SINGLE_WIDTHS[2].w); // 默认 1280
+  // 单页面尺寸
+  const [singlePresetId, setSinglePresetId] = useState(SINGLE_PRESETS[1].id); // 默认小红书竖图
+  const [singleW, setSingleW] = useState(SINGLE_PRESETS[1].w);
+  const [singleH, setSingleH] = useState(SINGLE_PRESETS[1].h);
   const isSingle = styleType === 'single';
 
   const isCampaign = isCampaignScenario(scenario as Scenario);
@@ -111,9 +110,8 @@ export function CreateProjectDialog({
   useEffect(() => {
     if (!open) return;
     const m = initial?.meta;
-    const initW = initial?.width ?? PRESETS[0].w;
-    const initH = initial?.height ?? PRESETS[0].h;
-    const matched = PRESETS.find((p) => p.w === initW && p.h === initH);
+    const initW = initial?.width ?? PPT_SIZE.w;
+    const initH = initial?.height ?? PPT_SIZE.h;
 
     setName(initial?.name ?? '');
     setScenario((m?.scenario ?? '') as Scenario | '');
@@ -125,32 +123,21 @@ export function CreateProjectDialog({
     setBusinessLine(m?.businessLine ?? '');
     setTemplateType(m?.templateType ?? (m?.scenario === 'campaign-report' ? m?.scenarioSub ?? '' : ''));
     setMkAdvertiser(m?.advertiser ?? '');
-    if (matched) {
-      setPresetId(matched.id);
-      setCustom(false);
-    } else {
-      setPresetId(PRESETS[0].id);
-      setCustom(true);
+
+    // 单页模式：尝试匹配已有预设，否则设为自定义
+    if ((m?.styleType as string) === 'single') {
+      const matched = SINGLE_PRESETS.find((p) => p.w === initW && p.h === initH);
+      if (matched) {
+        setSinglePresetId(matched.id);
+      } else {
+        setSinglePresetId('custom');
+      }
+      setSingleW(initW);
+      setSingleH(initH);
     }
-    setWidth(initW);
-    setHeight(initH);
-    setSingleWidth(initW >= 1000 ? initW : SINGLE_WIDTHS[2].w);
   }, [open, initial]);
 
-  // Campaign 现为可选绑定：进入 campaign 类型场景时不再自动拉取上游 campaign 列表。
-  // 下拉框仍允许用户主动选择（懒加载由"无选项但点击"或表单提交时按需触发），
-  // 这里注释掉自动 listCampaigns 以避免在用户不需要 Campaign 时强依赖上游接口。
-  // useEffect(() => {
-  //   if (open && isCampaign && campaigns.length === 0 && !campaignsLoading) {
-  //     setCampaignsLoading(true);
-  //     listCampaigns()
-  //       .then(setCampaigns)
-  //       .finally(() => setCampaignsLoading(false));
-  //   }
-  // }, [open, isCampaign, campaigns.length, campaignsLoading]);
-
-  // 改为：进入 campaign 场景时主动触发一次懒加载（用户可见但非阻塞），失败不报错。
-  // 这样既保留 Campaign 下拉体验，又不强制要求用户绑定。
+  // Campaign 现为可选绑定：进入 campaign 场景时主动触发一次懒加载（失败不报错）。
   useEffect(() => {
     if (open && isCampaign && campaigns.length === 0 && !campaignsLoading) {
       setCampaignsLoading(true);
@@ -182,11 +169,12 @@ export function CreateProjectDialog({
 
   if (!open) return null;
 
-  function pickPreset(p: SizePreset) {
-    setPresetId(p.id);
-    setCustom(false);
-    setWidth(p.w);
-    setHeight(p.h);
+  function pickSinglePreset(p: SinglePreset) {
+    setSinglePresetId(p.id);
+    if (p.id !== 'custom') {
+      setSingleW(p.w);
+      setSingleH(p.h);
+    }
   }
 
   // Campaign 现为可选绑定：不再要求 campaign 场景必须选择 Campaign。
@@ -197,17 +185,15 @@ export function CreateProjectDialog({
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed || !canSubmit) return;
-    const finalWidth = isSingle ? singleWidth : Math.max(1, Math.min(8192, Math.round(Number(width) || 0)));
-    const finalHeight = Math.max(1, Math.min(8192, Math.round(Number(height) || 0)));
-    const w = finalWidth;
-    const h = finalHeight;
+
+    // PPT 固定 1920×1080；单页面用预设或自定义
+    const w = isSingle ? Math.max(200, Math.min(5000, Math.round(singleW))) : PPT_SIZE.w;
+    const h = isSingle ? Math.max(200, Math.min(5000, Math.round(singleH))) : PPT_SIZE.h;
 
     // campaign-report 的模版类型取值与 scenarioSub 同集合;报告类型下拉双写两者。
-    // reportSub 兜底取 scenarioSub(默认 'weekly'),保证即使用户没动报告类型也带 templateType。
     const reportSub: ScenarioSub | undefined =
       scenario === 'campaign-report' ? ((templateType || scenarioSub) as ScenarioSub) : undefined;
-    // 编辑模式：保留现有 meta 的所有字段（theme/reportData/campaignId/campaignInfo/advertiser 等），
-    // 仅覆盖对话框管理的字段，避免重建 meta 时丢失已有数据导致保存失败。
+    // 编辑模式：保留现有 meta 的所有字段，仅覆盖对话框管理的字段。
     const preservedFields = initial?.meta ? { ...initial.meta } : {};
     const meta: ProjectMeta = {
       ...preservedFields,
@@ -220,7 +206,6 @@ export function CreateProjectDialog({
     };
 
     // campaign-report 场景：仅在用户确实选择了 Campaign 时覆盖 campaignId 等字段。
-    // 否则保留 preservedFields 中已有的 campaignId/campaignInfo（编辑模式不应丢失已有数据）。
     if (isCampaignScenario(scenario as Scenario) && selectedCampaign) {
       meta.campaignId = selectedCampaign.id;
       meta.advertiser = selectedCampaign.advertiser;
@@ -365,7 +350,6 @@ export function CreateProjectDialog({
                   onChange={(e) => {
                     const id = e.target.value;
                     setCampaignId(id);
-                    // 选 campaign 时回填业务线(用户可再改);edit 模式不触发,保留存量值。
                     const c = campaigns.find((x) => x.id === id);
                     if (c) setBusinessLine(c.businessLine);
                   }}
@@ -398,7 +382,7 @@ export function CreateProjectDialog({
                 </div>
               )}
 
-              {/* campaign 报告：报告类型(与模版类型同源,双写 scenarioSub + templateType) */}
+              {/* campaign 报告：报告类型 */}
               {scenario === 'campaign-report' && (
                 <label className="block text-sm text-foreground-secondary">
                   <span className="mb-1 block">报告类型</span>
@@ -422,7 +406,7 @@ export function CreateProjectDialog({
             </div>
           )}
 
-          {/* media-kit:广告主(选填);业务线已在上层必填 */}
+          {/* media-kit:广告主(选填) */}
           {scenario === 'media-kit' && (
             <label className="block text-sm text-foreground-secondary">
               <span className="mb-1 block">广告主</span>
@@ -437,95 +421,64 @@ export function CreateProjectDialog({
             </label>
           )}
 
-          {/* 创建人（通用） */}
-          <label className="block text-sm text-foreground-secondary">
-            <span className="mb-1 block">创建人</span>
-            <select className={selectCls} value={creator} onChange={(e) => setCreator(e.target.value)}>
-              <option value="">（选填）</option>
-              {['alex', 'stella', 'reese', 'stacey'].map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+          {/* 创建人（通用，可自由输入，提供常用建议） */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-foreground-secondary">创建人</label>
+            <input
+              className={selectCls}
+              list="creator-suggestions"
+              value={creator}
+              onChange={(e) => setCreator(e.target.value)}
+              placeholder="输入创建人姓名"
+            />
+            <datalist id="creator-suggestions">
+              {CREATOR_SUGGESTIONS.map((c) => (
+                <option key={c} value={c} />
               ))}
-            </select>
-          </label>
+            </datalist>
+          </div>
 
           {/* 画布尺寸（AI HTML 类型不需要设定尺寸） */}
           {styleType !== 'ai-html' && (
           <div>
             <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">画布尺寸</span>
 
-            {/* 单页面模式：选择宽度 + 自定义高度 */}
             {isSingle ? (
+              /* 单页面模式：预设卡片 + 自定义宽高 */
               <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-[11px] text-foreground-muted">宽度</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {SINGLE_WIDTHS.map((s) => (
-                      <button
-                        type="button"
-                        key={s.w}
-                        onClick={() => setSingleWidth(s.w)}
-                        className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          singleWidth === s.w
-                            ? 'border-accent-primary bg-accent-primary/5 text-foreground-primary'
-                            : 'border-border-default hover:bg-surface-hover text-foreground-secondary'
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] text-foreground-muted">高度（自定义）</label>
-                  <Input name="height" type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
-                </div>
-                <p className="text-[11px] text-foreground-muted">当前尺寸：{singleWidth} × {height} px</p>
-              </div>
-            ) : (
-              <>
-                {/* PPT 多页模式：预设 + 自定义 */}
-                <div className="grid grid-cols-2 gap-2">
-                  {PRESETS.map((p) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {SINGLE_PRESETS.map((p) => (
                     <button
                       type="button"
                       key={p.id}
-                      onClick={() => pickPreset(p)}
+                      onClick={() => pickSinglePreset(p)}
                       className={`rounded-lg border px-3 py-2 text-left transition ${
-                        !custom && presetId === p.id
-                          ? 'border-accent-primary bg-accent-primary/5'
-                          : 'border-border-default hover:bg-surface-hover'
+                        singlePresetId === p.id
+                          ? 'border-accent-primary bg-accent-primary/5 text-foreground-primary'
+                          : 'border-border-default hover:bg-surface-hover text-foreground-secondary'
                       }`}
                     >
-                      <div className="text-sm font-medium text-foreground-primary">{p.label}</div>
-                      <div className="text-[11px] text-foreground-muted">{p.hint}</div>
+                      <div className="text-sm font-medium">{p.label}</div>
+                      {p.id !== 'custom' && (
+                        <div className="text-[11px] text-foreground-muted">{p.ratio} · {p.w}×{p.h}</div>
+                      )}
                     </button>
                   ))}
                 </div>
-                <label className="mt-2 flex items-center gap-2 text-xs text-foreground-secondary">
-                  <input
-                    type="checkbox"
-                    checked={custom}
-                    onChange={(e) => {
-                      setCustom(e.target.checked);
-                      if (!e.target.checked) {
-                        const p = PRESETS.find((x) => x.id === presetId) ?? PRESETS[0];
-                        setWidth(p.w);
-                        setHeight(p.h);
-                      }
-                    }}
-                  />
-                  自定义尺寸
-                </label>
-                {custom && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <Input name="width" type="number" label="宽" value={width} onChange={(e) => setWidth(Number(e.target.value))} />
+                {singlePresetId === 'custom' && (
+                  <div className="flex items-center gap-2">
+                    <Input name="singleW" type="number" label="宽 (px)" value={singleW} onChange={(e) => setSingleW(Number(e.target.value))} />
                     <span className="mt-5 text-foreground-muted">×</span>
-                    <Input name="height" type="number" label="高" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
+                    <Input name="singleH" type="number" label="高 (px)" value={singleH} onChange={(e) => setSingleH(Number(e.target.value))} />
                   </div>
                 )}
-              </>
+                <p className="text-[11px] text-foreground-muted">当前尺寸：{singleW} × {singleH} px</p>
+              </div>
+            ) : (
+              /* PPT 多页模式：固定 16:9 (1920×1080)，无尺寸选择 */
+              <div className="rounded-lg border border-border-subtle bg-surface-hover/40 px-4 py-3 text-sm text-foreground-secondary">
+                固定 16:9 · <span className="font-medium text-foreground-primary">1920 × 1080 px</span>
+              </div>
             )}
           </div>
           )}
