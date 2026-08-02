@@ -1,7 +1,7 @@
 /**
  * Campaign 数据管理页面 —— 列表、CRUD。
  * 从 DataManagement.tsx 拆出的独立路由页面（/data/campaigns）。
- * 「查看达人」跳转到合作列表页（/data/campaign-collabs?campaign=xxx）。
+ * 「查看数据」跳转到合作列表页（/data/campaign-collabs?campaign=xxx）。
  *
  * Phase A: 列表读取走真实 DB Campaign 表（/api/v1/campaigns），不再走 DataRecord。
  * CRUD/导入保留 dataApi 以兼容现有 RecordFormModal。
@@ -307,7 +307,7 @@ function CampaignList({
                       onClick={() => navigate('/data/campaign-collabs', { state: { campaignId: d.id } })}
                       className="text-xs text-accent-primary hover:underline"
                     >
-                      查看达人
+                      查看数据
                     </button>
                     <button onClick={() => onEdit(d)} className="text-xs text-accent-primary hover:underline">
                       编辑

@@ -856,6 +856,95 @@ const METRIC_HINTS: Record<string, string> = {
   互动率: '互动量 ÷ 曝光 × 100%，衡量内容质量',
 };
 
+/* ───────── P1-14: 效果数据 icon 库（24 个常用图标，纯内联 SVG，无外部依赖） ───────── */
+const METRIC_ICONS: { name: string; path: string }[] = [
+  { name: 'eye', path: 'M12 5C7 5 3 12 3 12s4 7 9 7 9-7 9-7-4-7-9-7zm0 11a4 4 0 110-8 4 4 0 010 8z' },
+  { name: 'heart', path: 'M12 21s-7-4.5-9-9a5 5 0 019-3 5 5 0 019 3c-2 4.5-9 9-9 9z' },
+  { name: 'share', path: 'M18 8a3 3 0 10-2.8-4.2L5 9.5a3 3 0 100 5L15.2 20.2A3 3 0 1018 16a3 3 0 00-2.8 1.8L5 13.5a3 3 0 000-3L15.2 5.2C16 6 17 6.5 18 6.5c1.7 0 3-1.3 3-3a3 3 0 00-3 4.5z' },
+  { name: 'message-circle', path: 'M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z' },
+  { name: 'shopping-cart', path: 'M9 22a1 1 0 100-2 1 1 0 000 2zM20 22a1 1 0 100-2 1 1 0 000 2zM1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6' },
+  { name: 'trending-up', path: 'M23 6l-9.5 9.5-5-5L1 18M17 6h6v6' },
+  { name: 'star', path: 'M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L5 20l2-7L1 9h7z' },
+  { name: 'thumbs-up', path: 'M7 22V11H3v11h4zM7 11l4-9c1 0 2 1 2 3v3h6a2 2 0 012 2l-2 8a2 2 0 01-2 2H7' },
+  { name: 'bookmark', path: 'M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z' },
+  { name: 'users', path: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M13 7a4 4 0 11-8 0 4 4 0 018 0zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
+  { name: 'bar-chart', path: 'M12 20V10M18 20V4M6 20v-4M3 20h18' },
+  { name: 'dollar-sign', path: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
+  { name: 'target', path: 'M12 2a10 10 0 100 20 10 10 0 000-20zm0 6a4 4 0 100 8 4 4 0 000-8z' },
+  { name: 'zap', path: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z' },
+  { name: 'clock', path: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2' },
+  { name: 'play', path: 'M5 3l14 9-14 9V3z' },
+  { name: 'download', path: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3' },
+  { name: 'fire', path: 'M12 2s4 4 4 8a4 4 0 11-8 0c0-2 1-3 1-3s-3 2-3 6a6 6 0 1012 0c0-6-6-11-6-11z' },
+  { name: 'award', path: 'M12 15a7 7 0 100-14 7 7 0 000 14zM8.21 13.89L7 23l5-3 5 3-1.21-9.12' },
+  { name: 'percent', path: 'M19 5L5 19M6.5 6.5h.01M17.5 17.5h.01' },
+  { name: 'mouse-pointer', path: 'M3 3l7 19 2-8 8-2z' },
+  { name: 'globe', path: 'M12 22a10 10 0 100-20 10 10 0 000 20zM2 12h20M12 2a15 15 0 010 20 15 15 0 010-20z' },
+  { name: 'gift', path: 'M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z' },
+];
+
+function MetricIcon({ name, size = 12 }: { name?: string; size?: number }) {
+  const icon = METRIC_ICONS.find((i) => i.name === name);
+  if (!icon) return null;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d={icon.path} />
+    </svg>
+  );
+}
+
+/** P1-14: icon 选择面板 */
+function IconPicker({ value, onChange }: { value?: string; onChange: (icon: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex h-6 w-6 items-center justify-center rounded border border-border-default text-foreground-secondary hover:bg-surface-hover"
+        title="选择图标"
+      >
+        {value ? <MetricIcon name={value} /> : <span className="text-[10px] text-foreground-muted">○</span>}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 mt-1 grid w-56 grid-cols-6 gap-1 rounded-lg border border-border-default bg-surface-primary p-2 shadow-lg">
+            {METRIC_ICONS.map((icon) => (
+              <button
+                key={icon.name}
+                type="button"
+                title={icon.name}
+                onClick={() => {
+                  onChange(icon.name);
+                  setOpen(false);
+                }}
+                className={`flex h-7 w-7 items-center justify-center rounded transition hover:bg-surface-hover ${
+                  value === icon.name ? 'bg-accent-primary/10 text-accent-primary' : 'text-foreground-secondary'
+                }`}
+              >
+                <MetricIcon name={icon.name} size={14} />
+              </button>
+            ))}
+            {/* 清除 icon */}
+            <button
+              type="button"
+              title="清除"
+              onClick={() => {
+                onChange('');
+                setOpen(false);
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded text-foreground-muted hover:bg-surface-hover"
+            >
+              ✕
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** 小信息点图标 */
 function InfoDot() {
   return (
@@ -1016,6 +1105,10 @@ function DeliverableCard({
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
                 {metrics.map((m, i) => editing ? (
                   <div key={i} className="flex items-center gap-1">
+                    <IconPicker
+                      value={m.icon}
+                      onChange={(icon) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, icon } : x)))}
+                    />
                     <input
                       value={m.label}
                       placeholder="指标"
@@ -1033,6 +1126,7 @@ function DeliverableCard({
                 ) : (
                   <div key={i} className="rounded bg-surface-hover px-2 py-1.5" title={METRIC_HINTS[m.label] ?? ''}>
                     <div className="text-[10px] text-foreground-muted flex items-center gap-0.5">
+                      {m.icon && <MetricIcon name={m.icon} size={10} />}
                       {METRIC_HINTS[m.label] && <InfoDot />}
                       {m.label}
                     </div>

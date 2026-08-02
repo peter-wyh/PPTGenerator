@@ -757,6 +757,7 @@ export interface WorkMetricItem {
   label: string;
   value: string; // 展示文案，允许 "1.2万" / "95%" 等
   color?: string;
+  icon?: string; // P1-14: icon 标识（内置 24 个图标名之一），如 "eye" / "heart" / "share"
 }
 
 /** 单作品多维指标大数字卡。 */

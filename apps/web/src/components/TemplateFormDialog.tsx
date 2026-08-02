@@ -4,6 +4,22 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { BUSINESS_LINES, SCENARIOS, TEMPLATE_TYPES } from '@/projectsMeta';
 
+/** P1-15: 渲染类型 — 第一步先选这个，再展示对应配置 */
+type RenderType = 'multi-page' | 'long-poster' | 'html-report';
+
+const RENDER_TYPES: { value: RenderType; label: string; desc: string }[] = [
+  { value: 'multi-page', label: '多页 PPT', desc: '16:9 幻灯片，多页编辑' },
+  { value: 'long-poster', label: '长图海报', desc: '单页竖版长图，适合社媒传播' },
+  { value: 'html-report', label: 'HTML 报告', desc: '可交互网页，支持嵌入链接' },
+];
+
+/** 各渲染类型对应的默认尺寸 */
+const RENDER_DEFAULT_SIZE: Record<RenderType, { w: number; h: number }> = {
+  'multi-page': { w: 1920, h: 1080 },
+  'long-poster': { w: 1080, h: 1920 },
+  'html-report': { w: 1280, h: 0 }, // h=0 表示自适应高度
+};
+
 interface SizePreset {
   id: string;
   label: string;
@@ -67,6 +83,7 @@ export function TemplateFormDialog({
 }: Props) {
   const editMode = !!initial;
   const [name, setName] = useState('');
+  const [renderType, setRenderType] = useState<RenderType | ''>(''); // P1-15
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [businessLine, setBusinessLine] = useState('');
   const [scenario, setScenario] = useState<Scenario | ''>('');
@@ -88,6 +105,7 @@ export function TemplateFormDialog({
       setStatus(initial.status ?? 'DRAFT');
     } else {
       setName('');
+      setRenderType('');
       setPresetId(PRESETS[0].id);
       setBusinessLine('');
       setScenario('');
@@ -101,14 +119,17 @@ export function TemplateFormDialog({
 
   const submit = () => {
     const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[0];
+    // P1-15: 新建时根据渲染类型确定尺寸（多页固定 16:9，长图用预设，HTML 报告用宽度）
+    const renderSize = renderType ? RENDER_DEFAULT_SIZE[renderType] : null;
     const meta: ProjectMeta = {};
     if (businessLine) meta.businessLine = businessLine;
     if (scenario) meta.scenario = scenario as Scenario;
     if (templateType) meta.templateType = templateType;
+    if (renderType) meta.renderType = renderType;
     onSubmit({
       name: name.trim(),
-      width: preset.w,
-      height: preset.h,
+      width: renderSize?.w ?? preset.w,
+      height: renderSize?.h ?? preset.h,
       meta,
       note: note.trim() || undefined,
       // 新建固定 DRAFT（后端忽略 status）；编辑透传状态。
@@ -116,7 +137,9 @@ export function TemplateFormDialog({
     });
   };
 
-  const canSubmit = name.trim().length > 0 && !loading;
+  const canSubmit = editMode
+    ? name.trim().length > 0 && !loading
+    : name.trim().length > 0 && !!renderType && !loading;
 
   return (
     <div
@@ -141,16 +164,51 @@ export function TemplateFormDialog({
             placeholder="如：投放周报 · 通用模板"
           />
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-foreground-secondary">尺寸</span>
-            <select value={presetId} onChange={(e) => setPresetId(e.target.value)} className={selectCls}>
-              {PRESETS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label} · {p.hint}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* P1-15: 新建模板第一步 — 选择渲染类型 */}
+          {!editMode && (
+            <div>
+              <span className="mb-2 block text-sm font-medium text-foreground-secondary">渲染类型</span>
+              <div className="grid grid-cols-3 gap-2">
+                {RENDER_TYPES.map((rt) => (
+                  <button
+                    key={rt.value}
+                    type="button"
+                    onClick={() => setRenderType(rt.value)}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      renderType === rt.value
+                        ? 'border-accent-primary bg-accent-primary/5'
+                        : 'border-border-default hover:border-accent-secondary/50'
+                    }`}
+                  >
+                    <div className={`text-sm font-medium ${renderType === rt.value ? 'text-accent-primary' : 'text-foreground-primary'}`}>
+                      {rt.label}
+                    </div>
+                    <div className="mt-1 text-xs text-foreground-muted">{rt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 渲染类型选定后才展示尺寸 / 分类 / 备注（编辑模式直接展示全部） */}
+          {(editMode || renderType) && (
+            <>
+              {renderType === 'multi-page' && !editMode ? (
+                <div className="rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-secondary">
+                  固定 16:9（1920×1080），多页编辑
+                </div>
+              ) : (
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground-secondary">尺寸</span>
+                  <select value={presetId} onChange={(e) => setPresetId(e.target.value)} className={selectCls}>
+                    {PRESETS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label} · {p.hint}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
@@ -227,6 +285,8 @@ export function TemplateFormDialog({
                 <option value="PUBLISHED">已发布（BD 可基于此创建项目）</option>
               </select>
             </label>
+          )}
+            </>
           )}
         </div>
 

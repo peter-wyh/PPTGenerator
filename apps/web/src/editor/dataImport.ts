@@ -196,10 +196,109 @@ export function buildPreviewFromObjects(kind: ImportKind, items: unknown[]): Pre
   });
 }
 
-/** 下载 CSV 模板(表头对齐字段 + 示例行 + 格式说明)。 */
+/** P1-12: 逐字段中文批注（含义 + 格式要求），让下载模板更易懂。 */
+function getFieldComments(kind: ImportKind): Record<string, string> {
+  const base: Record<string, string> = {
+    id: '唯一ID（字母+数字，如 camp-001）',
+    name: '名称',
+    advertiser: '广告主名称',
+    businessLine: '业务线编码（FT/SM/CX/DG/KN/DM）',
+    platform: '主要平台（TikTok/Instagram/YouTube/小红书等）',
+    platforms: '投放平台:内容形式;平台:形式（;分隔多个，如 TikTok:短视频;YouTube:直播）',
+    startDate: '开始日期 YYYY-MM-DD',
+    endDate: '结束日期 YYYY-MM-DD',
+    budget: '预算（含币种符号，如 $300K 或 ¥500000）',
+    status: '状态（not_started/in_progress/completed/paused/cancelled）',
+    owner: '归属者（团队成员ID）',
+    creatorIds: '关联达人ID列表（;分隔，如 cre-mia;cre-sofia）',
+    metrics: '指标数据 label:value|label:value（|分隔，如 GMV:120000|ROAS:3.5）',
+    handle: '社交媒体 Handle（如 @example）',
+    tier: '层级（S/A/B/C/D）',
+    followers: '粉丝数（如 1.28M 或 1280000）',
+    engagement: '互动率（百分比，如 8.7%）',
+    category: '品类（美妆/服饰/3C/食品等）',
+    region: '地区/国家代码（US/CN/JP等）',
+    avatar: '头像图片URL',
+    profileUrl: '主页链接',
+    bio: '个人简介',
+    tags: '标签（;分隔）',
+    recentPostsCount: '近90天发帖数',
+    engagementMedian: '近90天互动中位数',
+    mcn: 'MCN机构',
+    agency: '经纪公司',
+    email: '邮箱',
+    phone: '电话',
+    contactPerson: '联系人',
+    currency: '报价币种（USD/CNY/EUR/JPY）',
+    ratePost: '图文报价',
+    rateVideo: '视频报价',
+    rateLive: '直播报价',
+    rateNote: '报价备注',
+  };
+  if (kind === 'creatorAudience' || kind === 'creatorWorks') {
+    return {
+      ...base,
+      creatorId: '关联的达人ID',
+      genderMale: '男性受众占比（0-100）',
+      genderFemale: '女性受众占比（0-100）',
+      workId: '作品唯一ID',
+      title: '作品标题',
+      cover: '作品封面URL',
+      url: '作品链接',
+      publishedAt: '发布日期 YYYY-MM-DD',
+      impressions: '曝光/播放量',
+      likes: '点赞数',
+      comments: '评论数',
+      shares: '转发/分享数',
+      saves: '收藏数',
+      engagementRate: '互动率%',
+      contentType: '内容类型（post/video/reels/live等）',
+      hashtags: '话题标签（;分隔）',
+      productLink: '商品链接（带货内容）',
+      duration: '时长（MM:SS）',
+      featured: '是否精选（yes/no）',
+    };
+  }
+  if (kind === 'collaboration' || kind === 'collaborationDaily' || kind === 'cps' || kind === 'cpsDaily') {
+    return {
+      ...base,
+      campaignId: '关联Campaign的ID',
+      creatorId: '关联达人ID',
+      collabId: '合作分组ID（同次合作多内容共享）',
+      contentType: '内容类型（post/reels/video/image/live/story）',
+      contentFormat: '内容形式（短视频/图文/直播切片等）',
+      postUrl: '作品链接',
+      screenshots: '作品截图URL（;分隔）',
+      execPrice: '执行价格',
+      clicks: '点击数',
+      impressions: '曝光数',
+      orders: '订单数',
+      gmv: 'GMV成交额',
+      commission: '佣金收入',
+      spend: '品牌侧花费',
+      roas: 'ROAS（GMV÷花费）',
+      ctr: '点击率%',
+      cvr: '转化率%',
+      epc: 'EPC单次点击产出',
+      date: '日期 YYYY-MM-DD',
+      dailyDate: '日期 YYYY-MM-DD',
+    };
+  }
+  return base;
+}
+
+/** 下载 CSV 模板(表头含必填/选填标注 + 示例行 + 逐字段批注说明)。 */
 export function downloadTemplate(kind: ImportKind): void {
-  const fields = FIELDS[kind];
-  const header = fields.join(',');
+  const fields = FIELDS[kind] as readonly string[];
+  const requiredList = REQUIRED[kind] as readonly string[];
+  const requiredSet = new Set(requiredList);
+
+  // P1-12: 表头标注必填(* ) / 选填
+  const headerLabels = fields.map((f) => (requiredSet.has(f) ? `${f}*` : f));
+  const header = headerLabels.join(',');
+
+  // P1-12: 字段批注（含义 + 格式要求），按 kind 差异化
+  const fieldComments: Record<string, string> = getFieldComments(kind);
   let example = '';
   let note = '';
 
@@ -275,7 +374,16 @@ export function downloadTemplate(kind: ImportKind): void {
     ].join('\n');
   }
 
-  const csv = `${header}\n${example}\n${note}\n`;
+  // P1-12: 在 note 后追加逐字段批注
+  const commentsBlock = fields
+    .map((f) => {
+      const reqTag = requiredSet.has(f) ? '[必填]' : '[选填]';
+      const comment = fieldComments[f] ?? '';
+      return `# ${f} ${reqTag}: ${comment}`;
+    })
+    .join('\n');
+
+  const csv = `${header}\n${example}\n${note}\n${commentsBlock}\n`;
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -206,4 +206,6 @@ export interface ProjectMeta {
   reportData?: ReportDataContext;
   /** 报告方案版本（用于追溯生成报告时所用的方案版本）。 */
   reportSchemeVersion?: string;
+  /** P1-15: 渲染类型 — 'multi-page'=多页PPT, 'long-poster'=长图海报, 'html-report'=HTML报告。 */
+  renderType?: string;
 }
