@@ -128,3 +128,37 @@ describe('projects.service · duplicate 自动找号', () => {
     ).toBe('我的报告 副本 2');
   });
 });
+
+describe('projects.service · getHtml', () => {
+  it('属主 → 返回 html(htmlContent 缺省为空串)', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(
+      makeProject({ htmlContent: '<p>hi</p>', ownerId: 'u_ap' }),
+    );
+    const out = await projectsService.getHtml('u_ap', 'prj_1');
+    expect(out).toEqual({
+      id: 'prj_1',
+      name: '我的报告',
+      html: '<p>hi</p>',
+      updatedAt: '2026-01-03T00:00:00.000Z',
+    });
+  });
+
+  it('htmlContent 为 null → html: ""', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(makeProject({ htmlContent: null }));
+    expect((await projectsService.getHtml('u_ap', 'prj_1')).html).toBe('');
+  });
+
+  it('非属主 → 404(不泄露存在性)', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(makeProject({ ownerId: 'u_other' }));
+    await expect(projectsService.getHtml('u_ap', 'prj_1')).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it('不存在 → 404', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(null);
+    await expect(projectsService.getHtml('u_ap', 'nope')).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+});

@@ -12,6 +12,7 @@ router.use(authenticate);
 router.get('/', projectsController.list);
 router.post('/', validate({ body: createProjectSchema }), projectsController.create);
 router.get('/:id', validate({ params: idParamSchema }), projectsController.get);
+router.get('/:id/html', validate({ params: idParamSchema }), projectsController.getHtml);
 router.patch('/:id', validate({ params: idParamSchema, body: updateProjectSchema }), projectsController.update);
 router.delete('/:id', validate({ params: idParamSchema }), projectsController.remove);
 router.post('/:id/duplicate', validate({ params: idParamSchema }), projectsController.duplicate);

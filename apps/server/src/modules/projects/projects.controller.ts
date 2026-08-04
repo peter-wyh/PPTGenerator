@@ -21,6 +21,10 @@ export const projectsController = {
     res.json({ project: await projectsService.getOwnedOrThrow(owner(req), req.params.id) });
   }),
 
+  getHtml: asyncHandler(async (req: Request, res: Response) => {
+    res.json(await projectsService.getHtml(owner(req), req.params.id));
+  }),
+
   update: asyncHandler(async (req: Request, res: Response) => {
     res.json({ project: await projectsService.update(owner(req), req.params.id, req.body) });
   }),

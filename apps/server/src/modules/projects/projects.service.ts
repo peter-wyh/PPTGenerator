@@ -130,6 +130,26 @@ export const projectsService = {
     return toDetail(project);
   },
 
+  /** 属主读取某报告的 HTML 源码(仅供列表预览/下载/复制)。 */
+  async getHtml(
+    ownerId: string,
+    id: string,
+  ): Promise<{ id: string; name: string; html: string; updatedAt: string }> {
+    const project = await prisma.project.findUnique({
+      where: { id },
+      select: { id: true, name: true, ownerId: true, htmlContent: true, updatedAt: true },
+    });
+    if (!project || project.ownerId !== ownerId) {
+      throw ApiError.notFound('Project not found');
+    }
+    return {
+      id: project.id,
+      name: project.name,
+      html: project.htmlContent ?? '',
+      updatedAt: project.updatedAt.toISOString(),
+    };
+  },
+
   async update(
     ownerId: string,
     id: string,
