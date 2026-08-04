@@ -63,6 +63,15 @@ export const projectsService = {
       meta?: ProjectMeta;
     },
   ): Promise<{ detail: ProjectDetail; seeded: boolean }> {
+    const trimmedName = input.name.trim();
+    if (!trimmedName) throw ApiError.badRequest('报告名称不能为空');
+    const existing = await prisma.project.findFirst({
+      where: { name: trimmedName },
+      select: { id: true },
+    });
+    if (existing)
+      throw ApiError.badRequest(`已存在同名报告「${trimmedName}」，请使用其他名称`);
+
     const meta = input.meta;
     const seedKey =
       meta && meta.businessLine && meta.scenario && meta.templateType
@@ -102,7 +111,7 @@ export const projectsService = {
 
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
-      name: input.name,
+      name: trimmedName,
       width: width ?? 1280,
       height: height ?? 720,
       pages: (pages ?? defaultPages()) as unknown as Prisma.InputJsonValue,
@@ -133,8 +142,22 @@ export const projectsService = {
     },
   ): Promise<ProjectDetail> {
     await this.getOwnedOrThrow(ownerId, id);
+
+    // 改名时拒绝重名(trim 后全局唯一),与 templates.service.update 一致。
+    let trimmedName: string | undefined;
+    if (input.name !== undefined) {
+      trimmedName = input.name.trim();
+      if (!trimmedName) throw ApiError.badRequest('报告名称不能为空');
+      const clash = await prisma.project.findFirst({
+        where: { name: trimmedName, id: { not: id } },
+        select: { id: true },
+      });
+      if (clash)
+        throw ApiError.badRequest(`已存在同名报告「${trimmedName}」，请使用其他名称`);
+    }
+
     const data: Prisma.ProjectUpdateInput = {};
-    if (input.name !== undefined) data.name = input.name;
+    if (trimmedName !== undefined) data.name = trimmedName;
     if (input.width !== undefined) data.width = input.width;
     if (input.height !== undefined) data.height = input.height;
     if (input.pages !== undefined) data.pages = input.pages as unknown as Prisma.InputJsonValue;
@@ -178,9 +201,21 @@ export const projectsService = {
 
   async duplicate(ownerId: string, id: string): Promise<ProjectDetail> {
     const src = await this.getOwnedOrThrow(ownerId, id);
+    // 生成唯一副本名:「X 副本」、「X 副本 2」…(对齐 templates.service.duplicate)
+    const baseName = `${src.name} 副本`;
+    let copyName = baseName;
+    let suffix = 2;
+    for (;;) {
+      const clash = await prisma.project.findFirst({
+        where: { name: copyName },
+        select: { id: true },
+      });
+      if (!clash) break;
+      copyName = `${baseName} ${suffix++}`;
+    }
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
-      name: `${src.name} 副本`,
+      name: copyName,
       width: src.width,
       height: src.height,
       // 深拷贝并给每个页面/组件分配新 id，避免引用同一对象。
