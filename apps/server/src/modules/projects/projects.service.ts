@@ -201,9 +201,22 @@ export const projectsService = {
     if (!tpl || tpl.status !== 'PUBLISHED') {
       throw ApiError.notFound('Template not found or not published');
     }
+    // 名称缺省回退模板名;全局重名时自动找号「X 副本 / X 副本 2 / …」(对齐 duplicate)。
+    const desiredName = name?.trim() || tpl.name;
+    let projectName = desiredName;
+    let copyNumber = 0; // 已发生的撞名次数:0=未撞名用原名,1=「X 副本」,≥2=「X 副本 N」。
+    for (;;) {
+      const clash = await prisma.project.findFirst({
+        where: { name: projectName },
+        select: { id: true },
+      });
+      if (!clash) break;
+      copyNumber++;
+      projectName = copyNumber === 1 ? `${desiredName} 副本` : `${desiredName} 副本 ${copyNumber}`;
+    }
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
-      name: name?.trim() || `${tpl.name}`,
+      name: projectName,
       width: tpl.width,
       height: tpl.height,
       pages: JSON.parse(JSON.stringify(tpl.pages)) as unknown as Prisma.InputJsonValue,

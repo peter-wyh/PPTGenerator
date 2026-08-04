@@ -9,7 +9,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     delete: vi.fn(),
   },
-  project: { create: vi.fn(), findUnique: vi.fn() },
+  project: { create: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn() },
 }));
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));

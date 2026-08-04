@@ -10,6 +10,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     delete: vi.fn(),
   },
+  template: { findUnique: vi.fn() },
 }));
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
@@ -160,5 +161,75 @@ describe('projects.service · getHtml', () => {
     await expect(projectsService.getHtml('u_ap', 'nope')).rejects.toMatchObject({
       statusCode: 404,
     });
+  });
+});
+
+describe('projects.service · createFromTemplate 重名自动找号', () => {
+  function makeTpl(over: Record<string, unknown> = {}) {
+    return {
+      id: 'tpl_1',
+      name: '周报模板',
+      pages: [{ id: 'p1', name: '第 1 页', components: [] }],
+      width: 1280,
+      height: 720,
+      meta: { businessLine: 'FT' },
+      status: 'PUBLISHED',
+      ...over,
+    };
+  }
+  function makePrj(over: Record<string, unknown> = {}) {
+    return {
+      id: 'prj_new',
+      name: '周报模板',
+      ownerId: 'u_bd',
+      pages: [{ id: 'p1', name: '第 1 页', components: [] }],
+      width: 1280,
+      height: 720,
+      meta: { businessLine: 'FT' },
+      createdAt: new Date('2026-01-03T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+      ...over,
+    };
+  }
+
+  it('模板不存在 → 404', async () => {
+    prismaMock.template.findUnique.mockResolvedValue(null);
+    await expect(projectsService.createFromTemplate('u_bd', 'tpl_1')).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    expect(prismaMock.project.create).not.toHaveBeenCalled();
+  });
+
+  it('草稿模板 → 404', async () => {
+    prismaMock.template.findUnique.mockResolvedValue(makeTpl({ status: 'DRAFT' }));
+    await expect(projectsService.createFromTemplate('u_bd', 'tpl_1')).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it('无重名 → 用传入名(trim)', async () => {
+    prismaMock.template.findUnique.mockResolvedValue(makeTpl());
+    prismaMock.project.findFirst.mockResolvedValueOnce(null);
+    prismaMock.project.create.mockImplementation(({ data }) =>
+      Promise.resolve(makePrj({ name: (data as { name: string }).name })),
+    );
+    await projectsService.createFromTemplate('u_bd', 'tpl_1', '  我的报告  ');
+    expect(
+      (prismaMock.project.create.mock.calls[0][0] as { data: { name: string } }).data.name,
+    ).toBe('我的报告');
+  });
+
+  it('缺省模板名撞名 → 自动「周报模板 副本」', async () => {
+    prismaMock.template.findUnique.mockResolvedValue(makeTpl());
+    prismaMock.project.findFirst
+      .mockResolvedValueOnce({ id: 'prj_other' })
+      .mockResolvedValueOnce(null);
+    prismaMock.project.create.mockImplementation(({ data }) =>
+      Promise.resolve(makePrj({ name: (data as { name: string }).name })),
+    );
+    await projectsService.createFromTemplate('u_bd', 'tpl_1'); // no name → defaults to '周报模板'
+    expect(
+      (prismaMock.project.create.mock.calls[0][0] as { data: { name: string } }).data.name,
+    ).toBe('周报模板 副本');
   });
 });
