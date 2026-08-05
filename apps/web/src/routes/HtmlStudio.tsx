@@ -45,7 +45,6 @@ export function HtmlStudio() {
   const presets = useMemo(() => getPresetsForBL(blCode), [blCode]);
 
   const [prompt, setPrompt] = useState('');
-  const [designSpec, setDesignSpec] = useState('');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
 
   // ★ BL 确定后自动填充该 BL 的第一个预设
@@ -53,7 +52,6 @@ export function HtmlStudio() {
   useEffect(() => {
     if (presets.length > 0) {
       setPrompt(presets[0].requirement);
-      setDesignSpec(presets[0].designSpec);
       setSelectedPresetIdx(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,10 +137,6 @@ export function HtmlStudio() {
       .then((data) => {
         setDesignMd(data.designMd || '');
         setDesignMdSource(data.businessLineName || '');
-        // 有业务线 design.md 时，自动清空残留的预设配色（避免 DG 配色污染其他 BL）
-        if (data.designMd && data.designMd.trim()) {
-          setDesignSpec('');
-        }
       })
       .catch(() => {})
       .finally(() => setDesignMdLoading(false));
@@ -174,7 +168,7 @@ export function HtmlStudio() {
       const html = await htmlTemplatesApi.generate({
         mode,
         templateId: mode === 'template' ? selectedTpl : undefined,
-        prompt: mode === 'ai' ? `${designSpec}\n\n${prompt}`.trim() : undefined,
+        prompt: mode === 'ai' ? prompt : undefined,
         campaignId,
         designMd: mode === 'ai' && designMd.trim() ? designMd.trim() : undefined,
         reportPeriod,
@@ -218,7 +212,7 @@ export function HtmlStudio() {
     } finally {
       setGenerating(false);
     }
-  }, [mode, selectedTpl, prompt, designSpec, campaignId, designMd, reportPeriod, updateAiHtmlStatus, id]);
+  }, [mode, selectedTpl, prompt, campaignId, designMd, reportPeriod, updateAiHtmlStatus, id]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(generatedHtml);
@@ -365,72 +359,85 @@ export function HtmlStudio() {
                 {/* Mode-specific config */}
                 {mode === 'ai' ? (
                   <div className="space-y-4">
-                    {/* 报告主题预设 */}
+                    {/* 提示词模板 */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground-muted">报告主题</label>
-                      <div className="flex flex-wrap gap-1.5">
+                      <label className="mb-1.5 block text-xs font-medium text-foreground-muted">
+                        提示词模板
+                      </label>
+                      <div className="flex flex-col gap-1.5">
                         {presets.map((p, idx) => (
                           <button
                             key={p.label}
                             onClick={() => {
                               setSelectedPresetIdx(idx);
                               setPrompt(p.requirement);
-                              // 有业务线 design.md 时，预设中的配色规范会与 design.md 重复
-                              // 自动清空 designSpec，让用户仅填补充差异项
-                              setDesignSpec(designMd.trim() ? '' : p.designSpec);
                             }}
-                            className={`rounded-md px-2.5 py-1 text-[11px] transition ${
+                            className={`rounded-lg border px-3 py-2 text-left transition ${
                               selectedPresetIdx === idx
-                                ? 'bg-accent-primary text-foreground-inverse'
-                                : 'bg-surface-hover text-foreground-secondary hover:text-foreground-primary'
+                                ? 'border-accent-primary bg-accent-primary/5'
+                                : 'border-border-default hover:border-border-strong hover:bg-surface-hover'
                             }`}
                           >
-                            {p.label}
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium text-foreground-primary">{p.label}</span>
+                              {idx === 0 && (
+                                <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[9px] text-foreground-muted">
+                                  默认
+                                </span>
+                              )}
+                            </div>
+                            {p.description && (
+                              <p className="mt-0.5 text-[10px] leading-relaxed text-foreground-muted">
+                                {p.description}
+                              </p>
+                            )}
                           </button>
                         ))}
                       </div>
-                      <p className="mt-1.5 text-[10px] leading-relaxed text-foreground-muted">
-                        点击预设快速加载「主题 + 设计规范 + 内容要求」组合。可在下方逐项微调。
-                      </p>
                     </div>
 
-                    {/* 补充说明（设计规范覆盖）— 仅在有 designMd 时显示为降级标题 */}
+                    {/* 提示词编辑器（合并了设计规范 + 内容要求） */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground-muted">
-                        {designMd.trim()
-                          ? '📝 补充说明（覆盖业务线规范的差异项）'
-                          : '🎨 设计规范（配色 / 字体 / 布局 / 图表引擎）'}
-                      </label>
-                      <textarea
-                        value={designSpec}
-                        onChange={(e) => setDesignSpec(e.target.value)}
-                        rows={designMd.trim() ? 2 : 4}
-                        placeholder={designMd.trim()
-                          ? '留空则完全使用业务线 design.md；填写则追加到 prompt 中…'
-                          : '配色体系、字体选择、布局参数、图表引擎…'}
-                        className="w-full resize-none rounded-lg border border-border-default bg-surface-secondary px-3 py-2 text-xs font-mono text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary focus:outline-none"
-                      />
-                      {designMd.trim() && (
-                        <p className="mt-1 text-[10px] text-foreground-muted">
-                          📎 主设计规范已从业务线「{designMdSource}」加载（下方可展开编辑）
-                        </p>
-                      )}
-                    </div>
-
-                    {/* 内容要求 */}
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground-muted">
-                        📝 内容要求（模块结构 / 重点指标 / 交互）
-                      </label>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <label className="text-xs font-medium text-foreground-muted">提示词</label>
+                        {designMd.trim() && (
+                          <span
+                            className="flex items-center gap-1 rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary"
+                            title="业务线设计规范会自动注入到 AI 生成请求中"
+                          >
+                            📎 {'{{design.md}}'} 已注入
+                          </span>
+                        )}
+                      </div>
                       <textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        rows={5}
-                        placeholder="描述你想要的报告模块、重点指标、特殊交互…"
-                        className="w-full resize-none rounded-lg border border-border-default bg-surface-secondary px-3 py-2 text-sm text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary focus:outline-none"
+                        rows={10}
+                        placeholder="输入提示词，描述你想要的报告结构、重点指标、视觉风格…&#10;&#10;💡 选择上方模板可快速填充，design.md 会作为变量自动注入。"
+                        className="w-full resize-y rounded-lg border border-border-default bg-surface-secondary px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary focus:outline-none"
                       />
+                      {/* design.md 变量展开/编辑 */}
+                      {campaignId && designMd.trim() && (
+                        <button
+                          onClick={() => setDesignMdExpanded(!designMdExpanded)}
+                          className="mt-1.5 flex items-center gap-1 text-[10px] text-foreground-muted hover:text-foreground-primary"
+                        >
+                          {designMdExpanded ? '▾' : '▸'} 查看/编辑 design.md
+                          {designMdSource && (
+                            <span className="rounded bg-surface-hover px-1 py-0.5">{designMdSource}</span>
+                          )}
+                        </button>
+                      )}
+                      {designMdExpanded && designMd.trim() && (
+                        <textarea
+                          value={designMd}
+                          onChange={(e) => setDesignMd(e.target.value)}
+                          rows={8}
+                          className="mt-1 w-full resize-y rounded border border-border-default bg-surface-secondary px-2 py-1.5 font-mono text-[10px] leading-relaxed text-foreground-primary focus:border-accent-primary focus:outline-none"
+                        />
+                      )}
                       {!campaignId && (
-                        <p className="mt-1.5 text-[11px] text-amber-500">
+                        <p className="mt-1.5 text-[10px] text-amber-500">
                           ⚠️ 未绑定 Campaign，AI 将生成通用模板（无真实数据）
                         </p>
                       )}

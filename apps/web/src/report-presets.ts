@@ -10,24 +10,27 @@
  * 本文件是 L3。所有预设 BL 无关：配色/字体/品牌名由 design.md 提供。
  */
 
-/** 单个预设的结构。 */
+/** 单个提示词模板的结构。 */
 export interface ReportPreset {
+  /** 模板名称（显示在模板卡片上）。 */
   label: string;
-  /** 无 design.md 时的 fallback 配色/字体/图表提示。 */
-  designSpec: string;
-  /** 报告 section 结构规范（BL 无关）。 */
+  /** 一句话描述（显示在模板卡片下方，帮助用户理解适用场景）。 */
+  description: string;
+  /** 提示词正文（design.md 由后端自动注入为变量，此处不重复配色/字体）。 */
   requirement: string;
   /** 适用报告类型（用于 UI 分组或过滤）。 */
   reportType: 'campaign' | 'settlement' | 'comparison' | 'creator';
   /** 适用 BL（空数组 = 全 BL 通用）。 */
   businessLines?: string[];
+  /** @deprecated 旧字段，保留向后兼容。设计规范现在由 design.md 自动注入。 */
+  designSpec?: string;
 }
 
 export const REPORT_PRESETS: ReportPreset[] = [
   {
     label: '投放结案',
+    description: 'B2B 营销活动标准 6 section 结案：KPI 总览 + 趋势图 + 渠道明细 + 洞察分析',
     reportType: 'campaign',
-    designSpec: `【配色/字体/图表】参照业务线 design.md。如无 design.md：浅色背景(#f5f7fa)，白色卡片+#ebebeb边框，品牌色用于强调，Chart.js(CDN)`,
     requirement: `生成一份 B2B 营销活动投放结案报告，SaaS 仪表盘风格，max-width 1280px，6 个 section：
 
 §1 Header — flex row：左（商家 Logo：圆角字母缩写+品牌名 | 分割线 | 品牌方 Logo），右（灰色浅底色日期标签）
@@ -39,8 +42,8 @@ export const REPORT_PRESETS: ReportPreset[] = [
   },
   {
     label: '达人复盘',
+    description: '聚焦 ROI 和内容效果：达人排行榜 + ROI 对比 + 平台维度 + 内容墙',
     reportType: 'creator',
-    designSpec: `【配色/字体/图表】参照业务线 design.md。如无 design.md：浅色主题，Chart.js(CDN)`,
     requirement: `生成一份达人投放复盘报告，聚焦 ROI 和内容效果，max-width 1280px，5 个 section：
 
 §1 Header — flex row：左（品牌 Logo + Campaign 名称），右（日期标签）
@@ -51,8 +54,8 @@ export const REPORT_PRESETS: ReportPreset[] = [
   },
   {
     label: '效果对比',
+    description: '多平台/达人横向对比：KPI 对比卡 + 趋势对比图 + 绩效矩阵',
     reportType: 'comparison',
-    designSpec: `【配色/字体/图表】参照业务线 design.md。如无 design.md：浅色主题，对比用互补色，Chart.js(CDN)`,
     requirement: `生成一份效果对比报告，将不同平台/达人的关键指标横向对比，max-width 1280px，4 个 section：
 
 §1 Header — flex row：品牌 Logo + 报告标题，右（日期范围标签）
@@ -62,8 +65,8 @@ export const REPORT_PRESETS: ReportPreset[] = [
   },
   {
     label: '业务复盘看板',
+    description: '结算台账风格：KPI 总览 + 季度对比 + 月度明细 + 佣金预估 + 运营动作',
     reportType: 'settlement',
-    designSpec: `【配色/字体/图表】参照业务线 design.md。如无 design.md：深色主题(#0a0e18)，金色强调，纯内联 canvas（不用外部库）`,
     requirement: `生成一份业务结算复盘看板，结算台账风格，max-width 1280px，5 个 section：
 
 §1 Hero 总览 — 大号 KPI 数字（58px），含 YOY 同比标签 + 完成率印章（圆形百分比）。指标：总收入/结算毛利/毛利率/活跃商家数
@@ -105,8 +108,8 @@ export const SECTION_LIBRARY = {
 const DG_PRESETS: ReportPreset[] = [
   {
     label: '投放结案',
+    description: '美妆行业结案：KPI 五卡 + 趋势混合图 + Publisher 表 + 洞察 3 列 + 5 卡建议',
     reportType: 'campaign',
-    designSpec: '',
     requirement: `生成一份 B2B 美妆营销活动投放结案报告，SaaS 仪表盘风格，max-width 1280px，6 个 section：
 
 §1 Header — flex row 垂直居中：左（商家 Logo：圆角字母缩写+品牌名 | 分割线 | 品牌方 Logo），右（灰色浅底色日期标签 "活动期间"）
@@ -122,8 +125,8 @@ const DG_PRESETS: ReportPreset[] = [
 const DM_PRESETS: ReportPreset[] = [
   {
     label: '投放结案',
+    description: '企业级数据仪表盘：4 核心 KPI + 趋势混合图 + 渠道明细表 + 洞察 + 4 卡建议',
     reportType: 'campaign',
-    designSpec: '',
     requirement: `生成一份 B2B 绩效营销活动投放结案报告，企业级数据仪表盘风格，max-width 1280px，6 个 section：
 
 §1 Header — flex row 垂直居中：左（Duomai 业务线 Logo | 分割线 | 广告主 Logo），右（活动日期范围+状态标签）。整体紧凑专业
@@ -139,8 +142,8 @@ const DM_PRESETS: ReportPreset[] = [
 const FT_PRESETS: ReportPreset[] = [
   {
     label: '业务复盘看板',
+    description: '半年结算复盘：KPI 总览 + 季度对比 + 月度明细表 + 佣金预估 + 运营动作',
     reportType: 'settlement',
-    designSpec: '',
     requirement: `生成一份业务结算复盘看板，结算台账风格，max-width 1280px，5 个 section：
 
 §1 Hero 总览 — 大号 KPI 数字（58px），含 YOY 同比标签 + 完成率印章（圆形百分比）。指标：总收入/结算毛利/毛利率/活跃商家数
@@ -161,8 +164,8 @@ const FT_PRESETS: ReportPreset[] = [
  */
 const AI_AUTO_PRESET: ReportPreset = {
   label: '🤖 AI 智能排版',
+  description: 'AI 自主决策：根据 Campaign 数据的实际维度和质量，自主选择 module 和可视化形式',
   reportType: 'campaign',
-  designSpec: '',
   requirement: `采用自主决策模式：不预设固定 section 结构，由 AI 根据 campaign 数据的实际维度和质量，自主选择 4-8 个最有价值的 module 和最佳可视化形式。
 通用报告结构规则（Header/KPI/图表选型/Footer 等）已内置于系统提示词，无需在此重复——只需补充以下差异化偏好：
 - 重点关注的指标或维度（如需突出某个数据视角）

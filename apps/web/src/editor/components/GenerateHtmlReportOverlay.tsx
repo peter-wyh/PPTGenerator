@@ -46,7 +46,6 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
   useEffect(() => {
     if (presets.length > 0) {
       setPrompt(presets[0].requirement);
-      setDesignSpec(presets[0].designSpec);
       setSelectedPresetIdx(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -283,7 +282,6 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
                         onClick={() => {
                           setSelectedPresetIdx(idx);
                           setPrompt(p.requirement);
-                          setDesignSpec(designMd.trim() ? '' : p.designSpec);
                         }}
                         className={`rounded-md px-2.5 py-1 text-[11px] transition ${
                           selectedPresetIdx === idx
