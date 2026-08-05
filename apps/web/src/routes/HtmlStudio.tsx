@@ -445,7 +445,7 @@ export function HtmlStudio() {
                         onChange={(e) => setPrompt(e.target.value)}
                         rows={10}
                         spellCheck={false}
-                        placeholder="输入提示词，描述你想要的报告结构、重点指标、视觉风格…&#10;&#10;💡 选择上方模板可快速填充，design.md 会作为变量自动注入。"
+                        placeholder="留空 = AI 完全自主决策（推荐）&#10;&#10;或输入差异化指令，如：&#10;• 突出 ROI 和达人排名&#10;• 用深色主题 / 隐藏 Footer&#10;• 增加 Publisher 截图列"
                         className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] leading-relaxed text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500"
                       />
                       {/* design.md 变量展开/编辑 */}

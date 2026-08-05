@@ -255,6 +255,9 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 
 const USER_PROMPT_TEMPLATE = `Generate a complete HTML marketing report.
 
+═══ USER INSTRUCTIONS ═══
+{{PROMPT}}
+
 ═══ CAMPAIGN DATA (USE EXACTLY THESE VALUES — DO NOT FABRICATE) ═══
 {{CAMPAIGN_DATA}}
 
@@ -462,7 +465,7 @@ export const aiGenerateService = {
     }
 
     let userPrompt = USER_PROMPT_TEMPLATE
-      .replace('{{PROMPT}}', params.prompt || 'Generate a comprehensive campaign report')
+      .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')
       .replace('{{CAMPAIGN_DATA}}', campaignData);
 
     // 追加业务线 design.md 规范

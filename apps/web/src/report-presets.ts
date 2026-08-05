@@ -166,10 +166,7 @@ const AI_AUTO_PRESET: ReportPreset = {
   label: '🤖 AI 智能排版',
   description: 'AI 自主决策：根据 Campaign 数据的实际维度和质量，自主选择 module 和可视化形式',
   reportType: 'campaign',
-  requirement: `采用自主决策模式：不预设固定 section 结构，由 AI 根据 campaign 数据的实际维度和质量，自主选择 4-8 个最有价值的 module 和最佳可视化形式。
-通用报告结构规则（Header/KPI/图表选型/Footer 等）已内置于系统提示词，无需在此重复——只需补充以下差异化偏好：
-- 重点关注的指标或维度（如需突出某个数据视角）
-- 特殊的视觉风格偏好（如需偏离 design.md 的默认风格）`,
+  requirement: '',
 };
 
 export const BL_PRESET_OVERRIDES: Record<string, ReportPreset[]> = {

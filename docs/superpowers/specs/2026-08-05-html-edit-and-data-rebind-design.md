@@ -34,7 +34,7 @@
 - ❌ 不做 WYSIWYG 拖拽画布(结构编辑通过 manifest 清单的勾选/调序,不是自由拖拽)。
 - ❌ 不让 AI 自由报告支持数据替换(与"自由编辑结构"互斥,已在 §1 说明)。
 - ❌ v1 不做"AI 生成新 recipe / 新 template"(用户要新风格时仍走 mode:'ai');留 v2。
-- ❌ v1 不合并现有 `mode:'template'`(简单 `{{key}}` 替换)与 recipe —— template mode 保留不动。
+- ❌ **废弃** `mode:'template'` + `HtmlTemplate`(DB 0 行 + 无 ADMIN 创建 UI + 从未使用,空壳);模板化报告统一走 recipe。详见 §4 决策 1。
 - ❌ 不引入新 DB 表(复用 HtmlVersion)。
 
 ---
@@ -61,10 +61,16 @@
 
 | # | 决策 | 选择 | 理由 |
 |---|---|---|---|
-| 1 | 现有 `mode:'template'` 怎么办 | **保留不动**,recipe 作为模板化标准 | template mode 轻量 + 向后兼容;不强行合并 |
+| 1 | 现有 `mode:'template'` 怎么办 | **废弃**(recipe 取代) | 见决策 1 详解 |
 | 2 | recipe 配置存哪 | **扩展 HtmlVersion**(加 4 可空列) | 版本化白送;AI 报告的 HtmlVersion 这 4 列 null,兼容;不新建表 |
 | 3 | template.hbs 是否拆 partial + manifest 驱动 | **是**(v1 就做) | 结构编辑(顺序/显隐)的前提;用户明确要区块结构编辑 |
 | 4 | 编辑器放哪 | **HtmlStudio 内按报告类型切换面板** | 统一入口;复用预览/保存流程 |
+
+**决策 1 详解(废弃 template mode)**:
+- 事实:`HtmlTemplate` 表 0 行;无任何 ADMIN 创建/编辑模板 UI(无 `htmlTemplatesApi.create/update/remove` 调用);前端 template mode 只能选下拉但 DB 空永远选不到 —— 从未启用的空壳。
+- 废弃改动:后端删 `generateFromTemplate`,`mode` enum `['template','ai']` → `['ai','recipe']`;前端 `Mode` 类型 → `'ai'|'recipe'`,移除模板选择下拉;`HtmlTemplate` 表 schema 保留(无害,后续可单独清理迁移删除)。
+- 零迁移负担:无数据、无 UI、无消费者。
+- ADMIN 自助维护模板(不动代码)是 v2 的 "recipe DB 化"(§15),不在本方案。
 
 ---
 
@@ -227,8 +233,8 @@ render({
 ### rebase worktree(机械冲突,非设计冲突)
 1. **recipe 子系统**(`recipe/` 目录,12 文件 + 测试)是纯新增 → **零冲突直接搬**。
 2. **集成层**(`html-templates.schema.ts` 加 `mode:'recipe'`+`recipeId`、`controller.ts` 加 recipe 分支、`package.json` 加 `handlebars`)→ main 后续改过这些文件,手动 reconcile:
-   - `schema.ts`:main 的 mode 是 `['template','ai']`,加 `'recipe'`;`reportPeriod` 字段保留。
-   - `controller.ts`:main 有 agent-edit / autoSave / HtmlVersion 端点,recipe 分支加在 generate 里,不动其它。
+   - `schema.ts`:mode enum 从 main 的 `['template','ai']` → `['ai','recipe']`(移除 `'template'`(决策 1 废弃)+ 加 `'recipe'`);同时删 `generateFromTemplate` 服务方法;`reportPeriod` 字段保留。
+   - `controller.ts`:main 有 agent-edit / autoSave / HtmlVersion 端点,recipe 分支加在 generate 里;移除 template 分支(决策 1),不动其它。
 3. **template.hbs 拆 partial**:这是本方案的新工作(rebase 之后做,不是 worktree 原内容)。
 
 ### DB 迁移
@@ -262,7 +268,7 @@ ALTER TABLE `HtmlVersion` ADD COLUMN `manifestOverrides` JSON NULL;
 
 ## 13. 工作分解(高层,实现计划阶段细化)
 
-1. **rebase recipe worktree 到 main**(搬 recipe/ 目录 + reconcile schema/controller/package.json)。
+1. **rebase recipe worktree + 废弃 template mode**(搬 recipe/ 目录 + reconcile schema/controller/package.json + 删 `generateFromTemplate` + mode enum `['template','ai']`→`['ai','recipe']` + 前端移除模板选择下拉 + `Mode` 类型改 `'ai'|'recipe'`)。
 2. **DB 迁移**:HtmlVersion 加 4 列 + Prisma schema + 手写 migration SQL。
 3. **template 拆 partial + manifest 驱动**(render 改动 §7):拆 6 个 partial,layout 改循环,加默认 manifest,快照测试保回归。
 4. **render 吃覆盖**:tokenOverrides / manifestOverrides / reportContent 合并逻辑 + 单测。
@@ -286,7 +292,6 @@ ALTER TABLE `HtmlVersion` ADD COLUMN `manifestOverrides` JSON NULL;
 
 ## 15. 未来(v2+,本方案不做)
 
-- AI 生成新 recipe / template(用户描述需求 → AI 产出四件套)。
-- template mode 与 recipe 合并(template mode 标记废弃)。
-- 模板市场(ADMIN 维护多套 recipe,用户选)。
+- AI 生成新 recipe(用户描述需求 → AI 产出四件套)。
+- recipe DB 化 / 模板市场(四件套从代码搬进 DB,ADMIN 在 UI 自助维护多套 recipe,用户选)—— 即"不动代码加模板"。
 - 结构编辑升级为 WYSIWYG 拖拽画布。
