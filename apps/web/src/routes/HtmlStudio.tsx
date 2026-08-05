@@ -16,7 +16,7 @@ import {
 } from '@/api/htmlTemplates';
 import { projectsApi } from '@/api/projects';
 import { Button } from '@/components/Button';
-import { MarkdownEditor, MarkdownPreview } from '@/components/MarkdownEditor';
+import { MarkdownPreview } from '@/components/MarkdownEditor';
 import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
 import { getPresetsForBL } from '@/report-presets';
 import { AgentChatPanel } from './AgentChatPanel';
@@ -76,6 +76,10 @@ export function HtmlStudio() {
   // 系统提示词回显
   const [systemPrompt, setSystemPrompt] = useState('');
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [systemPromptFullscreen, setSystemPromptFullscreen] = useState(false);
+
+  // 提示词编辑器全屏
+  const [promptFullscreen, setPromptFullscreen] = useState(false);
 
   // 左侧面板折叠（沉浸模式）
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -127,6 +131,19 @@ export function HtmlStudio() {
   useEffect(() => {
     htmlTemplatesApi.list({ status: 'PUBLISHED' }).then(setTemplates).catch(() => {});
   }, []);
+
+  // Esc 键关闭全屏
+  useEffect(() => {
+    if (!promptFullscreen && !systemPromptFullscreen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPromptFullscreen(false);
+        setSystemPromptFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [promptFullscreen, systemPromptFullscreen]);
 
   // 加载 design.md
   const campaignId = project?.meta?.campaignId;
@@ -401,24 +418,35 @@ export function HtmlStudio() {
                       </div>
                     </div>
 
-                    {/* 提示词编辑器（合并了设计规范 + 内容要求） */}
+                    {/* 提示词编辑器 */}
                     <div>
                       <div className="mb-1.5 flex items-center justify-between">
                         <label className="text-xs font-medium text-foreground-muted">提示词</label>
-                        {designMd.trim() && (
-                          <span
-                            className="flex items-center gap-1 rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary"
-                            title="业务线设计规范会自动注入到 AI 生成请求中"
+                        <div className="flex items-center gap-2">
+                          {designMd.trim() && (
+                            <span
+                              className="flex items-center gap-1 rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary"
+                              title="业务线设计规范会自动注入到 AI 生成请求中"
+                            >
+                              📎 {'{{design.md}}'} 已注入
+                            </span>
+                          )}
+                          <button
+                            onClick={() => setPromptFullscreen(true)}
+                            className="text-[10px] text-foreground-muted hover:text-foreground-primary"
+                            title="全屏编辑"
                           >
-                            📎 {'{{design.md}}'} 已注入
-                          </span>
-                        )}
+                            ⛶ 全屏
+                          </button>
+                        </div>
                       </div>
-                      <MarkdownEditor
+                      <textarea
                         value={prompt}
-                        onChange={setPrompt}
+                        onChange={(e) => setPrompt(e.target.value)}
                         rows={10}
+                        spellCheck={false}
                         placeholder="输入提示词，描述你想要的报告结构、重点指标、视觉风格…&#10;&#10;💡 选择上方模板可快速填充，design.md 会作为变量自动注入。"
+                        className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] leading-relaxed text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500"
                       />
                       {/* design.md 变量展开/编辑 */}
                       {campaignId && designMd.trim() && (
@@ -433,10 +461,12 @@ export function HtmlStudio() {
                         </button>
                       )}
                       {designMdExpanded && designMd.trim() && (
-                        <MarkdownEditor
+                        <textarea
                           value={designMd}
-                          onChange={setDesignMd}
+                          onChange={(e) => setDesignMd(e.target.value)}
                           rows={8}
+                          spellCheck={false}
+                          className="mt-1.5 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-mono text-[11px] leading-relaxed text-slate-700 outline-none focus:border-blue-500"
                         />
                       )}
                       {/* 系统提示词回显 */}
@@ -453,8 +483,24 @@ export function HtmlStudio() {
                         <span className="rounded bg-surface-hover px-1 py-0.5">SYSTEM_PROMPT</span>
                       </button>
                       {showSystemPrompt && systemPrompt && (
-                        <div className="mt-1.5 max-h-[400px] overflow-y-auto rounded-lg border border-border-default bg-surface-secondary p-3">
+                        <div className="mt-1.5 max-h-[400px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 relative">
+                          <button
+                            onClick={() => setSystemPromptFullscreen(true)}
+                            className="absolute right-2 top-2 text-[10px] text-slate-400 hover:text-slate-700"
+                            title="全屏查看"
+                          >
+                            ⛶ 全屏
+                          </button>
                           <MarkdownPreview content={systemPrompt} />
+                          {designMd.trim() && (
+                            <>
+                              <hr className="my-4 border-slate-200" />
+                              <div className="mb-2 text-[12px] font-semibold text-slate-800">
+                                📎 业务线设计规范 (design.md)
+                              </div>
+                              <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[11px] leading-relaxed font-mono text-slate-600 whitespace-pre-wrap">{designMd}</pre>
+                            </>
+                          )}
                         </div>
                       )}
                       {!campaignId && (
@@ -702,6 +748,58 @@ export function HtmlStudio() {
           )}
         </main>
       </div>
+
+      {/* ── Fullscreen Modal: Prompt Editor ── */}
+      {promptFullscreen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 px-4">
+            <span className="text-sm font-medium text-slate-800">提示词编辑器</span>
+            <button
+              onClick={() => setPromptFullscreen(false)}
+              className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+            >
+              ✕ 关闭 (Esc)
+            </button>
+          </div>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            spellCheck={false}
+            autoFocus
+            className="flex-1 resize-none bg-white p-6 text-[14px] leading-relaxed text-slate-800 focus:outline-none"
+            placeholder="输入提示词…"
+          />
+        </div>
+      )}
+
+      {/* ── Fullscreen Modal: System Prompt ── */}
+      {systemPromptFullscreen && systemPrompt && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 px-4">
+            <span className="text-sm font-medium text-slate-800">📋 系统提示词 (SYSTEM_PROMPT)</span>
+            <button
+              onClick={() => setSystemPromptFullscreen(false)}
+              className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+            >
+              ✕ 关闭 (Esc)
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-8 py-6">
+            <div className="mx-auto max-w-4xl">
+              <MarkdownPreview content={systemPrompt} />
+              {designMd.trim() && (
+                <>
+                  <hr className="my-6 border-slate-200" />
+                  <div className="mb-3 text-sm font-semibold text-slate-800">
+                    📎 业务线设计规范 (design.md) {designMdSource && <span className="ml-1 text-slate-400">— {designMdSource}</span>}
+                  </div>
+                  <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[12px] leading-relaxed font-mono text-slate-600 whitespace-pre-wrap">{designMd}</pre>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
