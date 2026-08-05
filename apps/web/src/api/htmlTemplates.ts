@@ -171,4 +171,10 @@ export const htmlTemplatesApi = {
         { html, agentHistory },
       )
       .then((r) => r.data),
+
+  /** 获取系统提示词 Markdown 展示版 */
+  getSystemPrompt: () =>
+    api
+      .get<{ systemPrompt: string }>('/html-templates/system-prompt')
+      .then((r) => r.data.systemPrompt),
 };

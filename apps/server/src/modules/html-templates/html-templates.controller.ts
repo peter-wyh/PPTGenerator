@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { htmlTemplateService } from './html-templates.service';
 import { aiGenerateService } from './ai-generate.service';
+import { SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ApiError } from '../../utils/ApiError';
 import type { AuthPayload } from '../../types/express';
@@ -186,5 +187,10 @@ export const htmlTemplateController = {
       }
     } catch { /* ignore */ }
     res.json({ designMd, businessLineName, businessLineCode });
+  }),
+
+  /** 返回系统提示词的 Markdown 展示版（仅供前端回显，不影响 AI 生成） */
+  getSystemPrompt: asyncHandler(async (_req: Request, res: Response) => {
+    res.json({ systemPrompt: SYSTEM_PROMPT_DISPLAY });
   }),
 };

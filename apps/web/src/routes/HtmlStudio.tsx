@@ -16,6 +16,7 @@ import {
 } from '@/api/htmlTemplates';
 import { projectsApi } from '@/api/projects';
 import { Button } from '@/components/Button';
+import { MarkdownEditor, MarkdownPreview } from '@/components/MarkdownEditor';
 import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
 import { getPresetsForBL } from '@/report-presets';
 import { AgentChatPanel } from './AgentChatPanel';
@@ -71,6 +72,10 @@ export function HtmlStudio() {
   const [designMdLoading, setDesignMdLoading] = useState(false);
   const [designMdExpanded, setDesignMdExpanded] = useState(false);
   const [designMdSource, setDesignMdSource] = useState('');
+
+  // 系统提示词回显
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
 
   // 左侧面板折叠（沉浸模式）
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -409,12 +414,11 @@ export function HtmlStudio() {
                           </span>
                         )}
                       </div>
-                      <textarea
+                      <MarkdownEditor
                         value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
+                        onChange={setPrompt}
                         rows={10}
                         placeholder="输入提示词，描述你想要的报告结构、重点指标、视觉风格…&#10;&#10;💡 选择上方模板可快速填充，design.md 会作为变量自动注入。"
-                        className="w-full resize-y rounded-lg border border-border-default bg-surface-secondary px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary focus:outline-none"
                       />
                       {/* design.md 变量展开/编辑 */}
                       {campaignId && designMd.trim() && (
@@ -429,12 +433,29 @@ export function HtmlStudio() {
                         </button>
                       )}
                       {designMdExpanded && designMd.trim() && (
-                        <textarea
+                        <MarkdownEditor
                           value={designMd}
-                          onChange={(e) => setDesignMd(e.target.value)}
+                          onChange={setDesignMd}
                           rows={8}
-                          className="mt-1 w-full resize-y rounded border border-border-default bg-surface-secondary px-2 py-1.5 font-mono text-[10px] leading-relaxed text-foreground-primary focus:border-accent-primary focus:outline-none"
                         />
+                      )}
+                      {/* 系统提示词回显 */}
+                      <button
+                        onClick={() => {
+                          if (!systemPrompt) {
+                            htmlTemplatesApi.getSystemPrompt().then(setSystemPrompt);
+                          }
+                          setShowSystemPrompt(!showSystemPrompt);
+                        }}
+                        className="mt-2 flex items-center gap-1 text-[10px] text-foreground-muted hover:text-foreground-primary"
+                      >
+                        {showSystemPrompt ? '▾' : '▸'} 查看系统提示词
+                        <span className="rounded bg-surface-hover px-1 py-0.5">SYSTEM_PROMPT</span>
+                      </button>
+                      {showSystemPrompt && systemPrompt && (
+                        <div className="mt-1.5 max-h-[400px] overflow-y-auto rounded-lg border border-border-default bg-surface-secondary p-3">
+                          <MarkdownPreview content={systemPrompt} />
+                        </div>
                       )}
                       {!campaignId && (
                         <p className="mt-1.5 text-[10px] text-amber-500">

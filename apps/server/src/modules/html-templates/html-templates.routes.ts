@@ -18,6 +18,10 @@ router.use(authenticate);
 
 // HTML 模板列表 + 详情：已登录用户均可（service 按角色过滤草稿/已发布）
 router.get('/', htmlTemplateController.list);
+
+// GET /system-prompt — 获取系统提示词（必须在 /:id 之前注册，否则会被通配匹配）
+router.get('/system-prompt', htmlTemplateController.getSystemPrompt);
+
 router.get('/:id', validate({ params: idParamSchema }), htmlTemplateController.get);
 
 // 写操作：仅 ADMIN
