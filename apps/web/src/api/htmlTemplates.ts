@@ -13,6 +13,29 @@ export interface HtmlTemplateDetail extends HtmlTemplateSummary {
   html: string;
 }
 
+export interface HtmlVersionSummary {
+  id: string;
+  name: string;
+  source: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HtmlVersionDetail extends HtmlVersionSummary {
+  html: string;
+  projectId: string;
+  ownerId: string;
+}
+
+/** Agent 对话消息 */
+export interface AgentChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  action?: 'generate' | 'edit' | 'fix' | 'manual';
+  ts: string;
+}
+
 export const htmlTemplatesApi = {
   list: (params?: { status?: string; category?: string }) =>
     api
@@ -52,17 +75,19 @@ export const htmlTemplatesApi = {
   remove: (id: string) =>
     api.delete(`/html-templates/${id}`).then((r) => r.data),
 
-  /** 生成 HTML 报告 */
+  /** 生成 HTML 报告（DeepSeek V4 Pro 推理模型需要 2-3 分钟） */
   generate: (input: {
     mode: 'template' | 'ai';
     templateId?: string;
     prompt?: string;
     campaignId?: string;
-    theme?: 'light' | 'dark';
     designMd?: string;
+    reportPeriod?: { startDate?: string; endDate?: string };
   }) =>
     api
-      .post<{ html: string }>('/html-templates/generate', input)
+      .post<{ html: string }>('/html-templates/generate', input, {
+        timeout: 300000, // 5 分钟超时（V4 Pro 推理模型需要更长时间）
+      })
       .then((r) => r.data.html),
 
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
@@ -73,11 +98,43 @@ export const htmlTemplatesApi = {
       )
       .then((r) => r.data),
 
-  /** 保存 HTML 到报告 */
-  saveHtml: (projectId: string, html: string) =>
+  /** 保存 HTML 到报告（覆盖当前版本或新增版本） */
+  saveHtml: (
+    projectId: string,
+    html: string,
+    opts?: { name?: string; source?: string; mode?: 'overwrite' | 'new' },
+  ) =>
     api
-      .patch(`/html-templates/projects/${projectId}/html`, { html })
+      .patch<{ ok: boolean; versionId: string }>(
+        `/html-templates/projects/${projectId}/html`,
+        { html, ...opts },
+      )
       .then((r) => r.data),
+
+  /** 列出项目的所有 HTML 版本 */
+  listHtmlVersions: (projectId: string) =>
+    api
+      .get<HtmlVersionSummary[]>(`/html-templates/projects/${projectId}/html-versions`)
+      .then((r) => r.data),
+
+  /** 获取单个版本（含完整 HTML） */
+  getHtmlVersion: (versionId: string) =>
+    api
+      .get<HtmlVersionDetail>(`/html-templates/html-versions/${versionId}`)
+      .then((r) => r.data),
+
+  /** 更新版本（名称/激活状态） */
+  updateHtmlVersion: (
+    versionId: string,
+    patch: { name?: string; html?: string; isActive?: boolean },
+  ) =>
+    api
+      .patch<HtmlVersionDetail>(`/html-templates/html-versions/${versionId}`, patch)
+      .then((r) => r.data),
+
+  /** 删除版本 */
+  deleteHtmlVersion: (versionId: string) =>
+    api.delete(`/html-templates/html-versions/${versionId}`).then((r) => r.data),
 
   /** 从 Campaign 创建新报告并保存 HTML */
   saveHtmlAsProject: (input: {
@@ -92,5 +149,26 @@ export const htmlTemplatesApi = {
   }) =>
     api
       .post<{ ok: boolean; projectId: string }>('/html-templates/projects/html', input)
+      .then((r) => r.data),
+
+  /** Agent 增量编辑：当前 HTML + 指令 → 修改后的 HTML */
+  agentEdit: (input: { currentHtml: string; instruction: string }) =>
+    api
+      .post<{ html: string }>('/html-templates/agent-edit', input, {
+        timeout: 300000,
+      })
+      .then((r) => r.data.html),
+
+  /** Agent 模式自动保存（直接覆盖 htmlContent） */
+  autoSave: (
+    projectId: string,
+    html: string,
+    agentHistory?: AgentChatMessage[],
+  ) =>
+    api
+      .patch<{ ok: boolean; updatedAt: string }>(
+        `/html-templates/projects/${projectId}/auto-save`,
+        { html, agentHistory },
+      )
       .then((r) => r.data),
 };

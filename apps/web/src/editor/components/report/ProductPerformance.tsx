@@ -139,7 +139,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
   );
 
   return (
-    <div className="flex h-full w-full skin-gap-sm skin-card skin-pad-sm">
+    <div className="flex w-full skin-gap-sm skin-card skin-pad-sm">
       <div className={insight ? 'min-w-0 flex-1' : 'min-w-0 flex-1'}>
         {variant === 'rank' ? (
           <div className="flex flex-col">{items.map((it, i) => <Row key={i} it={it} rank={i + 1} />)}</div>

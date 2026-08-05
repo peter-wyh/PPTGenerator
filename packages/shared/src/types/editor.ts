@@ -822,7 +822,12 @@ export interface CommentWordcloudData {
 export interface CardsRowItem {
   title: string;
   body?: string;
+  /** 图标：emoji 文本 或 IconKit key（由 iconType 决定渲染方式） */
   icon?: string;
+  /** 图标类型：emoji=直接渲染文本，kit=用 IconKit 组件渲染 */
+  iconType?: 'emoji' | 'kit';
+  /** IconKit weight（仅 iconType='kit' 时有效） */
+  iconWeight?: IconWeight;
   footer?: string;
 }
 

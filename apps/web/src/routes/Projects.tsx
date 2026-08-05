@@ -346,7 +346,7 @@ export function Projects() {
           <p className="text-sm text-foreground-muted">没有符合筛选条件的报告。</p>
         ) : (
           <div className="overflow-auto rounded-lg border border-border-default">
-            <table className="w-full min-w-[880px] border-collapse text-sm">
+            <table className="w-full min-w-[960px] border-collapse text-sm">
               <thead>
                 <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
                   <th className="px-3 py-2 font-medium">报告名称</th>
@@ -357,6 +357,9 @@ export function Projects() {
                   <th className="px-3 py-2 font-medium">创建人</th>
                   <th className="px-3 py-2 font-medium">尺寸</th>
                   <th className="px-3 py-2 font-medium">页数</th>
+                  {activeTab === 'ai-html' && (
+                    <th className="px-3 py-2 font-medium">HTML 状态</th>
+                  )}
                   <th className="px-3 py-2 font-medium">更新时间</th>
                   <th className="px-3 py-2 text-right font-medium">操作</th>
                 </tr>
@@ -389,20 +392,50 @@ export function Projects() {
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.creator ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-muted">{p.width}×{p.height}</td>
                     <td className="px-3 py-2 text-foreground-muted">{p.pageCount}</td>
+                    {activeTab === 'ai-html' && (
+                      <td className="px-3 py-2">
+                        {(() => {
+                          const status = p.meta?.aiHtmlStatus;
+                          const hasHtml = p.hasHtml;
+                          if (status === 'generating') {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                                生成中
+                              </span>
+                            );
+                          }
+                          if (hasHtml || status === 'generated') {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                已生成
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
+                              <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                              未生成
+                            </span>
+                          );
+                        })()}
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-foreground-muted">{new Date(p.updatedAt).toLocaleDateString()}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       <button
                         onClick={() => {
                           if (p.meta?.styleType === 'ai-html') {
-                            window.open('https://grapes-editor.g2h3.com/', '_blank');
+                            navigate(`/projects/${p.id}/html-studio`);
                             return;
                           }
                           navigate(`/projects/${p.id}`);
                         }}
                         className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
-                        title={p.meta?.styleType === 'ai-html' ? '打开 GrapesJS 编辑器' : '进入可视化编辑器'}
+                        title={p.meta?.styleType === 'ai-html' ? '进入 AI HTML 工作台' : '进入可视化编辑器'}
                       >
-                        {p.meta?.styleType === 'ai-html' ? 'GrapesJS' : '可视化编辑'}
+                        {p.meta?.styleType === 'ai-html' ? '⚡ AI生成' : '可视化编辑'}
                       </button>
                       {p.meta?.styleType === 'ai-html' && (
                         <span className="relative ml-1 inline-block">

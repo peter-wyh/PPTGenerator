@@ -265,6 +265,17 @@ export interface ProjectMeta {
   /** P1-15: 渲染类型 — 'multi-page'=多页PPT, 'long-poster'=长图海报, 'html-report'=HTML报告。 */
   renderType?: string;
 
+  /** AI HTML 生成状态：'generated'=已生成, 'generating'=生成中, 'pending'=未生成。 */
+  aiHtmlStatus?: 'generated' | 'generating' | 'pending';
+
+  /** Agent 对话历史（Report Agent 模式，存于 meta JSON）。 */
+  agentHistory?: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    action?: 'generate' | 'edit' | 'fix' | 'manual';
+    ts: string;
+  }>;
+
   /** 全局页眉配置（非画布组件，自动渲染在每页顶部）。 */
   headerConfig?: GlobalHeaderConfig;
 

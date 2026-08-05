@@ -13,6 +13,8 @@ export interface ProjectSummary {
   pageCount: number;
   /** 项目元数据（业务线/创建人/场景/广告主/campaign 信息）。 */
   meta?: ProjectMeta;
+  /** 是否已生成 HTML 内容（styleType='ai-html' 时用于列表展示状态）。 */
+  hasHtml?: boolean;
   createdAt: string;
   updatedAt: string;
 }

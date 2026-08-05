@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { useEditorStore } from '../../store';
-import type { EditorComponent, CardsRowData, CardsRowItem } from '@mediakit/shared';
+import type { EditorComponent, CardsRowData, CardsRowItem, IconWeight } from '@mediakit/shared';
+import { IconKit } from '../../icons/IconKit';
+import { IconPickerOverlay } from '../../icons/IconPickerOverlay';
 
 interface Props {
   comp: EditorComponent;
@@ -22,6 +25,7 @@ function updateComp(compId: string, updater: (data: CardsRowData) => void) {
 export function CardsRowFields({ comp }: Props) {
   const data = comp.data as CardsRowData;
   const items = data.items ?? [];
+  const [pickerFor, setPickerFor] = useState<number | null>(null);
 
   const updateItem = (idx: number, patch: Partial<CardsRowItem>) => {
     updateComp(comp.id, (d) => {
@@ -54,17 +58,42 @@ export function CardsRowFields({ comp }: Props) {
   return (
     <div className="space-y-2">
       <div className="text-xs font-semibold text-foreground-secondary">卡片列表（{items.length}）</div>
-      {items.map((item, i) => (
+      {items.map((item, i) => {
+        const iconType = item.iconType ?? (item.icon && item.icon.length <= 2 ? 'emoji' : 'emoji');
+        return (
         <div key={i} className="space-y-1.5 rounded-lg border border-border-default p-2.5">
           <div className="flex items-center gap-1.5">
             <span className="flex-none text-[11px] font-bold text-foreground-muted">#{i + 1}</span>
-            <input
-              type="text"
-              value={item.icon ?? ''}
-              placeholder="图标 emoji"
-              onChange={(e) => updateItem(i, { icon: e.target.value })}
-              className="w-14 rounded border border-border-default px-1.5 py-0.5 text-xs"
-            />
+            {/* 图标输入区：emoji 模式=文本输入，kit 模式=选择器按钮 */}
+            {iconType === 'kit' ? (
+              <button
+                onClick={() => setPickerFor(i)}
+                className="flex h-7 w-9 flex-none items-center justify-center rounded border border-border-default hover:bg-surface-hover"
+                title="点击选择图标"
+              >
+                {item.icon ? (
+                  <IconKit name={item.icon} weight={item.iconWeight ?? 'regular'} size={18} color="var(--foreground-primary)" />
+                ) : (
+                  <span className="text-xs text-foreground-muted">⊕</span>
+                )}
+              </button>
+            ) : (
+              <input
+                type="text"
+                value={item.icon ?? ''}
+                placeholder="Emoji"
+                onChange={(e) => updateItem(i, { icon: e.target.value })}
+                className="w-10 flex-none rounded border border-border-default px-1 py-0.5 text-center text-xs"
+              />
+            )}
+            {/* 图标类型切换 */}
+            <button
+              onClick={() => updateItem(i, { iconType: iconType === 'kit' ? 'emoji' : 'kit', icon: iconType === 'kit' ? '' : (item.icon ?? '') })}
+              className="flex-none rounded px-1 py-0.5 text-[9px] text-foreground-muted hover:bg-surface-hover"
+              title={iconType === 'kit' ? '切换为 Emoji' : '切换为图标库'}
+            >
+              {iconType === 'kit' ? '✎' : '⚡'}
+            </button>
             <input
               type="text"
               value={item.title}
@@ -90,6 +119,19 @@ export function CardsRowFields({ comp }: Props) {
               title="删除卡片"
             >✕</button>
           </div>
+          {/* kit 模式下显示 weight 选择 */}
+          {iconType === 'kit' && item.icon && (
+            <div className="flex items-center gap-1 pl-7">
+              <span className="text-[9px] text-foreground-muted">风格</span>
+              {(['thin', 'light', 'regular', 'bold', 'fill', 'duotone'] as IconWeight[]).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => updateItem(i, { iconWeight: w })}
+                  className={`rounded px-1 py-0.5 text-[9px] ${(item.iconWeight ?? 'regular') === w ? 'bg-accent-primary/10 text-accent-primary' : 'text-foreground-muted hover:bg-surface-hover'}`}
+                >{w}</button>
+              ))}
+            </div>
+          )}
           <textarea
             value={item.body ?? ''}
             placeholder="卡片正文"
@@ -105,7 +147,8 @@ export function CardsRowFields({ comp }: Props) {
             className="w-full rounded border border-border-default px-2 py-0.5 text-xs"
           />
         </div>
-      ))}
+        );
+      })}
       <button
         onClick={addCard}
         className="w-full rounded-lg border border-dashed border-border-default px-3 py-1.5 text-xs text-foreground-secondary hover:bg-surface-hover"
@@ -122,6 +165,23 @@ export function CardsRowFields({ comp }: Props) {
         />
         <span className="text-xs text-foreground-muted">px</span>
       </div>
+
+      {/* Icon picker overlay */}
+      {pickerFor !== null && (
+        <IconPickerOverlay
+          value={items[pickerFor]?.icon}
+          weight={items[pickerFor]?.iconWeight ?? 'regular'}
+          onPick={(key) => {
+            updateItem(pickerFor, { icon: key, iconType: 'kit' });
+            setPickerFor(null);
+          }}
+          onClear={() => {
+            updateItem(pickerFor, { icon: '' });
+            setPickerFor(null);
+          }}
+          onClose={() => setPickerFor(null)}
+        />
+      )}
     </div>
   );
 }

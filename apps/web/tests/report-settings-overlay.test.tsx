@@ -30,7 +30,7 @@ describe('ReportSettingsOverlay 左导航 + 业务线 Logo', () => {
     expect(screen.getByText('基础样式')).toBeInTheDocument();
     expect(screen.getByText('布局')).toBeInTheDocument();
     expect(screen.getByText('组件样式')).toBeInTheDocument();
-    expect(screen.getByText('品牌')).toBeInTheDocument();
+    expect(screen.getByText('页眉页脚')).toBeInTheDocument();
     expect(screen.getByText('配色')).toBeInTheDocument(); // 基础样式默认展开
   });
 

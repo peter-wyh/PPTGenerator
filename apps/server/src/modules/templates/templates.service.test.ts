@@ -5,6 +5,7 @@ const prismaMock = vi.hoisted(() => ({
   template: {
     findMany: vi.fn(),
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),

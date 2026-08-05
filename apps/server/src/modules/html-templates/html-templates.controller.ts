@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { htmlTemplateService } from './html-templates.service';
 import { aiGenerateService } from './ai-generate.service';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { ApiError } from '../../utils/ApiError';
 import type { AuthPayload } from '../../types/express';
 import type { TemplateStatus } from '@prisma/client';
 
@@ -59,16 +60,16 @@ export const htmlTemplateController = {
 
   /** Generate HTML report: template mode or AI mode */
   generate: asyncHandler(async (req: Request, res: Response) => {
-    const { mode, templateId, prompt, campaignId, theme } = req.body;
+    const { mode, templateId, prompt, campaignId, reportPeriod } = req.body;
 
     let html: string;
 
     if (mode === 'template') {
-      if (!templateId) throw new Error('templateId is required for template mode');
+      if (!templateId) throw ApiError.badRequest('template 模式需要选择模板（templateId）');
       // Build campaign context if available
       let campaignData: Record<string, any> = {};
       if (campaignId) {
-        const json = await aiGenerateService.buildCampaignContext(campaignId);
+        const json = await aiGenerateService.buildCampaignContext(campaignId, reportPeriod);
         campaignData = JSON.parse(json);
       }
       html = await htmlTemplateService.generateFromTemplate(templateId, campaignData);
@@ -77,21 +78,60 @@ export const htmlTemplateController = {
       html = await aiGenerateService.generateHtml({
         campaignId,
         prompt: prompt || 'Generate a comprehensive campaign performance report',
-        theme,
         designMd: req.body.designMd,
+        reportPeriod,
       });
     }
 
     res.json({ html });
   }),
 
-  /** 保存生成的 HTML 到项目 */
+  /** 保存生成的 HTML 到项目（兼容旧接口，同时写入 HtmlVersion 表） */
   saveHtml: asyncHandler(async (req: Request, res: Response) => {
     const auth = req.user as AuthPayload;
     const { projectId } = req.params;
-    const { html } = req.body;
-    await htmlTemplateService.saveHtmlToProject(projectId, auth.id, html);
-    res.json({ ok: true });
+    const { html, name, source, mode } = req.body;
+    // mode: 'overwrite' (覆盖当前版本) | 'new' (新增版本)，默认 overwrite
+    const result = await htmlTemplateService.saveHtmlVersion(projectId, auth.id, html, {
+      name,
+      source,
+      mode: mode || 'overwrite',
+    });
+    res.json(result);
+  }),
+
+  /** 列出项目的所有 HTML 版本 */
+  listHtmlVersions: asyncHandler(async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+    const versions = await htmlTemplateService.listHtmlVersions(projectId);
+    res.json(versions);
+  }),
+
+  /** 获取单个 HTML 版本 */
+  getHtmlVersion: asyncHandler(async (req: Request, res: Response) => {
+    const { versionId } = req.params;
+    const version = await htmlTemplateService.getHtmlVersion(versionId);
+    res.json(version);
+  }),
+
+  /** 更新 HTML 版本（名称/内容/激活状态） */
+  updateHtmlVersion: asyncHandler(async (req: Request, res: Response) => {
+    const auth = req.user as AuthPayload;
+    const { versionId } = req.params;
+    const { name, html, isActive } = req.body;
+    const version = await htmlTemplateService.updateHtmlVersion(versionId, auth.id, {
+      name,
+      html,
+      isActive,
+    });
+    res.json(version);
+  }),
+
+  /** 删除 HTML 版本 */
+  deleteHtmlVersion: asyncHandler(async (req: Request, res: Response) => {
+    const { versionId } = req.params;
+    await htmlTemplateService.deleteHtmlVersion(versionId);
+    res.status(204).json({ ok: true });
   }),
 
   /** 从 Campaign 直接创建新报告并保存 HTML（Campaign 列表入口） */
@@ -107,6 +147,24 @@ export const htmlTemplateController = {
     res.status(201).json({ ok: true, projectId: project.id });
   }),
 
+  /** Agent 增量编辑：当前 HTML + 用户指令 → 修改后的完整 HTML */
+  agentEdit: asyncHandler(async (req: Request, res: Response) => {
+    const { currentHtml, instruction } = req.body;
+    const html = await aiGenerateService.editHtml({
+      currentHtml,
+      instruction,
+    });
+    res.json({ html });
+  }),
+
+  /** Agent 模式自动保存（直接覆盖 htmlContent，无版本管理） */
+  autoSave: asyncHandler(async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+    const { html, agentHistory } = req.body;
+    const result = await htmlTemplateService.autoSaveHtml(projectId, html, agentHistory);
+    res.json(result);
+  }),
+
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
   getDesignGuide: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId } = req.params;
@@ -117,8 +175,15 @@ export const htmlTemplateController = {
     try {
       const parsed = JSON.parse(json);
       designMd = parsed.designGuide ?? '';
-      businessLineName = parsed.campaign?.businessLine ?? '';
-      businessLineCode = businessLineName;
+      // businessLine 可能是对象 {code, name, logoUrl} 或字符串
+      const bl = parsed.campaign?.businessLine;
+      if (typeof bl === 'string') {
+        businessLineName = bl;
+        businessLineCode = bl;
+      } else if (bl && typeof bl === 'object') {
+        businessLineName = bl.name ?? bl.code ?? '';
+        businessLineCode = bl.code ?? bl.name ?? '';
+      }
     } catch { /* ignore */ }
     res.json({ designMd, businessLineName, businessLineCode });
   }),

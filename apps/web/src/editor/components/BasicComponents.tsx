@@ -406,7 +406,7 @@ export function TableComponent({ data }: { data: TableData }) {
     );
   }
   return (
-    <div className="h-full w-full overflow-auto bg-surface-primary">
+    <div className="h-full w-full overflow-visible bg-surface-primary">
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr>
@@ -902,7 +902,13 @@ export function CardsRow({ data }: { data: CardsRowDataType }) {
           className="skin-card flex min-w-0 flex-1 flex-col p-4"
         >
           {item.icon && (
-            <div className="mb-1.5 text-xl">{item.icon}</div>
+            item.iconType === 'kit' ? (
+              <div className="mb-1.5" style={{ color: 'var(--color-primary)' }}>
+                <IconKit name={item.icon} weight={item.iconWeight ?? 'regular'} size={24} />
+              </div>
+            ) : (
+              <div className="mb-1.5 text-xl">{item.icon}</div>
+            )
           )}
           <div className="text-sm font-bold leading-tight text-foreground-primary">{item.title}</div>
           {item.body && (

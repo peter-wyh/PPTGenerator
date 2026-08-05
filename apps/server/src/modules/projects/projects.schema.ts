@@ -216,6 +216,15 @@ const reportDataContextSchema = z
             }),
           )
           .optional(),
+        /** 多平台多合作形式（reportCampaignFrom 从上游 Campaign 回填）。 */
+        platforms: z
+          .array(z.object({ platform: z.string().max(100), collaborationType: z.string().max(100) }))
+          .optional(),
+        /**
+         * Campaign 分析包（趋势/洞察/品类/产品/地域/优惠码）。
+         * 自动回填的大型嵌套数据、非用户输入——原样透传，避免严格 schema 漏字段再次被 strip。
+         */
+        analytics: z.unknown().optional(),
       })
       .nullable()
       .optional(),
@@ -402,6 +411,61 @@ const reportDataContextSchema = z
       .optional(),
   })
   .optional();
+/** 页眉/页脚 logo 配置（与 shared HeaderLogo 对齐）。 */
+const headerLogoSchema = z.object({
+  src: z.string().max(2048).optional(),
+  text: z.string().max(120).optional(),
+  initials: z.string().max(20).optional(),
+  logoHeight: z.number().min(8).max(200).optional(),
+});
+
+/** 页眉背景（与 shared HeaderBackground 对齐：纯色/渐变/图片 + 不透明度）。 */
+const headerBackgroundSchema = z.object({
+  type: z.enum(['color', 'gradient', 'image']).optional(),
+  color: z.string().max(20).optional(),
+  gradient: z.string().max(500).optional(),
+  image: z.string().max(2048).optional(),
+  /** 不透明度 0-1。 */
+  opacity: z.number().min(0).max(1).optional(),
+});
+
+/**
+ * 全局页眉配置（存于 meta.headerConfig）。
+ * 历史回归：曾漏声明 → Zod 默认 strip 未知键 → validate 中间件覆盖回 req.body，
+ * 导致「全局样式设置-页眉页脚」保存后刷新即丢失。声明后 Project/Template 共用。
+ */
+const headerConfigSchema = z.object({
+  enabled: z.boolean(),
+  height: z.number().min(8).max(400).optional(),
+  preset: z
+    .enum(['split', 'left-logos-right-text', 'left-text-right-logo', 'left-logo-right-text', 'center-text', 'custom'])
+    .optional(),
+  leftLogo: headerLogoSchema.optional(),
+  rightLogo: headerLogoSchema.optional(),
+  titleText: z.string().max(200).optional(),
+  dateLabel: z.string().max(200).optional(),
+  connector: z.string().max(20).optional(),
+  /** 背景：旧字符串形状（纯色 HEX）或新结构化 HeaderBackground。 */
+  background: z.union([z.string().max(2048), headerBackgroundSchema]).optional(),
+  borderColor: z.string().max(20).optional(),
+});
+
+/** 全局页脚配置（存于 meta.footerConfig）。 */
+const footerConfigSchema = z.object({
+  enabled: z.boolean(),
+  height: z.number().min(8).max(200).optional(),
+  leftText: z.string().max(200).optional(),
+  rightText: z.string().max(120).optional(),
+  background: z.string().max(20).optional(),
+});
+
+/** 报告时间范围（月报=选月 "YYYY-MM"；周报/双周报=选起止日期）。 */
+const reportPeriodSchema = z.object({
+  month: z.string().max(20).optional(),
+  startDate: z.string().max(40).optional(),
+  endDate: z.string().max(40).optional(),
+});
+
 const projectMetaFields = {
   businessLine: z.string().max(40).optional(),
   creator: z.string().max(80).optional(),
@@ -416,6 +480,15 @@ const projectMetaFields = {
   campaignInfo: campaignInfoSchema,
   theme: projectThemeSchema,
   reportData: reportDataContextSchema,
+  /** 全局页眉/页脚配置（ReportSettingsOverlay「页眉页脚」分区编辑，自动渲染在每页顶/底）。 */
+  headerConfig: headerConfigSchema.optional(),
+  footerConfig: footerConfigSchema.optional(),
+  /** 报告时间范围（驱动报告标题周期文案）。 */
+  reportPeriod: reportPeriodSchema.optional(),
+  /** 渲染类型：multi-page / long-poster / html-report（P1-15，模板管理流）。 */
+  renderType: z.string().max(40).optional(),
+  /** AI HTML 报告生成状态（HtmlStudio 写入，项目列表状态徽标读取）。 */
+  aiHtmlStatus: z.enum(['generated', 'generating', 'pending']).optional(),
 };
 
 /** 项目元数据 schema（Template 与 Project 共用同一 meta 结构）。 */

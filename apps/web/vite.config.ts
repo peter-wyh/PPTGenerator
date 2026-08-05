@@ -15,6 +15,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        // AI HTML 生成（DeepSeek V4 Pro）耗时不稳定，复杂报告 2-5 分钟，偶发更久；
+        // server 端 290s 主动超时兜底，这里给到 10min 避免 proxy 先于 server 返回裸 500。
+        proxyTimeout: 600000,
+        timeout: 600000,
       },
       // 本地上传文件静态托管（STORAGE_DRIVER=local 时）。
       '/uploads': {

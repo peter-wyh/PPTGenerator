@@ -38,6 +38,19 @@ const PRESETS: SizePreset[] = [
 const selectCls =
   'w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary';
 
+/**
+ * 根据宽高推断渲染类型（兼容旧数据——meta 中尚无 renderType 字段的模板）。
+ * - 竖版（高>宽）→ 长图海报
+ * - 接近 16:9（宽≥高且 ratio≥1.5）→ 多页 PPT
+ * - 其余（如 1242×1656 接近竖版但略宽）→ HTML 报告
+ */
+function inferRenderType(w: number, h: number): RenderType {
+  if (h > w) return 'long-poster';
+  const ratio = w / h;
+  if (ratio >= 1.5) return 'multi-page';
+  return 'html-report';
+}
+
 export interface TemplateFormInitial {
   name: string;
   width: number;
@@ -45,6 +58,7 @@ export interface TemplateFormInitial {
   businessLine?: string;
   scenario?: Scenario;
   templateType?: string;
+  renderType?: string;
   note?: string | null;
   status?: TemplateStatus;
 }
@@ -98,6 +112,9 @@ export function TemplateFormDialog({
       setName(initial.name);
       const matched = PRESETS.find((p) => p.w === initial.width && p.h === initial.height);
       setPresetId(matched?.id ?? 'custom');
+      // renderType 优先从 meta 取，为空时根据宽高比推断（兼容旧数据）
+      const inferredRT = (initial.renderType as RenderType | '') ?? inferRenderType(initial.width, initial.height);
+      setRenderType(inferredRT);
       setBusinessLine(initial.businessLine ?? '');
       setScenario(initial.scenario ?? '');
       setTemplateType(initial.templateType ?? '');
@@ -137,9 +154,7 @@ export function TemplateFormDialog({
     });
   };
 
-  const canSubmit = editMode
-    ? name.trim().length > 0 && !loading
-    : name.trim().length > 0 && !!renderType && !loading;
+  const canSubmit = name.trim().length > 0 && !!renderType && !loading;
 
   return (
     <div
@@ -164,36 +179,34 @@ export function TemplateFormDialog({
             placeholder="如：投放周报 · 通用模板"
           />
 
-          {/* P1-15: 新建模板第一步 — 选择渲染类型 */}
-          {!editMode && (
-            <div>
-              <span className="mb-2 block text-sm font-medium text-foreground-secondary">渲染类型</span>
-              <div className="grid grid-cols-3 gap-2">
-                {RENDER_TYPES.map((rt) => (
-                  <button
-                    key={rt.value}
-                    type="button"
-                    onClick={() => setRenderType(rt.value)}
-                    className={`rounded-lg border p-3 text-left transition ${
-                      renderType === rt.value
-                        ? 'border-accent-primary bg-accent-primary/5'
-                        : 'border-border-default hover:border-accent-secondary/50'
-                    }`}
-                  >
-                    <div className={`text-sm font-medium ${renderType === rt.value ? 'text-accent-primary' : 'text-foreground-primary'}`}>
-                      {rt.label}
-                    </div>
-                    <div className="mt-1 text-xs text-foreground-muted">{rt.desc}</div>
-                  </button>
-                ))}
-              </div>
+          {/* 渲染类型选择器 — 新建和编辑均显示 */}
+          <div>
+            <span className="mb-2 block text-sm font-medium text-foreground-secondary">渲染类型</span>
+            <div className="grid grid-cols-3 gap-2">
+              {RENDER_TYPES.map((rt) => (
+                <button
+                  key={rt.value}
+                  type="button"
+                  onClick={() => setRenderType(rt.value)}
+                  className={`rounded-lg border p-3 text-left transition ${
+                    renderType === rt.value
+                      ? 'border-accent-primary bg-accent-primary/5'
+                      : 'border-border-default hover:border-accent-secondary/50'
+                  }`}
+                >
+                  <div className={`text-sm font-medium ${renderType === rt.value ? 'text-accent-primary' : 'text-foreground-primary'}`}>
+                    {rt.label}
+                  </div>
+                  <div className="mt-1 text-xs text-foreground-muted">{rt.desc}</div>
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* 渲染类型选定后才展示尺寸 / 分类 / 备注（编辑模式直接展示全部） */}
-          {(editMode || renderType) && (
+          {/* 渲染类型选定后才展示尺寸 / 分类 / 备注 */}
+          {renderType && (
             <>
-              {renderType === 'multi-page' && !editMode ? (
+              {renderType === 'multi-page' ? (
                 <div className="rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-secondary">
                   固定 16:9（1920×1080），多页编辑
                 </div>

@@ -148,7 +148,7 @@ export const htmlTemplateService = {
     return html;
   },
 
-  /** 保存生成的 HTML 到项目 */
+  /** 保存生成的 HTML 到项目（向后兼容旧字段 + 新 HtmlVersion 表） */
   async saveHtmlToProject(projectId: string, _ownerId: string, html: string): Promise<void> {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw ApiError.notFound('报告不存在');
@@ -163,6 +163,211 @@ export const htmlTemplateService = {
         },
       },
     });
+  },
+
+  /**
+   * 自动保存 HTML 到报告（Agent 模式专用）。
+   * 直接更新 project.htmlContent，不创建 HtmlVersion。
+   * 同时更新 meta.updatedAt 时间戳，使报告列表按编辑时间排序。
+   */
+  async autoSaveHtml(
+    projectId: string,
+    html: string,
+    agentHistory?: unknown[],
+  ): Promise<{ ok: true; updatedAt: string }> {
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw ApiError.notFound('报告不存在');
+
+    const currentMeta = (project.meta as Record<string, unknown> | null) ?? {};
+    const newMeta: Record<string, unknown> = {
+      ...currentMeta,
+      styleType: 'ai-html',
+      updatedAt: new Date().toISOString(),
+    };
+    if (agentHistory !== undefined) {
+      newMeta.agentHistory = agentHistory;
+    }
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        htmlContent: html,
+        meta: newMeta as any,
+      },
+    });
+
+    return { ok: true, updatedAt: new Date().toISOString() };
+  },
+
+  // ─── HtmlVersion 多版本管理 ───────────────────────────
+
+  /** 保存 HTML（覆盖当前激活版本 或 新增版本） */
+  async saveHtmlVersion(
+    projectId: string,
+    ownerId: string,
+    html: string,
+    opts: { name?: string; source?: string; mode?: 'overwrite' | 'new' },
+  ) {
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw ApiError.notFound('报告不存在');
+
+    const mode = opts.mode || 'overwrite';
+    const versionName = opts.name || `版本 ${new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
+
+    // 如果项目有旧 htmlContent 但还没有 HtmlVersion → 自动迁移为第一个版本
+    const existingVersions = await prisma.htmlVersion.findMany({ where: { projectId } });
+    if (existingVersions.length === 0 && project.htmlContent) {
+      await prisma.htmlVersion.create({
+        data: {
+          projectId,
+          ownerId,
+          name: '初始版本',
+          html: project.htmlContent,
+          isActive: true,
+        },
+      });
+    }
+
+    let version;
+    if (mode === 'new') {
+      // 新增版本：取消其他版本的 isActive
+      await prisma.htmlVersion.updateMany({
+        where: { projectId },
+        data: { isActive: false },
+      });
+      version = await prisma.htmlVersion.create({
+        data: {
+          projectId,
+          ownerId,
+          name: versionName,
+          html,
+          source: opts.source || null,
+          isActive: true,
+        },
+      });
+    } else {
+      // 覆盖模式：找到当前激活版本覆盖；没有则新建
+      const active = await prisma.htmlVersion.findFirst({ where: { projectId, isActive: true } });
+      if (active) {
+        version = await prisma.htmlVersion.update({
+          where: { id: active.id },
+          data: {
+            html,
+            name: opts.name || active.name,
+            source: opts.source || active.source,
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        await prisma.htmlVersion.updateMany({
+          where: { projectId },
+          data: { isActive: false },
+        });
+        version = await prisma.htmlVersion.create({
+          data: {
+            projectId,
+            ownerId,
+            name: versionName,
+            html,
+            source: opts.source || null,
+            isActive: true,
+          },
+        });
+      }
+    }
+
+    // 同步更新 project.htmlContent（向后兼容）
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        htmlContent: html,
+        meta: { ...(project.meta as object), styleType: 'ai-html', updatedAt: new Date().toISOString() },
+      },
+    });
+
+    return { ok: true, versionId: version.id, version };
+  },
+
+  /** 列出项目的所有 HTML 版本 */
+  async listHtmlVersions(projectId: string) {
+    const versions = await prisma.htmlVersion.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        source: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    return versions;
+  },
+
+  /** 获取单个版本（含 html 内容） */
+  async getHtmlVersion(versionId: string) {
+    const version = await prisma.htmlVersion.findUnique({ where: { id: versionId } });
+    if (!version) throw ApiError.notFound('版本不存在');
+    return version;
+  },
+
+  /** 更新版本（名称/内容/激活状态） */
+  async updateHtmlVersion(
+    versionId: string,
+    _ownerId: string,
+    input: { name?: string; html?: string; isActive?: boolean },
+  ) {
+    const version = await prisma.htmlVersion.findUnique({ where: { id: versionId } });
+    if (!version) throw ApiError.notFound('版本不存在');
+
+    // 如果设为激活，取消同项目其他版本的 isActive
+    if (input.isActive) {
+      await prisma.htmlVersion.updateMany({
+        where: { projectId: version.projectId, id: { not: versionId } },
+        data: { isActive: false },
+      });
+      // 同步 project.htmlContent
+      const fullVersion = await prisma.htmlVersion.findUnique({ where: { id: versionId } });
+      if (fullVersion) {
+        await prisma.project.update({
+          where: { id: version.projectId },
+          data: { htmlContent: fullVersion.html },
+        });
+      }
+    }
+
+    const data: any = {};
+    if (input.name !== undefined) data.name = input.name;
+    if (input.html !== undefined) data.html = input.html;
+    if (input.isActive !== undefined) data.isActive = input.isActive;
+
+    const updated = await prisma.htmlVersion.update({ where: { id: versionId }, data });
+    return updated;
+  },
+
+  /** 删除版本 */
+  async deleteHtmlVersion(versionId: string) {
+    const version = await prisma.htmlVersion.findUnique({ where: { id: versionId } });
+    if (!version) throw ApiError.notFound('版本不存在');
+    const wasActive = version.isActive;
+
+    await prisma.htmlVersion.delete({ where: { id: versionId } });
+
+    // 如果删的是激活版本，自动激活最新的
+    if (wasActive) {
+      const latest = await prisma.htmlVersion.findFirst({
+        where: { projectId: version.projectId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (latest) {
+        await prisma.htmlVersion.update({ where: { id: latest.id }, data: { isActive: true } });
+        await prisma.project.update({
+          where: { id: version.projectId },
+          data: { htmlContent: latest.html },
+        });
+      }
+    }
   },
 
   /** 从 Campaign 创建新报告并保存 HTML */

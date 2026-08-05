@@ -10,8 +10,23 @@ import {
   type TemplateFormValues,
 } from '@/components/TemplateFormDialog';
 import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS, TEMPLATE_TYPES, TEMPLATE_TYPE_LABELS } from '@/projectsMeta';
-import type { ProjectMeta, Scenario, TemplateStatus, TemplateSummary } from '@mediakit/shared';
+import type { ProjectMeta, TemplateSummary, Scenario, TemplateStatus } from '@mediakit/shared';
 import { toast } from '../components/Toast';
+
+/** 渲染类型 → 标签 + 徽章颜色（与报告管理页 styleType 徽章风格一致） */
+const RENDER_TYPE_BADGES: Record<string, { label: string; cls: string }> = {
+  'multi-page': { label: '多页 PPT', cls: 'bg-orange-100 text-orange-700' },
+  'long-poster': { label: '长图海报', cls: 'bg-blue-100 text-blue-700' },
+  'html-report': { label: 'HTML 报告', cls: 'bg-purple-100 text-purple-700' },
+};
+/** 兼容旧数据：meta.renderType 为空时根据宽高推断 */
+function renderTypeOf(t: TemplateSummary): string {
+  const rt = (t.meta as Record<string, unknown>)?.renderType as string | undefined;
+  if (rt) return rt;
+  if (t.height > t.width) return 'long-poster';
+  const ratio = t.width / t.height;
+  return ratio >= 1.5 ? 'multi-page' : 'html-report';
+}
 
 /** 模板管理（管理后台）：仅 ADMIN 可见。列表 / 筛选 / 新建 / 编辑 / 发布·取消 / 复制 / 删除。 */
 export function Templates() {
@@ -285,6 +300,7 @@ export function Templates() {
               <thead>
                 <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
                   <th className="px-3 py-2 font-medium">模板名称</th>
+                  <th className="px-3 py-2 font-medium">样式</th>
                   <th className="px-3 py-2 font-medium">业务线</th>
                   <th className="px-3 py-2 font-medium">场景</th>
                   <th className="px-3 py-2 font-medium">模版类型</th>
@@ -306,6 +322,15 @@ export function Templates() {
                       >
                         {t.name}
                       </button>
+                    </td>
+                    <td className="px-3 py-2 text-foreground-secondary">
+                      {(() => {
+                        const rt = renderTypeOf(t);
+                        const badge = RENDER_TYPE_BADGES[rt];
+                        return badge
+                          ? <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${badge.cls}`}>{badge.label}</span>
+                          : <span className="text-foreground-muted">—</span>;
+                      })()}
                     </td>
                     <td className="px-3 py-2 text-foreground-secondary">{t.meta?.businessLine ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{scenarioText(t.meta)}</td>
@@ -434,6 +459,7 @@ function toInitial(t: TemplateSummary): TemplateFormInitial {
     businessLine: t.meta?.businessLine,
     scenario: t.meta?.scenario,
     templateType: t.meta?.templateType,
+    renderType: t.meta?.renderType,
     note: t.note,
     status: t.status,
   };

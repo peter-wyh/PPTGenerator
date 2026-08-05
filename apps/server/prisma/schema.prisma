@@ -48,11 +48,34 @@ model Project {
   /// 报告方案版本（追溯生成报告时所用的方案版本）。
   reportSchemeVersion String?
   /// AI/模板生成的 HTML 报告内容（单文件，内联 CSS）。styleType='ai-html' 时使用。
+  /// 保留向后兼容；新数据写入 HtmlVersion 表。
   htmlContent String? @db.LongText
   owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  htmlVersions HtmlVersion[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([ownerId])
+}
+
+/// AI 生成的 HTML 报告版本（一个 Project 可有多个版本）。
+model HtmlVersion {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// 版本名称（用户可编辑，如"投放结案 v1"、"达人复盘"）
+  name        String
+  /// HTML 内容（内联 CSS/JS 的完整单文件）
+  html        String   @db.LongText
+  /// 来源信息：哪个 preset 生成的、用的什么 prompt
+  source      String?
+  /// 是否为当前激活版本（前端默认展示）
+  isActive    Boolean  @default(false)
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
   @@index([ownerId])
 }
 

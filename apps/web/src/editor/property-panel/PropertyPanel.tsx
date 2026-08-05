@@ -32,6 +32,14 @@ import {
 } from './custom-fields';
 import { CardsRowFields } from './custom-fields/CardsRowFields';
 import { PageHeaderSyncButton } from './custom-fields/PageHeaderSyncButton';
+import {
+  PublisherTableFields,
+  CampaignSummaryFields,
+  RevenueTimelineFields,
+  GeoDistributionFields,
+  TimelineCompareFields,
+  ProductPerformanceFields,
+} from './custom-fields/CampaignComponentFields';
 
 /**
  * 标题块:序号/主色/底部分割线 三个字段按当前样式变体显隐(联动)。
@@ -171,6 +179,12 @@ export function PropertyPanel() {
       {comp.type === 'strategy-block' && <StrategyBlockFields comp={comp} />}
       {comp.type === 'cards-row' && <CardsRowFields comp={comp} />}
       {comp.type === 'page-header' && <PageHeaderSyncButton comp={comp} />}
+      {comp.type === 'publisher-table' && <PublisherTableFields comp={comp} />}
+      {comp.type === 'campaign-summary' && <CampaignSummaryFields comp={comp} />}
+      {comp.type === 'revenue-timeline' && <RevenueTimelineFields comp={comp} />}
+      {comp.type === 'geo-distribution' && <GeoDistributionFields comp={comp} />}
+      {comp.type === 'timeline-compare' && <TimelineCompareFields comp={comp} />}
+      {comp.type === 'product-performance' && <ProductPerformanceFields comp={comp} />}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button

@@ -17,6 +17,7 @@ const AdvertiserPage = lazy(() => import('./routes/AdvertiserPage').then((m) => 
 const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m) => ({ default: m.BusinessLinePage })));
 const CampaignCollabPage = lazy(() => import('./routes/CampaignCollabPage').then((m) => ({ default: m.CampaignCollabPage })));
 const SchemesPage = lazy(() => import('./routes/SchemesPage').then((m) => ({ default: m.SchemesPage })));
+const HtmlStudio = lazy(() => import('./routes/HtmlStudio').then((m) => ({ default: m.HtmlStudio })));
 
 function RouteFallback() {
   return (
@@ -51,6 +52,7 @@ export function App() {
           {/* 编辑器：沉浸式，无全局导航 */}
           <Route element={<ProtectedLayout bare />}>
             <Route path="/projects/:id" element={<ProjectShell />} />
+            <Route path="/projects/:id/html-studio" element={<HtmlStudio />} />
             <Route path="/templates/:id" element={<TemplateShell />} />
           </Route>
           <Route path="*" element={<Login />} />

@@ -8,6 +8,7 @@ import {
   type ThemeRadius,
   type GlobalHeaderConfig,
   type GlobalFooterConfig,
+  type HeaderBackground,
 } from '@mediakit/shared';
 import type { PageGradient } from '@mediakit/shared';
 import { useEditorStore } from '../store';
@@ -413,7 +414,94 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   </div>
                 </section>
                 <section className="space-y-3">
-                  <div className="text-xs skin-fw-heading text-foreground-secondary">配色</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs skin-fw-heading text-foreground-secondary">配色</div>
+                    {/* 从业务线自动同步品牌色 + design.md 样式 */}
+                    <button
+                      onClick={async () => {
+                        if (!businessLine) { setToast('请先选择业务线'); setTimeout(() => setToast(null), 2500); return; }
+                        try {
+                          const allBL = await lookupApi.listBusinessLines();
+                          const bl = allBL.find((b) => b.code === businessLine);
+                          if (!bl) { setToast(`未找到业务线 "${businessLine}"`); setTimeout(() => setToast(null), 2500); return; }
+
+                          // 1. 品牌色：从 BusinessLine.color 同步
+                          if (bl.color) {
+                            setTheme({ color: { primary: bl.color } });
+                          }
+
+                          // 2. 解析 design.md 提取样式值
+                          if (bl.designMd) {
+                            const md = bl.designMd;
+                            const colorPatch: Record<string, string> = {};
+                            const fontPatch: Record<string, string> = {};
+
+                            // 提取配色 hex/rgb
+                            const colorMatches = [...md.matchAll(/(?:#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})\b/g)].map((m) => m[0]);
+                            if (bl.color) colorPatch.primary = bl.color;
+                            if (colorMatches.length >= 2) colorPatch.secondary = colorMatches[1];
+
+                            // 提取字体名称
+                            const fontMatch = md.match(/字体[：:]\s*[「「"]?([^」"\n,，、\s]{2,20})/);
+                            let fontLabel = '';
+                            if (fontMatch) {
+                              fontPatch.heading = fontMatch[1];
+                              fontPatch.body = fontMatch[1];
+                              fontLabel = fontMatch[1];
+                            }
+
+                            // 提取圆角
+                            let radiusVal: 'sharp' | 'small' | 'medium' | 'large' | '' = '';
+                            const radiusMatch = md.match(/(?:圆角|radius)[：:]\s*(\d+)/);
+                            if (radiusMatch) {
+                              const r = parseInt(radiusMatch[1]);
+                              radiusVal = r <= 2 ? 'sharp' : r <= 8 ? 'small' : r <= 16 ? 'medium' : 'large';
+                            }
+
+                            // 提取间距/密度
+                            let densityVal: 'compact' | 'standard' | 'comfortable' | 'spacious' | '' = '';
+                            const spacingMatch = md.match(/(?:间距|padding|spacing)[：:]\s*(\d+)/);
+                            if (spacingMatch) {
+                              const s = parseInt(spacingMatch[1]);
+                              densityVal = s <= 8 ? 'compact' : s <= 16 ? 'standard' : s <= 24 ? 'comfortable' : 'spacious';
+                            }
+
+                            // 应用
+                            const parts: string[] = [];
+                            if (Object.keys(colorPatch).length > 0) {
+                              setTheme({ color: colorPatch });
+                              parts.push(`品牌色 ${bl.color ?? ''}`);
+                            }
+                            if (Object.keys(fontPatch).length > 0) {
+                              setTheme({ font: fontPatch });
+                              parts.push(`字体 ${fontLabel}`);
+                            }
+                            if (radiusVal) {
+                              setTheme({ radius: radiusVal });
+                              parts.push('圆角');
+                            }
+                            if (densityVal) {
+                              setTheme({ density: densityVal });
+                              parts.push('间距');
+                            }
+
+                            setToast(parts.length ? `已同步：${parts.join(' + ')}` : 'design.md 无可解析样式');
+                          } else if (bl.color) {
+                            setToast(`已同步品牌色 ${bl.color}（无 design.md）`);
+                          } else {
+                            setToast('业务线无品牌色和 design.md');
+                          }
+                          setTimeout(() => setToast(null), 3000);
+                        } catch {
+                          setToast('同步失败'); setTimeout(() => setToast(null), 2500);
+                        }
+                      }}
+                      disabled={!businessLine}
+                      className="rounded-lg border border-accent-primary/40 bg-accent-primary/5 px-2.5 py-1 text-[10px] skin-fw-body text-accent-primary hover:bg-accent-primary/10 disabled:opacity-50"
+                    >
+                      🔄 从业务线同步
+                    </button>
+                  </div>
 
                   {/* 主品牌色 + 次品牌色 */}
                   <div className="grid grid-cols-2 skin-gap-md">
@@ -1500,7 +1588,7 @@ function HeaderFooterLogoEditor({
 }
 
 /* ─── 页眉背景编辑器 ─── */
-function HeaderBackgroundEditor({
+export function HeaderBackgroundEditor({
   background,
   onChange,
 }: {
@@ -1513,6 +1601,10 @@ function HeaderBackgroundEditor({
   const bgStr = !isObj ? (background as string | undefined) : undefined;
   const bgType = bgObj?.type ?? (bgStr ? 'color' : 'color');
 
+  // 改色/切类型时携带已有 opacity，避免一动颜色透明度就静默丢失（回归：opacity 不生效）。
+  const withOpacity = (bg: HeaderBackground): HeaderBackground =>
+    bgObj?.opacity === undefined ? bg : { ...bg, opacity: bgObj.opacity };
+
   return (
     <div className="space-y-2">
       {/* 类型切换 */}
@@ -1521,7 +1613,7 @@ function HeaderBackgroundEditor({
           <button
             key={t}
             type="button"
-            onClick={() => onChange({ type: t, color: '#ffffff' })}
+            onClick={() => onChange(withOpacity({ type: t, color: '#ffffff' }))}
             className={`flex-1 rounded-md border px-2 py-1 text-xs transition ${
               bgType === t
                 ? 'border-accent-primary bg-accent-primary/5 skin-fw-body text-foreground-primary'
@@ -1539,13 +1631,13 @@ function HeaderBackgroundEditor({
           <input
             type="color"
             value={bgObj?.color ?? bgStr ?? '#ffffff'}
-            onChange={(e) => onChange({ type: 'color', color: e.target.value })}
+            onChange={(e) => onChange(withOpacity({ type: 'color', color: e.target.value }))}
             className="h-8 w-12 rounded border border-border-default"
           />
           <input
             type="text"
             value={bgObj?.color ?? bgStr ?? '#ffffff'}
-            onChange={(e) => onChange({ type: 'color', color: e.target.value })}
+            onChange={(e) => onChange(withOpacity({ type: 'color', color: e.target.value }))}
             placeholder="#ffffff"
             className="flex-1 rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
           />
@@ -1558,7 +1650,7 @@ function HeaderBackgroundEditor({
           <input
             type="text"
             value={bgObj?.gradient ?? 'linear-gradient(90deg, #1a1a2e, #16213e)'}
-            onChange={(e) => onChange({ type: 'gradient', gradient: e.target.value })}
+            onChange={(e) => onChange(withOpacity({ type: 'gradient', gradient: e.target.value }))}
             placeholder="linear-gradient(90deg, #color1, #color2)"
             className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
           />
@@ -1575,7 +1667,7 @@ function HeaderBackgroundEditor({
               <button
                 key={preset.label}
                 type="button"
-                onClick={() => onChange({ type: 'gradient', gradient: preset.val })}
+                onClick={() => onChange(withOpacity({ type: 'gradient', gradient: preset.val }))}
                 className="rounded border border-border-default px-2 py-0.5 text-[10px] text-foreground-secondary hover:border-accent-primary"
                 style={{ background: preset.val, color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}
               >
@@ -1591,7 +1683,7 @@ function HeaderBackgroundEditor({
         <input
           type="text"
           value={bgObj?.image ?? ''}
-          onChange={(e) => onChange({ type: 'image', image: e.target.value })}
+          onChange={(e) => onChange(withOpacity({ type: 'image', image: e.target.value }))}
           placeholder="背景图片 URL"
           className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
         />

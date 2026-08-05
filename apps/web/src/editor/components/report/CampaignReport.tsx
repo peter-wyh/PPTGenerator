@@ -30,7 +30,7 @@ import { useChartColors, STATUS_DOT_STYLES } from './shared';
 export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
   const { title, campaignName, period, metrics = [], customerSplit } = data;
   return (
-    <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-md">
+    <div className="flex w-full flex-col skin-gap-sm skin-card skin-pad-md">
       {(title || campaignName) && (
         <div className="flex flex-none items-baseline justify-between">
           <div>
@@ -196,9 +196,9 @@ export function PublisherTable({ data }: { data: PublisherTableData }) {
   ];
 
   return (
-    <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
+    <div className="flex w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {title && <div className="flex-none text-sm skin-fw-heading text-foreground-primary">{title}</div>}
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="flex-1 overflow-visible">
         <table className="w-full text-left text-[11px]">
           <thead className="sticky top-0 bg-surface-primary">
             <tr className="border-b border-border-primary">
@@ -238,14 +238,14 @@ export function GeoDistribution({ data }: { data: GeoDistributionData }) {
 
   if (variant === 'list') {
     return (
-      <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
+      <div className="flex w-full flex-col gap-1.5 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
             {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-visible">
           <table className="w-full text-left text-[11px]">
             <tbody>
               {items.map((d, i) => (
@@ -263,7 +263,7 @@ export function GeoDistribution({ data }: { data: GeoDistributionData }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
+    <div className="flex w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
           {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}

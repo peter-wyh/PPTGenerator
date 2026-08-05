@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { htmlTemplatesApi, type HtmlTemplateSummary } from '@/api/htmlTemplates';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { htmlTemplatesApi, type HtmlTemplateSummary, type HtmlVersionSummary } from '@/api/htmlTemplates';
 import { Button } from '@/components/Button';
 import { BUSINESS_LINES } from '@/projectsMeta';
+import { getPresetsForBL } from '@/report-presets';
 
 interface Props {
   /** 已有报告 ID（从报告列表入口时传入）。 */
@@ -10,62 +11,15 @@ interface Props {
   campaignId?: string;
   /** Campaign 名称（用于默认报告名）。 */
   campaignName?: string;
+  /** 报告实际时间范围（优先于 campaign 全局起止日期）。 */
+  reportPeriod?: { startDate?: string; endDate?: string };
   onClose: () => void;
-  /** 保存成功后的回调（Campaign 模式下传回新报告 ID）。 */
   onSaved?: (projectId: string) => void;
 }
 
 type Mode = 'template' | 'ai';
-type Theme = 'light' | 'dark';
 
-/** 提示词预设：主题 + 设计规范 + 补充要求，三者组合为完整 prompt。 */
-const PROMPT_PRESETS = [
-  {
-    label: '投放结案',
-    theme: 'light' as Theme,
-    designSpec: `【配色】背景 #f5f7fa，白色卡片(#fff) + #ebebeb 边框，品牌色 #ff099e（粉色），正文 #1e1c24，次要 #626166
-【字体】Outfit（正文）+ Poppins（标题）+ Barlow Condensed（数字，大号粗体）
-【布局】max-width 1280px 居中，card 间距 24px，圆角 8px
-【图表】Chart.js（CDN 加载），responsive + maintainAspectRatio:false`,
-    requirement: `生成一份 DIGCHIC 风格的营销投放结案报告。
-【模块结构】
-1. Header：左侧商家 Logo + 品牌名，右侧 Campaign 周期标签
-2. KPI 总览：5 列网格 — Total Revenue / Clicks / Orders / New Customer / AOV
-3. Performance Trend：混合图表（折线=Revenue + 柱状=Orders）
-4. Publisher Performance 表格：达人/渠道列表
-5. Insight & Analysis（3 列）：Top Categories / Top Products / Top Market
-6. Actionable Insights（5 列）：每张卡顶部彩色边条`,
-  },
-  {
-    label: '达人复盘',
-    theme: 'light' as Theme,
-    designSpec: `【配色】浅色主题，品牌色可自定义，数据对比用互补色
-【字体】系统字体 + 数字加粗
-【布局】max-width 1200px 居中，卡片式布局`,
-    requirement: `生成一份达人投放复盘报告，重点展示达人 ROI 排名、内容效果对比、CPS 带货数据。
-包含达人榜单（表格）、各平台效果对比（柱状图）、合作内容截图墙。`,
-  },
-  {
-    label: '效果对比',
-    theme: 'light' as Theme,
-    designSpec: `【配色】浅色主题，蓝/橙对比色
-【字体】系统字体
-【布局】max-width 1200px 居中`,
-    requirement: `生成一份效果对比报告，将不同平台/达人的关键指标进行横向对比，突出最佳和最差表现。`,
-  },
-  {
-    label: '业务复盘看板',
-    theme: 'dark' as Theme,
-    designSpec: `【配色体系】--bg:#0a0e18 / --panel:#131a2c / --text:#e9ecf5 / --gold:#d8a657 / --green:#3fcf8e / --red:#ff6b6b
-【字体】Noto Serif SC（衬线标题）+ Noto Sans SC（正文）+ JetBrains Mono（数字）
-【图表】纯内联 <canvas> + JavaScript，DPR 高清渲染，圆角柱状 + 贝塞尔折线`,
-    requirement: `生成一份深色业务结算复盘看板，参照金融结算台账风格。
-5 个 section（Hero总览 → 季度卡片 → 按月分析 → 佣金预估 → 运营动作），
-每个 section 顶部含序号 01-05 + 衬线标题。
-KPI 大数字 58px JetBrains Mono，含 YOY 同比 + 完成率印章。
-所有图表用纯内联 canvas 实现，不依赖外部库。`,
-  },
-];
+
 
 const CREATOR_SUGGESTIONS = ['alex', 'stella', 'reese', 'stacey'];
 const selectCls = 'w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary';
@@ -77,14 +31,26 @@ const selectCls = 'w-full rounded-lg border border-border-default bg-surface-pri
  *  - 预览（iframe）、复制源码、下载、保存到报告
  *  - 业务线 design.md 回显与二次编辑
  */
-export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName, onClose, onSaved }: Props) {
+export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName, reportPeriod, onClose, onSaved }: Props) {
   const [mode, setMode] = useState<Mode>('ai');
-  const [theme, setTheme] = useState<Theme>('light');
   const [templates, setTemplates] = useState<HtmlTemplateSummary[]>([]);
   const [selectedTpl, setSelectedTpl] = useState<string>('');
-  const [prompt, setPrompt] = useState(PROMPT_PRESETS[0].requirement);
-  const [designSpec, setDesignSpec] = useState(PROMPT_PRESETS[0].designSpec);
+  // ★ 从 design guide API 获取 BL code，动态加载预设
+  const [blCode, setBlCode] = useState('');
+  const presets = useMemo(() => getPresetsForBL(blCode || undefined), [blCode]);
+  const [prompt, setPrompt] = useState('');
+  const [designSpec, setDesignSpec] = useState('');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
+
+  // BL 确定后自动填充该 BL 的第一个预设
+  useEffect(() => {
+    if (presets.length > 0) {
+      setPrompt(presets[0].requirement);
+      setDesignSpec(presets[0].designSpec);
+      setSelectedPresetIdx(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blCode]);
   const [generatedHtml, setGeneratedHtml] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -104,10 +70,28 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
   const [reportBL, setReportBL] = useState('');
   const [reportCreator, setReportCreator] = useState('');
 
+  // ★ 多版本管理
+  const [versions, setVersions] = useState<HtmlVersionSummary[]>([]);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+
   // 加载 templates
   useEffect(() => {
     htmlTemplatesApi.list({ status: 'PUBLISHED' }).then(setTemplates).catch(() => {});
   }, []);
+
+  // ★ 加载已有版本（已有报告模式）
+  useEffect(() => {
+    if (!projectId) return;
+    htmlTemplatesApi
+      .listHtmlVersions(projectId)
+      .then((vs) => {
+        setVersions(vs);
+        const active = vs.find((v) => v.isActive);
+        setActiveVersionId(active?.id || vs[0]?.id || null);
+      })
+      .catch(() => {});
+  }, [projectId]);
 
   // 加载 design.md
   useEffect(() => {
@@ -118,6 +102,10 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
       .then((data) => {
         setDesignMd(data.designMd || '');
         setDesignMdSource(data.businessLineName || '');
+        setBlCode(data.businessLineCode || ''); // ★ 触发预设重新加载
+        if (data.designMd && data.designMd.trim()) {
+          setDesignSpec('');
+        }
       })
       .catch(() => {
         // 静默失败 — designMd 是可选的
@@ -135,16 +123,21 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
         templateId: mode === 'template' ? selectedTpl : undefined,
         prompt: mode === 'ai' ? `${designSpec}\n\n${prompt}`.trim() : undefined,
         campaignId,
-        theme,
         designMd: mode === 'ai' && designMd.trim() ? designMd.trim() : undefined,
+        reportPeriod,
       });
       setGeneratedHtml(html);
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message || e?.response?.data?.message || e?.message || '生成失败，请重试');
+      const status = e?.response?.status;
+      const bizMsg = e?.response?.data?.error?.message || e?.response?.data?.message;
+      if (bizMsg) setError(bizMsg);
+      else if (status === 500) setError('AI 生成超时或服务异常，请稍后重试（报告越复杂耗时越长）');
+      else if (e?.code === 'ECONNABORTED' || e?.code === 'ETIMEDOUT') setError('请求超时，请重试');
+      else setError(e?.message || '生成失败，请重试');
     } finally {
       setLoading(false);
     }
-  }, [mode, selectedTpl, prompt, campaignId, theme, designMd]);
+  }, [mode, selectedTpl, prompt, campaignId, designMd, reportPeriod]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(generatedHtml);
@@ -162,52 +155,73 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
     URL.revokeObjectURL(url);
   }, [generatedHtml, projectId, campaignId]);
 
-  // 保存：已有报告 → 更新 HTML；Campaign 入口 → 创建新报告
-  const doSave = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      if (projectId) {
-        // 已有报告 — 更新 HTML
-        await htmlTemplatesApi.saveHtml(projectId, generatedHtml);
-        setSaved(true);
-        setTimeout(() => onSaved?.(projectId), 1200);
-      } else if (campaignId) {
-        // Campaign 入口 — 创建新报告
-        const result = await htmlTemplatesApi.saveHtmlAsProject({
-          html: generatedHtml,
-          campaignId,
-          name: reportName.trim() || `${campaignName ?? 'Campaign'} HTML 报告`,
-          businessLine: reportBL || undefined,
-          creator: reportCreator || undefined,
-        });
-        setSaved(true);
-        setShowSaveForm(false);
-        setTimeout(() => onSaved?.(result.projectId), 1200);
-      }
-    } catch (e: any) {
-      setError(e?.response?.data?.error?.message || '保存失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, campaignId, campaignName, generatedHtml, reportName, reportBL, reportCreator, onSaved]);
-
-  // 打开保存表单（Campaign 模式）
+  // 保存：已有报告 → 弹出版本对话框（覆盖/新增）；Campaign 入口 → 创建新报告
   const handleClickSave = useCallback(() => {
     if (projectId) {
-      // 已有报告 — 直接保存
-      void doSave();
+      // 已有报告 — 弹出多版本保存对话框
+      setShowSaveDialog(true);
     } else {
       // Campaign 模式 — 先填表单
       setReportName(`${campaignName ?? 'Campaign'} HTML 报告`);
       setShowSaveForm(true);
     }
-  }, [projectId, campaignName, doSave]);
+  }, [projectId, campaignName]);
+
+  // 执行保存（多版本模式）
+  const doSaveVersion = useCallback(
+    async (mode: 'overwrite' | 'new', versionName?: string) => {
+      if (!projectId) return;
+      setLoading(true);
+      setError('');
+      setShowSaveDialog(false);
+      try {
+        const result = await htmlTemplatesApi.saveHtml(projectId, generatedHtml, {
+          mode,
+          name: versionName,
+          source: presets[selectedPresetIdx]?.label,
+        });
+        setSaved(true);
+        setActiveVersionId(result.versionId);
+        // 重新加载版本列表
+        const vs = await htmlTemplatesApi.listHtmlVersions(projectId);
+        setVersions(vs);
+        setTimeout(() => onSaved?.(projectId), 1200);
+      } catch (e: any) {
+        setError(e?.response?.data?.error?.message || '保存失败');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [projectId, generatedHtml, presets, selectedPresetIdx, onSaved],
+  );
+
+  // Campaign 入口 — 创建新报告并保存
+  const doSaveNewProject = useCallback(async () => {
+    if (!campaignId) return;
+    setLoading(true);
+    setError('');
+    try {
+      const result = await htmlTemplatesApi.saveHtmlAsProject({
+        html: generatedHtml,
+        campaignId,
+        name: reportName.trim() || `${campaignName ?? 'Campaign'} HTML 报告`,
+        businessLine: reportBL || undefined,
+        creator: reportCreator || undefined,
+      });
+      setSaved(true);
+      setShowSaveForm(false);
+      setTimeout(() => onSaved?.(result.projectId), 1200);
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message || '保存失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [campaignId, campaignName, generatedHtml, reportName, reportBL, reportCreator, onSaved]);
 
   const handleSaveFormSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    void doSave();
-  }, [doSave]);
+    void doSaveNewProject();
+  }, [doSaveNewProject]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
@@ -254,26 +268,6 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
               </div>
             </div>
 
-            {/* Theme */}
-            <div>
-              <label className="mb-2 block text-xs skin-fw-body text-foreground-muted">主题</label>
-              <div className="flex skin-gap-sm">
-                {(['light', 'dark'] as Theme[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTheme(t)}
-                    className={`flex-1 rounded-lg px-3 py-1.5 text-xs transition ${
-                      theme === t
-                        ? 'bg-accent-primary text-foreground-inverse'
-                        : 'bg-surface-hover text-foreground-secondary'
-                    }`}
-                  >
-                    {t === 'light' ? '☀️ 浅色' : '🌙 深色'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Mode-specific config */}
             {mode === 'ai' ? (
               <div className="space-y-3">
@@ -283,14 +277,13 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
                     报告主题
                   </label>
                   <div className="flex flex-wrap gap-1.5">
-                    {PROMPT_PRESETS.map((p, idx) => (
+                    {presets.map((p, idx) => (
                       <button
                         key={p.label}
                         onClick={() => {
                           setSelectedPresetIdx(idx);
                           setPrompt(p.requirement);
-                          setDesignSpec(p.designSpec);
-                          setTheme(p.theme);
+                          setDesignSpec(designMd.trim() ? '' : p.designSpec);
                         }}
                         className={`rounded-md px-2.5 py-1 text-[11px] transition ${
                           selectedPresetIdx === idx
@@ -426,7 +419,7 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
             <Button
               onClick={handleGenerate}
               loading={loading && !generatedHtml}
-              disabled={mode === 'template' ? !selectedTpl : !prompt.trim()}
+              disabled={mode === 'template' ? !selectedTpl : loading}
               className="w-full"
             >
               {loading && !generatedHtml ? '生成中… (~15s)' : '✨ 生成报告'}
@@ -451,8 +444,8 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
                       💾 下载 HTML
                     </Button>
                   </div>
-                  <Button variant="primary" onClick={handleClickSave} loading={loading} disabled={saved} className="px-3 py-1 text-xs">
-                    {saved ? '✓ 已保存' : projectId ? '保存到报告' : '保存为新报告'}
+                  <Button variant="primary" onClick={handleClickSave} loading={loading} disabled={loading} className="px-3 py-1 text-xs">
+                    {saved ? '💾 另存/覆盖' : projectId ? '保存到报告' : '保存为新报告'}
                   </Button>
                 </div>
                 {/* iframe preview */}
@@ -541,6 +534,44 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
           </div>
         </div>
       </div>
+
+      {/* ────── 多版本保存对话框（覆盖/新增版本） ────── */}
+      {showSaveDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="w-96 rounded-xl bg-surface-primary p-6 shadow-2xl">
+            <h3 className="mb-4 text-base font-medium text-foreground-primary">保存报告</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => doSaveVersion('overwrite')}
+                className="w-full rounded-lg border border-border-default p-3 text-left transition hover:bg-surface-hover"
+              >
+                <div className="text-sm font-medium text-foreground-primary">📋 覆盖当前版本</div>
+                <div className="mt-0.5 text-xs text-foreground-muted">
+                  {activeVersionId
+                    ? `替换「${versions.find((v) => v.id === activeVersionId)?.name || '当前版本'}」`
+                    : '覆盖当前内容'}
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  const name = window.prompt('请输入新版本名称', `${presets[selectedPresetIdx]?.label || '新版本'} ${new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}`);
+                  if (name) doSaveVersion('new', name);
+                }}
+                className="w-full rounded-lg border border-border-default p-3 text-left transition hover:bg-surface-hover"
+              >
+                <div className="text-sm font-medium text-foreground-primary">➕ 新增版本</div>
+                <div className="mt-0.5 text-xs text-foreground-muted">保存为新版本，不影响已有版本</div>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowSaveDialog(false)}
+              className="mt-4 w-full rounded-lg py-2 text-xs text-foreground-muted hover:bg-surface-hover"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

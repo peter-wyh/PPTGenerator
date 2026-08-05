@@ -63,6 +63,7 @@ const GROUPS: { group: string; items: PaletteItem[] }[] = [
       { type: 'revenue-timeline', label: '收入趋势', icon: '╱', description: '收入趋势线' },
       { type: 'publisher-table', label: '合作方表现', icon: '▦', description: 'Publisher 收入/ROAS 表' },
       { type: 'geo-distribution', label: '地域分布', icon: '◈', description: '地域分布图' },
+      { type: 'cards-row', label: '卡片行', icon: '⊟', description: '多卡片自动等分行' },
       { type: 'device-breakdown', label: '设备分布', icon: '◑', description: '设备占比分布' },
       { type: 'content-topic-performance', label: '内容话题', icon: '▦', description: '内容话题效果' },
       { type: 'search-term-table', label: '搜索词', icon: '▦', description: '搜索词表现表' },

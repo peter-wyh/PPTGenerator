@@ -24,7 +24,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
     const colCount = rows.length <= 2 ? rows.length : rows.length <= 4 ? 2 : 3;
     return (
       <div
-        className="grid h-full w-full skin-gap-md overflow-auto"
+        className="grid h-full w-full skin-gap-md overflow-visible"
         style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`, gridAutoRows: '1fr' }}
       >
         {rows.map((row, ri) => {
@@ -63,7 +63,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
   if (variant === 'mini') {
     // 仅指标 + 本期 + 变化方向（两列紧凑）。
     return (
-      <div className="flex h-full w-full flex-col skin-gap-xs overflow-auto skin-card skin-pad-sm">
+      <div className="flex h-full w-full flex-col skin-gap-xs overflow-visible skin-card skin-pad-sm">
         {rows.map((r, ri) => {
           const label = r[0] ?? '';
           const cur = r[1] ?? '';
@@ -87,7 +87,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
 
   // standard / with-bar：标准对比表（指标 / 本期 / 上期 / 状态）
   return (
-    <div className="h-full w-full overflow-auto skin-card">
+    <div className="h-full w-full overflow-visible skin-card">
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr>

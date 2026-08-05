@@ -26,6 +26,7 @@ function toSummary(p: Project): ProjectSummary {
     height: p.height,
     pageCount: pageCount(p.pages),
     meta: metaOf(p),
+    hasHtml: !!p.htmlContent,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -233,7 +234,11 @@ export const projectsService = {
   },
 
   async duplicate(ownerId: string, id: string): Promise<ProjectDetail> {
-    const src = await this.getOwnedOrThrow(ownerId, id);
+    // 直接查 Prisma 获取完整原始记录（toDetail 会剥离 htmlContent 等字段）
+    const src = await prisma.project.findUnique({ where: { id } });
+    if (!src || src.ownerId !== ownerId) {
+      throw ApiError.notFound('Project not found');
+    }
     // 生成唯一副本名:「X 副本」、「X 副本 2」…(对齐 templates.service.duplicate)
     const baseName = `${src.name} 副本`;
     let copyName = baseName;
@@ -253,8 +258,15 @@ export const projectsService = {
       height: src.height,
       // 深拷贝并给每个页面/组件分配新 id，避免引用同一对象。
       pages: JSON.parse(JSON.stringify(src.pages)) as unknown as Prisma.InputJsonValue,
+      // ★ 完整复制 meta（scenario / businessLine / advertiser / campaignId / campaignInfo / reportPeriod / styleType / templateType 等）
+      ...(src.meta ? { meta: JSON.parse(JSON.stringify(src.meta)) as unknown as Prisma.InputJsonValue } : {}),
+      // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
+      ...(src.htmlContent ? { htmlContent: src.htmlContent } : {}),
+      // ★ 复制 reportSchemeVersion（若有）
+      ...(src.reportSchemeVersion ? { reportSchemeVersion: src.reportSchemeVersion } : {}),
     };
     const project = await prisma.project.create({ data });
+
     return toDetail(project);
   },
 

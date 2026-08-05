@@ -45,7 +45,7 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   // Campaign 强关联组件
   'campaign-summary': { w: 720, h: 200 },
   'funnel-chart': { w: 480, h: 360 },
-  'revenue-timeline': { w: 640, h: 320 },
+  'revenue-timeline': { w: 640, h: 420 },
   'publisher-table': { w: 640, h: 320 },
   'geo-distribution': { w: 480, h: 280 },
   'placement-wide-table': { w: 720, h: 320 },

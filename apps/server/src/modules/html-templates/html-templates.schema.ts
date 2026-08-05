@@ -48,3 +48,9 @@ export const saveHtmlAsProjectSchema = z.object({
   scenario: z.string().optional(),
   scenarioSub: z.string().optional(),
 });
+
+/** Agent 增量编辑：当前 HTML + 用户指令 → 修改后的 HTML */
+export const agentEditSchema = z.object({
+  currentHtml: z.string().min(1),
+  instruction: z.string().min(1).max(2000),
+});

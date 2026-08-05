@@ -13,7 +13,6 @@ import { listCampaigns } from '@/api/campaigns';
 import { projectsApi } from '@/api/projects';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
-import { GenerateHtmlReportOverlay } from '@/editor/components/GenerateHtmlReportOverlay';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { RecordFormModal } from '@/editor/components/RecordFormModal';
 import {
@@ -26,7 +25,6 @@ import { parseFile } from '@/editor/datasource/parse';
 import { toast } from '../components/Toast';
 
 export function CampaignPage() {
-  const navigate = useNavigate();
   const { records, loading, reload } = useCampaignRecords();
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
   const [editing, setEditing] = useState<DataRecordDTO | null>(null);
@@ -211,8 +209,9 @@ export function CampaignPage() {
                 campaignId: genHtmlFor.id,
                 campaignName: genHtmlFor.name,
               });
-            } catch {
-              setGenHtmlError('报告创建失败，请重试');
+            } catch (err: unknown) {
+              const e = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+              setGenHtmlError(e.response?.data?.error?.message ?? e.message ?? '报告创建失败，请重试');
             } finally {
               setGenHtmlCreating(false);
             }
@@ -220,22 +219,28 @@ export function CampaignPage() {
         />
       )}
 
-      {/* ⚡生成HTML — Step 2: AI 生成 overlay（已有报告 projectId） */}
+      {/* ⚡生成HTML — Step 2: 跳转到沉浸式 AI HTML 工作台 */}
       {genHtmlOverlay && (
-        <GenerateHtmlReportOverlay
+        <NavigateToHtmlStudio
           projectId={genHtmlOverlay.projectId}
-          campaignId={genHtmlOverlay.campaignId}
-          campaignName={genHtmlOverlay.campaignName}
-          onClose={() => setGenHtmlOverlay(null)}
-          onSaved={(projectId) => {
-            setGenHtmlOverlay(null);
-            toast.success('HTML 报告已保存');
-            navigate(`/projects/${projectId}`);
-          }}
+          onDone={() => setGenHtmlOverlay(null)}
         />
       )}
     </div>
   );
+}
+
+/* ========================= Helpers ========================= */
+
+/** 创建报告成功后，立即跳转到沉浸式 AI HTML 工作台。 */
+function NavigateToHtmlStudio({ projectId, onDone }: { projectId: string; onDone: () => void }) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    toast.success('报告已创建，正在进入 AI HTML 工作台…');
+    onDone();
+    navigate(`/projects/${projectId}/html-studio`);
+  }, [projectId, navigate, onDone]);
+  return null;
 }
 
 /* ========================= Hooks ========================= */

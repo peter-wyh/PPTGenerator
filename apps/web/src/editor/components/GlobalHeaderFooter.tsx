@@ -117,6 +117,9 @@ export function GlobalHeader({
   const bg = resolveBg(config.background);
   const dark = isDarkBg(config.background);
   const opacity = typeof config.background === 'object' ? config.background.opacity : undefined;
+  // opacity<1 时容器自身不画背景（透明），交由下方 zIndex:-1 遮罩层承载半透明背景，
+  // 这样遮罩才能透过容器与页面 backdrop 合成出真正的半透明效果。
+  const useOpacityMask = opacity !== undefined && opacity < 1;
   const preset = config.preset ?? 'split';
   const connector = config.connector ?? '×';
 
@@ -256,7 +259,7 @@ export function GlobalHeader({
         left: 0,
         width,
         height: h,
-        background: bg,
+        background: useOpacityMask ? 'transparent' : bg,
         borderBottom: borderColor !== 'transparent' ? `1px solid ${borderColor}` : 'none',
         display: 'flex',
         alignItems: 'center',
@@ -267,8 +270,8 @@ export function GlobalHeader({
         pointerEvents: 'none',
       }}
     >
-      {/* 不透明度遮罩层 */}
-      {opacity !== undefined && opacity < 1 && (
+      {/* 不透明度遮罩层：opacity<1 时容器透明，由这层承载半透明背景 */}
+      {useOpacityMask && (
         <div
           style={{
             position: 'absolute',
