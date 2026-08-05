@@ -2,7 +2,7 @@
  * 主题 / 报告 / 渐变 工具函数。
  * 类型来自 ../types/* 与 ../theme/presets。
  */
-import type { ProjectTheme, ThemeDensity, ThemeRadius, ProjectMeta, ThemeShadow, ThemeFormat } from '../types/theme';
+import type { ProjectTheme, ThemeDensity, ThemeRadius, ProjectMeta, ThemeShadow, ThemeFormat, ReportPeriod } from '../types/theme';
 import type { PageGradient, GradientStop } from '../types/page';
 import { FONT_OPTIONS, DEFAULT_THEME, DEFAULT_FORMAT } from './presets';
 
@@ -249,10 +249,39 @@ export function buildReportTitle(meta: ProjectMeta): string {
   const advertiser = meta.advertiser?.trim();
   const base = advertiser ? `${advertiser}'s MEDIA REPORT` : 'MEDIA REPORT';
   let period = '';
-  if (meta.scenarioSub === 'weekly') period = '上周';
-  else if (meta.scenarioSub === 'monthly') period = '上月';
-  else if (meta.scenarioSub === 'wrap-up') period = buildWrapUpPeriod(meta);
+
+  // 优先使用 reportPeriod（用户在创建报告时选择的精确时间范围）
+  if (meta.reportPeriod) {
+    period = formatReportPeriod(meta.reportPeriod, meta.scenarioSub);
+  }
+
+  // fallback 到旧的 scenarioSub 逻辑
+  if (!period) {
+    if (meta.scenarioSub === 'weekly') period = '上周';
+    else if (meta.scenarioSub === 'monthly') period = '上月';
+    else if (meta.scenarioSub === 'wrap-up') period = buildWrapUpPeriod(meta);
+  }
   return period ? `${base} · ${period}` : base;
+}
+
+/** 把 ReportPeriod 格式化为可读字符串。 */
+export function formatReportPeriod(
+  rp: ReportPeriod,
+  scenarioSub?: string,
+): string {
+  if (rp.month) {
+    // 月报格式 "2026-07" → "2026年7月"
+    const [y, m] = rp.month.split('-');
+    return `${y}年${parseInt(m, 10)}月`;
+  }
+  if (rp.startDate && rp.endDate) {
+    // 周报/自定义范围 "2026-07-01 ~ 2026-07-07"
+    if (scenarioSub === 'weekly') {
+      return `${rp.startDate} ~ ${rp.endDate}`;
+    }
+    return `${rp.startDate} ~ ${rp.endDate}`;
+  }
+  return '';
 }
 
 function clampNum(v: number, lo: number, hi: number): number {

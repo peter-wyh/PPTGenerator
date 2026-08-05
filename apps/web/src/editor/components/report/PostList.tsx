@@ -12,9 +12,9 @@ export function PostList({ data }: { data: PostListData }) {
 
   if (variant === 'compact') {
     return (
-      <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card skin-pad-sm">
+      <div className="flex h-full w-full flex-col skin-gap-xs overflow-auto skin-card skin-pad-sm">
         {items.map((it, i) => (
-          <div key={i} className="flex items-center gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
+          <div key={i} className="flex items-center skin-gap-md border-b border-border-subtle py-1.5 last:border-b-0">
             <span className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</span>
             <span className="flex-none text-[11px] text-foreground-muted">{idLabel} {it.id}</span>
             <span className="flex-none text-[11px] text-foreground-secondary">{it.metric}</span>
@@ -26,9 +26,9 @@ export function PostList({ data }: { data: PostListData }) {
 
   if (variant === 'row') {
     return (
-      <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card p-2">
+      <div className="flex h-full w-full flex-col skin-gap-xs overflow-auto skin-card p-2">
         {items.map((it, i) => (
-          <div key={i} className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface-hover">
+          <div key={i} className="flex items-center skin-gap-sm rounded-lg px-1 py-1 hover:bg-surface-hover">
             <ImgOrPlaceholder url={it.img} label={it.title} cls="h-10 w-10 flex-none" />
             <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</div>
             <span className="flex-none text-[11px] text-foreground-muted">{it.id}</span>
@@ -41,11 +41,11 @@ export function PostList({ data }: { data: PostListData }) {
 
   // cards
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto skin-card p-2">
+    <div className="grid h-full w-full grid-cols-3 skin-gap-sm overflow-auto skin-card p-2">
       {items.map((it, i) => (
-        <div key={i} className="flex flex-col gap-1 rounded-lg border border-border-subtle p-2">
+        <div key={i} className="flex flex-col skin-gap-xs rounded-lg border border-border-subtle p-2">
           <ImgOrPlaceholder url={it.img} label={it.title} cls="h-16 w-full" />
-          <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{it.title}</div>
+          <div className="line-clamp-1 text-xs skin-fw-body text-foreground-primary">{it.title}</div>
           <div className="flex items-center justify-between text-[10px] text-foreground-secondary">
             <span>{it.id}</span>
             <span>{it.metric}</span>

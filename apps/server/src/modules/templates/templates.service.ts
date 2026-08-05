@@ -138,9 +138,18 @@ export const templatesService = {
       note?: string;
     },
   ): Promise<TemplateDetail> {
+    // Reject duplicate template names (case-insensitive, trimmed).
+    const trimmedName = input.name.trim();
+    if (!trimmedName) throw ApiError.badRequest('模版名称不能为空');
+    const existing = await prisma.template.findFirst({
+      where: { name: trimmedName },
+      select: { id: true },
+    });
+    if (existing) throw ApiError.badRequest(`已存在同名模版「${trimmedName}」，请使用其他名称`);
+
     const data: Prisma.TemplateCreateInput = {
       owner: { connect: { id: ownerId } },
-      name: input.name,
+      name: trimmedName,
       width: input.width ?? 1280,
       height: input.height ?? 720,
       pages: (input.pages ?? defaultTemplatePages()) as unknown as Prisma.InputJsonValue,
@@ -167,8 +176,23 @@ export const templatesService = {
     },
   ): Promise<TemplateDetail> {
     await this.getOwnedOrThrow(ownerId, id);
+
+    // If renaming, reject duplicate names (case-insensitive, trimmed).
+    if (input.name !== undefined) {
+      const trimmedName = input.name.trim();
+      if (!trimmedName) throw ApiError.badRequest('模版名称不能为空');
+      const clash = await prisma.template.findFirst({
+        where: {
+          name: trimmedName,
+          id: { not: id },
+        },
+        select: { id: true },
+      });
+      if (clash) throw ApiError.badRequest(`已存在同名模版「${trimmedName}」，请使用其他名称`);
+    }
+
     const data: Prisma.TemplateUpdateInput = {};
-    if (input.name !== undefined) data.name = input.name;
+    if (input.name !== undefined) data.name = input.name.trim();
     if (input.width !== undefined) data.width = input.width;
     if (input.height !== undefined) data.height = input.height;
     if (input.pages !== undefined) data.pages = input.pages as unknown as Prisma.InputJsonValue;
@@ -186,9 +210,21 @@ export const templatesService = {
 
   async duplicate(ownerId: string, id: string): Promise<TemplateDetail> {
     const src = await this.getOwnedOrThrow(ownerId, id);
+    // Generate a unique copy name: "X 副本", "X 副本 2", ...
+    const baseName = `${src.name} 副本`;
+    let copyName = baseName;
+    let suffix = 2;
+    for (;;) {
+      const clash = await prisma.template.findFirst({
+        where: { name: copyName },
+        select: { id: true },
+      });
+      if (!clash) break;
+      copyName = `${baseName} ${suffix++}`;
+    }
     const data: Prisma.TemplateCreateInput = {
       owner: { connect: { id: ownerId } },
-      name: `${src.name} 副本`,
+      name: copyName,
       width: src.width,
       height: src.height,
       pages: JSON.parse(JSON.stringify(src.pages)) as unknown as Prisma.InputJsonValue,
@@ -251,6 +287,7 @@ export const templatesService = {
   /**
    * 从项目的某个页面创建模板（ADMIN）。
    * 取出项目的指定页，将其组件剥离数据绑定（保留样式/布局/类型），包装为单页模板。
+   * 同名模板冲突时：overwrite=true → 覆盖已有模板的 pages/meta；overwrite=false → 抛 conflict。
    */
   async createFromProjectPage(
     ownerId: string,
@@ -262,8 +299,20 @@ export const templatesService = {
       height?: number;
       meta?: ProjectMeta;
       note?: string;
+      overwrite?: boolean;
     },
   ): Promise<TemplateDetail> {
+    // 同名冲突检查
+    const existing = await prisma.template.findFirst({
+      where: { ownerId, name: input.name },
+    });
+    if (existing && !input.overwrite) {
+      throw ApiError.conflict(
+        `已存在同名模板「${input.name}」，是否覆盖？`,
+        { existingId: existing.id },
+      );
+    }
+
     // 取项目数据
     const project = await prisma.project.findUnique({ where: { id: input.projectId } });
     if (!project) throw ApiError.notFound('Project not found');
@@ -293,13 +342,122 @@ export const templatesService = {
       return clone as unknown as Page['components'][number];
     });
 
+    const pagesJson = [tplPage] as unknown as Prisma.InputJsonValue;
+    const metaJson = input.meta
+      ? (input.meta as unknown as Prisma.InputJsonValue)
+      : undefined;
+
+    // 覆盖模式：更新已有模板
+    if (existing && input.overwrite) {
+      const updated = await prisma.template.update({
+        where: { id: existing.id },
+        data: {
+          pages: pagesJson,
+          width: input.width ?? project.width,
+          height: input.height ?? project.height,
+          ...(metaJson ? { meta: metaJson } : {}),
+          ...(input.note ? { note: input.note } : {}),
+        },
+      });
+      return toDetail(updated);
+    }
+
+    // 新建模式
     const data: Prisma.TemplateCreateInput = {
       owner: { connect: { id: ownerId } },
       name: input.name,
       width: input.width ?? project.width,
       height: input.height ?? project.height,
-      pages: [tplPage] as unknown as Prisma.InputJsonValue,
-      ...(input.meta ? { meta: input.meta as unknown as Prisma.InputJsonValue } : {}),
+      pages: pagesJson,
+      ...(metaJson ? { meta: metaJson } : {}),
+      ...(input.note ? { note: input.note } : {}),
+      status: 'DRAFT',
+    };
+    const template = await prisma.template.create({ data });
+    return toDetail(template);
+  },
+
+  /**
+   * 从整个项目创建模板（ADMIN）。
+   * 将项目的所有页面复制为模板页面，清除运行时数据绑定（campaignId/creatorId）。
+   * 同名模板冲突时：overwrite=true → 覆盖已有模板的 pages/meta；overwrite=false → 抛 conflict。
+   */
+  async createFromProject(
+    ownerId: string,
+    input: {
+      projectId: string;
+      name: string;
+      meta?: ProjectMeta;
+      note?: string;
+      overwrite?: boolean;
+    },
+  ): Promise<TemplateDetail> {
+    // 同名冲突检查
+    const existing = await prisma.template.findFirst({
+      where: { ownerId, name: input.name },
+    });
+    if (existing && !input.overwrite) {
+      throw ApiError.conflict(
+        `已存在同名模板「${input.name}」，是否覆盖？`,
+        { existingId: existing.id },
+      );
+    }
+
+    // 取项目数据
+    const project = await prisma.project.findUnique({ where: { id: input.projectId } });
+    if (!project) throw ApiError.notFound('Project not found');
+
+    const projectPages = (project.pages as unknown as Page[]) ?? [];
+
+    // 复制每一页为模板页：清除数据绑定 + 换新 id
+    const tplPages: Page[] = projectPages.map((srcPage) => {
+      const tplPage: Page = { ...srcPage };
+      delete tplPage.campaignId;
+      delete tplPage.creatorId;
+      tplPage.id = randomUUID();
+      tplPage.components = (srcPage.components ?? []).map((c) => {
+        const clone = { ...c } as Record<string, unknown>;
+        delete clone.creatorId;
+        delete clone.campaignId;
+        if (clone.data && typeof clone.data === 'object') {
+          const data = { ...(clone.data as Record<string, unknown>) };
+          delete data.creatorId;
+          delete data.campaignId;
+          clone.data = data;
+        }
+        return clone as unknown as Page['components'][number];
+      });
+      return tplPage;
+    });
+
+    const pagesJson = tplPages as unknown as Prisma.InputJsonValue;
+    const metaJson = input.meta
+      ? (input.meta as unknown as Prisma.InputJsonValue)
+      : undefined;
+
+    // 覆盖模式：更新已有模板
+    if (existing && input.overwrite) {
+      const updated = await prisma.template.update({
+        where: { id: existing.id },
+        data: {
+          pages: pagesJson,
+          width: project.width,
+          height: project.height,
+          ...(metaJson ? { meta: metaJson } : {}),
+          ...(input.note ? { note: input.note } : {}),
+        },
+      });
+      return toDetail(updated);
+    }
+
+    // 新建模式
+    const data: Prisma.TemplateCreateInput = {
+      owner: { connect: { id: ownerId } },
+      name: input.name,
+      width: project.width,
+      height: project.height,
+      pages: pagesJson,
+      ...(metaJson ? { meta: metaJson } : {}),
       ...(input.note ? { note: input.note } : {}),
       status: 'DRAFT',
     };

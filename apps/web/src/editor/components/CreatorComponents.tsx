@@ -29,6 +29,7 @@ import type {
   CreatorWorksListData,
   WorkAudienceInsight,
 } from '@mediakit/shared';
+import { Shell, Screenshot, autoCols, gridSpans, MOSAIC_TEMPLATES } from './WorksComponents';
 
 const PLATFORM_LABEL: Record<CreatorPlatform, string> = {
   xiaohongshu: 'Xiaohongshu',
@@ -125,7 +126,7 @@ function PlatformBadges({ data, className }: { data: CreatorAvatarCardData; clas
 function PlatformDots({ data }: { data: CreatorAvatarCardData }) {
   const platforms = resolvePlatforms(data);
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1">
+    <div className="flex flex-wrap items-center justify-center skin-gap-xs">
       {platforms.map((p) => (
         <span key={p} className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-foreground-secondary">
           {PLATFORM_LABEL[p] ?? p}
@@ -139,18 +140,18 @@ function PlatformDots({ data }: { data: CreatorAvatarCardData }) {
 function AvatarGlass({ data }: { data: CreatorAvatarCardData }) {
   return (
     <div
-      className="flex h-full w-full items-center gap-3 rounded-2xl p-3"
-      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' }}
+      className="flex h-full w-full items-center skin-gap-md p-3"
+      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', borderRadius: 'var(--radius-card, 12px)' }}
     >
       <Avatar data={data} size={72} />
       <div className="min-w-0 flex-1 text-white">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-semibold">{data.name}</span>
+        <div className="flex items-center skin-gap-sm">
+          <span className="truncate skin-fw-heading">{data.name}</span>
           <span className="flex-none rounded-full bg-white/20 px-1.5 py-0.5 text-[10px]">
             {TIER_LABEL[data.tier] ?? data.tier}
           </span>
         </div>
-        <div className="mt-1 flex flex-wrap gap-1">
+        <div className="mt-1 flex flex-wrap skin-gap-xs">
           <PlatformBadges data={data} className="bg-white/20 !text-white" />
         </div>
         {data.intro && <div className="mt-1 line-clamp-2 text-xs text-white/80">{data.intro}</div>}
@@ -167,12 +168,12 @@ function AvatarHero({ data }: { data: CreatorAvatarCardData }) {
         className="h-16 w-full"
         style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' }}
       />
-      <div className="-mt-10 flex flex-col items-center gap-1 px-4 pb-3 text-center">
+      <div className="-mt-10 flex flex-col items-center skin-gap-xs px-4 pb-3 text-center">
         <Avatar data={data} size={80} />
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex items-center skin-gap-sm">
           <span className="font-headings text-base font-bold text-foreground-primary">{data.name}</span>
           <span
-            className="flex-none rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+            className="flex-none rounded-full px-2 py-0.5 text-[10px] skin-fw-heading text-white"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
             {TIER_LABEL[data.tier] ?? data.tier}
@@ -189,16 +190,16 @@ function AvatarHero({ data }: { data: CreatorAvatarCardData }) {
 function AvatarMinimal({ data }: { data: CreatorAvatarCardData }) {
   const platforms = resolvePlatforms(data);
   return (
-    <div className="flex h-full w-full items-center gap-3">
+    <div className="flex h-full w-full items-center skin-gap-md">
       <div className="flex-none" style={{ borderTop: '2px solid var(--color-primary)' }}>
         <Avatar data={data} size={56} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="font-headings text-base font-bold text-foreground-primary">{data.name}</div>
-        <div className="mt-0.5 text-[11px] font-medium" style={{ color: 'var(--color-primary)' }}>
+        <div className="mt-0.5 text-[11px] skin-fw-body" style={{ color: 'var(--color-primary)' }}>
           {TIER_LABEL[data.tier] ?? data.tier}
         </div>
-        <div className="mt-1 flex flex-wrap gap-1">
+        <div className="mt-1 flex flex-wrap skin-gap-xs">
           {platforms.map((p) => (
             <span key={p} className="rounded-full border border-border-subtle px-2 py-0.5 text-[10px] text-foreground-secondary">
               {PLATFORM_LABEL[p] ?? p}
@@ -214,16 +215,16 @@ function AvatarMinimal({ data }: { data: CreatorAvatarCardData }) {
 /** horizontal：横排 — 头像 + 名称 + 多平台标签。 */
 function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
   return (
-    <div className="flex h-full w-full items-center gap-3 skin-card skin-pad-sm">
+    <div className="flex h-full w-full items-center skin-gap-md skin-card skin-pad-sm">
       <Avatar data={data} size={72} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
-          <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+        <div className="flex items-center skin-gap-sm">
+          <span className="truncate skin-fw-heading text-foreground-primary">{data.name}</span>
+          <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] skin-fw-heading text-primary">
             {TIER_LABEL[data.tier] ?? data.tier}
           </span>
         </div>
-        <div className="mt-0.5 flex flex-wrap gap-1">
+        <div className="mt-0.5 flex flex-wrap skin-gap-xs">
           <PlatformBadges data={data} />
         </div>
         {data.intro && <div className="mt-1 line-clamp-2 text-xs text-foreground-secondary">{data.intro}</div>}
@@ -235,11 +236,11 @@ function AvatarHorizontal({ data }: { data: CreatorAvatarCardData }) {
 
 function AvatarVertical({ data }: { data: CreatorAvatarCardData }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 skin-card skin-pad-sm text-center">
+    <div className="flex h-full w-full flex-col items-center justify-center skin-gap-sm skin-card skin-pad-sm text-center">
       <Avatar data={data} size={80} />
-      <div className="flex items-center gap-2">
-        <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
-        <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+      <div className="flex items-center skin-gap-sm">
+        <span className="truncate skin-fw-heading text-foreground-primary">{data.name}</span>
+        <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] skin-fw-heading text-primary">
           {TIER_LABEL[data.tier] ?? data.tier}
         </span>
       </div>
@@ -253,12 +254,12 @@ function AvatarVertical({ data }: { data: CreatorAvatarCardData }) {
 function AvatarCompact({ data }: { data: CreatorAvatarCardData }) {
   const platforms = resolvePlatforms(data);
   return (
-    <div className="flex h-full w-full items-center gap-2 skin-card px-3">
+    <div className="flex h-full w-full items-center skin-gap-sm skin-card px-3">
       <Avatar data={data} size={40} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold text-foreground-primary">{data.name}</span>
-          <span className="truncate text-[11px] font-medium text-primary">{TIER_LABEL[data.tier] ?? data.tier}</span>
+        <div className="flex items-center skin-gap-sm">
+          <span className="truncate text-sm skin-fw-heading text-foreground-primary">{data.name}</span>
+          <span className="truncate text-[11px] skin-fw-body text-primary">{TIER_LABEL[data.tier] ?? data.tier}</span>
         </div>
         <div className="truncate text-[11px] text-foreground-secondary">
           {platforms.map((p) => PLATFORM_LABEL[p] ?? p).join(' · ')}
@@ -273,12 +274,12 @@ function AvatarBadge({ data }: { data: CreatorAvatarCardData }) {
   const platforms = resolvePlatforms(data);
   return (
     <div
-      className="flex h-full w-full items-center gap-2 rounded-full border border-border-default px-2"
+      className="flex h-full w-full items-center skin-gap-sm rounded-full border border-border-default px-2"
       style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent)' }}
     >
       <Avatar data={data} size={40} />
-      <span className="truncate text-sm font-semibold text-foreground-primary">{data.name}</span>
-      <div className="flex flex-none gap-1">
+      <span className="truncate text-sm skin-fw-heading text-foreground-primary">{data.name}</span>
+      <div className="flex flex-none skin-gap-xs">
         {platforms.map((p) => (
           <span key={p} className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-foreground-secondary">
             {PLATFORM_LABEL[p] ?? p}
@@ -295,11 +296,11 @@ function AvatarBanner({ data }: { data: CreatorAvatarCardData }) {
     <div className="flex h-full w-full flex-col skin-card pb-3">
       {/* 顶部全宽背景色条 */}
       <div className="h-6 w-full rounded-t-xl" style={{ background: 'color-mix(in srgb, var(--color-primary) 16%, transparent)' }} />
-      <div className="-mt-8 flex flex-col items-center gap-1 px-3 text-center">
+      <div className="-mt-8 flex flex-col items-center skin-gap-xs px-3 text-center">
         <Avatar data={data} size={64} />
-        <div className="flex items-center gap-2">
-          <span className="truncate font-semibold text-foreground-primary">{data.name}</span>
-          <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+        <div className="flex items-center skin-gap-sm">
+          <span className="truncate skin-fw-heading text-foreground-primary">{data.name}</span>
+          <span className="flex-none rounded bg-primary/10 px-1.5 py-0.5 text-[10px] skin-fw-heading text-primary">
             {TIER_LABEL[data.tier] ?? data.tier}
           </span>
         </div>
@@ -327,7 +328,7 @@ export function CreatorStatsStrip({ data }: { data: CreatorStatsStripData }) {
 function StatsCards({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   const palette = useChartColors();
   return (
-    <div className="flex h-full w-full items-stretch gap-2 skin-card p-2">
+    <div className="flex h-full w-full items-stretch skin-gap-sm skin-card p-2">
       {stats.map((s, i) => {
         const color = resolveColor(s.color, i, palette);
         return (
@@ -337,7 +338,7 @@ function StatsCards({ stats }: { stats: CreatorStatsStripData['stats'] }) {
             style={{ backgroundColor: `${color}14` }}
           >
             <div className="text-[11px] text-foreground-secondary">{s.label}</div>
-            <div className="font-data text-lg font-semibold" style={{ color }}>
+            <div className="font-data text-lg skin-fw-heading" style={{ color }}>
               {s.value}
             </div>
           </div>
@@ -353,7 +354,7 @@ function StatsPlain({ stats }: { stats: CreatorStatsStripData['stats'] }) {
       {stats.map((s, i) => (
         <div key={i} className="flex flex-1 flex-col justify-center px-3">
           <div className="text-[11px] text-foreground-secondary">{s.label}</div>
-          <div className="font-data text-base font-semibold text-foreground-primary">{s.value}</div>
+          <div className="font-data text-base skin-fw-heading text-foreground-primary">{s.value}</div>
         </div>
       ))}
     </div>
@@ -363,7 +364,7 @@ function StatsPlain({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 function StatsMetric({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   const palette = useChartColors();
   return (
-    <div className="flex h-full w-full items-stretch gap-3 skin-card skin-pad-sm">
+    <div className="flex h-full w-full items-stretch skin-gap-md skin-card skin-pad-sm">
       {stats.map((s, i) => {
         const color = resolveColor(s.color, i, palette);
         return (
@@ -389,15 +390,15 @@ function parsePercent(value: string): number {
 function StatsProgress({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   const palette = useChartColors();
   return (
-    <div className="flex h-full w-full flex-col justify-center gap-3 skin-card skin-pad-sm">
+    <div className="flex h-full w-full flex-col justify-center skin-gap-md skin-card skin-pad-sm">
       {stats.map((s, i) => {
         const pct = Math.min(100, Math.max(0, parsePercent(s.value)));
         const color = resolveColor(s.color, i, palette);
         return (
-          <div key={i} className="flex flex-col gap-1">
+          <div key={i} className="flex flex-col skin-gap-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-foreground-secondary">{s.label}</span>
-              <span className="font-data text-sm font-semibold" style={{ color }}>
+              <span className="font-data text-sm skin-fw-heading" style={{ color }}>
                 {s.value}
               </span>
             </div>
@@ -415,7 +416,7 @@ function StatsProgress({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   const palette = useChartColors();
   return (
-    <div className="flex h-full w-full flex-wrap items-center gap-4 skin-card skin-pad-sm">
+    <div className="flex h-full w-full flex-wrap items-center skin-gap-lg skin-card skin-pad-sm">
       {stats.map((s, i) => {
         const pct = Math.min(100, Math.max(0, parsePercent(s.value)));
         const color = resolveColor(s.color, i, palette);
@@ -424,7 +425,7 @@ function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
           { name: 'rest', value: 100 - pct },
         ];
         return (
-          <div key={i} className="flex items-center gap-2">
+          <div key={i} className="flex items-center skin-gap-sm">
             <div className="relative h-12 w-12">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -434,13 +435,13 @@ function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-data font-semibold text-foreground-primary">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-data skin-fw-heading text-foreground-primary">
                 {Math.round(pct)}%
               </div>
             </div>
             <div className="flex flex-col">
               <span className="text-[11px] text-foreground-secondary">{s.label}</span>
-              <span className="font-data text-sm font-semibold" style={{ color }}>
+              <span className="font-data text-sm skin-fw-heading" style={{ color }}>
                 {s.value}
               </span>
             </div>
@@ -461,13 +462,13 @@ function StatsRing({ stats }: { stats: CreatorStatsStripData['stats'] }) {
 function StatsGradient({ stats }: { stats: CreatorStatsStripData['stats'] }) {
   return (
     <div
-      className="flex h-full w-full items-stretch overflow-hidden rounded-2xl divide-x divide-white/35"
-      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' }}
+      className="flex h-full w-full items-stretch overflow-hidden divide-x divide-white/35"
+      style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', borderRadius: 'var(--radius-card, 12px)' }}
     >
       {stats.map((s, i) => (
         <div key={i} className="flex flex-1 flex-col items-center justify-center gap-1.5 px-4 py-3 text-center">
           <MetricIcon keyName={s.key} className="h-[18px] w-[18px] flex-none text-white/90" />
-          <div className="text-[11px] font-medium uppercase leading-tight tracking-wide text-white/80">{s.label}</div>
+          <div className="text-[11px] skin-fw-body uppercase leading-tight tracking-wide text-white/80">{s.label}</div>
           <div className="font-data text-2xl font-bold leading-none text-white">{s.value}</div>
         </div>
       ))}
@@ -575,6 +576,7 @@ export function CreatorWorksList({ data }: { data: CreatorWorksListData }) {
   if (variant === 'row') return <WorksRow items={items} metricLabels={metricLabels} />;
   if (variant === 'compact') return <WorksCompact items={items} metricLabels={metricLabels} />;
   if (variant === 'detailed') return <WorksDetailed items={items} metricLabels={metricLabels} />;
+  if (variant === 'gallery') return <WorksGallery items={items} metricLabels={metricLabels} data={data} />;
   return <WorksCards items={items} metricLabels={metricLabels} />;
 }
 
@@ -591,6 +593,168 @@ function Cover({ url, alt, cls }: { url: string; alt: string; cls?: string }) {
   );
 }
 
+/* ----- gallery 变体：参考 WorkScreenshot 的全部视觉风格 ----- */
+function WorksGallery({
+  items,
+  metricLabels,
+  data,
+}: {
+  items: WorkItem[];
+  metricLabels: string[];
+  data: CreatorWorksListData;
+}) {
+  const galleryStyle = data.galleryStyle ?? 'grid';
+
+  // 将 WorkItem 转为 Screenshot 组件需要的 {src, caption} 形状
+  const images = items.map((it) => ({
+    src: it.cover ?? '',
+    caption: [
+      it.title,
+      ...it.metrics.map((m, ci) => (metricLabels[ci] ? `${metricLabels[ci]} ${m}` : m)),
+    ].join(' · '),
+  }));
+
+  if (images.length === 0) {
+    return (
+      <Shell title="作品展示">
+        <div className="flex h-full w-full items-center justify-center text-xs text-foreground-muted">
+          暂无作品
+        </div>
+      </Shell>
+    );
+  }
+
+  const cols = autoCols(images.length);
+  const spans = gridSpans(images.length, cols);
+
+  /* ---- skew ---- */
+  if (galleryStyle === 'skew') {
+    return (
+      <Shell>
+        <div className="grid h-full w-full content-center skin-gap-xs overflow-hidden" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+          {images.map((im, i) => {
+            const angle = i % 2 === 0 ? -5 : 5;
+            const mt = i % 2 === 0 ? 0 : 6;
+            return (
+              <div key={i} className="relative aspect-square overflow-hidden rounded-lg shadow-md" style={{ transform: `rotate(${angle}deg)`, marginTop: mt, gridColumn: `span ${spans[i]}` }}>
+                <Screenshot src={im.src} caption={im.caption} />
+              </div>
+            );
+          })}
+        </div>
+      </Shell>
+    );
+  }
+
+  /* ---- overlap ---- */
+  if (galleryStyle === 'overlap') {
+    const rows = Math.ceil(images.length / cols);
+    return (
+      <Shell>
+        <div className="grid h-full w-full content-center overflow-hidden" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
+          {images.map((im, i) => {
+            const colInRow = i % cols;
+            const mid = (cols - 1) / 2;
+            const offset = (colInRow - mid) * 16;
+            const rot = (colInRow - mid) * 4;
+            const z = Math.round(cols - Math.abs(colInRow - mid));
+            return (
+              <div key={i} className="relative flex items-center justify-center" style={{ gridColumn: `span ${spans[i]}` }}>
+                <div className="relative h-[70%] w-[80%] overflow-hidden rounded-lg shadow-lg" style={{ transform: `translateX(${offset}px) rotate(${rot}deg)`, zIndex: z }}>
+                  <Screenshot src={im.src} caption={im.caption} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Shell>
+    );
+  }
+
+  /* ---- filmstrip ---- */
+  if (galleryStyle === 'filmstrip') {
+    return (
+      <Shell>
+        <div
+          className="grid h-full w-full skin-gap-sm overflow-hidden rounded-lg p-2"
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, background: 'color-mix(in srgb, var(--color-neutral-bg, #f5f5f5) 60%, #000 8%)' }}
+        >
+          {images.map((im, i) => (
+            <div key={i} className="relative h-full overflow-hidden rounded" style={{ gridColumn: `span ${spans[i]}` }}>
+              <Screenshot src={im.src} caption={im.caption} />
+            </div>
+          ))}
+        </div>
+      </Shell>
+    );
+  }
+
+  /* ---- diagonal ---- */
+  if (galleryStyle === 'diagonal') {
+    const clipH = 14;
+    let cursor = 0;
+    const cells = spans.map((sp, i) => {
+      const row = Math.floor(cursor / cols);
+      const col = cursor % cols;
+      cursor += sp;
+      return { row, col, span: sp, idx: i };
+    });
+    return (
+      <Shell>
+        <div className="grid h-full w-full overflow-hidden" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px' }}>
+          {images.map((im, i) => {
+            const c = cells[i];
+            const clipEven = `polygon(0 0, 100% 0, 100% calc(100% - ${clipH}px), 0 100%)`;
+            const clipOdd = `polygon(0 ${clipH}px, 100% 0, 100% 100%, 0 100%)`;
+            const clipPath = c.row % 2 === 0 ? clipEven : clipOdd;
+            const marginTop = c.row > 0 ? -clipH : 0;
+            return (
+              <div key={i} className="relative overflow-hidden rounded-md" style={{ clipPath, marginTop: `${marginTop}px`, gridColumn: `span ${spans[i]}` }}>
+                <Screenshot src={im.src} caption={im.caption} />
+              </div>
+            );
+          })}
+        </div>
+      </Shell>
+    );
+  }
+
+  /* ---- mosaic: 非对称拼图（auto 按张数自动选模板）---- */
+  if (galleryStyle === 'mosaic') {
+    const idx = Math.min(Math.max(images.length - 1, 0), MOSAIC_TEMPLATES.length - 1);
+    const tpl = MOSAIC_TEMPLATES[idx];
+    const { gridCols, gridRows, cells } = tpl;
+    return (
+      <Shell>
+        <div className="grid h-full w-full overflow-hidden" style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gridTemplateRows: `repeat(${gridRows}, 1fr)`, gap: '4px' }}>
+          {cells.map((cell, i) => {
+            const im = images[i];
+            if (!im) return null;
+            return (
+              <div key={i} className="relative overflow-hidden rounded-lg" style={{ gridColumn: `${cell.col + 1} / span ${cell.colSpan}`, gridRow: `${cell.row + 1} / span ${cell.rowSpan}` }}>
+                <Screenshot src={im.src} caption={im.caption} />
+              </div>
+            );
+          })}
+        </div>
+      </Shell>
+    );
+  }
+
+  /* ---- grid（默认）: 等分网格 + 末行 span 填满 ---- */
+  return (
+    <Shell>
+      <div className="grid h-full w-full overflow-hidden skin-gap-xs" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${Math.ceil(images.length / cols)}, 1fr)` }}>
+        {images.map((im, i) => (
+          <div key={i} className="relative overflow-hidden rounded-lg" style={{ gridColumn: `span ${spans[i]}` }}>
+            <Screenshot src={im.src} caption={im.caption} />
+          </div>
+        ))}
+      </div>
+    </Shell>
+  );
+}
+
 function WorksCards({
   items,
   metricLabels,
@@ -599,12 +763,12 @@ function WorksCards({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full gap-2 overflow-auto skin-card p-2">
+    <div className="flex h-full w-full skin-gap-sm overflow-auto skin-card p-2">
       {items.map((it, ri) => (
-        <div key={ri} className="flex w-[200px] flex-none flex-col gap-1 rounded-lg border border-border-subtle p-2">
+        <div key={ri} className="flex w-[200px] flex-none flex-col skin-gap-xs rounded-lg border border-border-subtle p-2">
           <Cover url={it.cover} alt={it.title} cls="w-full aspect-[3/4] rounded" />
-          <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{it.title}</div>
-          <div className="flex gap-2 text-[10px] text-foreground-secondary">
+          <div className="line-clamp-1 text-xs skin-fw-body text-foreground-primary">{it.title}</div>
+          <div className="flex skin-gap-sm text-[10px] text-foreground-secondary">
             {it.metrics.map((m, ci) => (
               <span key={ci}>
                 {metricLabels[ci] ? `${metricLabels[ci]} ` : ''}
@@ -626,12 +790,12 @@ function WorksRow({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card p-2">
+    <div className="flex h-full w-full flex-col skin-gap-xs overflow-auto skin-card p-2">
       {items.map((it, ri) => (
-        <div key={ri} className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface-hover">
+        <div key={ri} className="flex items-center skin-gap-sm rounded-lg px-1 py-1 hover:bg-surface-hover">
           <Cover url={it.cover} alt={it.title} cls="h-[44px] w-[44px] flex-none" />
           <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</div>
-          <div className="flex flex-none gap-2 text-[11px] text-foreground-secondary">
+          <div className="flex flex-none skin-gap-sm text-[11px] text-foreground-secondary">
             {it.metrics.map((m, ci) => (
               <span key={ci}>
                 {metricLabels[ci] ? `${metricLabels[ci]} ` : ''}
@@ -653,11 +817,11 @@ function WorksCompact({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card skin-pad-sm">
+    <div className="flex h-full w-full flex-col skin-gap-xs overflow-auto skin-card skin-pad-sm">
       {items.map((it, ri) => (
-        <div key={ri} className="flex items-center gap-3 border-b border-border-subtle py-1.5 last:border-b-0">
+        <div key={ri} className="flex items-center skin-gap-md border-b border-border-subtle py-1.5 last:border-b-0">
           <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.title}</div>
-          <div className="flex flex-none gap-3 text-[11px] text-foreground-secondary">
+          <div className="flex flex-none skin-gap-md text-[11px] text-foreground-secondary">
             {it.metrics.map((m, ci) => (
               <span key={ci}>
                 {metricLabels[ci] ? `${metricLabels[ci]} ` : ''}
@@ -730,7 +894,7 @@ export function MiniGenderDonut({ data }: { data: { label: string; value: number
   const palette = useChartColors();
   if (!data.length) return null;
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center skin-gap-sm">
       <div className="h-10 w-10">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -744,7 +908,7 @@ export function MiniGenderDonut({ data }: { data: { label: string; value: number
       </div>
       <div className="flex flex-col gap-0.5">
         {data.map((d, i) => (
-          <span key={i} className="flex items-center gap-1 text-[10px] text-foreground-secondary">
+          <span key={i} className="flex items-center skin-gap-xs text-[10px] text-foreground-secondary">
             <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: resolveColor(d.color, i, palette) }} />
             {d.label} {d.value}%
           </span>
@@ -762,18 +926,18 @@ function WorksDetailed({
   metricLabels: string[];
 }) {
   return (
-    <div className="flex h-full w-full flex-col gap-2 overflow-auto skin-card p-2">
+    <div className="flex h-full w-full flex-col skin-gap-sm overflow-auto skin-card p-2">
       {items.map((it, ri) => {
         const ins = it.insight;
         const hasInsight = ins && (ins.topCities?.length || ins.genderSplit?.length || ins.ageRange?.length || ins.trend?.length);
         return (
           <div key={ri} className="rounded-lg border border-border-subtle p-2">
             {/* 头部：封面 + 标题 + 互动指标 */}
-            <div className="flex items-start gap-2">
+            <div className="flex items-start skin-gap-sm">
               <Cover url={it.cover} alt={it.title} cls="h-[60px] w-[60px] flex-none rounded" />
               <div className="min-w-0 flex-1">
-                <div className="line-clamp-2 text-xs font-medium text-foreground-primary">{it.title}</div>
-                <div className="mt-1 flex gap-2 text-[10px] text-foreground-secondary">
+                <div className="line-clamp-2 text-xs skin-fw-body text-foreground-primary">{it.title}</div>
+                <div className="mt-1 flex skin-gap-sm text-[10px] text-foreground-secondary">
                   {it.metrics.map((m, ci) => (
                     <span key={ci}>
                       {metricLabels[ci] ? `${metricLabels[ci]} ` : ''}
@@ -788,8 +952,8 @@ function WorksDetailed({
               <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border-subtle pt-2">
                 {/* 城市 Top */}
                 {ins.topCities && ins.topCities.length > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[10px] font-medium text-foreground-secondary">Top Fan Cities</div>
+                  <div className="flex flex-col skin-gap-xs">
+                    <div className="text-[10px] skin-fw-body text-foreground-secondary">Top Fan Cities</div>
                     {ins.topCities.slice(0, 4).map((c, ci) => (
                       <MiniBar key={ci} label={c.label} value={c.value} color={c.color} index={ci} />
                     ))}
@@ -797,8 +961,8 @@ function WorksDetailed({
                 )}
                 {/* 年龄段 */}
                 {ins.ageRange && ins.ageRange.length > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[10px] font-medium text-foreground-secondary">Age Distribution</div>
+                  <div className="flex flex-col skin-gap-xs">
+                    <div className="text-[10px] skin-fw-body text-foreground-secondary">Age Distribution</div>
                     {ins.ageRange.slice(0, 4).map((a, ci) => (
                       <MiniBar key={ci} label={a.label} value={a.value} color={a.color ?? 'auto'} index={ci} />
                     ))}
@@ -806,14 +970,14 @@ function WorksDetailed({
                 )}
                 {/* 性别 */}
                 {ins.genderSplit && ins.genderSplit.length > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[10px] font-medium text-foreground-secondary">Gender Distribution</div>
+                  <div className="flex flex-col skin-gap-xs">
+                    <div className="text-[10px] skin-fw-body text-foreground-secondary">Gender Distribution</div>
                     <MiniGenderDonut data={ins.genderSplit} />
                   </div>
                 )}
                 {/* 趋势 */}
                 {ins.trend && ins.trend.length > 0 && (
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col skin-gap-xs">
                     <MiniTrend data={ins.trend} label={ins.trendLabel ?? 'Data Trend'} />
                   </div>
                 )}
@@ -843,7 +1007,7 @@ function CreatorChartShell({
       className="flex h-full w-full flex-col skin-card skin-pad-sm"
       style={{ boxShadow: 'var(--shadow-card)' }}
     >
-      {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+      {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
       {subtitle && <div className="mt-0.5 text-[11px] text-foreground-secondary">{subtitle}</div>}
       <div className="min-h-0 flex-1">{children}</div>
     </div>
@@ -909,7 +1073,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
             </ResponsiveContainer>
             {center && (
               <div
-                className="pointer-events-none absolute inset-0 flex items-center justify-center text-center font-semibold text-foreground-primary"
+                className="pointer-events-none absolute inset-0 flex items-center justify-center text-center skin-fw-heading text-foreground-primary"
                 style={{ fontSize: labelFont }}
               >
                 {center}
@@ -922,7 +1086,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
             style={{ fontSize: legendFont }}
           >
             {slices.map((s, i) => (
-              <span key={i} className="inline-flex items-center gap-1">
+              <span key={i} className="inline-flex items-center skin-gap-xs">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: resolveColor(s.color, i, palette) }} />
                 <span>{s.label}</span>
               </span>
@@ -1005,11 +1169,11 @@ export function CreatorFanInterest({ data }: { data: CreatorFanInterestData }) {
       {tags.length === 0 ? (
         <EmptyChart />
       ) : (
-        <div className="flex h-full w-full flex-col justify-center gap-2 overflow-auto">
+        <div className="flex h-full w-full flex-col justify-center skin-gap-sm overflow-auto">
           {tags.map((t, i) => {
             const pct = Math.round((t.value / sum) * 100);
             return (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex items-center skin-gap-sm">
                 <div className="w-12 flex-none truncate text-[11px] text-foreground-secondary">{t.label}</div>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-hover">
                   <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: resolveColor(t.color, i, palette) }} />
@@ -1067,7 +1231,7 @@ function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers
   return (
     <div className="flex h-full w-full flex-col overflow-auto skin-card">
       {/* 表头 */}
-      <div className="flex items-center gap-2 border-b border-border-default bg-surface-subtle px-3 py-2 text-[11px] font-medium text-foreground-secondary">
+      <div className="flex items-center skin-gap-sm border-b border-border-default bg-surface-subtle px-3 py-2 text-[11px] skin-fw-body text-foreground-secondary">
         <div className="w-8 flex-none" />
         <div className="min-w-0 flex-1">{headers[1] ?? '达人'}</div>
         <div className="w-20 flex-none text-center">{headers[2] ?? '平台'}</div>
@@ -1076,9 +1240,9 @@ function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers
         <div className="w-16 flex-none text-right">{headers[5] ?? '分类'}</div>
       </div>
       {items.map((it, i) => (
-        <div key={i} className="flex items-center gap-2 border-b border-border-subtle px-3 py-2 last:border-b-0 hover:bg-surface-hover">
+        <div key={i} className="flex items-center skin-gap-sm border-b border-border-subtle px-3 py-2 last:border-b-0 hover:bg-surface-hover">
           <ListAvatar url={it.avatar} name={it.name} size={32} />
-          <div className="min-w-0 flex-1 truncate text-sm font-medium text-foreground-primary">{it.name}</div>
+          <div className="min-w-0 flex-1 truncate text-sm skin-fw-body text-foreground-primary">{it.name}</div>
           <div className="w-20 flex-none text-center text-[11px] text-foreground-secondary">{PLATFORM_LABEL_SHORT[it.platform] ?? it.platform}</div>
           <div className="w-20 flex-none text-right font-data text-sm text-foreground-primary">{it.followers}</div>
           <div className="w-16 flex-none text-right font-data text-sm text-primary">{it.engagement}</div>
@@ -1092,13 +1256,13 @@ function CreatorListTable({ items, headers }: { items: CreatorListRow[]; headers
 /** 卡片变体：每人一张卡片，网格排列。 */
 function CreatorListCards({ items }: { items: CreatorListRow[] }) {
   return (
-    <div className="flex h-full w-full flex-wrap gap-2 overflow-auto skin-card p-2">
+    <div className="flex h-full w-full flex-wrap skin-gap-sm overflow-auto skin-card p-2">
       {items.map((it, i) => (
-        <div key={i} className="flex w-[140px] flex-none flex-col items-center gap-1 rounded-lg border border-border-subtle p-2 text-center">
+        <div key={i} className="flex w-[140px] flex-none flex-col items-center skin-gap-xs rounded-lg border border-border-subtle p-2 text-center">
           <ListAvatar url={it.avatar} name={it.name} size={48} />
-          <div className="truncate text-xs font-medium text-foreground-primary">{it.name}</div>
+          <div className="truncate text-xs skin-fw-body text-foreground-primary">{it.name}</div>
           <div className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">{PLATFORM_LABEL_SHORT[it.platform] ?? it.platform}</div>
-          <div className="font-data text-sm font-semibold text-foreground-primary">{it.followers}</div>
+          <div className="font-data text-sm skin-fw-heading text-foreground-primary">{it.followers}</div>
           <div className="text-[10px] text-foreground-muted">Engagement {it.engagement}</div>
           {it.category && <div className="text-[10px] text-foreground-secondary">{it.category}</div>}
         </div>
@@ -1110,9 +1274,9 @@ function CreatorListCards({ items }: { items: CreatorListRow[] }) {
 /** 紧凑变体：纯文字横排列表。 */
 function CreatorListCompact({ items }: { items: CreatorListRow[]; headers: string[] }) {
   return (
-    <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card p-2">
+    <div className="flex h-full w-full flex-col skin-gap-xs overflow-auto skin-card p-2">
       {items.map((it, i) => (
-        <div key={i} className="flex items-center gap-2 rounded px-1 py-1 hover:bg-surface-hover">
+        <div key={i} className="flex items-center skin-gap-sm rounded px-1 py-1 hover:bg-surface-hover">
           <span className="w-5 flex-none text-center text-[10px] text-foreground-muted">{i + 1}</span>
           <div className="min-w-0 flex-1 truncate text-sm text-foreground-primary">{it.name}</div>
           <span className="w-16 flex-none truncate text-[11px] text-foreground-secondary">{PLATFORM_LABEL_SHORT[it.platform] ?? it.platform}</span>

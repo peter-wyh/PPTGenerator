@@ -6,12 +6,15 @@ import {
   type ProjectTheme,
   type ThemeDensity,
   type ThemeRadius,
+  type GlobalHeaderConfig,
+  type GlobalFooterConfig,
 } from '@mediakit/shared';
 import type { PageGradient } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import type { ThemePatch } from '../store';
 import { ImageInput } from '@/components/ImageInput';
 import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { lookupApi } from '@/api/lookup';
 import {
   registerCustomFonts,
   unregisterCustomFont,
@@ -120,18 +123,29 @@ export function ReportSettingsOverlay({ onClose }: Props) {
   const customFonts = useSyncExternalStore(subscribeCustomFonts, getCustomFontsSnapshot);
   const [uploadingFont, setUploadingFont] = useState(false);
 
+  // ── 页眉页脚 draft 状态 ──
+  const [hfHeader, setHfHeader] = useState<GlobalHeaderConfig>(
+    () => useEditorStore.getState().projectMeta?.headerConfig ?? { enabled: false, height: 56, background: '#ffffff' },
+  );
+  const [hfFooter, setHfFooter] = useState<GlobalFooterConfig>(
+    () => useEditorStore.getState().projectMeta?.footerConfig ?? { enabled: false, height: 36, background: '#f8f8f8' },
+  );
+  const [hfSyncing, setHfSyncing] = useState(false);
+
   // 业务线 Logo（标题栏右上角，只读；取自 mock BUSINESS_LINE_META）
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+  const meta = useEditorStore((s) => s.projectMeta);
+  const updateProjectMeta = useEditorStore((s) => s.updateProjectMeta);
   const bl = businessLine ? BUSINESS_LINE_META[businessLine] : undefined;
 
   // 左导航分类
-  type Cat = 'basic' | 'layout' | 'component' | 'brand';
+  type Cat = 'basic' | 'layout' | 'component' | 'header-footer';
   const [activeCat, setActiveCat] = useState<Cat>('basic');
   const CATS: { key: Cat; label: string }[] = [
     { key: 'basic', label: '基础样式' },
     { key: 'layout', label: '布局' },
     { key: 'component', label: '组件样式' },
-    { key: 'brand', label: '品牌' },
+    { key: 'header-footer', label: '页眉页脚' },
   ];
 
   /** 保存：把 draft 整体提交到 store（深合并等价整体替换），然后关闭浮层。 */
@@ -149,6 +163,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
       // 仅更新没有独立背景设置的页面（保留用户手动设置过的）
       store.applyBackgroundToPagesWithoutOwn(bgPatch);
     }
+    // 同时提交页眉页脚配置
+    useEditorStore.getState().updateProjectMeta({ headerConfig: hfHeader, footerConfig: hfFooter });
     onClose();
   }
 
@@ -237,14 +253,6 @@ export function ReportSettingsOverlay({ onClose }: Props) {
     setTheme({ shadow: s, preset: undefined });
   }
 
-  /** 更新品牌配置字段。 */
-  function updateBranding<K extends keyof NonNullable<ProjectTheme['branding']>>(
-    field: K,
-    value: NonNullable<ProjectTheme['branding']>[K],
-  ) {
-    setTheme({ branding: { [field]: value }, preset: undefined });
-  }
-
   /** 更新默认背景配置字段。 */
   function updateBackground<K extends keyof NonNullable<ProjectTheme['background']>>(
     field: K,
@@ -295,12 +303,12 @@ export function ReportSettingsOverlay({ onClose }: Props) {
         {/* 标题栏 */}
         <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
           <div>
-            <div className="font-headings text-lg font-semibold text-foreground-primary">全局样式设置</div>
+            <div className="font-headings text-lg skin-fw-heading text-foreground-primary">全局样式设置</div>
             <p className="text-xs text-foreground-secondary">整体风格驱动整份报告的配色、字体、密度与布局。</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center skin-gap-md">
             {bl?.logo && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center skin-gap-sm">
                 <img
                   src={bl.logo}
                   alt={bl.name}
@@ -323,7 +331,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                 onClick={() => setActiveCat(c.key)}
                 className={`w-full rounded-lg px-3 py-1.5 text-left text-sm transition ${
                   activeCat === c.key
-                    ? 'bg-accent-primary/10 font-medium text-accent-primary'
+                    ? 'bg-accent-primary/10 skin-fw-body text-accent-primary'
                     : 'text-foreground-secondary hover:bg-surface-hover'
                 }`}
               >
@@ -338,8 +346,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
               <>
                 {/* ① 预设选择器 */}
                 <section>
-                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">整体风格预设</div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="mb-2 text-xs skin-fw-heading text-foreground-secondary">整体风格预设</div>
+                  <div className="flex flex-wrap skin-gap-sm">
                     {STYLE_PRESETS.map((preset) => {
                       const active = theme.preset === preset.key;
                       return (
@@ -365,12 +373,50 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   )}
                 </section>
 
-                {/* ② 配色 */}
+                {/* ①.5 报告周期 */}
+                <section className="space-y-2">
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">报告周期</div>
+                  <div className="flex items-center skin-gap-sm">
+                    <select
+                      value={meta?.scenarioSub ?? 'monthly'}
+                      onChange={(e) => updateProjectMeta({ scenarioSub: e.target.value as 'monthly' | 'weekly' | 'wrap-up' })}
+                      className="rounded-lg border border-border-default bg-surface-primary px-2 py-1.5 text-sm"
+                    >
+                      <option value="monthly">月报</option>
+                      <option value="weekly">周报</option>
+                      <option value="wrap-up">总结</option>
+                    </select>
+                    {meta?.scenarioSub === 'monthly' ? (
+                      <input
+                        type="month"
+                        value={meta?.reportPeriod?.month ?? ''}
+                        onChange={(e) => updateProjectMeta({ reportPeriod: { ...meta?.reportPeriod, month: e.target.value } })}
+                        className="rounded-lg border border-border-default bg-surface-primary px-2 py-1.5 text-sm"
+                      />
+                    ) : meta?.scenarioSub === 'weekly' ? (
+                      <div className="flex items-center skin-gap-xs">
+                        <input
+                          type="date"
+                          value={meta?.reportPeriod?.startDate ?? ''}
+                          onChange={(e) => updateProjectMeta({ reportPeriod: { ...meta?.reportPeriod, startDate: e.target.value } })}
+                          className="rounded-lg border border-border-default bg-surface-primary px-2 py-1.5 text-sm"
+                        />
+                        <span className="text-xs text-foreground-muted">~</span>
+                        <input
+                          type="date"
+                          value={meta?.reportPeriod?.endDate ?? ''}
+                          onChange={(e) => updateProjectMeta({ reportPeriod: { ...meta?.reportPeriod, endDate: e.target.value } })}
+                          className="rounded-lg border border-border-default bg-surface-primary px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
                 <section className="space-y-3">
-                  <div className="text-xs font-semibold text-foreground-secondary">配色</div>
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">配色</div>
 
                   {/* 主品牌色 + 次品牌色 */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 skin-gap-md">
                     <ColorField
                       label="主品牌色"
                       value={theme.color.primary}
@@ -385,7 +431,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   </div>
 
                   {/* 中性文字色 + 背景色 */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 skin-gap-md">
                     <ColorField
                       label="中性文字色"
                       value={theme.color.neutralText}
@@ -401,9 +447,9 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   {/* 图表配色板 6 色 */}
                   <div>
                     <div className="mb-1.5 text-[11px] text-foreground-muted">图表配色（6 色序列）</div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap skin-gap-sm">
                       {theme.color.chartPalette.map((c, i) => (
-                        <div key={i} className="flex items-center gap-1">
+                        <div key={i} className="flex items-center skin-gap-xs">
                           <input
                             type="color"
                             value={c}
@@ -419,7 +465,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                 {/* ③ 字体 */}
                 <section className="space-y-2">
-                  <div className="text-xs font-semibold text-foreground-secondary">字体</div>
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">字体</div>
                   <FontSelect
                     label="文本字体"
                     value={theme.font.text}
@@ -443,7 +489,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                 {/* 自定义字体上传 */}
                 <section className="space-y-2">
-                  <div className="text-xs font-semibold text-foreground-secondary">自定义字体</div>
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">自定义字体</div>
                   <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-border-subtle px-3 py-2 text-xs text-foreground-muted hover:border-accent-primary hover:text-accent-primary">
                     {uploadingFont ? '上传中…' : '点击上传 TTF / OTF / WOFF / WOFF2 / ZIP'}
                     <input
@@ -491,8 +537,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   )}
                 </section>
                 <section className="space-y-2">
-                  <div className="text-xs font-semibold text-foreground-secondary">标题样式</div>
-                  <div className="flex items-center gap-2">
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">标题样式</div>
+                  <div className="flex items-center skin-gap-sm">
                     <span className="w-16 flex-none text-[11px] text-foreground-muted">字号</span>
                     <input
                       type="number"
@@ -505,7 +551,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                     />
                     <span className="text-[11px] text-foreground-muted">px</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center skin-gap-sm">
                     <span className="w-16 flex-none text-[11px] text-foreground-muted">默认样式</span>
                     <select
                       value={heading.variant ?? ''}
@@ -522,7 +568,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                       ))}
                     </select>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center skin-gap-sm">
                     <span className="w-16 flex-none text-[11px] text-foreground-muted">主色</span>
                     <input
                       type="color"
@@ -536,8 +582,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                 {/* ④ 密度 */}
                 <section>
-                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">密度</div>
-                  <div className="flex gap-2">
+                  <div className="mb-2 text-xs skin-fw-heading text-foreground-secondary">密度</div>
+                  <div className="flex skin-gap-sm">
                     {DENSITY_OPTIONS.map((opt) => (
                       <Chip
                         key={opt.value}
@@ -552,8 +598,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                 {/* 行高 */}
                 <section className="space-y-2">
-                  <div className="text-xs font-semibold text-foreground-secondary">行高（文本组件）</div>
-                  <div className="flex gap-2">
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">行高（文本组件）</div>
+                  <div className="flex skin-gap-sm">
                     {(['ratio', 'fixed'] as const).map((m) => (
                       <Chip key={m} active={lineHeight.mode === m} onClick={() => updateLineHeight('mode', m)}>
                         {m === 'ratio' ? '倍数 ×n' : '加法 +px'}
@@ -576,8 +622,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                 {/* 币种与数字 */}
                 <section className="space-y-2">
-                  <div className="text-xs font-semibold text-foreground-secondary">币种与数字</div>
-                  <div className="flex items-center gap-2">
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">币种与数字</div>
+                  <div className="flex items-center skin-gap-sm">
                     <input
                       value={format.currencySymbol}
                       onChange={(e) => updateFormat('currencySymbol', e.target.value || '$')}
@@ -592,7 +638,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                       <option value="after">符号在后</option>
                     </select>
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap skin-gap-md">
                     <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
                       <input
                         type="checkbox"
@@ -642,12 +688,12 @@ export function ReportSettingsOverlay({ onClose }: Props) {
               <>
                 {/* ⑥ 布局：安全距离 + 网格 */}
                 <section className="space-y-3">
-                  <div className="text-xs font-semibold text-foreground-secondary">布局</div>
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">布局</div>
 
                   {/* 安全距离 */}
                   <div>
-                    <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">安全距离（px）</div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="mb-1.5 text-[11px] skin-fw-body text-foreground-secondary">安全距离（px）</div>
+                    <div className="flex flex-wrap skin-gap-xs">
                       {[24, 48, 64, 96].map((m) => (
                         <Chip key={m} active={layout.safeMargin === m} onClick={() => updateLayout('safeMargin', m)}>
                           {m}
@@ -668,8 +714,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                   {/* 网格大小 */}
                   <div>
-                    <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">网格大小（px）</div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="mb-1.5 text-[11px] skin-fw-body text-foreground-secondary">网格大小（px）</div>
+                    <div className="flex flex-wrap skin-gap-xs">
                       {[8, 10, 12, 20].map((g) => (
                         <Chip key={g} active={layout.gridSize === g} onClick={() => updateLayout('gridSize', g)}>
                           {g}
@@ -689,7 +735,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   </div>
 
                   {/* 显示开关 */}
-                  <div className="flex gap-4">
+                  <div className="flex skin-gap-lg">
                     <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
                       <input
                         type="checkbox"
@@ -714,8 +760,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
               <>
                 {/* ⑤ 圆角 */}
                 <section>
-                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">圆角</div>
-                  <div className="flex gap-2">
+                  <div className="mb-2 text-xs skin-fw-heading text-foreground-secondary">圆角</div>
+                  <div className="flex skin-gap-sm">
                     {RADIUS_OPTIONS.map((opt) => (
                       <Chip
                         key={opt.value}
@@ -730,8 +776,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                 {/* 卡片阴影 */}
                 <section>
-                  <div className="mb-2 text-xs font-semibold text-foreground-secondary">卡片阴影</div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="mb-2 text-xs skin-fw-heading text-foreground-secondary">卡片阴影</div>
+                  <div className="flex flex-wrap skin-gap-sm">
                     {(['none', 'subtle', 'soft', 'strong'] as const).map((s) => (
                       <Chip key={s} active={shadow === s} onClick={() => updateShadow(s)}>
                         {{ none: '无', subtle: '细微', soft: '柔和', strong: '强烈' }[s]}
@@ -742,8 +788,8 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
                 {/* 图表样式 */}
                 <section className="space-y-2">
-                  <div className="text-xs font-semibold text-foreground-secondary">图表样式</div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">图表样式</div>
+                  <div className="flex flex-wrap skin-gap-md">
                     <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
                       <input
                         type="checkbox"
@@ -789,7 +835,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                 {/* ⑧ 默认页面背景 */}
                 <section className="space-y-3 border-t border-border-subtle pt-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs font-semibold text-foreground-secondary">默认页面背景</div>
+                    <div className="text-xs skin-fw-heading text-foreground-secondary">默认页面背景</div>
                     {theme.background && theme.background.type !== 'none' && (
                       <button
                         onClick={applyBackgroundToAllPages}
@@ -800,7 +846,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap skin-gap-xs">
                     {(['none', 'color', 'gradient', 'image'] as const).map((t) => {
                       const labels: Record<string, string> = { none: '无', color: '纯色', gradient: '渐变', image: '图片' };
                       const active = (theme.background?.type ?? 'none') === t;
@@ -854,7 +900,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                               });
                             }
                           }}
-                          className="flex flex-col items-center gap-1 rounded border border-border-subtle p-1.5 hover:border-accent-primary hover:bg-surface-hover transition"
+                          className="flex flex-col items-center skin-gap-xs rounded border border-border-subtle p-1.5 hover:border-accent-primary hover:bg-surface-hover transition"
                           title={preset.label}
                         >
                           <div
@@ -872,7 +918,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                   </div>
 
                   {theme.background?.type === 'color' && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center skin-gap-sm">
                       <input
                         type="color"
                         value={theme.background.color ?? 'var(--surface-primary)'}
@@ -904,135 +950,235 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                 </section>
               </>
             )}
-            {activeCat === 'brand' && (
+            {/* ── 页眉页脚 ── */}
+            {activeCat === 'header-footer' && (
               <>
-                {/* ⑦ 品牌：Logo + 标题 + 副标题 */}
-                <section className="space-y-3 border-t border-border-subtle pt-4">
-                  <div className="text-xs font-semibold text-foreground-secondary">品牌</div>
+                {/* 同步按钮 */}
+                <section className="space-y-2">
+                  <div className="text-xs skin-fw-heading text-foreground-secondary">数据同步</div>
+                  <button
+                    onClick={async () => {
+                      if (!businessLine) return;
+                      setHfSyncing(true);
+                      try {
+                        const allBL = await lookupApi.listBusinessLines();
+                        const bl = allBL.find((b) => b.code === businessLine);
+                        if (!bl) { setToast(`未找到业务线 "${businessLine}"`); setTimeout(() => setToast(null), 2500); return; }
+                        const advertisers = await lookupApi.listAdvertisers({ businessLineId: bl.id });
+                        const firstAdv = advertisers[0];
+                        setHfHeader((prev) => ({
+                          ...prev,
+                          rightLogo: { src: bl.logo || '', text: bl.name, initials: bl.code },
+                          leftLogo: firstAdv
+                            ? { src: firstAdv.logo || '', text: firstAdv.name, initials: firstAdv.name.slice(0, 2).toUpperCase() }
+                            : prev.leftLogo,
+                        }));
+                        setToast('Logo 已同步'); setTimeout(() => setToast(null), 2500);
+                      } catch { setToast('同步失败'); setTimeout(() => setToast(null), 2500); }
+                      finally { setHfSyncing(false); }
+                    }}
+                    disabled={hfSyncing || !businessLine}
+                    className="rounded-lg border border-accent-primary/40 bg-accent-primary/5 px-3 py-1.5 text-xs skin-fw-body text-accent-primary hover:bg-accent-primary/10 disabled:opacity-50"
+                  >
+                    {hfSyncing ? '⏳ 同步中…' : '🔄 从数据管理同步 Logo'}
+                  </button>
+                </section>
 
-                  {/* Logo */}
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] text-foreground-muted">Logo</div>
-                    <ImageInput
-                      value={theme.branding?.logo ?? ''}
-                      onChange={(url) => updateBranding('logo', url || undefined)}
-                    />
-                    {(theme.branding?.logo) && (
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
-                          高度
-                          <input
-                            type="number"
-                            min={8}
-                            max={200}
-                            value={theme.branding?.logoHeight ?? 32}
-                            onChange={(e) => updateBranding('logoHeight', Math.max(8, Math.min(200, Number(e.target.value) || 32)))}
-                            className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
-                          />
-                          px
-                        </label>
-                        <label className="flex items-center gap-1 text-[11px] text-foreground-secondary">
-                          圆角
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={theme.branding?.logoRadius ?? 0}
-                            onChange={(e) => updateBranding('logoRadius', Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                            className="w-16 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
-                          />
-                          px
-                        </label>
-                      </div>
-                    )}
+                {/* 页眉配置 */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs skin-fw-heading text-foreground-secondary">页眉</div>
+                    <label className="flex cursor-pointer items-center skin-gap-sm text-xs">
+                      <input
+                        type="checkbox"
+                        checked={hfHeader.enabled}
+                        onChange={(e) => setHfHeader({ ...hfHeader, enabled: e.target.checked })}
+                        className="h-4 w-4 accent-orange-500"
+                      />
+                      启用
+                    </label>
                   </div>
 
-                  {/* 品牌标题 */}
-                  <div>
-                    <label className="mb-1 block text-[11px] text-foreground-muted">品牌标题（留空=跟随项目广告主名）</label>
-                    <input
-                      value={theme.branding?.title ?? ''}
-                      onChange={(e) => updateBranding('title', e.target.value || undefined)}
-                      placeholder="如 品牌名称"
-                      className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-                    />
-                  </div>
-
-                  {/* 品牌副标题 */}
-                  <div>
-                    <label className="mb-1 block text-[11px] text-foreground-muted">品牌副标题</label>
-                    <input
-                      value={theme.branding?.subtitle ?? ''}
-                      onChange={(e) => updateBranding('subtitle', e.target.value || undefined)}
-                      placeholder="如 Q4 Campaign Report 2026"
-                      className="w-full rounded border border-border-default px-2 py-1 text-xs text-foreground-primary"
-                    />
-                  </div>
-
-                  {/* 业务线标识配置 */}
-                  <div className="space-y-1.5 border-t border-border-subtle pt-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-medium text-foreground-secondary">业务线标识</span>
-                      <label className="flex items-center gap-1 text-[10px] text-foreground-muted">
-                        <input
-                          type="checkbox"
-                          checked={theme.branding?.blBadge?.visible !== false}
-                          onChange={(e) => updateBranding('blBadge', { ...theme.branding?.blBadge, visible: e.target.checked })}
-                          className="h-3 w-3"
-                        />
-                        显示
-                      </label>
-                    </div>
-                    {theme.branding?.blBadge?.visible !== false && (
-                      <details className="text-[11px] text-foreground-muted">
-                        <summary className="cursor-pointer hover:text-foreground-primary">位置与尺寸</summary>
-                        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                  {hfHeader.enabled && (
+                    <div className="space-y-4 rounded-lg border border-border-default p-4">
+                      {/* 预设样式选择 */}
+                      <div>
+                        <label className="mb-1.5 block text-[11px] skin-fw-body text-foreground-muted">布局预设</label>
+                        <div className="grid grid-cols-3 skin-gap-sm">
                           {([
-                            ['width', '宽度', 40, 8, 200, 1],
-                            ['right', '右边距', 24, 0, 600, 1],
-                            ['top', '顶距', 24, 0, 600, 1],
-                            ['opacity', '透明度', 0.8, 0, 1, 0.1],
-                            ['radius', '圆角', 8, 0, 100, 1],
-                          ] as const).map(([key, label, fallback, min, max, step]) => {
-                            const current = theme.branding?.blBadge?.[key];
-                            return (
-                              <label key={key} className="flex items-center gap-1">
-                                <span className="w-10 flex-none">{label}</span>
-                                <input
-                                  type="number"
-                                  min={min}
-                                  max={max}
-                                  step={step}
-                                  value={current ?? fallback}
-                                  onChange={(e) => {
-                                    const raw = e.target.value;
-                                    // 允许输入框为空（用户正在编辑中间态）
-                                    if (raw === '') {
-                                      updateBranding('blBadge', { ...theme.branding?.blBadge, [key]: min });
-                                      return;
-                                    }
-                                    const parsed = Number(raw);
-                                    if (Number.isNaN(parsed)) return;
-                                    const clamped = Math.max(min as number, Math.min(max as number, parsed));
-                                    updateBranding('blBadge', { ...theme.branding?.blBadge, [key]: clamped });
-                                  }}
-                                  className="w-14 rounded border border-border-default px-1 py-0.5 text-[11px] text-foreground-primary"
-                                />
-                                {key === 'opacity' ? '' : 'px'}
-                              </label>
-                            );
-                          })}
+                            { id: 'split', label: '左右分列', icon: '⬜ ↔ ⬜' },
+                            { id: 'left-logos-right-text', label: '双logo+标题', icon: '⬜×⬜ 📝' },
+                            { id: 'left-logo-right-text', label: 'logo+标题', icon: '⬜ 📝' },
+                            { id: 'left-text-right-logo', label: '标题+logo', icon: '📝 ⬜' },
+                            { id: 'center-text', label: '居中文案', icon: '📝' },
+                            { id: 'custom', label: '自定义', icon: '⚙' },
+                          ] as const).map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setHfHeader({ ...hfHeader, preset: opt.id })}
+                              className={`rounded-lg border px-2 py-1.5 text-xs transition ${
+                                (hfHeader.preset ?? 'split') === opt.id
+                                  ? 'border-accent-primary bg-accent-primary/5 skin-fw-body text-foreground-primary'
+                                  : 'border-border-default text-foreground-muted hover:bg-surface-hover'
+                              }`}
+                            >
+                              <div className="text-[10px] opacity-70">{opt.icon}</div>
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
-                        <div className="mt-1.5">
-                          <label className="mb-0.5 block text-[11px] text-foreground-muted">自定义 Logo（留空=跟随业务线）</label>
-                          <ImageInput
-                            value={theme.branding?.blBadge?.logo ?? ''}
-                            onChange={(url) => updateBranding('blBadge', { ...theme.branding?.blBadge, logo: url || undefined })}
+                      </div>
+
+                      {/* 报告标题文案（非 split 预设使用） */}
+                      {(hfHeader.preset ?? 'split') !== 'split' && (hfHeader.preset ?? 'split') !== 'custom' && (
+                        <div>
+                          <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">报告标题文案</label>
+                          <input
+                            type="text"
+                            value={hfHeader.titleText ?? ''}
+                            onChange={(e) => setHfHeader({ ...hfHeader, titleText: e.target.value })}
+                            placeholder="如 MOTION Spring Campaign Report"
+                            className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm"
                           />
                         </div>
-                      </details>
-                    )}
+                      )}
+
+                      {/* 左侧 logo */}
+                      <HeaderFooterLogoEditor
+                        label="品牌 Logo（广告主）"
+                        logo={hfHeader.leftLogo}
+                        onChange={(logo) => setHfHeader({ ...hfHeader, leftLogo: logo })}
+                      />
+                      {/* 右侧 logo（split / left-logos-right-text / custom 预设需要） */}
+                      {(hfHeader.preset ?? 'split') !== 'left-logo-right-text' && (hfHeader.preset ?? 'split') !== 'left-text-right-logo' && (
+                        <HeaderFooterLogoEditor
+                          label="业务线 Logo"
+                          logo={hfHeader.rightLogo}
+                          onChange={(logo) => setHfHeader({ ...hfHeader, rightLogo: logo })}
+                        />
+                      )}
+
+                      {/* 连接符（split / left-logos-right-text 时使用） */}
+                      {((hfHeader.preset ?? 'split') === 'split' || (hfHeader.preset ?? 'split') === 'left-logos-right-text') && (
+                        <div>
+                          <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">连接符</label>
+                          <input
+                            type="text"
+                            value={hfHeader.connector ?? '×'}
+                            onChange={(e) => setHfHeader({ ...hfHeader, connector: e.target.value })}
+                            placeholder="×"
+                            className="w-20 rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm text-center"
+                          />
+                        </div>
+                      )}
+
+                      {/* 副标题/日期标签 */}
+                      <div>
+                        <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">副标题/日期标签</label>
+                        <input
+                          type="text"
+                          value={hfHeader.dateLabel ?? ''}
+                          onChange={(e) => setHfHeader({ ...hfHeader, dateLabel: e.target.value })}
+                          placeholder="如 2026 H1 / 周报 W32 / 支持 {page}/{total}"
+                          className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm"
+                        />
+                      </div>
+
+                      {/* 高度 */}
+                      <div>
+                        <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">高度 (px)</label>
+                        <input
+                          type="number"
+                          value={hfHeader.height ?? 56}
+                          onChange={(e) => setHfHeader({ ...hfHeader, height: Number(e.target.value) })}
+                          className="w-24 rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm"
+                        />
+                      </div>
+
+                      {/* 背景设置 */}
+                      <div>
+                        <label className="mb-1.5 block text-[11px] skin-fw-body text-foreground-muted">背景设置</label>
+                        <HeaderBackgroundEditor
+                          background={hfHeader.background}
+                          onChange={(bg) => setHfHeader({ ...hfHeader, background: bg })}
+                        />
+                      </div>
+
+                      {/* 底部边框 */}
+                      <div>
+                        <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">底部边框色（设为 transparent 隐藏）</label>
+                        <input
+                          type="text"
+                          value={hfHeader.borderColor ?? '#ebebeb'}
+                          onChange={(e) => setHfHeader({ ...hfHeader, borderColor: e.target.value })}
+                          placeholder="#ebebeb 或 transparent"
+                          className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                {/* 页脚配置 */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs skin-fw-heading text-foreground-secondary">页脚</div>
+                    <label className="flex cursor-pointer items-center skin-gap-sm text-xs">
+                      <input
+                        type="checkbox"
+                        checked={hfFooter.enabled}
+                        onChange={(e) => setHfFooter({ ...hfFooter, enabled: e.target.checked })}
+                        className="h-4 w-4 accent-orange-500"
+                      />
+                      启用
+                    </label>
                   </div>
+
+                  {hfFooter.enabled && (
+                    <div className="space-y-3 rounded-lg border border-border-default p-4">
+                      <div>
+                        <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">左侧文字</label>
+                        <input
+                          type="text"
+                          value={hfFooter.leftText ?? ''}
+                          onChange={(e) => setHfFooter({ ...hfFooter, leftText: e.target.value })}
+                          placeholder="© 2026 MediaKit"
+                          className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">右侧文字（支持 {`{page}/{total}`})</label>
+                        <input
+                          type="text"
+                          value={hfFooter.rightText ?? ''}
+                          onChange={(e) => setHfFooter({ ...hfFooter, rightText: e.target.value })}
+                          placeholder="{page}/{total}"
+                          className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 skin-gap-md">
+                        <div>
+                          <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">高度 (px)</label>
+                          <input
+                            type="number"
+                            value={hfFooter.height ?? 36}
+                            onChange={(e) => setHfFooter({ ...hfFooter, height: Number(e.target.value) })}
+                            className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-1.5 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] skin-fw-body text-foreground-muted">背景色</label>
+                          <input
+                            type="color"
+                            value={hfFooter.background ?? '#f8f8f8'}
+                            onChange={(e) => setHfFooter({ ...hfFooter, background: e.target.value })}
+                            className="h-9 w-full rounded-lg border border-border-default"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </section>
               </>
             )}
@@ -1040,7 +1186,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
         </div>
 
         {/* 底部操作栏 */}
-        <div className="flex justify-end gap-2 border-t border-border-subtle px-6 py-3">
+        <div className="flex justify-end skin-gap-sm border-t border-border-subtle px-6 py-3">
           <button
             onClick={onClose}
             className="rounded-lg border border-border-default px-4 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
@@ -1082,9 +1228,9 @@ function ColorField({
 }) {
   return (
     <div>
-      <div className="mb-1.5 text-[11px] font-medium text-foreground-secondary">{label}</div>
+      <div className="mb-1.5 text-[11px] skin-fw-body text-foreground-secondary">{label}</div>
       {presetSwatches && (
-        <div className="mb-1.5 flex flex-wrap gap-1">
+        <div className="mb-1.5 flex flex-wrap skin-gap-xs">
           {presetSwatches.map((c) => (
             <button
               key={c}
@@ -1130,8 +1276,8 @@ function FontSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <label className="w-20 flex-none text-[11px] font-medium text-foreground-secondary">{label}</label>
+    <div className="flex items-center skin-gap-sm">
+      <label className="w-20 flex-none text-[11px] skin-fw-body text-foreground-secondary">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -1214,7 +1360,7 @@ function BackgroundGradientFields({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap skin-gap-xs">
         {(['linear', 'radial'] as const).map((t) => (
           <button
             key={t}
@@ -1233,7 +1379,7 @@ function BackgroundGradientFields({
       <div className="h-6 w-full rounded border border-border-default" style={{ background: preview }} />
 
       {grad.type === 'linear' && (
-        <label className="flex items-center gap-2 text-xs text-foreground-secondary">
+        <label className="flex items-center skin-gap-sm text-xs text-foreground-secondary">
           <span>角度</span>
           <input
             type="number"
@@ -1248,7 +1394,7 @@ function BackgroundGradientFields({
 
       <div className="space-y-1">
         {grad.stops.map((s, i) => (
-          <div key={i} className="flex items-center gap-1">
+          <div key={i} className="flex items-center skin-gap-xs">
             <input
               type="color"
               value={s.color}
@@ -1281,6 +1427,195 @@ function BackgroundGradientFields({
       >
         + 添加色标
       </button>
+    </div>
+  );
+}
+
+/* ─── 页眉页脚 Logo 编辑器 ─── */
+function HeaderFooterLogoEditor({
+  label,
+  logo,
+  onChange,
+}: {
+  label: string;
+  logo?: { src?: string; text?: string; initials?: string; logoHeight?: number };
+  onChange: (logo: { src?: string; text?: string; initials?: string; logoHeight?: number } | undefined) => void;
+}) {
+  const l = logo ?? {};
+  return (
+    <div className="rounded-md border border-border-subtle p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs skin-fw-body text-foreground-secondary">{label}</span>
+        {(l.src || l.text || l.initials) && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="text-[11px] text-foreground-muted hover:text-red"
+          >
+            清除
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-2 skin-gap-sm">
+        <input
+          type="text"
+          value={l.src ?? ''}
+          onChange={(e) => onChange({ ...l, src: e.target.value })}
+          placeholder="Logo URL（留空则不显示）"
+          className="col-span-2 w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+        />
+        <input
+          type="text"
+          value={l.text ?? ''}
+          onChange={(e) => onChange({ ...l, text: e.target.value })}
+          placeholder="名称"
+          className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+        />
+        <input
+          type="text"
+          value={l.initials ?? ''}
+          onChange={(e) => onChange({ ...l, initials: e.target.value })}
+          placeholder="缩写（如 DG）"
+          className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+        />
+      </div>
+      {l.src && (
+        <div className="mt-2 flex items-center skin-gap-sm">
+          <label className="flex items-center skin-gap-xs text-[11px] text-foreground-secondary">
+            Logo 高度
+            <input
+              type="number"
+              min={12}
+              max={120}
+              value={l.logoHeight ?? 32}
+              onChange={(e) => onChange({ ...l, logoHeight: Math.max(12, Math.min(120, Number(e.target.value) || 32)) })}
+              className="w-14 rounded border border-border-default px-1 py-0.5 text-xs text-foreground-primary"
+            />
+            px
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── 页眉背景编辑器 ─── */
+function HeaderBackgroundEditor({
+  background,
+  onChange,
+}: {
+  background?: string | import('@mediakit/shared').HeaderBackground;
+  onChange: (bg: string | import('@mediakit/shared').HeaderBackground) => void;
+}) {
+  // 归一化背景值
+  const isObj = typeof background === 'object' && background !== null;
+  const bgObj = isObj ? background as import('@mediakit/shared').HeaderBackground : undefined;
+  const bgStr = !isObj ? (background as string | undefined) : undefined;
+  const bgType = bgObj?.type ?? (bgStr ? 'color' : 'color');
+
+  return (
+    <div className="space-y-2">
+      {/* 类型切换 */}
+      <div className="flex skin-gap-xs">
+        {(['color', 'gradient', 'image'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onChange({ type: t, color: '#ffffff' })}
+            className={`flex-1 rounded-md border px-2 py-1 text-xs transition ${
+              bgType === t
+                ? 'border-accent-primary bg-accent-primary/5 skin-fw-body text-foreground-primary'
+                : 'border-border-default text-foreground-muted hover:bg-surface-hover'
+            }`}
+          >
+            {t === 'color' ? '纯色' : t === 'gradient' ? '渐变' : '图片'}
+          </button>
+        ))}
+      </div>
+
+      {/* 纯色 */}
+      {bgType === 'color' && (
+        <div className="flex items-center skin-gap-sm">
+          <input
+            type="color"
+            value={bgObj?.color ?? bgStr ?? '#ffffff'}
+            onChange={(e) => onChange({ type: 'color', color: e.target.value })}
+            className="h-8 w-12 rounded border border-border-default"
+          />
+          <input
+            type="text"
+            value={bgObj?.color ?? bgStr ?? '#ffffff'}
+            onChange={(e) => onChange({ type: 'color', color: e.target.value })}
+            placeholder="#ffffff"
+            className="flex-1 rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+          />
+        </div>
+      )}
+
+      {/* 渐变 */}
+      {bgType === 'gradient' && (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={bgObj?.gradient ?? 'linear-gradient(90deg, #1a1a2e, #16213e)'}
+            onChange={(e) => onChange({ type: 'gradient', gradient: e.target.value })}
+            placeholder="linear-gradient(90deg, #color1, #color2)"
+            className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+          />
+          {/* 渐变预设 */}
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: '深蓝', val: 'linear-gradient(90deg, #0f172a, #1e3a5f)' },
+              { label: '暗夜', val: 'linear-gradient(90deg, #1a1a2e, #16213e)' },
+              { label: '品牌红', val: 'linear-gradient(90deg, #e2503f, #c0392b)' },
+              { label: '墨绿', val: 'linear-gradient(90deg, #0d3b2e, #16534a)' },
+              { label: '炭灰', val: 'linear-gradient(90deg, #2d2d2d, #1a1a1a)' },
+              { label: '紫调', val: 'linear-gradient(90deg, #2d1b4e, #1a1a2e)' },
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => onChange({ type: 'gradient', gradient: preset.val })}
+                className="rounded border border-border-default px-2 py-0.5 text-[10px] text-foreground-secondary hover:border-accent-primary"
+                style={{ background: preset.val, color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 图片 */}
+      {bgType === 'image' && (
+        <input
+          type="text"
+          value={bgObj?.image ?? ''}
+          onChange={(e) => onChange({ type: 'image', image: e.target.value })}
+          placeholder="背景图片 URL"
+          className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+        />
+      )}
+
+      {/* 透明度滑块 */}
+      <div>
+        <label className="flex items-center justify-between text-[11px] text-foreground-secondary">
+          <span>不透明度</span>
+          <span>{Math.round((bgObj?.opacity ?? 1) * 100)}%</span>
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={bgObj?.opacity ?? 1}
+          onChange={(e) => {
+            const baseBg = bgObj ?? { type: 'color' as const, color: bgStr ?? '#ffffff' };
+            onChange({ ...baseBg, opacity: Number(e.target.value) });
+          }}
+          className="w-full accent-orange-500"
+        />
+      </div>
     </div>
   );
 }

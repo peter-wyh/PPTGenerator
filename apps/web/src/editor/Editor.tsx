@@ -13,6 +13,7 @@ import { useEditorKeyboard } from './useEditorKeyboard';
 import { ThemeContext, injectFontLinks } from './theme';
 import { bootstrapCustomFonts } from './customFonts';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { getCampaign, reportCampaignFrom } from '@/api/campaigns';
 
 interface EditorProps {
   detail: ProjectDetail;
@@ -29,6 +30,22 @@ export function Editor({ detail, mode }: EditorProps) {
     if (st.loaded && st.projectId === detail.id && st.saveMode === m) return;
     useEditorStore.getState().loadProject(detail, detail.name, mode);
   }, [detail, mode]);
+
+  // 项目加载后：若绑定了 campaignId 但 reportData.campaign 缺失，自动拉取填充。
+  useEffect(() => {
+    const cid = useEditorStore.getState().projectMeta?.campaignId;
+    if (!cid) return;
+    const existing = useEditorStore.getState().reportData?.campaign;
+    if (existing?.id) return;
+    let alive = true;
+    getCampaign(cid).then((c) => {
+      if (!alive || !c) return;
+      const st = useEditorStore.getState();
+      const rd = st.reportData ?? {};
+      st.setReportData({ ...rd, campaign: reportCampaignFrom(c) });
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [detail.id]);
 
   useAutosave();
   useEditorKeyboard();

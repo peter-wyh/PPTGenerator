@@ -282,7 +282,7 @@ export function ReportCreatorAvatarImporter({ comp }: { comp: EditorComponent })
   }
 
   return (
-    <FieldGroup title="从项目数据导入">
+    <FieldGroup title="从报告数据导入">
       {pageCreator && (
         <p className="mb-1 text-[10px] text-accent-primary">
           🔗 页面达人：{pageCreator.name}
@@ -340,7 +340,7 @@ export function ReportCreatorMetaStripImporter({ comp }: { comp: EditorComponent
   }
 
   return (
-    <FieldGroup title="从项目数据导入">
+    <FieldGroup title="从报告数据导入">
       {pageCreator && (
         <p className="mb-1 text-[10px] text-accent-primary">
           🔗 页面达人：{pageCreator.name}
@@ -400,7 +400,7 @@ export function ReportCreatorStatsImporter({ comp }: { comp: EditorComponent }) 
   const hasStats = (selectedCreator?.stats?.length ?? 0) > 0;
 
   return (
-    <FieldGroup title="从项目数据导入">
+    <FieldGroup title="从报告数据导入">
       {pageCreator && (
         <p className="mb-1 text-[10px] text-accent-primary">
           🔗 页面达人：{pageCreator.name}
@@ -486,7 +486,7 @@ export function ReportCreatorListImporter({ comp }: { comp: EditorComponent }) {
   }
 
   return (
-    <FieldGroup title="从项目数据导入">
+    <FieldGroup title="从报告数据导入">
       {pageCreator && (
         <p className="mb-1 text-[10px] text-accent-primary">
           🔗 页面达人：{pageCreator.name}
@@ -670,7 +670,7 @@ export function ReportCreatorFanGenderImporter({ comp }: { comp: EditorComponent
   const hasData = (selectedCreator?.audience?.genderSplit?.length ?? 0) > 0;
 
   return (
-    <FieldGroup title="从项目数据导入">
+    <FieldGroup title="从报告数据导入">
       {pageCreator && (
         <p className="mb-1 text-[10px] text-accent-primary">
           🔗 页面达人：{pageCreator.name}
@@ -732,7 +732,7 @@ export function ReportCreatorFanAgeImporter({ comp }: { comp: EditorComponent })
   const hasData = (selectedCreator?.audience?.ageRange?.length ?? 0) > 0;
 
   return (
-    <FieldGroup title="从项目数据导入">
+    <FieldGroup title="从报告数据导入">
       {pageCreator && (
         <p className="mb-1 text-[10px] text-accent-primary">
           🔗 页面达人：{pageCreator.name}

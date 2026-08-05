@@ -60,6 +60,7 @@ export function PageSidebar() {
   const copyPage = useEditorStore((s) => s.copyPage);
   const renamePage = useEditorStore((s) => s.renamePage);
   const reorderPage = useEditorStore((s) => s.reorderPage);
+  const isSinglePage = useEditorStore((s) => s.projectMeta?.styleType === 'single');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -99,8 +100,8 @@ export function PageSidebar() {
       // 页面名仍取通用模板的描述性名称（如「月报 · 达人合作详情」），仅组件布局/变体走业务线。
       const bl = useEditorStore.getState().projectMeta?.businessLine;
       const resolved = resolveTemplateForBusinessLine(tpl, bl);
-      // 单页超长模板：自动调整画板高度以容纳所有组件
-      if (resolved.canvasHeight) {
+      // 单页超长模板：自动调整画板高度以容纳所有组件（仅单页面模式，不影响多页 PPT）
+      if (resolved.canvasHeight && useEditorStore.getState().projectMeta?.styleType === 'single') {
         const cur = useEditorStore.getState().canvasHeight;
         if (resolved.canvasHeight > cur) {
           useEditorStore.setState({ canvasHeight: resolved.canvasHeight });
@@ -236,18 +237,26 @@ export function PageSidebar() {
         ))}
       </div>
       <div className="flex gap-2 p-2">
-        <button
-          onClick={() => setShowScenarios(true)}
-          className="flex-1 rounded-lg border border-accent-primary/40 bg-accent-primary/5 px-2 py-1.5 text-sm text-accent-primary hover:bg-accent-primary/10"
-        >
-          + 报告
-        </button>
-        <button
-          onClick={() => setShowTemplates(true)}
-          className="flex-1 rounded-lg border border-dashed border-border-default px-2 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
-        >
-          + 页面
-        </button>
+        {isSinglePage ? (
+          <div className="flex-1 rounded-lg bg-surface-hover px-2 py-1.5 text-center text-xs text-foreground-muted">
+            单页面模式
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={() => setShowScenarios(true)}
+              className="flex-1 rounded-lg border border-accent-primary/40 bg-accent-primary/5 px-2 py-1.5 text-sm text-accent-primary hover:bg-accent-primary/10"
+            >
+              + 报告
+            </button>
+            <button
+              onClick={() => setShowTemplates(true)}
+              className="flex-1 rounded-lg border border-dashed border-border-default px-2 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
+            >
+              + 页面
+            </button>
+          </>
+        )}
       </div>
       {showTemplates && (
         <TemplateOverlay onApply={applyTemplate} onClose={() => setShowTemplates(false)} />

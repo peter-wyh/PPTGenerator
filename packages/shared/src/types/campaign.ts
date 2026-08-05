@@ -645,6 +645,46 @@ export interface Product {
 
 /* ------------------------------ Campaign 分析数据 ------------------------------ */
 
+/** Top-Selling Category 项（品类销售占比）。 */
+export interface CategoryPerformance {
+  name: string;
+  /** 销售额（含货币符号，如 "$481,998"）。 */
+  revenue?: string;
+  /** 占比百分比数值（如 72 表示 72%）。 */
+  share?: number;
+}
+
+/** Top-Selling Product 项（热销产品）。 */
+export interface ProductPerformance {
+  name: string;
+  revenue?: string;
+  orders?: string;
+  category?: string;
+}
+
+/** Top Market / 地域销售维度。 */
+export interface MarketPerformance {
+  /** 地区名称，如 "United States"。 */
+  name: string;
+  revenue?: string;
+  /** 占比百分比数值。 */
+  share?: number;
+}
+
+/** 促销活动 / 优惠码效果。 */
+export interface PromotionOffer {
+  /** 优惠名称，如 "Creator Exclusive 15% OFF"。 */
+  name: string;
+  /** 类型：Code / Bundle / Flash Sale / … */
+  type?: string;
+  /** 驱动收入。 */
+  revenue?: string;
+  /** 使用次数。 */
+  usageCount?: number;
+}
+
+/** Campaign 分析包（趋势 + 新老客 + 洞察 + 品类 + 产品 + 地域 + 优惠码）。 */
+
 /** Campaign 大盘每日趋势（GMV + spend → ROAS）。 */
 export interface CampaignTrendPoint {
   date: string;
@@ -685,10 +725,22 @@ export interface CampaignInsight {
   action: string;
 }
 
-/** Campaign 分析包（趋势 + 新老客 + 洞察）。 */
+/** Campaign 分析包（趋势 + 新老客 + 洞察 + 品类 + 产品 + 地域 + 优惠码）。 */
 export interface CampaignAnalytics {
   trend: CampaignTrendPoint[];
   weeklyTrend: CampaignWeeklyTrendPoint[];
   customerSplit?: { newCustomers: number; returningCustomers: number; newCustomerRate: string };
   insights: CampaignInsight[];
+  /** 新客数（DG 报告 KPI: New Customer Acquisition）。 */
+  newCustomers?: number;
+  /** 客单价 AOV（DG 报告 KPI）。 */
+  aov?: string;
+  /** Top-Selling Categories（品类销售占比）。 */
+  topCategories?: CategoryPerformance[];
+  /** Top-Selling Products（热销产品排行）。 */
+  topProducts?: ProductPerformance[];
+  /** Top Markets（地域销售维度）。 */
+  topMarkets?: MarketPerformance[];
+  /** Top Promotion Offers（促销活动 / 优惠码效果）。 */
+  promotionOffers?: PromotionOffer[];
 }

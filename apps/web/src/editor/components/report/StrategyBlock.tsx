@@ -18,17 +18,17 @@ export function StrategyBlockComponent({ data }: { data: StrategyBlockData }) {
 function StrategyDefault({ data }: { data: StrategyBlockData }) {
   const rows = data.rows ?? [];
   return (
-    <div className="flex h-full w-full flex-col gap-3 overflow-auto">
+    <div className="flex h-full w-full flex-col skin-gap-md overflow-auto">
       {rows.map((r, i) => {
         const iconKey = r[0] ?? '';
         const title = r[1] ?? '';
         const content = r[2] ?? '';
         const Icon = findIcon(iconKey)?.Comp;
         return (
-          <div key={i} className="flex flex-col gap-1">
+          <div key={i} className="flex flex-col skin-gap-xs">
             <div className="flex items-center gap-1.5">
               {Icon && <Icon size={16} className="text-primary" />}
-              <span className="text-xs font-semibold uppercase tracking-wide text-foreground-primary">
+              <span className="text-xs skin-fw-heading uppercase tracking-wide text-foreground-primary">
                 {title}
               </span>
             </div>
@@ -98,7 +98,7 @@ function StrategyBulleted({ data }: { data: StrategyBlockData }) {
     );
   }
   return (
-    <div className={`grid h-full w-full gap-3 overflow-auto ${rows.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+    <div className={`grid h-full w-full skin-gap-md overflow-auto ${rows.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
       {rows.map((r, i) => {
         const iconKey = r[0] ?? '';
         const title = r[1] ?? '';
@@ -132,7 +132,7 @@ function StrategyCards({ data }: { data: StrategyBlockData }) {
     );
   }
   return (
-    <div className="flex h-full w-full flex-col gap-2 overflow-auto">
+    <div className="flex h-full w-full flex-col skin-gap-sm overflow-auto">
       {rows.map((r, i) => {
         const iconKey = r[0] ?? '';
         const title = r[1] ?? '';

@@ -13,6 +13,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useEditorStore } from '../store';
+import { BUSINESS_LINE_META } from '@/projectsMeta';
 import type {
   BarChartData,
   IconWeight,
@@ -20,12 +22,15 @@ import type {
   IndicatorCardData,
   IndicatorCardVariant,
   LineChartData,
+  PageHeaderData,
+  PageHeaderLogo,
   PieChartData,
   ShapeData,
   TableData,
   TextData,
   TitleBlockData,
 } from '@mediakit/shared';
+import { sanitizeRichText } from '../richText';
 import { IconKit } from '../icons/IconKit';
 import { useChartStyle } from '../theme';
 import { useChartColors } from './report/shared';
@@ -46,9 +51,13 @@ function formatCompactNum(v: number): string {
 
 /* ---------------------------------- text --------------------------------- */
 export function TextComponent({ data }: { data: TextData }) {
+  // Render content as sanitized HTML to support inline rich-text formatting
+  // (bold, italic, lists). The sanitizer (richText.ts) whitelists only safe
+  // inline tags and strips all attributes, so XSS is not a concern here.
+  const html = sanitizeRichText(data.content ?? '');
   return (
     <div
-      className="h-full w-full overflow-hidden break-words"
+      className="h-full w-full overflow-hidden break-words [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_mark]:rounded [&_mark]:px-0.5"
       style={{
         fontSize: data.fontSize,
         fontWeight: data.fontWeight,
@@ -58,9 +67,8 @@ export function TextComponent({ data }: { data: TextData }) {
         padding: data.padding,
         lineHeight: 'var(--line-height)',
       }}
-    >
-      {data.content}
-    </div>
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
@@ -116,13 +124,13 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
 
   if (variant === 'icon-bg') {
     return (
-      <div className="relative h-full w-full overflow-hidden rounded-xl px-4" style={{ backgroundColor: t.bg }}>
+      <div className="relative h-full w-full overflow-hidden px-4" style={{ backgroundColor: t.bg, borderRadius: 'var(--radius-card, 12px)' }}>
         <div className="pointer-events-none absolute -right-3 -bottom-3 opacity-[0.12]" style={{ color: t.fg }}>
           <IconKit name={iconKey} weight={iconWeight} size={120} color={t.fg} />
         </div>
         <div className="relative flex h-full w-full flex-col justify-center">
           <div className="text-xs text-foreground-secondary">{data.title}</div>
-          <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+          <div className="font-data text-2xl skin-fw-heading" style={{ color: t.fg }}>{data.value}</div>
           {data.trend && (
             <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
               {data.trendUp ? '▲' : '▼'} {data.trend}
@@ -135,13 +143,13 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
 
   if (variant === 'icon-left') {
     return (
-      <div className="flex h-full w-full items-center gap-3 rounded-xl px-4" style={{ backgroundColor: t.bg }}>
+      <div className="flex h-full w-full items-center skin-gap-md px-4" style={{ backgroundColor: t.bg, borderRadius: 'var(--radius-card, 12px)' }}>
         <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg" style={{ backgroundColor: `${t.fg}1A`, color: t.fg }}>
           <IconKit name={iconKey} weight={iconWeight} size={22} color={t.fg} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-xs text-foreground-secondary">{data.title}</div>
-          <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+          <div className="font-data text-2xl skin-fw-heading" style={{ color: t.fg }}>{data.value}</div>
           {data.trend && (
             <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
               {data.trendUp ? '▲' : '▼'} {data.trend}
@@ -154,10 +162,10 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
 
   if (variant === 'icon-top') {
     return (
-      <div className="flex h-full w-full flex-col justify-center rounded-xl px-4" style={{ backgroundColor: t.bg }}>
+      <div className="flex h-full w-full flex-col justify-center px-4" style={{ backgroundColor: t.bg, borderRadius: 'var(--radius-card, 12px)' }}>
         <IconKit name={iconKey} weight={iconWeight} size={24} color={t.fg} />
         <div className="mt-1 text-xs text-foreground-secondary">{data.title}</div>
-        <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+        <div className="font-data text-2xl skin-fw-heading" style={{ color: t.fg }}>{data.value}</div>
         {data.trend && (
           <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
             {data.trendUp ? '▲' : '▼'} {data.trend}
@@ -171,8 +179,8 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
     // 聚光：深色渐变背景 + 大数值 + 右上角图标徽章。
     return (
       <div
-        className="relative h-full w-full overflow-hidden rounded-xl px-4"
-        style={{ background: `linear-gradient(135deg, ${t.fg}, ${t.fg}CC)` }}
+        className="relative h-full w-full overflow-hidden px-4"
+        style={{ background: `linear-gradient(135deg, ${t.fg}, ${t.fg}CC)`, borderRadius: 'var(--radius-card, 12px)' }}
       >
         <div className="absolute right-3 top-3 opacity-90" style={{ color: 'var(--foreground-inverse, #fff)' }}>
           <IconKit name={iconKey} weight={iconWeight} size={20} color="var(--foreground-inverse, #fff)" />
@@ -193,18 +201,18 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
   if (variant === 'duo') {
     // 双值：主数值 + 副数值（trend 文案充当副值），左图标 + 分割线。
     return (
-      <div className="flex h-full w-full items-center gap-3 skin-card px-4">
+      <div className="flex h-full w-full items-center skin-gap-md skin-card px-4">
         <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg" style={{ backgroundColor: `${t.fg}1A`, color: t.fg }}>
           <IconKit name={iconKey} weight={iconWeight} size={22} color={t.fg} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-xs text-foreground-secondary">{data.title}</div>
-          <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+          <div className="font-data text-2xl skin-fw-heading" style={{ color: t.fg }}>{data.value}</div>
         </div>
         {data.trend && (
           <div className="flex-none border-l border-border-subtle pl-3 text-right">
             <div className="text-[10px] text-foreground-muted">Change</div>
-            <div className="font-data text-sm font-semibold" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
+            <div className="font-data text-sm skin-fw-heading" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
               {data.trendUp ? '▲' : '▼'} {data.trend}
             </div>
           </div>
@@ -217,7 +225,7 @@ export function IndicatorCardComponent({ data }: { data: IndicatorCardData }) {
   return (
     <div className="flex h-full w-full flex-col justify-center rounded-xl px-4" style={{ backgroundColor: t.bg }}>
       <div className="text-xs text-foreground-secondary">{data.title}</div>
-      <div className="font-data text-2xl font-semibold" style={{ color: t.fg }}>{data.value}</div>
+      <div className="font-data text-2xl skin-fw-heading" style={{ color: t.fg }}>{data.value}</div>
       {data.trend && (
         <div className="mt-0.5 text-xs" style={{ color: data.trendUp ? 'var(--green, #22C55E)' : 'var(--red, #EF4444)' }}>
           {data.trendUp ? '▲' : '▼'} {data.trend}
@@ -233,12 +241,23 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
   const palette = useChartColors();
   const variant = data.variant ?? 'vertical';
 
+  // 防御：bars 为空时显示占位
+  const bars = data.bars ?? [];
+  if (variant !== 'stacked' && bars.length === 0 && !(data.stackBars?.length)) {
+    return (
+      <div className="flex h-full w-full flex-col bg-surface-primary p-3">
+        {data.title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{data.title}</div>}
+        <div className="flex flex-1 items-center justify-center text-xs text-foreground-muted">暂无数据</div>
+      </div>
+    );
+  }
+
   /* 堆叠模式 */
   if (variant === 'stacked' && data.stackBars && data.stackBars.length > 0) {
     const keys = data.stackKeys ?? Object.keys(data.stackBars[0]?.values ?? {});
     return (
       <div className="flex h-full w-full flex-col bg-surface-primary p-3">
-        {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
+        {data.title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{data.title}</div>}
         <div className="flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.stackBars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
@@ -260,12 +279,12 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
   /* 横向条形 */
   const isHorizontal = variant === 'horizontal';
   const chartProps = isHorizontal
-    ? { layout: 'vertical' as const, data: data.bars, margin: { top: 4, right: 16, bottom: 4, left: 8 } }
-    : { layout: 'horizontal' as const, data: data.bars, margin: { top: 4, right: 8, bottom: 4, left: 0 } };
+    ? { layout: 'vertical' as const, data: bars, margin: { top: 4, right: 16, bottom: 4, left: 8 } }
+    : { layout: 'horizontal' as const, data: bars, margin: { top: 4, right: 8, bottom: 4, left: 0 } };
 
   return (
     <div className="flex h-full w-full flex-col bg-surface-primary p-3">
-      {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
+      {data.title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{data.title}</div>}
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart {...chartProps}>
@@ -283,7 +302,7 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
             )}
             <Tooltip cursor={{ fill: 'var(--surface-hover, #F9FAFB)' }} />
             <Bar dataKey="value" radius={isHorizontal ? [0, cs.barRadius, cs.barRadius, 0] : [cs.barRadius, cs.barRadius, 0, 0]}>
-              {data.bars.map((b, i) => (
+              {bars.map((b, i) => (
                 <Cell key={i} fill={resolveColor(b.color, i, palette)} />
               ))}
             </Bar>
@@ -298,25 +317,35 @@ export function BarChartComponent({ data }: { data: BarChartData }) {
 export function LineChartComponent({ data }: { data: LineChartData }) {
   const cs = useChartStyle();
   const palette = useChartColors();
+  // 防御：series 为空时显示占位
+  const series = data.series ?? [];
+  if (series.length === 0) {
+    return (
+      <div className="flex h-full w-full flex-col bg-surface-primary p-3">
+        {data.title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{data.title}</div>}
+        <div className="flex flex-1 items-center justify-center text-xs text-foreground-muted">暂无数据</div>
+      </div>
+    );
+  }
   // 多系列按 label 对齐成单数据集。
-  const labels = data.series[0]?.points.map((p) => p.label) ?? [];
+  const labels = series[0]?.points.map((p) => p.label) ?? [];
   const dataset = labels.map((label, i) => {
     const row: Record<string, string | number> = { label };
-    for (const s of data.series) row[s.name] = s.points[i]?.value ?? 0;
+    for (const s of series) row[s.name] = s.points[i]?.value ?? 0;
     return row;
   });
   return (
     <div className="flex h-full w-full flex-col bg-surface-primary p-3">
-      {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
+      {data.title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{data.title}</div>}
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={dataset} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+          <LineChart data={dataset} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
             {cs.showGrid && <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #F3F4F6)" />}
             <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
-            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />
+            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={56} hide={!cs.showAxis} tickFormatter={formatCompactNum} />
             <Tooltip />
             {cs.legend && <Legend {...cs.legend} />}
-            {data.series.map((s, i) => (
+            {series.map((s, i) => (
               <Line key={s.name} type="monotone" dataKey={s.name} stroke={resolveColor(s.color, i, palette)} strokeWidth={2} dot={false} />
             ))}
           </LineChart>
@@ -329,14 +358,23 @@ export function LineChartComponent({ data }: { data: LineChartData }) {
 /* -------------------------------- pie chart ------------------------------ */
 export function PieChartComponent({ data }: { data: PieChartData }) {
   const palette = useChartColors();
+  const slices = data.slices ?? [];
+  if (slices.length === 0) {
+    return (
+      <div className="flex h-full w-full flex-col bg-surface-primary p-3">
+        {data.title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{data.title}</div>}
+        <div className="flex flex-1 items-center justify-center text-xs text-foreground-muted">暂无数据</div>
+      </div>
+    );
+  }
   return (
     <div className="flex h-full w-full flex-col bg-surface-primary p-3">
-      {data.title && <div className="mb-2 text-sm font-medium text-foreground-primary">{data.title}</div>}
+      {data.title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{data.title}</div>}
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data.slices}
+              data={slices}
               dataKey="value"
               nameKey="label"
               cx="50%"
@@ -344,7 +382,7 @@ export function PieChartComponent({ data }: { data: PieChartData }) {
               outerRadius="80%"
               label={(e) => e.label}
             >
-              {data.slices.map((s, i) => (
+              {slices.map((s, i) => (
                 <Cell key={i} fill={resolveColor(s.color, i, palette)} />
               ))}
             </Pie>
@@ -358,20 +396,29 @@ export function PieChartComponent({ data }: { data: PieChartData }) {
 
 /* --------------------------------- table --------------------------------- */
 export function TableComponent({ data }: { data: TableData }) {
+  const headers = data.headers ?? [];
+  const rows = data.rows ?? [];
+  if (headers.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-surface-primary text-xs text-foreground-muted">
+        暂无数据
+      </div>
+    );
+  }
   return (
     <div className="h-full w-full overflow-auto bg-surface-primary">
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr>
-            {data.headers.map((h, i) => (
-              <th key={i} className="border-b border-border-default bg-surface-hover px-3 py-2 text-left font-medium text-foreground-secondary">
+            {headers.map((h, i) => (
+              <th key={i} className="border-b border-border-default bg-surface-hover px-3 py-2 text-left skin-fw-body text-foreground-secondary">
                 {h}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.rows.map((row, ri) => (
+          {rows.map((row, ri) => (
             <tr key={ri}>
               {row.map((cell, ci) => (
                 <td key={ci} className="border-b border-border-subtle px-3 py-2 text-foreground-primary">
@@ -459,7 +506,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
 
     case 'bar-left':
       inner = (
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center skin-gap-md">
           <span className="h-full w-1 flex-none rounded-full" style={{ backgroundColor: color }} />
           <div className="min-w-0">
             <div className="leading-tight text-foreground-primary" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
@@ -487,7 +534,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
 
     case 'gradient':
       inner = (
-        <div className="w-full rounded-xl px-5 py-4" style={{ background: `linear-gradient(135deg, ${color}, ${color}99)` }}>
+        <div className="w-full px-5 py-4" style={{ background: `linear-gradient(135deg, ${color}, ${color}99)`, borderRadius: 'var(--radius-card, 12px)' }}>
           <div className="leading-tight text-white" style={{ fontSize: fs(), fontWeight: fw, color: titleFg }}>{text}</div>
           {subtitle && <div className="mt-1 text-sm text-white/80">{subtitle}</div>}
         </div>
@@ -505,7 +552,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
 
     case 'numbered':
       inner = (
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center skin-gap-md">
           {index && (
             <span className="leading-none flex-none" style={{ color, fontSize: fs(1.6), fontWeight: fw }}>
               {index}
@@ -535,7 +582,7 @@ export function TitleBlock({ data }: { data: TitleBlockData }) {
     case 'accent-tag':
       // 色块标签:左圆角色块(显序号/空) + 标题。
       inner = (
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center skin-gap-md">
           <span
             className="flex h-9 w-9 flex-none items-center justify-center rounded-lg text-sm font-bold text-white"
             style={{ backgroundColor: color }}
@@ -614,7 +661,7 @@ export function ContentCard({ data }: { data: ContentCardData }) {
 
   const tagEl = tag && (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium"
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] skin-fw-body"
       style={{ backgroundColor: `color-mix(in srgb, ${accent} 12%, white)`, color: accent }}
     >
       {tag}
@@ -645,7 +692,7 @@ export function ContentCard({ data }: { data: ContentCardData }) {
             </div>
           )}
           <div className="flex flex-1 flex-col gap-1.5 p-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center skin-gap-sm">
               {tagEl}
             </div>
             {titleEl}
@@ -664,7 +711,7 @@ export function ContentCard({ data }: { data: ContentCardData }) {
             </div>
           )}
           <div className="flex flex-1 flex-col gap-1.5 p-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center skin-gap-sm">
               {tagEl}
             </div>
             {titleEl}
@@ -676,7 +723,7 @@ export function ContentCard({ data }: { data: ContentCardData }) {
 
     case 'compact':
       return (
-        <div className="skin-card flex h-full w-full flex-col gap-1 p-3">
+        <div className="skin-card flex h-full w-full flex-col skin-gap-xs p-3">
           <div className="flex items-center justify-between">
             {titleEl}
             {tagEl}
@@ -688,12 +735,12 @@ export function ContentCard({ data }: { data: ContentCardData }) {
     case 'quote':
       return (
         <div
-          className="flex h-full w-full flex-col justify-center gap-2 rounded-xl p-5"
-          style={{ background: `color-mix(in srgb, ${accent} 6%, var(--surface-secondary, #f8f8f8))` }}
+          className="flex h-full w-full flex-col justify-center skin-gap-sm p-5"
+          style={{ background: `color-mix(in srgb, ${accent} 6%, var(--surface-secondary, #f8f8f8))`, borderRadius: 'var(--radius-card, 12px)' }}
         >
           <span className="text-3xl leading-none" style={{ color: accent }}>❝</span>
           {bodyEl}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center skin-gap-sm">
             <span className="h-0.5 w-6 rounded-full" style={{ backgroundColor: accent }} />
             <span className="text-sm font-bold text-foreground-primary">{title}</span>
           </div>
@@ -703,8 +750,8 @@ export function ContentCard({ data }: { data: ContentCardData }) {
 
     default: // standard
       return (
-        <div className="skin-card-lg flex h-full w-full flex-col gap-2 p-4">
-          <div className="flex items-center gap-2">
+        <div className="skin-card-lg flex h-full w-full flex-col skin-gap-sm p-4">
+          <div className="flex items-center skin-gap-sm">
             <span className="h-4 w-0.5 rounded-full" style={{ backgroundColor: accent }} />
             {tagEl}
           </div>
@@ -714,4 +761,158 @@ export function ContentCard({ data }: { data: ContentCardData }) {
         </div>
       );
   }
+}
+
+/* ---- 页眉：左侧广告主 logo + 右侧业务线 logo ---- */
+
+function HeaderLogo({ logo, side }: { logo: PageHeaderLogo; side: 'left' | 'right' }) {
+  const height = logo.logoHeight ?? 28; /* px — configurable per logo, default 28 */
+  const hasImg = logo.src && logo.src.trim();
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const customBg = (logo as any).bgColor as string | undefined;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        flexDirection: side === 'right' ? 'row-reverse' : 'row',
+      }}
+    >
+      {hasImg ? (
+        <img
+          src={logo.src}
+          alt={logo.text || ''}
+          style={{ height, width: 'auto', maxWidth: 180, objectFit: 'contain' }}
+        />
+      ) : (
+        <div
+          style={{
+            height,
+            minWidth: height,
+            borderRadius: 6,
+            background: customBg || 'var(--color-primary, #e2503f)',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 12,
+            fontWeight: 700,
+            padding: '0 6px',
+            flexShrink: 0,
+          }}
+        >
+          {logo.initials || (logo.text || '?').slice(0, 2).toUpperCase()}
+        </div>
+      )}
+      {logo.text && (
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'var(--foreground-primary, #1e1c24)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {logo.text}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function PageHeader({ data }: { data: PageHeaderData }) {
+  const bg = data.background || 'var(--color-neutral-bg, #ffffff)';
+
+  // 从项目元数据自动填充业务线/广告主信息
+  const blCode = useEditorStore((s) => s.projectMeta?.businessLine);
+  const advertiserName = useEditorStore((s) => s.projectMeta?.advertiser);
+
+  // 业务线 code → 中文名 + 颜色（统一从 BUSINESS_LINE_META 获取）
+  const blInfo = blCode ? BUSINESS_LINE_META[blCode] : undefined;
+
+  // 左侧 logo = 广告主；右侧 logo = 业务线
+  const leftLogo: PageHeaderLogo = {
+    ...data.leftLogo,
+    text: data.leftLogo.text && data.leftLogo.text !== '广告主' ? data.leftLogo.text : (advertiserName || '广告主'),
+  };
+  const rightLogo: PageHeaderLogo = {
+    ...data.rightLogo,
+    text: data.rightLogo.text && data.rightLogo.text !== '业务线' ? data.rightLogo.text : (blInfo?.name || data.rightLogo.text || '业务线'),
+  };
+  // 业务线颜色用于占位符（无图片时）
+  if (blInfo && !rightLogo.src) {
+    rightLogo.initials = rightLogo.initials || blCode;
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    (rightLogo as any).bgColor = blInfo.color;
+  }
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        background: bg,
+        border: '1px solid var(--border-default, #ebebeb)',
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 24px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+        boxSizing: 'border-box',
+      }}
+    >
+      <HeaderLogo logo={leftLogo} side="left" />
+      {data.dateLabel && (
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--foreground-secondary, #626166)',
+            background: 'var(--background-secondary, #f5f7fa)',
+            padding: '4px 16px',
+            borderRadius: 6,
+          }}
+        >
+          {data.dateLabel}
+        </div>
+      )}
+      <HeaderLogo logo={rightLogo} side="right" />
+    </div>
+  );
+}
+
+/* ------------------------------- cards row ------------------------------- */
+
+import type { CardsRowData as CardsRowDataType } from '@mediakit/shared';
+
+export function CardsRow({ data }: { data: CardsRowDataType }) {
+  const { items = [], gap = 16 } = data;
+  if (!items.length) return null;
+
+  return (
+    <div
+      className="flex h-full w-full"
+      style={{ gap, alignItems: 'stretch' }}
+    >
+      {items.map((item, i) => (
+        <div
+          key={i}
+          className="skin-card flex min-w-0 flex-1 flex-col p-4"
+        >
+          {item.icon && (
+            <div className="mb-1.5 text-xl">{item.icon}</div>
+          )}
+          <div className="text-sm font-bold leading-tight text-foreground-primary">{item.title}</div>
+          {item.body && (
+            <div className="mt-1.5 flex-1 text-xs leading-relaxed text-foreground-secondary whitespace-pre-line">{item.body}</div>
+          )}
+          {item.footer && (
+            <div className="mt-2 border-t border-border-subtle pt-1.5 text-[10px] text-foreground-muted">{item.footer}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }

@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Page } from '@mediakit/shared';
-import { filterCategoriesByScenario, getTemplate, type Template } from '../templates';
+import { filterCategoriesByScenario, getTemplate, isSinglePageTemplate, type Template } from '../templates';
 import { useEditorStore } from '../store';
 import { PageThumbnail } from './PageThumbnail';
 
@@ -17,24 +17,23 @@ function useTemplateThumbPage(tpl: Template) {
   }, [tpl]);
 }
 
-/** 单个模板卡片：名称 + 缩略图 + 描述。 */
+/** 单个模板卡片：名称 + 缩略图 + 描述 + 预览按钮。 */
 function TemplateCard({
   tpl,
   canvasWidth,
   canvasHeight,
   onApply,
+  onPreview,
 }: {
   tpl: Template;
   canvasWidth: number;
   canvasHeight: number;
   onApply: (tpl: Template) => void;
+  onPreview: (tpl: Template) => void;
 }) {
   const thumb = useTemplateThumbPage(tpl);
   return (
-    <button
-      onClick={() => onApply(tpl)}
-      className="flex flex-col gap-1.5 rounded-lg border border-border-default p-2 text-left transition hover:border-accent-primary hover:bg-surface-hover"
-    >
+    <div className="flex flex-col gap-1.5 rounded-lg border border-border-default p-2 transition hover:border-accent-primary hover:bg-surface-hover">
       {/* 缩略图：按画布宽高比展示，最大高度 84px。 */}
       <div className="flex justify-center">
         <PageThumbnail
@@ -45,9 +44,115 @@ function TemplateCard({
           height={84}
         />
       </div>
-      <div className="text-sm font-medium text-foreground-primary">{tpl.name}</div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm skin-fw-body text-foreground-primary">{tpl.name}</span>
+        {isSinglePageTemplate(tpl) ? (
+          <span className="rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] skin-fw-body text-accent-primary">单页</span>
+        ) : (
+          <span className="rounded bg-surface-secondary px-1.5 py-0.5 text-[10px] skin-fw-body text-foreground-secondary">多页</span>
+        )}
+      </div>
       <div className="text-xs text-foreground-muted">{tpl.description}</div>
-    </button>
+      <div className="mt-1 flex gap-1.5">
+        <button
+          onClick={() => onPreview(tpl)}
+          className="flex-1 rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+        >
+          👁 预览
+        </button>
+        <button
+          onClick={() => onApply(tpl)}
+          className="flex-1 rounded bg-accent-primary px-2 py-1 text-xs skin-fw-body text-white hover:bg-accent-primary/90"
+        >
+          应用
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 全屏预览弹窗：以实际画布尺寸渲染模板。 */
+function TemplatePreviewModal({
+  tpl,
+  canvasWidth,
+  canvasHeight,
+  onApply,
+  onClose,
+}: {
+  tpl: Template;
+  canvasWidth: number;
+  canvasHeight: number;
+  onApply: (tpl: Template) => void;
+  onClose: () => void;
+}) {
+  const page = useTemplateThumbPage(tpl);
+  // 计算预览缩放：最大宽度 900px，等比缩放
+  const maxW = 900;
+  const scale = Math.min(1, maxW / canvasWidth);
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/60"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-surface-primary p-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* 标题栏 */}
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <div className="font-headings text-lg skin-fw-heading text-foreground-primary">{tpl.name}</div>
+            <div className="text-xs text-foreground-muted">{tpl.description}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-foreground-secondary hover:bg-surface-hover"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* 预览区域 */}
+        <div className="flex-1 overflow-auto rounded-lg bg-surface-secondary p-4">
+          <div
+            style={{
+              width: canvasWidth,
+              height: canvasHeight,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top center',
+            }}
+            className="mx-auto"
+          >
+            <PageThumbnail
+              page={page}
+              canvasWidth={canvasWidth}
+              canvasHeight={canvasHeight}
+              width={canvasWidth}
+              height={canvasHeight}
+            />
+          </div>
+        </div>
+
+        {/* 底部操作栏 */}
+        <div className="mt-3 flex justify-end skin-gap-sm">
+          <button
+            onClick={onClose}
+            className="rounded-lg px-4 py-1.5 text-sm text-foreground-secondary hover:bg-surface-hover"
+          >
+            返回
+          </button>
+          <button
+            onClick={() => onApply(tpl)}
+            className="rounded-lg bg-accent-primary px-4 py-1.5 text-sm skin-fw-body text-white hover:bg-accent-primary/90"
+          >
+            应用此模板
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -56,6 +161,7 @@ export function TemplateOverlay({ onApply, onClose }: Props) {
   const scenario = useEditorStore((s) => s.projectMeta?.scenario);
   const canvasWidth = useEditorStore((s) => s.canvasWidth);
   const canvasHeight = useEditorStore((s) => s.canvasHeight);
+  const [previewTpl, setPreviewTpl] = useState<Template | null>(null);
 
   return (
     <div
@@ -70,7 +176,7 @@ export function TemplateOverlay({ onApply, onClose }: Props) {
         aria-modal="true"
       >
         <div className="flex-none">
-          <div className="font-headings text-lg font-semibold text-foreground-primary">新建页面</div>
+          <div className="font-headings text-lg skin-fw-heading text-foreground-primary">新建页面</div>
           <p className="mb-4 text-sm text-foreground-secondary">选择一个模板开始</p>
         </div>
 
@@ -80,10 +186,10 @@ export function TemplateOverlay({ onApply, onClose }: Props) {
             if (templates.length === 0) return null;
             return (
               <section key={cat.category} className="mb-4">
-                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">
+                <div className="mb-2 text-[11px] skin-fw-heading uppercase tracking-wide text-foreground-muted">
                   {cat.category}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 skin-gap-md">
                   {templates.map((tpl) => (
                     <TemplateCard
                       key={tpl.id}
@@ -91,6 +197,7 @@ export function TemplateOverlay({ onApply, onClose }: Props) {
                       canvasWidth={canvasWidth}
                       canvasHeight={canvasHeight}
                       onApply={onApply}
+                      onPreview={setPreviewTpl}
                     />
                   ))}
                 </div>
@@ -105,6 +212,16 @@ export function TemplateOverlay({ onApply, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {previewTpl && (
+        <TemplatePreviewModal
+          tpl={previewTpl}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
+          onApply={onApply}
+          onClose={() => setPreviewTpl(null)}
+        />
+      )}
     </div>
   );
 }

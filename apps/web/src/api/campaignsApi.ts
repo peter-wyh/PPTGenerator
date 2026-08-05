@@ -242,6 +242,12 @@ export const campaignsApi = {
       .put<{ collaboration: CollaborationDTO }>(`/campaigns/${campaignId}/creators/${creatorId}/collaboration`, data)
       .then((r) => r.data.collaboration),
 
+  // Analytics (Campaign 级分析数据)
+  getAnalytics: (campaignId: string) =>
+    api.get<{ analytics: Record<string, unknown> | null }>(`/campaigns/${campaignId}/analytics`).then((r) => r.data.analytics),
+  updateAnalytics: (campaignId: string, analytics: Record<string, unknown>) =>
+    api.put<{ analytics: Record<string, unknown> }>(`/campaigns/${campaignId}/analytics`, { analytics }).then((r) => r.data.analytics),
+
   // ─── Batch Import (structured tables) ───────────────────────────────────────
   importCreators: (items: Record<string, unknown>[]) =>
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/creators', { items }).then((r) => r.data),

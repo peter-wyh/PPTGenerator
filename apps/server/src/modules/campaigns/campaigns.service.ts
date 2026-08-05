@@ -47,6 +47,22 @@ export const campaignService = {
     await this.getOrThrow(id, ownerId);
     await prisma.campaign.delete({ where: { id } });
   },
+  // ─── Analytics (Campaign 级分析数据) ──────────────────────────────────────
+  /** 获取 Campaign 分析数据（analytics JSON）。 */
+  async getAnalytics(campaignId: string, ownerId: string) {
+    const c = await this.getOrThrow(campaignId, ownerId);
+    return (c.analytics as Record<string, unknown> | null) ?? null;
+  },
+
+  /** 更新 Campaign 分析数据（analytics JSON 全量覆盖）。 */
+  async updateAnalytics(campaignId: string, ownerId: string, analytics: Record<string, unknown>) {
+    await this.getOrThrow(campaignId, ownerId);
+    return prisma.campaign.update({
+      where: { id: campaignId },
+      data: { analytics: analytics as Prisma.InputJsonValue },
+      select: { analytics: true },
+    });
+  },
 };
 
 // ─── Creator ─────────────────────────────────────────────────────────────────

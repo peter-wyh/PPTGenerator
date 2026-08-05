@@ -20,6 +20,7 @@ import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/edit
 import type { ImportKind } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
+import { CampaignAnalyticsEditor } from '@/editor/components/CampaignAnalyticsEditor';
 import { toast } from '../components/Toast';
 
 /** 从每日 CPS 明细累加出汇总 CpsLinkData。 */
@@ -84,6 +85,8 @@ export function CampaignCollabPage() {
   const [tick, setTick] = useState(0);
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
   const [previewKind, setPreviewKind] = useState<ImportKind>('collaboration');
+  const [viewMode, setViewMode] = useState<'collabs' | 'analytics'>('collabs');
+  const [analyticsCampaignId, setAnalyticsCampaignId] = useState<string>('');
   const csvRef = useRef<HTMLInputElement>(null);
   const dailyCsvRef = useRef<HTMLInputElement>(null);
   const cpsCsvRef = useRef<HTMLInputElement>(null);
@@ -447,6 +450,31 @@ export function CampaignCollabPage() {
 
   return (
     <div>
+      {/* 视图切换 */}
+      <div className="mb-3 flex items-center gap-1">
+        <button onClick={() => setViewMode('collabs')} className={`rounded px-3 py-1 text-xs font-medium ${viewMode === 'collabs' ? 'bg-accent-primary text-white' : 'bg-surface-secondary text-foreground-secondary hover:bg-surface-hover'}`}>合作列表</button>
+        <button onClick={() => setViewMode('analytics')} className={`rounded px-3 py-1 text-xs font-medium ${viewMode === 'analytics' ? 'bg-accent-primary text-white' : 'bg-surface-secondary text-foreground-secondary hover:bg-surface-hover'}`}>分析数据</button>
+      </div>
+
+      {viewMode === 'analytics' ? (
+        <div className="max-w-3xl space-y-4">
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-foreground-secondary">选择 Campaign:</label>
+            <select value={analyticsCampaignId} onChange={(e) => setAnalyticsCampaignId(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary min-w-[240px]">
+              <option value="">— 选择 —</option>
+              {[...new Map(rows.map((r) => [r.campaignId, r.campaign.name])).entries()].map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))}
+            </select>
+          </div>
+          {analyticsCampaignId ? (
+            <CampaignAnalyticsEditor key={analyticsCampaignId} campaignId={analyticsCampaignId} campaignName={rows.find((r) => r.campaignId === analyticsCampaignId)?.campaign.name} />
+          ) : (
+            <p className="text-sm text-foreground-muted py-8 text-center">请选择一个 Campaign 以编辑分析数据</p>
+          )}
+        </div>
+      ) : (
+        <>
       {/* Tab 切换合作方类型 */}
       <div className="mb-3 flex items-center gap-1">
         {([
@@ -675,6 +703,8 @@ export function CampaignCollabPage() {
           onClose={() => setDrawerRow(null)}
           onUpdate={() => { setDrawerRow(null); setTick((t) => t + 1); }}
         />
+      )}
+        </>
       )}
     </div>
   );

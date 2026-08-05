@@ -16,12 +16,12 @@ export function CreatorMultiSelect({ creators, selected, onChange }: Props) {
     onChange([...next]);
   }
   return (
-    <div className="flex max-h-40 flex-col gap-1 overflow-auto rounded border border-border-default p-2">
+    <div className="flex max-h-40 flex-col skin-gap-xs overflow-auto rounded border border-border-default p-2">
       {creators.length === 0 && (
         <span className="text-xs text-foreground-muted">达人库为空</span>
       )}
       {creators.map((c) => (
-        <label key={c.id} className="flex items-center gap-2 text-xs text-foreground-secondary">
+        <label key={c.id} className="flex items-center skin-gap-sm text-xs text-foreground-secondary">
           <input type="checkbox" checked={set.has(c.id)} onChange={() => toggle(c.id)} />
           <span className="text-foreground-primary">{c.name}</span>
           <span className="text-foreground-muted">{c.handle}</span>

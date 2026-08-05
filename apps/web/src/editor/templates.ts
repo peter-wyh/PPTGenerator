@@ -67,20 +67,30 @@ export function resolveTemplateForBusinessLine(tpl: Template, businessLine?: str
   return tpl;
 }
 
+/** 判断模板是否为单页模板（id 含 single-page 或模板设置了 canvasHeight 超 720）。 */
+export function isSinglePageTemplate(tpl: Template): boolean {
+  return tpl.id.includes('single-page');
+}
+
 /** Page template categories (grouped in the "New Page" dialog). Order = display order. */
 export const TEMPLATE_CATEGORIES: { category: string; ids: string[] }[] = [
   { category: '基础', ids: ['blank', 'title', 'overview', 'table'] },
   {
-    category: '投放报告',
+    category: '单页报告（长图一页全览）',
     ids: [
-      'report-weekly-overview',
-      'report-monthly-overview',
       'report-single-page',
       'report-single-page-classic',
       'report-single-page-dashboard',
       'report-single-page-narrative',
       'report-single-page-settlement',
       'report-single-page-digchic',
+    ],
+  },
+  {
+    category: '多页报告（PPT 逐页）',
+    ids: [
+      'report-weekly-overview',
+      'report-monthly-overview',
       'report-channel',
       'report-product',
       'report-creator-collab',
@@ -620,18 +630,27 @@ export const TEMPLATES: Template[] = [
     components: () => {
       const comps: EditorComponent[] = [];
 
-      // ── Row 0: 标题块（带副标题：数据周期）──
-      const hero = t('title-block', 80, 30, 1120, 66);
+      // ── Row 0: 页眉（出血通栏 x=0..1280，左右 Logo + 日期）──
+      const header = t('page-header', 0, 0, 1280, 56);
+      const hd0 = header.data as { leftLogo: { text: string; initials: string }; rightLogo: { text: string; initials: string }; dateLabel: string; background: string };
+      hd0.leftLogo = { text: 'FT', initials: 'FT' };
+      hd0.rightLogo = { text: '结算中心', initials: 'JS' };
+      hd0.dateLabel = '2026-01 至 2026-06';
+      hd0.background = '#1a1820';
+      comps.push(header);
+
+      // ── Row 0b: 标题块（安全区通栏）──
+      const hero = t('title-block', 48, 66, 1184, 60);
       const hd = hero.data as { text: string; subtitle: string; variant: string; fontSize: number; divider: boolean };
       hd.text = '2026 H1 业务结算复盘看板';
-      hd.subtitle = 'SETTLEMENT REVIEW · 收入 / 毛利 / 佣金 / 商户拓展 全景回顾（2026-01 至 2026-06）';
+      hd.subtitle = 'SETTLEMENT REVIEW · 收入 / 毛利 / 佣金 / 商户拓展 全景回顾';
       hd.variant = 'bar-left';
       hd.fontSize = 26;
       hd.divider = true;
       comps.push(hero);
 
-      // ── Row 1: KPI 看板（5 项核心结算指标 + 目标完成率）──
-      const kpi = t('kpi-board', 80, 106, 1120, 150);
+      // ── Row 1: KPI 看板（安全区通栏）──
+      const kpi = t('kpi-board', 48, 136, 1184, 140);
       (kpi.data as { variant: string }).variant = 'grid';
       (kpi.data as { headers: string[] }).headers = ['指标', 'H1 实际', '目标'];
       (kpi.data as { rows: string[][] }).rows = [
@@ -644,8 +663,8 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(kpi);
 
-      // ── Row 2: 月度收入 vs 目标 柱状图（左 540）+ 月度毛利 vs 毛利率 柱状图（右 540）──
-      const revChart = t('bar-chart', 80, 270, 540, 150);
+      // ── Row 2: 月度收入 vs 目标 柱状图（左半 580）+ 月度毛利 vs 毛利率 柱状图（右半 580）──
+      const revChart = t('bar-chart', 48, 286, 580, 140);
       const rd = revChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
       rd.title = '月度开票收入 (¥)';
       rd.variant = 'vertical';
@@ -659,7 +678,7 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(revChart);
 
-      const marginChart = t('bar-chart', 660, 270, 540, 150);
+      const marginChart = t('bar-chart', 652, 286, 580, 140);
       const md = marginChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
       md.title = '月度结算毛利 (¥)';
       md.variant = 'vertical';
@@ -673,8 +692,8 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(marginChart);
 
-      // ── Row 3: 预估佣金月度走势柱状图（左 540）+ 上线/出单商户漏斗对比柱状图（右 540）──
-      const commChart = t('bar-chart', 80, 434, 540, 150);
+      // ── Row 3: 预估佣金（左半 580）+ 上线/出单商户漏斗（右半 580）──
+      const commChart = t('bar-chart', 48, 436, 580, 140);
       const cd = commChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
       cd.title = '2026 预估佣金月度走势 (¥)';
       cd.variant = 'vertical';
@@ -688,7 +707,7 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(commChart);
 
-      const plansChart = t('bar-chart', 660, 434, 540, 150);
+      const plansChart = t('bar-chart', 652, 436, 580, 140);
       const pd = plansChart.data as { title: string; variant: string; bars: { label: string; value: number; color: string }[] };
       pd.title = '上线计划数 vs 出单计划数';
       pd.variant = 'vertical';
@@ -708,8 +727,8 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(plansChart);
 
-      // ── Row 4: 月度明细数据表（满宽）──
-      const table = tableAt(80, 598, 1120, 92, ['月份', '收入目标', '开票收入', '完成率', '结算毛利', '毛利率', '收入YOY', '毛利YOY'], [
+      // ── Row 4: 月度明细数据表（安全区通栏）──
+      const table = tableAt(48, 586, 1184, 92, ['月份', '收入目标', '开票收入', '完成率', '结算毛利', '毛利率', '收入YOY', '毛利YOY'], [
         ['1月', '¥6,114,000', '¥8,418,072', '137.6%', '¥2,675,614', '31.8%', '+28%', '+61%'],
         ['2月', '¥8,001,000', '¥4,332,347', '54.1%', '¥1,219,355', '28.2%', '-63%', '-62%'],
         ['3月', '¥10,600,000', '¥8,388,930', '79.1%', '¥2,083,769', '24.8%', '+9%', '-7%'],
@@ -719,8 +738,8 @@ export const TEMPLATES: Template[] = [
       ]);
       comps.push(table);
 
-      // ── Row 5: 业务动作 KPI（FT 业务线运营触达）──
-      const opsKpi = t('kpi-board', 80, 706, 1120, 80);
+      // ── Row 5: 业务动作 KPI（安全区通栏）──
+      const opsKpi = t('kpi-board', 48, 688, 1184, 70);
       (opsKpi.data as { variant: string }).variant = 'compact';
       (opsKpi.data as { headers: string[] }).headers = ['指标', '数值'];
       (opsKpi.data as { rows: string[][] }).rows = [
@@ -731,9 +750,13 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(opsKpi);
 
-      // ── Row 6: 运营洞察文字 ──
-      const opsNote = textAt(80, 802, 1120, 70, '⚠ 运营动作复盘：电话次数和邮件数量不足，老员工发力不够——触达动作与商户增长规模不匹配（5–6 月新增商户提速），需关注存量团队的主动触达节奏。', 14);
+      // ── Row 6: 运营洞察文字（安全区通栏）──
+      const opsNote = textAt(48, 768, 1184, 70, '⚠ 运营动作复盘：电话次数和邮件数量不足，老员工发力不够——触达动作与商户增长规模不匹配（5–6 月新增商户提速），需关注存量团队的主动触达节奏。', 14);
       comps.push(opsNote);
+
+      // ── Row 7: 总结文字（安全区通栏）──
+      const summary = textAt(48, 850, 1184, 40, 'H1 SETTLEMENT REVIEW BOARD — 内部复盘资料，请勿外传 · NEXT FILE READY · 后续文件将采用相同看板模板生成', 11);
+      comps.push(summary);
 
       return comps;
     },
@@ -743,107 +766,99 @@ export const TEMPLATES: Template[] = [
   {
     id: 'report-single-page-digchic',
     name: '单页 · DIGCHIC 品牌报告',
-    description: '5 KPI + 趋势图 + 发布者表 + 品类/商品/市场洞察 + 行动建议（粉品牌风）',
+    description: '页眉 + 7 KPI + 趋势图 + 发布者表 + 品类/商品/市场/促销洞察 + 新客占比 + 行动建议（粉品牌风）',
     pageType: 'report-single-page-digchic',
     scenario: ['campaign-report'],
-    canvasHeight: 900,
+    canvasHeight: 1560,
     components: () => {
       const comps: EditorComponent[] = [];
 
-      // ── Row 0: 标题块（品牌 + 日期范围）──
-      const hero = t('title-block', 80, 30, 1120, 60);
-      const hd = hero.data as { text: string; subtitle: string; variant: string; fontSize: number; divider: boolean };
-      hd.text = 'DIGCHIC × GlowLab · Campaign Report';
-      hd.subtitle = 'Performance Period: Oct 12 - Nov 10, 2026';
-      hd.variant = 'bar-left';
-      hd.fontSize = 24;
-      hd.divider = true;
-      comps.push(hero);
+      // ── Row 0: 页眉（出血通栏 x=0..1280，左右 Logo + 日期）──
+      const header = t('page-header', 0, 0, 1280, 56);
+      const hd0 = header.data as { leftLogo: { text: string; initials: string }; rightLogo: { text: string; initials: string }; dateLabel: string; background: string };
+      hd0.leftLogo = { text: 'GlowLab', initials: 'GL' };
+      hd0.rightLogo = { text: 'DIGCHIC', initials: 'DG' };
+      hd0.dateLabel = 'Oct 12 - Nov 10, 2026';
+      hd0.background = '#ffffff';
+      comps.push(header);
 
-      // ── Row 1: 5 个 KPI 指标卡（横排，粉色品牌色）──
-      const cardW = 208;
-      const gap = 22;
-      const kpiCards: [string, string][] = [
-        ['Total Revenue', '$876,360'],
-        ['Clicks', '348,619'],
-        ['Orders', '4,636'],
-        ['New Customers', '1,604'],
-        ['AOV', '$189'],
+      // ── Row 0b: 标题块（安全区通栏）──
+      const sectionTitle = t('title-block', 48, 66, 1184, 44);
+      const std = sectionTitle.data as { text: string; subtitle: string; variant: string; fontSize: number; divider: boolean };
+      std.text = 'DIGCHIC × GlowLab · Campaign Report';
+      std.subtitle = 'Performance Period: Oct 12 - Nov 10, 2026';
+      std.variant = 'bar-left';
+      std.fontSize = 22;
+      std.divider = true;
+      comps.push(sectionTitle);
+
+      // ── Row 1: Campaign Summary（安全区通栏，Campaign 强关联组件）──
+      const summary = t('campaign-summary', 48, 120, 1184, 90);
+      const sd = summary.data as {
+        title: string; campaignName: string; period: string;
+        metrics: { label: string; value: string; compare: string }[];
+        customerSplit: { newCustomers: number; returningCustomers: number; newCustomerRate: string };
+      };
+      sd.title = 'Campaign Overview';
+      sd.campaignName = 'DIGCHIC × GlowLab Q4';
+      sd.period = 'Oct 12 - Nov 10, 2026';
+      sd.metrics = [
+        { label: 'Revenue', value: '$876,360', compare: '+38%' },
+        { label: 'Clicks', value: '348,619', compare: '+52%' },
+        { label: 'Orders', value: '4,636', compare: '+22%' },
+        { label: 'AOV', value: '$189', compare: '-8%' },
+        { label: 'CVR', value: '1.33%', compare: '' },
+        { label: 'ROAS', value: '2.51x', compare: '' },
       ];
-      kpiCards.forEach(([label, value], i) => {
-        const c = t('indicator-card', 80 + i * (cardW + gap), 102, cardW, 86);
-        const d = c.data as { title: string; value: string; colorTheme: string };
-        d.title = label;
-        d.value = value;
-        d.colorTheme = i === 3 ? 'pink' : 'orange';
-        comps.push(c);
-      });
+      sd.customerSplit = { newCustomers: 1604, returningCustomers: 3032, newCustomerRate: '34.6%' };
+      comps.push(summary);
 
-      // ── Row 2: 业绩趋势折线图（满宽：Revenue + Clicks + Orders）──
-      const trend = t('line-chart', 80, 204, 1120, 150);
+      // ── Row 2: 业绩趋势（安全区通栏，Campaign 强关联组件 revenue-timeline）──
+      const trend = t('revenue-timeline', 48, 220, 1184, 150);
       const td = trend.data as {
-        title: string;
-        series: { name: string; color: string; points: { label: string; value: number }[] }[];
+        title: string; subtitle: string;
+        points: { date: string; revenue: number; spend: number; commission: number; orders: number }[];
+        series: string[];
       };
       td.title = 'Performance Trend';
-      td.series = [
-        {
-          name: 'Revenue ($)',
-          color: '#ff099e',
-          points: [
-            { label: 'Oct 12', value: 50000 },
-            { label: 'Oct 16', value: 75000 },
-            { label: 'Oct 20', value: 90000 },
-            { label: 'Oct 24', value: 110000 },
-            { label: 'Oct 28', value: 105000 },
-            { label: 'Nov 01', value: 130000 },
-            { label: 'Nov 05', value: 150000 },
-            { label: 'Nov 10', value: 166360 },
-          ],
-        },
-        {
-          name: 'Clicks',
-          color: '#1e1c24',
-          points: [
-            { label: 'Oct 12', value: 15000 },
-            { label: 'Oct 16', value: 25000 },
-            { label: 'Oct 20', value: 32000 },
-            { label: 'Oct 24', value: 40000 },
-            { label: 'Oct 28', value: 38000 },
-            { label: 'Nov 01', value: 50000 },
-            { label: 'Nov 05', value: 65000 },
-            { label: 'Nov 10', value: 83619 },
-          ],
-        },
-        {
-          name: 'Orders',
-          color: 'rgba(255,9,158,0.4)',
-          points: [
-            { label: 'Oct 12', value: 250 },
-            { label: 'Oct 16', value: 380 },
-            { label: 'Oct 20', value: 460 },
-            { label: 'Oct 24', value: 600 },
-            { label: 'Oct 28', value: 550 },
-            { label: 'Nov 01', value: 720 },
-            { label: 'Nov 05', value: 800 },
-            { label: 'Nov 10', value: 876 },
-          ],
-        },
+      td.subtitle = 'Revenue · Spend · Orders';
+      td.series = ['revenue', 'orders'];
+      td.points = [
+        { date: 'Oct 12', revenue: 50000, spend: 22000, commission: 7500, orders: 250 },
+        { date: 'Oct 16', revenue: 75000, spend: 30000, commission: 11250, orders: 380 },
+        { date: 'Oct 20', revenue: 90000, spend: 35000, commission: 13500, orders: 460 },
+        { date: 'Oct 24', revenue: 110000, spend: 42000, commission: 16500, orders: 600 },
+        { date: 'Oct 28', revenue: 105000, spend: 40000, commission: 15750, orders: 550 },
+        { date: 'Nov 01', revenue: 130000, spend: 48000, commission: 19500, orders: 720 },
+        { date: 'Nov 05', revenue: 150000, spend: 52000, commission: 22500, orders: 800 },
+        { date: 'Nov 10', revenue: 166360, spend: 56000, commission: 24954, orders: 876 },
       ];
       comps.push(trend);
 
-      // ── Row 3: 发布者表现表（满宽）──
-      const publisher = t('publisher-table', 80, 370, 1120, 180);
+      // ── Row 3: 发布者表现表（安全区通栏，Campaign 强关联组件）──
+      const publisher = t('publisher-table', 48, 380, 1184, 220);
       (publisher.data as { title: string }).title = 'Publisher Performance Overview';
       (publisher.data as { rows: { publisher: string; clicks: string; conversions: string; revenue: string; status: string }[] }).rows = [
-        { publisher: 'Mia Chen (@miaglowup, Creator)', clicks: '124,678', conversions: '1,016', revenue: '$192,000', status: 'good' },
+        { publisher: 'Mia Chen (@miaglowup, TikTok Creator)', clicks: '124,678', conversions: '1,016', revenue: '$192,000', status: 'good' },
         { publisher: 'Beauty Deals Daily (FB Group)', clicks: '86,520', conversions: '768', revenue: '$145,230', status: 'good' },
-        { publisher: 'Nora Kim (@nora.kim, Creator)', clicks: '42,955', conversions: '696', revenue: '$131,600', status: 'good' },
+        { publisher: 'Nora Kim (@nora.kim, IG Creator)', clicks: '42,955', conversions: '696', revenue: '$131,600', status: 'good' },
+        { publisher: 'Glow Tips Weekly (Email Newsletter)', clicks: '38,200', conversions: '412', revenue: '$88,400', status: 'warn' },
+        { publisher: 'Beauty Blog D (Blog Website)', clicks: '28,300', conversions: '384', revenue: '$76,200', status: 'warn' },
+        { publisher: 'YouTube Channel B (Video Review)', clicks: '18,400', conversions: '180', revenue: '$42,930', status: 'bad' },
       ];
       comps.push(publisher);
 
-      // ── Row 4: 品类占比饼图（左 360）+ Top 市场地域分布（右 720）──
-      const catPie = t('pie-chart', 80, 568, 360, 132);
+      // ── Row 4: Insight & Analysis 标题（安全区通栏）──
+      const insightTitle = t('title-block', 48, 610, 1184, 40);
+      const itd = insightTitle.data as { text: string; subtitle: string; variant: string; fontSize: number; divider: boolean };
+      itd.text = 'Insight & Analysis';
+      itd.variant = 'bar-left';
+      itd.fontSize = 18;
+      itd.divider = false;
+      comps.push(insightTitle);
+
+      // ── Row 5: 品类占比饼图（左 280）+ Top 商品表现（中 440）+ Top 市场地域（右 440）──
+      const catPie = t('pie-chart', 48, 660, 280, 180);
       const cpd = catPie.data as { title: string; slices: { label: string; value: number; color: string }[] };
       cpd.title = 'Top-Selling Categories';
       cpd.slices = [
@@ -853,26 +868,107 @@ export const TEMPLATES: Template[] = [
       ];
       comps.push(catPie);
 
-      const geo = t('geo-distribution', 460, 568, 740, 132);
+      // product-performance（Campaign 强关联组件）
+      const topProducts = t('product-performance', 348, 660, 440, 180);
+      const ppd = topProducts.data as {
+        variant: string; insight: string;
+        headers: string[]; rows: string[][];
+      };
+      ppd.variant = 'cards';
+      ppd.insight = 'Sensitive Skin Serum 30ml dominates with 42% revenue share.';
+      ppd.headers = ['Product', 'Image URL', 'Sales', 'Share', 'Category'];
+      ppd.rows = [
+        ['Sensitive Skin Serum 30ml', '', '$368,071', '42%', 'Skincare'],
+        ['Gentle Cleanser 150ml', '', '$262,908', '30%', 'Skincare'],
+        ['Vit C Brightening Mask', '', '$157,745', '18%', 'Skincare'],
+        ['Sunscreen SPF50+', '', '$87,636', '10%', 'Bodycare'],
+      ];
+      comps.push(topProducts);
+
+      const geo = t('geo-distribution', 808, 660, 424, 180);
       (geo.data as { title: string }).title = 'Top Market (By Sales)';
       (geo.data as { variant: string }).variant = 'bars';
       (geo.data as { items: { code: string; name: string; value: number; display: string; share: string }[] }).items = [
         { code: 'US', name: 'United States', value: 481998, display: '$481,998', share: '55%' },
         { code: 'CN', name: 'China (CN)', value: 200200, display: '$200,200', share: '23%' },
         { code: 'UK', name: 'United Kingdom', value: 105163, display: '$105,163', share: '12%' },
+        { code: 'DE', name: 'Germany', value: 52582, display: '$52,582', share: '6%' },
+        { code: 'AU', name: 'Australia', value: 36417, display: '$36,417', share: '4%' },
       ];
       comps.push(geo);
 
-      // ── Row 5: Top Promotion Offer 表（满宽）──
-      const promoTable = tableAt(80, 720, 1120, 80, ['Offer Name', 'Type', 'Revenue Driven', 'Usage Count'], [
+      // ── Row 6: Top Promotion Offer 表（左 700）+ New Customer Rate 饼图（右 464）──
+      const promoTable = tableAt(48, 850, 700, 130, ['Offer Name', 'Type', 'Revenue Driven', 'Usage Count'], [
         ['Creator Exclusive 15% OFF', 'Code', '$340,500', '1,802'],
         ['Buy 2 Serum Get 1 Free', 'Bundle', '$210,000', '740'],
+        ['First Order 10% OFF', 'Code', '$131,400', '968'],
+        ['Free Shipping Weekend', 'Auto', '$98,200', '520'],
       ]);
       comps.push(promoTable);
 
-      // ── Row 6: Actionable Insights 文字 ──
-      const insights = textAt(80, 820, 1120, 60, 'Actionable Insights: 1) Scale top creators (Mia Chen, Nora Kim)  2) Optimize low-CVR placements (YouTube, Email)  3) Increase investment in Story Swipe-up & Bio Link  4) Scale Creator Exclusive 15% OFF code', 14);
+      const ncrPie = t('pie-chart', 768, 850, 464, 130);
+      const ncrd = ncrPie.data as { title: string; slices: { label: string; value: number; color: string }[] };
+      ncrd.title = 'New Customer Rate: 34.6% (1,604 New / 4,636 Total)';
+      ncrd.slices = [
+        { label: 'New Customer (34.6%)', value: 34.6, color: '#ff099e' },
+        { label: 'Returning (65.4%)', value: 65.4, color: '#f5f7fa' },
+      ];
+      comps.push(ncrPie);
+
+      // ── Row 7: Actionable Insights 标题（安全区通栏）──
+      const aiTitle = t('title-block', 48, 990, 1184, 40);
+      const aid = aiTitle.data as { text: string; subtitle: string; variant: string; fontSize: number; divider: boolean };
+      aid.text = 'Actionable Insights';
+      aid.variant = 'bar-left';
+      aid.fontSize = 18;
+      aid.divider = false;
+      comps.push(aiTitle);
+
+      // ── Row 8: 5 列 Actionable Insights 卡片（安全区通栏）──
+      const insights = t('cards-row', 48, 1040, 1184, 200);
+      (insights.data as { items: { title: string; body?: string; icon?: string; footer?: string }[]; gap: number }).items = [
+        { icon: '🏆', title: 'Top Performers', body: '1. Mia Chen (TikTok, $192K)\n2. Beauty Deals Daily ($145K)\n3. Nora Kim (IG, $131K)', footer: 'Focus on scaling these top publishers.' },
+        { icon: '⚠️', title: 'High Traffic / Low CVR', body: '1. YouTube Channel B (CVR 0.98%)\n2. Email Newsletter (CVR 1.08%)', footer: 'Optimize landing pages and offer alignment.' },
+        { icon: '⭐', title: 'Best Placement', body: '1. Story Swipe-up (ROAS 4.10)\n2. Bio Link (ROAS 2.46)\n3. Article Inline (ROAS 2.20)', footer: 'Increase investment in high ROAS placements.' },
+        { icon: '🎨', title: 'Creative Insight', body: '1. Offer + testimonial creatives convert best\n2. Video format outperforms static\n3. UGC style drives 2x engagement', footer: 'Offer + testimonial creatives converting best.' },
+        { icon: '🚨', title: 'Action Required', body: '1. Improve blog article CTAs\n2. Test new angles for YouTube\n3. Scale top creators & placements', footer: 'Address these to boost performance next period.' },
+      ];
+      (insights.data as { gap: number }).gap = 20;
       comps.push(insights);
+
+      // ── Row 9: Period-over-Period 对比（安全区通栏，业务组件 timeline-compare）──
+      const pop = t('timeline-compare', 48, 1250, 1184, 60);
+      const popD = pop.data as {
+        variant: string;
+        headers: string[]; rows: string[][];
+      };
+      popD.variant = 'compact';
+      popD.headers = ['Metric', 'Current', 'Previous', 'Status'];
+      popD.rows = [
+        ['Revenue', '$876,360', '$635,000', '+38%'],
+        ['Clicks', '348,619', '229,000', '+52%'],
+        ['Orders', '4,636', '3,800', '+22%'],
+        ['New Customer Rate', '34.6%', '28.4%', '+6.2%'],
+        ['AOV', '$189', '$206', '-8%'],
+      ];
+      comps.push(pop);
+
+      // ── Row 10: 推荐行动计划（安全区通栏，业务组件 strategy-block）──
+      const actionPlan = t('strategy-block', 48, 1320, 1184, 110);
+      const apd = actionPlan.data as {
+        headers: string[]; rows: string[][];
+      };
+      apd.headers = ['Icon', 'Title', 'Content'];
+      apd.rows = [
+        ['rocket', 'P0 · Scale Winners', 'Scale Creator Exclusive 15% OFF to top 5 creators by Nov 15 — expected <mark>+$150K revenue</mark> uplift.'],
+        ['wrench', 'P0 · Fix the Leaks', 'Optimize YouTube & Email landing pages for CVR (1.7% → 2.5%) by Nov 20.'],
+        ['globe', 'P1 · Expand Markets', 'Launch Story Swipe-up campaign + expand to <mark>Germany & Australia</mark> markets by Dec 01.'],
+      ];
+      comps.push(actionPlan);
+
+      // ── Row 11: Footer 文字（安全区通栏）──
+      const footer = textAt(48, 1440, 1184, 40, 'DIGCHIC Campaign Report · Generated for GlowLab · Confidential — Internal Use Only · Next Review: Nov 25, 2026', 11);
+      comps.push(footer);
 
       return comps;
     },
@@ -1295,10 +1391,6 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     return comp;
   };
 
-  /** n 行 × cols 列的占位 rows（空字符串占位）。 */
-  const ph = (cols: number, n = 4): string[][] =>
-    Array.from({ length: n }, () => Array.from({ length: cols }, () => ''));
-
   /** BL 风格的「标题 + 表格 (+ 简介)」页（milestone/global/org/service/process/calendar/campaign-plan 共用）。 */
   const blTablePage = (title: string, headers: string[], rows: string[][], intro?: string): EditorComponent[] => {
     const head = blTitle(title, 40);
@@ -1425,7 +1517,8 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
         const chart2 = t('timeline-compare', mx + halfW + 20, chartY, halfW, 220);
         const insightY = chartY + 240;
         const insight = t('text', mx, insightY, cw, 720 - insightY - 40);
-        (insight.data as { content: string; fontSize: number }).content = '';
+        (insight.data as { content: string; fontSize: number }).content =
+          '洞察：本月达人种草内容贡献了 62% 的 GMV 增长，Top 5 达人 ROAS 均 >4x。建议下月扩大中腰部达人矩阵，同时优化商品详情页承接效率。';
         (insight.data as { fontSize: number }).fontSize = 14;
         return [title, kpi, chart1, chart2, insight];
       }
@@ -1437,7 +1530,8 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       const timeline = t('timeline-compare', mx + chartW + 20, chartY, tlW, 240);
       const insightY = chartY + 260;
       const insight = t('text', mx, insightY, cw, 720 - insightY - 40);
-      (insight.data as { content: string }).content = '';
+      (insight.data as { content: string }).content =
+        '洞察：趋势图显示月中投放高峰带动 GMV 增长 23%。周期对比来看，达人内容转化率较上月提升 1.8pp，建议维持当前达人投放节奏并增加 Reels 内容占比。';
       return [title, kpi, chart, timeline, insight];
     },
   });
@@ -1605,10 +1699,19 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     components: () => {
       const title = blTitle('Weekly Performance Overview', 40);
       const kpi = t('kpi-board', mx, 130, cw, style.kpiHeight);
+      (kpi.data as { variant: string }).variant = 'grid';
+      (kpi.data as { headers: string[] }).headers = ['指标', '本周', '环比'];
+      (kpi.data as { rows: string[][] }).rows = [
+        ['GMV', '$32,500', '+12.3%'],
+        ['Spend', '$8,200', '-3.1%'],
+        ['ROAS', '3.96x', '+0.4x'],
+        ['订单', '1,240', '+8.7%'],
+      ];
       // 行间用紧凑固定间距（非 style.gapY），保证最大业务线画布内不溢出。
       const planY = 130 + style.kpiHeight + 20;
       const plan = t('text', mx, planY, cw, 720 - planY - 40);
-      (plan.data as { content: string; fontSize: number }).content = '';
+      (plan.data as { content: string; fontSize: number }).content =
+        '下周计划：\n1. 扩大 Top 3 达人投放预算 +20%\n2. 新增 5 位 Micro 达人合作\n3. 优化广告位素材 A/B Test';
       (plan.data as { fontSize: number }).fontSize = 16;
       return [title, kpi, plan];
     },
@@ -1626,9 +1729,18 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       const channelKpi = t('kpi-board', mx, 110, cw, 90);
       (channelKpi.data as { variant: string }).variant = 'compact';
       (channelKpi.data as { headers: string[] }).headers = ['指标', '数值', '对比'];
+      (channelKpi.data as { rows: string[][] }).rows = [
+        ['总销量', '5,820', '+15.2%'],
+      ];
       const tableY = 110 + 90 + 30;
       const table = t('table', mx, tableY, cw, 720 - tableY - 40);
       (table.data as { headers: string[] }).headers = ['渠道', '销量', '点击', 'CVR', '发布者'];
+      (table.data as { rows: string[][] }).rows = [
+        ['TikTok', '2,100', '125K', '4.2%', '18'],
+        ['Instagram', '1,850', '98K', '3.8%', '12'],
+        ['YouTube', '1,200', '76K', '5.1%', '6'],
+        ['Reddit', '670', '45K', '2.9%', '4'],
+      ];
       return [title, channelKpi, table];
     },
   });
@@ -1643,12 +1755,20 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     components: () => {
       const title = blTitle('Performance Review', 40);
       const kpi = t('kpi-board', mx, 110, cw, style.kpiHeight);
+      (kpi.data as { headers: string[] }).headers = ['指标', '本期', '上期'];
+      (kpi.data as { rows: string[][] }).rows = [
+        ['GMV', '$128,400', '$112,300'],
+        ['ROAS', '4.2x', '3.8x'],
+        ['Spend', '$30,500', '$29,600'],
+        ['订单', '4,890', '4,210'],
+      ];
       const tlY = 110 + style.kpiHeight + 20;
       const timeline = t('timeline-compare', mx, tlY, cw, 220);
       (timeline.data as { variant: string }).variant = 'with-bar';
       const textY = tlY + 220 + 20;
       const works = t('text', mx, textY, cw, 720 - textY - 40);
-      (works.data as { content: string }).content = '';
+      (works.data as { content: string }).content =
+        '亮点策略：\n1. TikTok 达人矩阵扩量 +25%\n2. Instagram Reels 内容种草转化率提升 18%\n3. Reddit 社区运营带来低成本长尾流量';
       return [title, kpi, timeline, works];
     },
   });
@@ -1696,7 +1816,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       td.fontSize = 48;
       td.fontWeight = 700;
       const sub = t('text', mx + 20, 360, cw - 40, 60);
-      (sub.data as { content: string; fontSize: number }).content = '';
+      (sub.data as { content: string; fontSize: number }).content = '副标题 · 数据周期';
       (sub.data as { fontSize: number }).fontSize = 20;
       return [title, sub];
     },
@@ -1739,7 +1859,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     components: () => {
       const title = blTitle('关于我们', 40);
       const intro = t('text', mx, 130, cw, 80);
-      (intro.data as { content: string }).content = '';
+      (intro.data as { content: string }).content = '专注达人营销与品牌增长，覆盖 TikTok / Instagram / YouTube 等主流渠道，累计合作达人 3,000+。';
       const wall = t('brand-wall', mx, 240, cw, 440);
       return [title, intro, wall];
     },
@@ -1752,7 +1872,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled milestones`,
     pageType: 'milestone',
     businessLine,
-    components: () => blTablePage('公司里程碑', ['年份', '里程碑'], ph(2), ''),
+    components: () => blTablePage('公司里程碑', ['年份', '里程碑'], [['2021', '公司成立'], ['2022', '达人资源突破 1,000'], ['2023', 'GMV 突破 $10M'], ['2024', '扩展东南亚市场']], ''),
   });
 
   /* -------- Global (全球布局) -------- */
@@ -1762,7 +1882,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled global network`,
     pageType: 'global',
     businessLine,
-    components: () => blTablePage('全球布局', ['区域', '办公点', '达人资源'], ph(3)),
+    components: () => blTablePage('全球布局', ['区域', '办公点', '达人资源'], [['北美', '纽约 · 洛杉矶', '1,200+'], ['欧洲', '伦敦 · 柏林', '800+'], ['亚太', '上海 · 东京', '1,500+']]),
   });
 
   /* -------- Org (组织架构) -------- */
@@ -1773,7 +1893,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     pageType: 'org',
     businessLine,
     components: () =>
-      blTablePage('组织架构', ['职能', '占比', '职责'], ph(3)),
+      blTablePage('组织架构', ['职能', '占比', '职责'], [['BD', '30%', '达人开拓与关系维护'], ['策划', '25%', '内容策略与创意'], ['投放', '20%', '广告投放与优化'], ['数据', '15%', '效果分析与报告'], ['设计', '10%', '素材与视觉']]),
   });
 
   /* -------- Service (核心服务矩阵) -------- */
@@ -1783,7 +1903,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled service matrix`,
     pageType: 'service',
     businessLine,
-    components: () => blTablePage('核心服务矩阵', ['服务', '描述'], ph(2)),
+    components: () => blTablePage('核心服务矩阵', ['服务', '描述'], [['达人匹配', '基于品牌调性的精准达人推荐'], ['内容创作', '短视频/图文全链路内容生产'], ['投放优化', 'ROI 驱动的广告投放与 AB Test'], ['数据报告', '多维度效果分析与周期复盘']]),
   });
 
   /* -------- Process (合作评估流程) -------- */
@@ -1797,7 +1917,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       blTablePage(
         '合作评估流程',
         ['步骤', '核心工作', '目标'],
-        [['1', '...', '...'], ['2', '...', '...'], ['3', '...', '...'], ['4', '...', '...']],
+        [['1', '需求沟通', '明确品牌目标与预算'], ['2', '达人筛选', '匹配调性 + 报价评估'], ['3', '内容制作', '创意脚本 + 拍摄审核'], ['4', '投放复盘', '数据追踪 + 效果报告']],
       ),
   });
 
@@ -1808,7 +1928,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled content calendar`,
     pageType: 'calendar',
     businessLine,
-    components: () => blTablePage('营销日历', ['节点', '主题', '动作'], ph(3)),
+    components: () => blTablePage('营销日历', ['节点', '主题', '动作'], [['Q1', '春节大促', '品牌种草 + 限时优惠'], ['Q2', '618 预热', '达人测评 + 直播带货'], ['Q3', '七夕/开学', '情感营销 + 种草合集'], ['Q4', '双11/黑五', '矩阵爆量 + 沉淀复购']]),
   });
 
   /* -------- Campaign Plan (投放计划) -------- */
@@ -1818,7 +1938,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
     description: `${businessLine} styled campaign plan`,
     pageType: 'campaign-plan',
     businessLine,
-    components: () => blTablePage('投放计划', ['阶段', '动作', '目标'], ph(3)),
+    components: () => blTablePage('投放计划', ['阶段', '动作', '目标'], [['蓄水期', '达人种草 + 内容蓄水', '曝光 500K+'], ['爆发期', '广告放量 + 直播冲刺', 'GMV $50K+'], ['沉淀期', '社群运营 + 复购触达', '复购率 25%+']]),
   });
 
   /* -------- Challenge (机会与挑战) -------- */
@@ -1839,10 +1959,10 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       sd.variant = 'grid';
       sd.title = '';
       sd.quadrants = [
-        { title: 'Opportunities', items: ['...'] },
-        { title: 'Strengths', items: ['...'] },
-        { title: 'Challenges', items: ['...'] },
-        { title: 'Threats', items: ['...'] },
+        { title: 'Opportunities', items: ['TikTok 商城上线新流量入口', '短视频种草转化率持续提升'] },
+        { title: 'Strengths', items: ['达人资源覆盖广 + 筛选精准', '全链路服务能力强'] },
+        { title: 'Challenges', items: ['内容同质化需持续创新', '达人合作成本上升 15%'] },
+        { title: 'Threats', items: ['平台政策收紧影响投放', '竞品低价策略挤压利润'] },
       ];
       return [title, swot];
     },
@@ -1863,7 +1983,7 @@ export function createBusinessLineTemplates(businessLine: string): Template[] {
       const tbl = t('table', mx + chartW + 20, 130, cw - chartW - 20, 550);
       const td = tbl.data as { headers: string[]; rows: string[][] };
       td.headers = ['类型', '观看占比', '热门关键词'];
-      td.rows = ph(3, 3);
+      td.rows = [['短视频', '45%', '开箱测评 / 好物推荐'], ['图文', '30%', '种草合集 / 使用心得'], ['直播', '25%', '限时秒杀 / 互动抽奖']];
       return [title, chart, tbl];
     },
   });

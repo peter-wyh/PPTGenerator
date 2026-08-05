@@ -96,6 +96,8 @@ export interface EditorState {
   setProjectName: (name: string) => void;
   /** 报告维度：更新主题（品牌色/字体/密度/圆角），深合并 color/font，标记 dirty。 */
   setTheme: (patch: ThemePatch) => void;
+  /** 更新 projectMeta 的部分字段（浅合并），标记 dirty。 */
+  updateProjectMeta: (patch: Partial<ProjectMeta>) => void;
   markSaved: () => void;
   /** 立即把当前编辑结果落库（name/尺寸/pages/meta）。autosave 与手动保存共用此入口。 */
   save: () => Promise<void>;

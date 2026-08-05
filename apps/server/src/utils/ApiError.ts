@@ -26,6 +26,9 @@ export class ApiError extends Error {
   static conflict(message = 'Conflict', details?: unknown) {
     return new ApiError(409, message, 'CONFLICT', details);
   }
+  static internal(message = 'Internal Server Error', details?: unknown) {
+    return new ApiError(500, message, 'INTERNAL', details);
+  }
 }
 
 function defaultCode(status: number): string {

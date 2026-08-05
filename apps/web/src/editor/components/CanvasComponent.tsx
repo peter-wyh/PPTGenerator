@@ -4,6 +4,9 @@ import type { EditorComponent } from '@mediakit/shared';
 import type { ResizeDir } from '../store';
 import { ComponentRenderer } from './ComponentRenderer';
 
+/** 文字类组件：内容可能超出容器边界（如标题带色条/分割线），不裁剪 overflow。 */
+const TEXT_OVERFLOW_TYPES = new Set(['title-block', 'page-header', 'text']);
+
 const HANDLES: { dir: ResizeDir; style: React.CSSProperties; cursor: string }[] = [
   { dir: 'nw', style: { left: -4, top: -4 }, cursor: 'nw-resize' },
   { dir: 'n', style: { left: '50%', top: -4, marginLeft: -4 }, cursor: 'n-resize' },
@@ -60,7 +63,7 @@ export const CanvasComponent = memo(
           outlineOffset: 0,
         }}
       >
-        <div className="pointer-events-none h-full w-full overflow-hidden">
+        <div className={`pointer-events-none h-full w-full ${TEXT_OVERFLOW_TYPES.has(comp.type) ? '' : 'overflow-hidden'}`}>
           <ComponentRenderer comp={comp} />
         </div>
 
@@ -70,7 +73,7 @@ export const CanvasComponent = memo(
 
         {/* 悬浮快键：复制 / 删除 */}
         {!comp.locked && (
-          <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100">
+          <div className="absolute right-1 top-1 flex skin-gap-xs opacity-0 transition group-hover:opacity-100">
             <button
               title="Copy"
               onMouseDown={(e) => {

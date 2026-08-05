@@ -14,11 +14,11 @@ export function BrandWall({ data }: { data: BrandWallData }) {
   const logos = rows.map((r) => ({ name: r[0] ?? '', src: r[1] ?? '' }));
 
   const Tile = ({ name, src }: { name: string; src: string }) => (
-    <div className="flex flex-col items-center justify-center gap-1 skin-card-flat px-2 py-3">
+    <div className="flex flex-col items-center justify-center skin-gap-xs skin-card-flat px-2 py-3">
       {src ? (
         <img src={src} alt={name} className="h-8 max-w-[80%] object-contain" draggable={false} />
       ) : (
-        <div className="flex h-8 w-8 items-center justify-center rounded bg-primary/10 text-sm font-semibold text-primary">
+        <div className="flex h-8 w-8 items-center justify-center rounded bg-primary/10 text-sm skin-fw-heading text-primary">
           {name?.slice(0, 1) || '?'}
         </div>
       )}
@@ -28,7 +28,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
 
   if (variant === 'row') {
     return (
-      <div className="flex h-full w-full items-center gap-2 overflow-auto skin-card skin-pad-sm">
+      <div className="flex h-full w-full items-center skin-gap-sm overflow-auto skin-card skin-pad-sm">
         {logos.map((l, i) => (
           <div key={i} className="w-[120px] flex-none">
             <Tile {...l} />
@@ -46,7 +46,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
           l.src ? (
             <img key={i} src={l.src} alt={l.name} className="h-7 object-contain" draggable={false} />
           ) : (
-            <span key={i} className="text-sm font-semibold text-foreground-secondary">
+            <span key={i} className="text-sm skin-fw-heading text-foreground-secondary">
               {l.name}
             </span>
           ),
@@ -59,7 +59,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
     // 圆形头像式：Logo 以圆形(56px)展示，名称在下方，网格排列 4-6 列。
     return (
       <div
-        className="grid h-full w-full gap-3 overflow-auto skin-card skin-pad-sm"
+        className="grid h-full w-full skin-gap-md overflow-auto skin-card skin-pad-sm"
         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}
       >
         {logos.map((l, i) => (
@@ -67,7 +67,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
             {l.src ? (
               <img src={l.src} alt={l.name} className="h-14 w-14 rounded-full object-cover" draggable={false} />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg skin-fw-heading text-primary">
                 {l.name?.slice(0, 1) || '?'}
               </div>
             )}
@@ -83,11 +83,11 @@ export function BrandWall({ data }: { data: BrandWallData }) {
     return (
       <div className="flex h-full w-full items-center justify-start gap-5 overflow-auto skin-card skin-pad-sm">
         {logos.map((l, i) => (
-          <div key={i} className="flex w-[110px] flex-none flex-col items-center gap-1" style={{ opacity: Math.max(0.3, 1 - i * 0.05) }}>
+          <div key={i} className="flex w-[110px] flex-none flex-col items-center skin-gap-xs" style={{ opacity: Math.max(0.3, 1 - i * 0.05) }}>
             {l.src ? (
               <img src={l.src} alt={l.name} className="h-9 max-w-[80%] object-contain" draggable={false} />
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded bg-primary/10 text-sm font-semibold text-primary">
+              <div className="flex h-9 w-9 items-center justify-center rounded bg-primary/10 text-sm skin-fw-heading text-primary">
                 {l.name?.slice(0, 1) || '?'}
               </div>
             )}
@@ -100,7 +100,7 @@ export function BrandWall({ data }: { data: BrandWallData }) {
 
   // grid（默认）
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto skin-card skin-pad-sm">
+    <div className="grid h-full w-full grid-cols-3 skin-gap-sm overflow-auto skin-card skin-pad-sm">
       {logos.map((l, i) => (
         <Tile key={i} {...l} />
       ))}
@@ -124,9 +124,9 @@ export function PackageCard({ data }: { data: PackageCardData }) {
   if (variant === 'compact') {
     return (
       <div className={wrap}>
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-sm font-semibold text-foreground-primary">{name}</span>
-          <span className="flex-none font-data text-sm font-semibold text-primary">{price}</span>
+        <div className="flex items-baseline justify-between skin-gap-sm">
+          <span className="truncate text-sm skin-fw-heading text-foreground-primary">{name}</span>
+          <span className="flex-none font-data text-sm skin-fw-heading text-primary">{price}</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-foreground-secondary">
           {features.map((f, i) => (
@@ -140,9 +140,9 @@ export function PackageCard({ data }: { data: PackageCardData }) {
   if (variant === 'table') {
     // 表格行风格：单行展示 套餐名 | 价格 | 特性列表(逗号分隔)，无卡片边框。
     return (
-      <div className="flex h-full w-full items-center gap-3 px-3">
-        <span className="w-28 flex-none truncate text-sm font-semibold text-foreground-primary">{name}</span>
-        <span className="w-20 flex-none font-data text-sm font-semibold text-primary">{price}</span>
+      <div className="flex h-full w-full items-center skin-gap-md px-3">
+        <span className="w-28 flex-none truncate text-sm skin-fw-heading text-foreground-primary">{name}</span>
+        <span className="w-20 flex-none font-data text-sm skin-fw-heading text-primary">{price}</span>
         <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">
           {features.filter(Boolean).join('、')}
         </span>
@@ -154,7 +154,7 @@ export function PackageCard({ data }: { data: PackageCardData }) {
   return (
     <div className={wrap}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-foreground-primary">{name}</span>
+        <span className="text-sm skin-fw-heading text-foreground-primary">{name}</span>
         {highlighted && (
           <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">Featured</span>
         )}

@@ -46,16 +46,16 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         aria-label={creator.name}
       >
         {/* 头部:头像 + name + handle + 简介 + 标签 */}
-        <div className="flex items-start gap-3 border-b border-border-subtle p-5">
+        <div className="flex items-start skin-gap-md border-b border-border-subtle p-5">
           <CreatorAvatar name={creator.name} avatar={creator.avatar} size={64} />
           <div className="min-w-0 flex-1">
-            <div className="font-headings text-lg font-semibold text-foreground-primary">{creator.name}</div>
+            <div className="font-headings text-lg skin-fw-heading text-foreground-primary">{creator.name}</div>
             <div className="truncate text-sm text-foreground-secondary">{creator.handle}</div>
             {creator.bio && (
               <p className="mt-2 text-sm leading-relaxed text-foreground-secondary">{creator.bio}</p>
             )}
             {creator.tags && creator.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
+              <div className="mt-2 flex flex-wrap skin-gap-xs">
                 {creator.tags.map((t) => (
                   <span key={t} className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] text-accent-primary">{t}</span>
                 ))}
@@ -72,7 +72,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
           {profile.map(([k, v]) => (
             <div key={k} className="bg-surface-primary p-3">
               <div className="text-[11px] uppercase tracking-wide text-foreground-muted">{k}</div>
-              <div className="text-sm font-medium text-foreground-primary">{v || '—'}</div>
+              <div className="text-sm skin-fw-body text-foreground-primary">{v || '—'}</div>
             </div>
           ))}
         </div>
@@ -80,8 +80,8 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         {/* 合作报价 */}
         {creator.rate && (creator.rate.post || creator.rate.video || creator.rate.live) && (
           <div className="p-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">合作报价{creator.rate.currency ? ` (${creator.rate.currency})` : ''}</div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="mb-2 text-xs skin-fw-heading uppercase tracking-wide text-foreground-muted">合作报价{creator.rate.currency ? ` (${creator.rate.currency})` : ''}</div>
+            <div className="grid grid-cols-3 skin-gap-sm">
               {creator.rate.post && <RateCell label="图文" value={creator.rate.post} />}
               {creator.rate.video && <RateCell label="短视频" value={creator.rate.video} />}
               {creator.rate.live && <RateCell label="直播" value={creator.rate.live} />}
@@ -93,7 +93,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         {/* 联系方式 */}
         {creator.contact && (creator.contact.mcn || creator.contact.email || creator.contact.phone || creator.contact.contactPerson) && (
           <div className="p-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">商务联系方式</div>
+            <div className="mb-2 text-xs skin-fw-heading uppercase tracking-wide text-foreground-muted">商务联系方式</div>
             <div className="space-y-1 text-sm">
               {creator.contact.mcn && <ContactRow label="MCN" value={creator.contact.mcn} />}
               {creator.contact.email && <ContactRow label="邮箱" value={creator.contact.email} />}
@@ -106,12 +106,12 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         {/* 频道 KPI(metrics 为空则隐藏) */}
         {metrics.length > 0 && (
           <div className="p-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">频道 KPI</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="mb-2 text-xs skin-fw-heading uppercase tracking-wide text-foreground-muted">频道 KPI</div>
+            <div className="grid grid-cols-2 skin-gap-sm">
               {metrics.map((m, i) => (
                 <div key={`${m.label}-${i}`} className="rounded-lg border border-border-subtle p-3">
                   <div className="text-[11px] text-foreground-muted">{m.label}</div>
-                  <div className="text-base font-semibold text-foreground-primary">{m.value}</div>
+                  <div className="text-base skin-fw-heading text-foreground-primary">{m.value}</div>
                 </div>
               ))}
             </div>
@@ -121,16 +121,16 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         {/* 受众画像 */}
         {audience && (audience.genderSplit?.length || audience.ageRange?.length || audience.topCities?.length) ? (
           <div className="border-t border-border-subtle p-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">受众画像</div>
+            <div className="mb-2 text-xs skin-fw-heading uppercase tracking-wide text-foreground-muted">受众画像</div>
             <div className="space-y-3">
               {/* 性别占比 */}
               {audience.genderSplit?.length ? (
                 <div>
                   <div className="mb-1 text-[11px] text-foreground-muted">性别分布</div>
-                  <div className="flex gap-1">
+                  <div className="flex skin-gap-xs">
                     {audience.genderSplit.map((g, i) => (
                       <div key={i} className="flex-1 rounded bg-surface-hover px-2 py-1 text-center">
-                        <div className="text-xs font-medium text-foreground-primary">{g.value}%</div>
+                        <div className="text-xs skin-fw-body text-foreground-primary">{g.value}%</div>
                         <div className="text-[10px] text-foreground-muted">{g.label}</div>
                       </div>
                     ))}
@@ -141,12 +141,12 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
               {audience.ageRange?.length ? (
                 <div>
                   <div className="mb-1 text-[11px] text-foreground-muted">年龄分布</div>
-                  <div className="flex items-end gap-1">
+                  <div className="flex items-end skin-gap-xs">
                     {audience.ageRange.map((a, i) => (
                       <div key={i} className="flex-1 text-center">
                         <div className="mx-auto rounded-t bg-accent-primary/30" style={{ height: `${a.value}px`, minHeight: '4px' }} />
                         <div className="mt-0.5 text-[9px] text-foreground-muted">{a.label}</div>
-                        <div className="text-[9px] font-medium text-foreground-secondary">{a.value}%</div>
+                        <div className="text-[9px] skin-fw-body text-foreground-secondary">{a.value}%</div>
                       </div>
                     ))}
                   </div>
@@ -156,7 +156,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
               {audience.topCities?.length ? (
                 <div>
                   <div className="mb-1 text-[11px] text-foreground-muted">城市 TOP</div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap skin-gap-xs">
                     {audience.topCities.map((c, i) => (
                       <span key={i} className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-foreground-secondary">
                         {c.label} {c.value}%
@@ -172,7 +172,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         {/* 作品列表(可展开每日效果数据) */}
         {works.length > 0 ? (
           <div className="border-t border-border-subtle p-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+            <div className="mb-2 text-xs skin-fw-heading uppercase tracking-wide text-foreground-muted">
               作品列表 <span className="text-foreground-muted">({works.length})</span>
             </div>
             <div className="space-y-2">
@@ -183,7 +183,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                   <div key={w.id || i} className="rounded-lg border border-border-subtle bg-surface-hover/30">
                     {/* 作品头部(可点击展开) */}
                     <div
-                      className={`flex items-start gap-2 p-2 ${daily?.length ? 'cursor-pointer' : ''}`}
+                      className={`flex items-start skin-gap-sm p-2 ${daily?.length ? 'cursor-pointer' : ''}`}
                       onClick={() => daily?.length && setExpandedWorkIdx(isExpanded ? null : i)}
                     >
                       {w.cover ? (
@@ -194,8 +194,8 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className="truncate text-xs font-medium text-foreground-primary" title={w.title}>{w.title}</span>
+                        <div className="flex items-center skin-gap-xs">
+                          <span className="truncate text-xs skin-fw-body text-foreground-primary" title={w.title}>{w.title}</span>
                           {w.featured && <span className="rounded bg-accent-soft px-1 text-[9px] text-accent-primary">精选</span>}
                           {w.contentType && <span className="text-[9px] text-foreground-muted">{w.contentType}</span>}
                         </div>
@@ -204,7 +204,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                           {w.publishedAt ? ` · ${w.publishedAt}` : ''}
                         </div>
                         {/* 指标 */}
-                        <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-foreground-muted tabular-nums">
+                        <div className="mt-1 flex flex-wrap skin-gap-sm text-[10px] text-foreground-muted tabular-nums">
                           {w.impressions && <span title="曝光">👁 {w.impressions}</span>}
                           {w.likes && <span title="点赞">👍 {w.likes}</span>}
                           {w.comments && <span title="评论">💬 {w.comments}</span>}
@@ -236,19 +236,19 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
                     {/* 每日效果数据表格 */}
                     {isExpanded && daily && daily.length > 0 && (
                       <div className="border-t border-border-subtle px-2 pb-2 pt-1">
-                        <div className="mb-1 text-[10px] font-medium text-foreground-muted">
+                        <div className="mb-1 text-[10px] skin-fw-body text-foreground-muted">
                           每日效果数据 ({daily.length} 天)
                         </div>
                         <div className="max-h-40 overflow-auto rounded border border-border-subtle">
                           <table className="w-full text-[10px] tabular-nums">
                             <thead className="sticky top-0 bg-surface-hover text-foreground-muted">
                               <tr>
-                                <th className="px-1.5 py-0.5 text-left font-medium">日期</th>
-                                <th className="px-1.5 py-0.5 text-right font-medium">曝光</th>
-                                <th className="px-1.5 py-0.5 text-right font-medium">点赞</th>
-                                <th className="px-1.5 py-0.5 text-right font-medium">评论</th>
-                                <th className="px-1.5 py-0.5 text-right font-medium">转发</th>
-                                <th className="px-1.5 py-0.5 text-right font-medium">收藏</th>
+                                <th className="px-1.5 py-0.5 text-left skin-fw-body">日期</th>
+                                <th className="px-1.5 py-0.5 text-right skin-fw-body">曝光</th>
+                                <th className="px-1.5 py-0.5 text-right skin-fw-body">点赞</th>
+                                <th className="px-1.5 py-0.5 text-right skin-fw-body">评论</th>
+                                <th className="px-1.5 py-0.5 text-right skin-fw-body">转发</th>
+                                <th className="px-1.5 py-0.5 text-right skin-fw-body">收藏</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -274,7 +274,7 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
           </div>
         ) : (
           <div className="border-t border-border-subtle p-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">作品列表</div>
+            <div className="mb-2 text-xs skin-fw-heading uppercase tracking-wide text-foreground-muted">作品列表</div>
             <div className="text-xs text-foreground-muted">暂无作品数据（需在数据管理-合作列表中关联 Campaign 后获取）</div>
           </div>
         )}
@@ -282,12 +282,12 @@ export function CreatorDetailDrawer({ creator, onClose }: Props) {
         {/* 频道统计 */}
         {(creator.stats?.length ?? 0) > 0 && (
           <div className="border-t border-border-subtle p-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">频道统计</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="mb-2 text-xs skin-fw-heading uppercase tracking-wide text-foreground-muted">频道统计</div>
+            <div className="grid grid-cols-2 skin-gap-sm">
               {creator.stats!.map((s, i) => (
                 <div key={`${s.label}-${i}`} className="rounded-lg border border-border-subtle p-3">
                   <div className="text-[11px] text-foreground-muted">{s.label}</div>
-                  <div className="text-sm font-semibold text-foreground-primary">{s.value}</div>
+                  <div className="text-sm skin-fw-heading text-foreground-primary">{s.value}</div>
                 </div>
               ))}
             </div>
@@ -302,14 +302,14 @@ function RateCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border-subtle p-3">
       <div className="text-[11px] text-foreground-muted">{label}</div>
-      <div className="text-sm font-semibold text-foreground-primary">{value}</div>
+      <div className="text-sm skin-fw-heading text-foreground-primary">{value}</div>
     </div>
   );
 }
 
 function ContactRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex skin-gap-sm">
       <span className="w-14 shrink-0 text-foreground-muted">{label}</span>
       <span className="text-foreground-primary">{value}</span>
     </div>

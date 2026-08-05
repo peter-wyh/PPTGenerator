@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Projects } from '@/routes/Projects';
 
-const { listMock, createMock, renameMock, removeMock, updateMock, duplicateMock } = vi.hoisted(() => ({
+const { listMock, createMock, renameMock, removeMock, updateMock, duplicateMock, getHtmlMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   createMock: vi.fn(),
   renameMock: vi.fn(),
   removeMock: vi.fn(),
   updateMock: vi.fn(),
   duplicateMock: vi.fn(),
+  getHtmlMock: vi.fn(),
 }));
 
 vi.mock('@/api/projects', () => ({
@@ -21,6 +22,7 @@ vi.mock('@/api/projects', () => ({
     update: (id: string, patch: unknown) => updateMock(id, patch),
     duplicate: (id: string) => duplicateMock(id),
     remove: (id: string) => removeMock(id),
+    getHtml: (id: string) => getHtmlMock(id),
   },
 }));
 
@@ -82,15 +84,15 @@ describe('Projects page', () => {
     ]);
     renderPage();
     await screen.findByText('A');
-    expect(screen.getByText('3 / 3 个项目')).toBeInTheDocument();
+    expect(screen.getByText('3 / 3 个报告')).toBeInTheDocument();
 
     const combos = screen.getAllByRole('combobox'); // [业务线, 场景]
     await user.selectOptions(combos[0], 'FT');
-    expect(screen.getByText('2 / 3 个项目')).toBeInTheDocument();
+    expect(screen.getByText('2 / 3 个报告')).toBeInTheDocument();
     expect(screen.queryByText('B')).toBeNull();
 
     await user.selectOptions(combos[1], 'media-kit');
-    expect(screen.getByText('1 / 3 个项目')).toBeInTheDocument(); // FT ∩ media-kit = C
+    expect(screen.getByText('1 / 3 个报告')).toBeInTheDocument(); // FT ∩ media-kit = C
     expect(screen.getByText('C')).toBeInTheDocument();
     expect(screen.queryByText('A')).toBeNull();
   });
@@ -108,16 +110,16 @@ describe('Projects page', () => {
       updatedAt: '',
     });
     renderPage();
-    await screen.findByText(/还没有项目/);
+    await screen.findByText(/还没有报告/);
 
     // 打开新建项目弹窗
-    await user.click(screen.getByRole('button', { name: /新建项目/ }));
+    await user.click(screen.getByRole('button', { name: /新建报告/ }));
     // 填名称
     await user.type(screen.getByPlaceholderText(/例如/), 'My Report');
     // 选业务线(顶层必填)
     await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
     // 选 1920×1080 预设并提交
-    await user.click(screen.getByText('1920 × 1080'));
+    await user.click(screen.getByText('1920 × 1080 px'));
     await user.click(screen.getByRole('button', { name: '创建' }));
 
     await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
@@ -141,8 +143,8 @@ describe('Projects page', () => {
       updatedAt: '',
     });
     renderPage();
-    await screen.findByText(/还没有项目/);
-    await user.click(screen.getByRole('button', { name: /新建项目/ }));
+    await screen.findByText(/还没有报告/);
+    await user.click(screen.getByRole('button', { name: /新建报告/ }));
     await user.type(screen.getByPlaceholderText(/例如/), 'Campaign 周报');
 
     // 1) 先选场景 Campaign 报告 → campaign 列表懒加载
@@ -226,5 +228,52 @@ describe('Projects page', () => {
     await user.click(within(dialog).getByRole('button', { name: '删除' }));
 
     await waitFor(() => expect(removeMock).toHaveBeenCalledWith('p1'));
+  });
+
+  it('ai-html 报告: HTML ▾ 菜单可预览/下载/复制源码(复制走 getHtml+clipboard)', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    getHtmlMock.mockResolvedValue({
+      id: 'p1',
+      name: 'AI 报告',
+      html: '<p>HTML</p>',
+      updatedAt: '',
+    });
+    listMock.mockResolvedValue([
+      summary('p1', 'AI 报告', 0, { styleType: 'ai-html', businessLine: 'FT' }),
+    ]);
+    renderPage();
+    await screen.findByText('AI 报告');
+
+    await user.click(screen.getByRole('button', { name: /HTML ▾/ }));
+    const copyBtn = await screen.findByRole('button', { name: '复制源码' });
+    await user.click(copyBtn);
+
+    await waitFor(() => expect(getHtmlMock).toHaveBeenCalledWith('p1'));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('<p>HTML</p>'));
+  });
+
+  it('建报告遇重名 400 → 在弹窗回显后端文案', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue([]);
+    createMock.mockRejectedValueOnce({
+      response: { data: { error: { message: '已存在同名报告「X」，请使用其他名称' } } },
+    });
+    renderPage();
+    await screen.findByText(/还没有报告/);
+
+    await user.click(screen.getByRole('button', { name: /新建报告/ }));
+    await user.type(screen.getByPlaceholderText(/例如/), 'X');
+    await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
+    await user.click(screen.getByText('1920 × 1080 px'));
+    await user.click(screen.getByRole('button', { name: '创建' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('已存在同名报告「X」，请使用其他名称')).toBeInTheDocument(),
+    );
   });
 });

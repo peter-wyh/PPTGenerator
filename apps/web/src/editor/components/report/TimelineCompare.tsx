@@ -24,7 +24,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
     const colCount = rows.length <= 2 ? rows.length : rows.length <= 4 ? 2 : 3;
     return (
       <div
-        className="grid h-full w-full gap-3 overflow-auto"
+        className="grid h-full w-full skin-gap-md overflow-auto"
         style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`, gridAutoRows: '1fr' }}
       >
         {rows.map((row, ri) => {
@@ -35,20 +35,20 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
           const chip = statusChip(status);
           return (
             <div key={ri} className="flex min-h-0 flex-col gap-1.5 skin-card skin-pad-sm">
-              <div className="truncate text-xs font-medium text-foreground-secondary" title={label}>{label}</div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="truncate text-xs skin-fw-body text-foreground-secondary" title={label}>{label}</div>
+              <div className="grid grid-cols-2 skin-gap-sm">
                 <div className="flex min-w-0 flex-col">
                   <span className="text-[10px] text-foreground-muted">{curLabel}</span>
                   <span className="font-data text-lg font-bold text-foreground-primary break-all">{cur}</span>
                 </div>
                 <div className="flex min-w-0 flex-col">
                   <span className="text-[10px] text-foreground-muted">{prevLabel}</span>
-                  <span className="font-data text-lg font-semibold text-foreground-secondary break-all">{prev}</span>
+                  <span className="font-data text-lg skin-fw-heading text-foreground-secondary break-all">{prev}</span>
                 </div>
               </div>
               {status && (
                 <div className="mt-auto">
-                  <span className="rounded px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: chip.bg, color: chip.fg }}>
+                  <span className="rounded px-2 py-0.5 text-[10px] skin-fw-body" style={{ backgroundColor: chip.bg, color: chip.fg }}>
                     {status}
                   </span>
                 </div>
@@ -63,7 +63,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
   if (variant === 'mini') {
     // 仅指标 + 本期 + 变化方向（两列紧凑）。
     return (
-      <div className="flex h-full w-full flex-col gap-1 overflow-auto skin-card skin-pad-sm">
+      <div className="flex h-full w-full flex-col skin-gap-xs overflow-auto skin-card skin-pad-sm">
         {rows.map((r, ri) => {
           const label = r[0] ?? '';
           const cur = r[1] ?? '';
@@ -72,8 +72,8 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
           return (
             <div key={ri} className="flex items-center justify-between border-b border-border-subtle py-1.5 last:border-b-0">
               <span className="text-sm text-foreground-primary">{label}</span>
-              <span className="flex items-center gap-2">
-                <span className="font-data text-sm font-semibold text-foreground-primary">{cur}</span>
+              <span className="flex items-center skin-gap-sm">
+                <span className="font-data text-sm skin-fw-heading text-foreground-primary">{cur}</span>
                 <span className="text-[11px]" style={{ color: up ? 'var(--green)' : 'var(--red)' }}>
                   {up ? '▲' : '▼'}
                 </span>
@@ -94,7 +94,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
             {headers.map((h, i) => (
               <th
                 key={i}
-                className="border-b border-border-default bg-surface-hover px-3 py-2 text-left font-medium text-foreground-secondary"
+                className="border-b border-border-default bg-surface-hover px-3 py-2 text-left skin-fw-body text-foreground-secondary"
               >
                 {h}
               </th>
@@ -111,12 +111,12 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
             return (
               <tr key={ri}>
                 <td className="border-b border-border-subtle px-3 py-2 text-foreground-primary">{row[0]}</td>
-                <td className="border-b border-border-subtle px-3 py-2 font-data font-semibold text-foreground-primary">
+                <td className="border-b border-border-subtle px-3 py-2 font-data skin-fw-heading text-foreground-primary">
                   {row[1]}
                 </td>
                 <td className="border-b border-border-subtle px-3 py-2 text-foreground-secondary">{row[2]}</td>
                 <td className="border-b border-border-subtle px-3 py-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center skin-gap-sm">
                     {variant === 'with-bar' && (
                       <div className="h-1.5 w-16 overflow-hidden rounded bg-surface-hover">
                         <div
@@ -130,7 +130,7 @@ export function TimelineCompare({ data }: { data: TimelineCompareData }) {
                     )}
                     {status && (
                       <span
-                        className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                        className="rounded px-1.5 py-0.5 text-[10px] skin-fw-body"
                         style={{ backgroundColor: chip.bg, color: chip.fg }}
                       >
                         {status}

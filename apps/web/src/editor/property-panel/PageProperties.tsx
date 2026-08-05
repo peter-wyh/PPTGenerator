@@ -297,7 +297,7 @@ const PAGE_TYPE_GROUPS: { label: string; options: { value: PageType; label: stri
     ],
   },
   {
-    label: '投放报告',
+    label: '多页报告（PPT 逐页）',
     options: [
       { value: 'report-weekly-overview', label: '周报 · 业绩概览', icon: '📈', desc: 'KPI 看板 + 下周计划' },
       { value: 'report-monthly-overview', label: '月报 · 业绩概览', icon: '📈', desc: 'KPI + 趋势图 + 洞察' },
@@ -309,6 +309,11 @@ const PAGE_TYPE_GROUPS: { label: string; options: { value: PageType; label: stri
       { value: 'report-wrapup-review', label: '总结 · 业绩复盘', icon: '🔎', desc: 'KPI + 周期对比 + 策略' },
       { value: 'content-analysis', label: '内容分析', icon: '📊', desc: '内容类型分布 + 明细' },
       { value: 'funnel', label: '增长漏斗', icon: '🔻', desc: '漏斗阶段柱状图' },
+    ],
+  },
+  {
+    label: '单页报告（长图一页全览）',
+    options: [
       { value: 'report-single-page', label: '单页 · 综合报告', icon: '📄', desc: '单页长图：KPI + 图表 + 表格' },
       { value: 'report-single-page-classic', label: '单页 · 经典版', icon: '📄', desc: '经典单页报告布局' },
       { value: 'report-single-page-dashboard', label: '单页 · 仪表盘', icon: '📊', desc: '仪表盘风格单页报告' },
@@ -384,9 +389,9 @@ function PageTypeSection({
   const setReportData = useEditorStore((s) => s.setReportData);
   const [ccLoading, setCcLoading] = useState(false);
 
-  // creator-collab 页面且达人列表为空时，自动从后端加载 Campaign 下的达人
+  // creator-collab / campaign-report 页面且达人列表为空时，自动从后端加载 Campaign 下的达人
   useEffect(() => {
-    if (currentCat !== 'creator-collab') return;
+    if (currentCat !== 'creator-collab' && currentCat !== 'campaign-report') return;
     const campaignId = page.campaignId ?? boundCampaign?.id;
     if (!campaignId || campaignCreators.length > 0 || ccLoading) return;
     let alive = true;
@@ -460,6 +465,38 @@ function PageTypeSection({
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+          )}
+
+          {/* 已绑定 Campaign 详情展示 */}
+          {boundCampaign && (
+            <div className="mt-1.5 rounded border border-border-default bg-surface-secondary p-2 text-[11px] text-foreground-secondary">
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium text-foreground-primary">{boundCampaign.name}</span>
+                {boundCampaign.status && (
+                  <span className="rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary">{boundCampaign.status}</span>
+                )}
+              </div>
+              {boundCampaign.startDate && boundCampaign.endDate && (
+                <div className="mt-0.5 text-[10px] text-foreground-muted">
+                  {boundCampaign.startDate} ~ {boundCampaign.endDate}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 达人合作信息（Campaign 下已绑定达人列表） */}
+          {boundCampaign && campaignCreators.length > 0 && (
+            <div className="mt-1.5 space-y-1">
+              <label className="text-[10px] text-foreground-muted">达人合作信息（{campaignCreators.length}）</label>
+              {campaignCreators.map((c) => (
+                <div key={c.id} className="flex items-center gap-1.5 rounded border border-border-default bg-surface-secondary px-2 py-1 text-[11px]">
+                  <span className="font-medium text-foreground-primary">{c.name}</span>
+                  {c.handle && <span className="text-foreground-muted">@{c.handle}</span>}
+                  {c.platform && <span className="rounded bg-surface-tertiary px-1 text-[10px]">{c.platform}</span>}
+                  {c.followers != null && <span className="text-[10px] text-foreground-muted">{c.followers.toLocaleString()} 粉丝</span>}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

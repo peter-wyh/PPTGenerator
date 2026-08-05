@@ -5,6 +5,20 @@ import type { Scenario, ScenarioSub, CampaignInfo, ReportDataContext } from './c
 import type { PageGradient } from './page';
 
 /**
+ * 报告时间范围。
+ * - monthly（月报）：只选 month（如 "2026-03"），startDate/endDate 自动推导。
+ * - weekly / biweekly（周报/双周报）：选 startDate + endDate。
+ */
+export interface ReportPeriod {
+  /** 月份，格式 "YYYY-MM"，月报/总结使用。 */
+  month?: string;
+  /** 开始日期 "YYYY-MM-DD"。 */
+  startDate?: string;
+  /** 结束日期 "YYYY-MM-DD"。 */
+  endDate?: string;
+}
+
+/**
  * 字体选项：预置字体清单，前后端共享。
  * key 为唯一标识（存入 ProjectTheme.font.text/number/heading），
  * stack 为 CSS font-family 值，loadUrl 为 Google Fonts <link>（按需注入 <head>）。
@@ -70,11 +84,47 @@ export interface ProjectTheme {
     chartPalette: string[]; // 图表配色序列，6 色，用于柱/折/饼
     neutralText: string; // 主文字色（中性），映射 --color-neutral-text
     neutralBg: string; // 页面/卡片背景色，映射 --color-neutral-bg
+    /** 卡片边框色；缺省跟随 neutralBg 派生浅灰。映射 --border-default。 */
+    borderColor?: string;
+    /**
+     * 表面色层次（暗色主题核心）：
+     * - surface.primary：卡片/面板主背景（映射 --surface-primary）
+     * - surface.subtle：次级面板/嵌套区域（映射 --surface-subtle）
+     * - surface.hover：悬停态背景（映射 --surface-hover）
+     * 缺省时由 neutralBg 派生（亮色）或保持 :root（暗色）。
+     */
+    surface?: {
+      primary?: string;
+      subtle?: string;
+      hover?: string;
+    };
+    /**
+     * 前景色层次（文字色，暗色主题核心）：
+     * - foreground.primary：主标题/正文（映射 --foreground-primary）
+     * - foreground.secondary：次级文字（映射 --foreground-secondary）
+     * - foreground.muted：标签/辅助文字（映射 --foreground-muted）
+     * 缺省时由 neutralText 派生。
+     */
+    foreground?: {
+      primary?: string;
+      secondary?: string;
+      muted?: string;
+    };
   };
   font: {
     text: string; // 文本字体 key（如 'noto-sans-sc'）
     number: string; // 数字字体 key（如 'inter'）
     heading?: string; // 标题字体 key，可选，缺省=跟随 text
+    /**
+     * 字重 token：标题/正文/标签的默认字重。
+     * 映射 --font-weight-heading/body/label。
+     * 缺省 heading=600 / body=500 / label=500。
+     */
+    weight?: {
+      heading?: number; // 标题字重（H1/H2/H3）
+      body?: number; // 正文字重
+      label?: number; // 标签/KPI 名/表头字重
+    };
   };
   density: ThemeDensity;
   radius: ThemeRadius;
@@ -206,6 +256,93 @@ export interface ProjectMeta {
   reportData?: ReportDataContext;
   /** 报告方案版本（用于追溯生成报告时所用的方案版本）。 */
   reportSchemeVersion?: string;
+
+  /** 报告时间范围（月报=选月，周报/双周报=选起止日期）。 */
+  reportPeriod?: ReportPeriod;
+
+  /** 创建时自动应用的单页面模版 pageType（仅用于新建流程，应用后清除）。 */
+  metaInitialTemplate?: string;
   /** P1-15: 渲染类型 — 'multi-page'=多页PPT, 'long-poster'=长图海报, 'html-report'=HTML报告。 */
   renderType?: string;
+
+  /** 全局页眉配置（非画布组件，自动渲染在每页顶部）。 */
+  headerConfig?: GlobalHeaderConfig;
+
+  /** 全局页脚配置（非画布组件，自动渲染在每页底部）。 */
+  footerConfig?: GlobalFooterConfig;
+}
+
+/** 单个 logo 配置。 */
+export interface HeaderLogo {
+  src?: string;
+  text?: string;
+  initials?: string;
+  logoHeight?: number;
+}
+
+/** 页眉预设样式。 */
+export type HeaderPreset =
+  | 'split'      // 左右分列：左广告主 logo + 右业务线 logo，中间 × 关联
+  | 'left-logos-right-text' // 左侧双 logo（×关联）+ 右侧报告标题文案
+  | 'left-text-right-logo'  // 左侧文案 + 右侧单 logo
+  | 'left-logo-right-text'  // 左侧单 logo + 右侧文案
+  | 'center-text'           // 纯居中文案
+  | 'custom';               // 自定义布局
+
+/** 页眉背景配置。 */
+export interface HeaderBackground {
+  /** 背景类型。 */
+  type: 'color' | 'gradient' | 'image';
+  /** 纯色值（type=color 时生效）。 */
+  color?: string;
+  /** 渐变 CSS 值（type=gradient 时生效，如 "linear-gradient(90deg, #1a1a2e, #16213e)"）。 */
+  gradient?: string;
+  /** 图片 URL（type=image 时生效）。 */
+  image?: string;
+  /** 不透明度 0-1（叠加在背景上方）。 */
+  opacity?: number;
+}
+
+/** 全局页眉配置：支持预设布局 + 背景设置。 */
+export interface GlobalHeaderConfig {
+  /** 是否启用全局页眉。 */
+  enabled: boolean;
+  /** 页眉高度（px），默认 56。 */
+  height?: number;
+
+  /* ---- 预设布局 ---- */
+  /** 预设样式（决定 logo 和文案的排布方式）。 */
+  preset?: HeaderPreset;
+  /** 广告主/品牌 logo。 */
+  leftLogo?: HeaderLogo;
+  /** 业务线 logo（split 预设放右侧，left-logos-right-text 放左侧第二位）。 */
+  rightLogo?: HeaderLogo;
+  /** 报告标题文案（left-logos-right-text / left-logo-right-text 等预设使用）。 */
+  titleText?: string;
+  /** 日期/副标题标签（可选）。 */
+  dateLabel?: string;
+  /** 连接符（默认 "×"）。 */
+  connector?: string;
+
+  /* ---- 背景 ---- */
+  /** 背景配置（颜色/图片/渐变/透明）。 */
+  background?: string | HeaderBackground;
+
+  /* ---- 底部边框 ---- */
+  /** 底部边框颜色（默认 #ebebeb，设为 transparent 可隐藏）。 */
+  borderColor?: string;
+}
+
+/** 全局页脚配置：页码 + 版权信息。 */
+export interface GlobalFooterConfig {
+  /** 是否启用全局页脚。 */
+  enabled: boolean;
+  /** 页脚高度（px），默认 36。 */
+  height?: number;
+  /** 左侧文字（如版权信息）。 */
+  leftText?: string;
+  /** 右侧文字（如页码占位 "{page}/{total}"）。 */
+  rightText?: string;
+  /** 背景色。 */
+  background?: string;
 }

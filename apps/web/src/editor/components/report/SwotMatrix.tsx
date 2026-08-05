@@ -20,7 +20,7 @@ function QuadrantCard({ q, style }: { q: SwotQuadrant; style: (typeof QUADRANT_S
     >
       <div className="mb-2 flex items-center gap-1.5">
         <span className="text-sm" style={{ color: style.headerColor }}>{style.icon}</span>
-        <span className="text-xs font-semibold" style={{ color: style.headerColor }}>{q.title}</span>
+        <span className="text-xs skin-fw-heading" style={{ color: style.headerColor }}>{q.title}</span>
       </div>
       <div className="flex-1 overflow-auto">
         {q.items.length === 0 ? (
@@ -28,7 +28,7 @@ function QuadrantCard({ q, style }: { q: SwotQuadrant; style: (typeof QUADRANT_S
         ) : (
           <ul className="space-y-1">
             {q.items.map((item, i) => (
-              <li key={i} className="flex gap-1 text-[11px] leading-relaxed text-foreground-secondary">
+              <li key={i} className="flex skin-gap-xs text-[11px] leading-relaxed text-foreground-secondary">
                 <span className="flex-none text-foreground-muted">·</span>
                 <span>{item}</span>
               </li>
@@ -54,8 +54,8 @@ export function SwotMatrix({ data }: { data: SwotMatrixData }) {
 
   if (!has) {
     return (
-      <div className="flex h-full w-full flex-col rounded-xl bg-surface-primary p-3">
-        {title && <div className="mb-2 text-sm font-medium text-foreground-primary">{title}</div>}
+      <div className="skin-card flex h-full w-full flex-col p-3">
+        {title && <div className="mb-2 text-sm skin-fw-body text-foreground-primary">{title}</div>}
         <EmptyState />
       </div>
     );
@@ -68,14 +68,14 @@ export function SwotMatrix({ data }: { data: SwotMatrixData }) {
 
   if (variant === 'list') {
     return (
-      <div className="flex h-full w-full flex-col rounded-xl bg-surface-primary p-3">
-        {title && <div className="mb-3 text-sm font-medium text-foreground-primary">{title}</div>}
-        <div className="flex flex-1 flex-col gap-2 overflow-auto">
+      <div className="skin-card flex h-full w-full flex-col p-3">
+        {title && <div className="mb-3 text-sm skin-fw-body text-foreground-primary">{title}</div>}
+        <div className="flex flex-1 flex-col skin-gap-sm overflow-auto">
           {styledQuads.map(({ q, style }, i) => (
             <div key={i} className="rounded-lg border p-2.5" style={{ backgroundColor: style.bg, borderColor: style.border }}>
               <div className="mb-1 flex items-center gap-1.5">
                 <span className="text-xs" style={{ color: style.headerColor }}>{style.icon}</span>
-                <span className="text-xs font-semibold" style={{ color: style.headerColor }}>{q.title}</span>
+                <span className="text-xs skin-fw-heading" style={{ color: style.headerColor }}>{q.title}</span>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-0.5">
                 {q.items.map((item, j) => (
@@ -91,12 +91,12 @@ export function SwotMatrix({ data }: { data: SwotMatrixData }) {
 
   if (variant === 'cards') {
     return (
-      <div className="flex h-full w-full flex-col rounded-xl bg-surface-primary p-3">
-        {title && <div className="mb-3 text-sm font-medium text-foreground-primary">{title}</div>}
-        <div className="flex flex-1 flex-col gap-2 overflow-auto">
+      <div className="skin-card flex h-full w-full flex-col p-3">
+        {title && <div className="mb-3 text-sm skin-fw-body text-foreground-primary">{title}</div>}
+        <div className="flex flex-1 flex-col skin-gap-sm overflow-auto">
           {styledQuads.map(({ q, style }, i) => (
             <div key={i} className="rounded-lg border p-2.5" style={{ backgroundColor: style.bg, borderColor: style.border }}>
-              <div className="mb-1.5 text-xs font-semibold" style={{ color: style.headerColor }}>
+              <div className="mb-1.5 text-xs skin-fw-heading" style={{ color: style.headerColor }}>
                 {style.icon} {q.title}
               </div>
               <ul className="space-y-0.5">
@@ -113,9 +113,9 @@ export function SwotMatrix({ data }: { data: SwotMatrixData }) {
 
   /* 默认 grid 布局：2×2 四象限 */
   return (
-    <div className="flex h-full w-full flex-col rounded-xl bg-surface-primary p-3">
-      {title && <div className="mb-3 text-sm font-medium text-foreground-primary">{title}</div>}
-      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2">
+    <div className="skin-card flex h-full w-full flex-col p-3">
+      {title && <div className="mb-3 text-sm skin-fw-body text-foreground-primary">{title}</div>}
+      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 skin-gap-sm">
         {styledQuads.map(({ q, style }, i) => (
           <QuadrantCard key={i} q={q} style={style} />
         ))}

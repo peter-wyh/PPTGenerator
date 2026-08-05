@@ -6,6 +6,7 @@ import { ReportSettingsOverlay } from './components/ReportSettingsOverlay';
 import { DataConfigOverlay } from './components/DataConfigOverlay';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { projectsApi } from '@/api/projects';
+import { templatesApi } from '@/api/templates';
 import { toast } from '@/components/Toast';
 import { SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 
@@ -28,6 +29,7 @@ export function EditorTopbar() {
   const projectId = useEditorStore((s) => s.projectId);
   const canvasWidth = useEditorStore((s) => s.canvasWidth);
   const canvasHeight = useEditorStore((s) => s.canvasHeight);
+  const isTemplate = useEditorStore((s) => s.saveMode === 'template');
   const [showSettings, setShowSettings] = useState(false);
   const [showDataConfig, setShowDataConfig] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -49,7 +51,7 @@ export function EditorTopbar() {
     if (useEditorStore.getState().dirty) {
       if (!window.confirm('有未保存的更改，确定离开吗？')) return;
     }
-    navigate('/projects');
+    navigate(isTemplate ? '/templates' : '/projects');
   };
 
   async function handleEdit(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta }) {
@@ -57,7 +59,11 @@ export function EditorTopbar() {
     setEditSubmitting(true);
     setEditError(null);
     try {
-      await projectsApi.update(projectId, values);
+      if (isTemplate) {
+        await templatesApi.update(projectId, values);
+      } else {
+        await projectsApi.update(projectId, values);
+      }
       // 更新 store 中的 name/meta
       useEditorStore.getState().setProjectName(values.name);
       useEditorStore.setState({ projectMeta: values.meta });
@@ -65,7 +71,7 @@ export function EditorTopbar() {
         useEditorStore.setState({ canvasWidth: values.width, canvasHeight: values.height });
       }
       setShowEdit(false);
-      toast.success('项目信息已更新');
+      toast.success(isTemplate ? '模板信息已更新' : '报告信息已更新');
     } catch (err: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const e = err as any;
@@ -87,7 +93,7 @@ export function EditorTopbar() {
         <button
           onClick={handleBack}
           className="flex items-center gap-1 rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
-          title="返回项目列表"
+          title={isTemplate ? '返回模板列表' : '返回报告列表'}
         >
           ← 返回
         </button>
@@ -97,6 +103,11 @@ export function EditorTopbar() {
           onChange={(e) => setProjectName(e.target.value)}
           className="w-56 rounded px-1.5 py-0.5 text-sm text-foreground-primary outline-none hover:bg-surface-hover focus:bg-surface-hover"
         />
+        {isTemplate && (
+          <span className="rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
+            模板
+          </span>
+        )}
         {metaTags.map((t, i) => (
           <span
             key={i}
@@ -148,30 +159,36 @@ export function EditorTopbar() {
           </button>
         </div>
         <span className="mx-1 h-4 w-px bg-border-default" />
-        <button
-          onClick={() => setShowDataConfig(true)}
-          className={
-            hasReportData
-              ? 'rounded px-2 py-1 text-sm text-accent-primary hover:bg-surface-hover'
-              : 'rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary'
-          }
-          title="配置 Campaign 和达人数据"
-        >
-          数据配置{hasReportData ? ' ●' : ''}
-        </button>
+        {!isTemplate && (
+          <button
+            onClick={() => setShowDataConfig(true)}
+            className={
+              hasReportData
+                ? 'rounded px-2 py-1 text-sm text-accent-primary hover:bg-surface-hover'
+                : 'rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary'
+            }
+            title="配置 Campaign 和达人数据"
+          >
+            数据配置{hasReportData ? ' ●' : ''}
+          </button>
+        )}
         <button
           onClick={() => { setEditError(null); setShowEdit(true); }}
           className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
-          title="编辑项目信息（名称 / 尺寸 / 场景 / 业务线）"
+          title={isTemplate ? '编辑模板信息（名称 / 尺寸 / 场景 / 业务线）' : '编辑报告信息（名称 / 尺寸 / 场景 / 业务线）'}
         >
           编辑
         </button>
         <button
           onClick={() => setShowSettings(true)}
-          className="rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
-          title="全局样式设置（风格 / 布局）"
+          className={
+            (meta?.headerConfig?.enabled || meta?.footerConfig?.enabled)
+              ? 'rounded px-2 py-1 text-sm text-accent-primary hover:bg-surface-hover'
+              : 'rounded px-2 py-1 text-sm text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary'
+          }
+          title="全局样式设置（风格 / 布局 / 页眉页脚）"
         >
-          全局样式设置
+          全局样式设置{(meta?.headerConfig?.enabled || meta?.footerConfig?.enabled) ? ' ●' : ''}
         </button>
         <button
           onClick={() => enterPreview()}
@@ -190,7 +207,7 @@ export function EditorTopbar() {
           open={showEdit}
           loading={editSubmitting}
           error={editError}
-          title="编辑项目"
+          title={isTemplate ? '编辑模板' : '编辑报告'}
           submitLabel="保存"
           lockScenario
           initial={{

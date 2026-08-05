@@ -23,10 +23,10 @@ export function CampaignAnalysis({ data }: { data: CampaignAnalysisData }) {
   const { variant = 'radar', title, subtitle, dimensions = [], series = [], funnelSteps = [], insight } = data;
 
   return (
-    <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+    <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
         </div>
       )}
@@ -37,7 +37,7 @@ export function CampaignAnalysis({ data }: { data: CampaignAnalysisData }) {
       </div>
       {insight && (
         <div className="flex-none rounded-lg bg-primary/5 p-2.5">
-          <div className="mb-0.5 text-[11px] font-semibold text-primary">Insight</div>
+          <div className="mb-0.5 text-[11px] skin-fw-heading text-primary">Insight</div>
           <div className="text-[11px] text-foreground-secondary">{insight}</div>
         </div>
       )}
@@ -89,16 +89,16 @@ function CampaignFunnel({ steps }: { steps: CampaignAnalysisData['funnelSteps'] 
   }
   const max = Math.max(...steps.map((s) => s.value), 1);
   return (
-    <div className="flex h-full w-full flex-col justify-center gap-2">
+    <div className="flex h-full w-full flex-col justify-center skin-gap-sm">
       {steps.map((s, i) => {
         const pct = Math.round((s.value / max) * 100);
         const color = CAMPAIGN_COLORS[i % CAMPAIGN_COLORS.length];
         return (
-          <div key={i} className="flex items-center gap-2">
+          <div key={i} className="flex items-center skin-gap-sm">
             <span className="w-16 flex-none text-right text-[11px] text-foreground-secondary">{s.label}</span>
             <div className="relative h-7 flex-1 overflow-hidden rounded bg-surface-hover">
               <div
-                className="flex h-full items-center justify-end rounded px-2 text-[10px] font-medium text-white"
+                className="flex h-full items-center justify-end rounded px-2 text-[10px] skin-fw-body text-white"
                 style={{
                   width: `${Math.max(pct, 12)}%`,
                   background: `linear-gradient(90deg, ${color}, ${color}CC)`,

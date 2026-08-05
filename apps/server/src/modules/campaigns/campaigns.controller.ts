@@ -31,6 +31,16 @@ export const campaignController = {
     res.status(204).end();
   }),
 
+  // ─── Analytics ───────────────────────────────────────────────────────────────
+  getAnalytics: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ analytics: await campaignService.getAnalytics(req.params.campaignId, userId(req)) });
+  }),
+
+  updateAnalytics: asyncHandler(async (req: Request, res: Response) => {
+    const result = await campaignService.updateAnalytics(req.params.campaignId, userId(req), req.body.analytics ?? req.body);
+    res.json({ analytics: result.analytics });
+  }),
+
   // ─── Creator ───────────────────────────────────────────────────────────────
   listCreators: asyncHandler(async (req: Request, res: Response) => {
     const q = req.query as { platform?: string; tier?: string; category?: string; partnerType?: string; search?: string };

@@ -34,6 +34,15 @@ export const fromProjectPageSchema = z.object({
   height: z.number().int().min(1).max(8192).optional(),
   meta: templateMetaSchema,
   note: z.string().max(1000).optional(),
+  overwrite: z.boolean().optional(),
+});
+
+export const fromProjectSchema = z.object({
+  projectId: z.string().min(1),
+  name: z.string().min(1).max(200),
+  meta: templateMetaSchema,
+  note: z.string().max(1000).optional(),
+  overwrite: z.boolean().optional(),
 });
 
 export { setDefaultSchema };
@@ -41,3 +50,4 @@ export { setDefaultSchema };
 export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
 export type UpdateTemplateInput = z.infer<typeof updateTemplateSchema>;
 export type FromProjectPageInput = z.infer<typeof fromProjectPageSchema>;
+export type FromProjectInput = z.infer<typeof fromProjectSchema>;

@@ -33,6 +33,7 @@ const GROUPS: { group: string; items: PaletteItem[] }[] = [
       { type: 'shape', shape: 'line', label: '直线', icon: '─', description: '直线分隔' },
       { type: 'title-block', label: '标题块', icon: 'H', description: '页面标题块' },
       { type: 'content-card', label: '卡片', icon: '▢', description: '通用内容卡片' },
+      { type: 'cards-row', label: '卡片行', icon: '⊟', description: '多卡片自动等分行' },
     ],
   },
   {

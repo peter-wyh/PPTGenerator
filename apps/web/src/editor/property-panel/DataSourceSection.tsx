@@ -17,7 +17,7 @@ import { FieldGroup } from './helpers';
 const MODE_LABELS: Record<DataSourceMode, { label: string; icon: string }> = {
   manual: { label: '手动', icon: '✏️' },
   url: { label: 'URL', icon: '🔗' },
-  project: { label: '项目', icon: '📥' },
+  project: { label: 'Campaign', icon: '📥' },
 };
 
 export function DataSourceSection({

@@ -131,7 +131,7 @@ export function DataConfigOverlay({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
           <div>
-            <div className="font-headings text-base font-semibold text-foreground-primary">
+            <div className="font-headings text-base skin-fw-heading text-foreground-primary">
               数据配置
             </div>
             {campaignName && (
@@ -182,7 +182,7 @@ export function DataConfigOverlay({ onClose }: Props) {
                 <span className="text-xs text-foreground-secondary">
                   共 {allCreators.length} 位达人 · 显示 {visibleCount} 位 · 隐藏 {hiddenIds.size} 位
                 </span>
-                <div className="flex gap-2">
+                <div className="flex skin-gap-sm">
                   <button
                     onClick={() => {
                       setHiddenIds(new Set());
@@ -220,7 +220,7 @@ export function DataConfigOverlay({ onClose }: Props) {
                       }`}
                     >
                       {/* 达人信息行 */}
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start skin-gap-md">
                         <button
                           onClick={() => toggleCreator(c)}
                           data-testid="toggle-creator"
@@ -234,8 +234,8 @@ export function DataConfigOverlay({ onClose }: Props) {
                           ✓
                         </button>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground-primary">{c.name}</span>
+                          <div className="flex items-center skin-gap-sm">
+                            <span className="skin-fw-body text-foreground-primary">{c.name}</span>
                             <span className="text-[10px] text-foreground-muted">
                               {c.platform} · {c.tier}
                             </span>
@@ -299,7 +299,7 @@ function CreatorPostList({ works }: { works: CreatorWorks }) {
         return (
           <div key={i}>
             <div
-              className={`flex items-center gap-3 rounded border bg-surface-hover/30 px-2 py-1.5 ${isOpen ? 'border-accent-primary/40' : 'border-border-subtle'}`}
+              className={`flex items-center skin-gap-md rounded border bg-surface-hover/30 px-2 py-1.5 ${isOpen ? 'border-accent-primary/40' : 'border-border-subtle'}`}
             >
               <button
                 type="button"
@@ -311,7 +311,7 @@ function CreatorPostList({ works }: { works: CreatorWorks }) {
                 {hasDaily ? (isOpen ? '▾' : '▸') : '•'}
               </button>
               {/* 多截图缩略图 */}
-              <div className="flex gap-1">
+              <div className="flex skin-gap-xs">
                 {(post.screenshots ?? []).slice(0, 3).map((ss, si) => (
                   ss.src ? (
                     <img key={si} src={ss.src} alt={ss.caption || ''} className="h-8 w-8 rounded border border-border-subtle object-cover" />
@@ -320,7 +320,7 @@ function CreatorPostList({ works }: { works: CreatorWorks }) {
               </div>
               {/* 标题 + 平台 */}
               <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-medium text-foreground-primary" title={post.title}>
+                <div className="truncate text-xs skin-fw-body text-foreground-primary" title={post.title}>
                   {post.title}
                 </div>
                 <div className="text-[10px] text-foreground-muted">
@@ -329,7 +329,7 @@ function CreatorPostList({ works }: { works: CreatorWorks }) {
                 </div>
               </div>
               {/* 指标（只读） */}
-              <div className="flex shrink-0 items-center gap-2 text-[10px] text-foreground-muted tabular-nums">
+              <div className="flex shrink-0 items-center skin-gap-sm text-[10px] text-foreground-muted tabular-nums">
                 <span title="曝光">👁 {post.impressions}</span>
                 <span title="点赞">👍 {post.likes}</span>
                 <span title="评论">💬 {post.comments}</span>
@@ -345,12 +345,12 @@ function CreatorPostList({ works }: { works: CreatorWorks }) {
                 <table className="w-full text-[10px] tabular-nums">
                   <thead>
                     <tr className="bg-surface-hover text-foreground-muted">
-                      <th className="px-2 py-1 text-left font-medium">日期</th>
-                      <th className="px-2 py-1 text-right font-medium">曝光</th>
-                      <th className="px-2 py-1 text-right font-medium">点赞</th>
-                      <th className="px-2 py-1 text-right font-medium">评论</th>
-                      <th className="px-2 py-1 text-right font-medium">转发</th>
-                      <th className="px-2 py-1 text-right font-medium">收藏</th>
+                      <th className="px-2 py-1 text-left skin-fw-body">日期</th>
+                      <th className="px-2 py-1 text-right skin-fw-body">曝光</th>
+                      <th className="px-2 py-1 text-right skin-fw-body">点赞</th>
+                      <th className="px-2 py-1 text-right skin-fw-body">评论</th>
+                      <th className="px-2 py-1 text-right skin-fw-body">转发</th>
+                      <th className="px-2 py-1 text-right skin-fw-body">收藏</th>
                     </tr>
                   </thead>
                   <tbody>

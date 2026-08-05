@@ -35,7 +35,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
       return { name: it.name || `#${i + 1}`, value: m ? parseFloat(m[0]) : items.length - i, sold: it.sold };
     });
     return (
-      <div className="flex h-full w-full gap-2 skin-card skin-pad-sm">
+      <div className="flex h-full w-full skin-gap-sm skin-card skin-pad-sm">
         <div className="min-w-0 flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart layout="vertical" data={chartData} margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
@@ -50,7 +50,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
         </div>
         {insight && (
           <div className="flex w-[220px] flex-none flex-col justify-center rounded-lg bg-primary/5 p-3">
-            <div className="mb-1 text-[11px] font-semibold text-primary">Insight</div>
+            <div className="mb-1 text-[11px] skin-fw-heading text-primary">Insight</div>
             <div className="text-xs text-foreground-secondary">{insight}</div>
           </div>
         )}
@@ -69,7 +69,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
     });
     const pieData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
     return (
-      <div className="flex h-full w-full gap-2 skin-card skin-pad-sm">
+      <div className="flex h-full w-full skin-gap-sm skin-card skin-pad-sm">
         <div className="flex min-w-0 flex-1 items-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -96,10 +96,10 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex w-[260px] flex-none flex-col gap-1 overflow-auto">
-          <div className="mb-1 text-[11px] font-semibold text-foreground-secondary">Top Products</div>
+        <div className="flex w-[260px] flex-none flex-col skin-gap-xs overflow-auto">
+          <div className="mb-1 text-[11px] skin-fw-heading text-foreground-secondary">Top Products</div>
           {items.slice(0, 8).map((it, i) => (
-            <div key={i} className="flex items-center gap-2 border-b border-border-subtle py-1 last:border-b-0">
+            <div key={i} className="flex items-center skin-gap-sm border-b border-border-subtle py-1 last:border-b-0">
               <span className="w-4 flex-none text-center text-[10px] text-foreground-muted">{i + 1}</span>
               <ImgOrPlaceholder url={it.img} label={it.name} cls="h-7 w-7 flex-none" />
               <div className="min-w-0 flex-1">
@@ -107,7 +107,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
                 <div className="text-[10px] text-foreground-muted">{it.cat}</div>
               </div>
               <div className="flex-none text-right">
-                <div className="font-data text-xs font-semibold text-foreground-primary">{it.sold}</div>
+                <div className="font-data text-xs skin-fw-heading text-foreground-primary">{it.sold}</div>
                 <div className="text-[10px] text-foreground-secondary">{it.share}</div>
               </div>
             </div>
@@ -115,7 +115,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
         </div>
         {insight && (
           <div className="flex w-[200px] flex-none flex-col justify-center rounded-lg bg-primary/5 p-3">
-            <div className="mb-1 text-[11px] font-semibold text-primary">Insight</div>
+            <div className="mb-1 text-[11px] skin-fw-heading text-primary">Insight</div>
             <div className="text-xs text-foreground-secondary">{insight}</div>
           </div>
         )}
@@ -124,7 +124,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
   }
 
   const Row = ({ it, rank }: { it: (typeof items)[number]; rank: number }) => (
-    <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 last:border-b-0">
+    <div className="flex items-center skin-gap-sm border-b border-border-subtle py-1.5 last:border-b-0">
       <span className="w-5 flex-none text-center text-xs text-foreground-muted">{rank}</span>
       <ImgOrPlaceholder url={it.img} label={it.name} cls="h-10 w-10 flex-none" />
       <div className="min-w-0 flex-1">
@@ -132,23 +132,23 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
         <div className="text-[10px] text-foreground-muted">{it.cat}</div>
       </div>
       <div className="flex-none text-right">
-        <div className="font-data text-sm font-semibold text-foreground-primary">{it.sold}</div>
+        <div className="font-data text-sm skin-fw-heading text-foreground-primary">{it.sold}</div>
         <div className="text-[10px] text-foreground-secondary">Share {it.share}</div>
       </div>
     </div>
   );
 
   return (
-    <div className="flex h-full w-full gap-2 skin-card skin-pad-sm">
+    <div className="flex h-full w-full skin-gap-sm skin-card skin-pad-sm">
       <div className={insight ? 'min-w-0 flex-1' : 'min-w-0 flex-1'}>
         {variant === 'rank' ? (
           <div className="flex flex-col">{items.map((it, i) => <Row key={i} it={it} rank={i + 1} />)}</div>
         ) : (
           <div className={`grid ${variant === 'grid' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
             {items.map((it, i) => (
-              <div key={i} className="flex flex-col gap-1 rounded-lg border border-border-subtle p-2">
+              <div key={i} className="flex flex-col skin-gap-xs rounded-lg border border-border-subtle p-2">
                 <ImgOrPlaceholder url={it.img} label={it.name} cls="h-12 w-full" />
-                <div className="truncate text-xs font-medium text-foreground-primary">{it.name}</div>
+                <div className="truncate text-xs skin-fw-body text-foreground-primary">{it.name}</div>
                 <div className="flex justify-between text-[10px] text-foreground-secondary">
                   <span>{it.sold}</span>
                   <span>{it.share}</span>
@@ -160,7 +160,7 @@ export function ProductPerformance({ data }: { data: ProductPerformanceData }) {
       </div>
       {insight && (
         <div className="flex w-[260px] flex-none flex-col justify-center rounded-lg bg-primary/5 p-3">
-          <div className="mb-1 text-[11px] font-semibold text-primary">Insight</div>
+          <div className="mb-1 text-[11px] skin-fw-heading text-primary">Insight</div>
           <div className="text-xs text-foreground-secondary">{insight}</div>
         </div>
       )}

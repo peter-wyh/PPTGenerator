@@ -55,6 +55,8 @@ export const DEFAULT_SIZES: Record<ComponentType, { w: number; h: number }> = {
   'search-term-table': { w: 560, h: 280 },
   'hourly-heatmap': { w: 560, h: 200 },
   'creator-audience-profile': { w: 720, h: 360 },
+  'page-header': { w: 1280, h: 60 },
+  'cards-row': { w: 1184, h: 180 },
 };
 
 /** 兜底网格大小（theme.layout.gridSize 不可得时回退，如未加载项目态）。 */
@@ -848,6 +850,22 @@ export function getDefaultData(type: ComponentType): ComponentData {
         variant: 'grid-3',
         title: 'Audience Profile',
         modules: AUDIENCE_MODULE_CATALOG.map((m) => ({ key: m.key, selected: true, items: [] })),
+      };
+    case 'page-header':
+      return {
+        leftLogo: { src: '', text: '广告主', initials: 'AD' },
+        rightLogo: { src: '', text: '业务线', initials: 'BL' },
+        dateLabel: '',
+        background: '#ffffff',
+      };
+    case 'cards-row':
+      return {
+        items: [
+          { title: '卡片标题 1', body: '卡片内容描述', icon: '', footer: '' },
+          { title: '卡片标题 2', body: '卡片内容描述', icon: '', footer: '' },
+          { title: '卡片标题 3', body: '卡片内容描述', icon: '', footer: '' },
+        ],
+        gap: 16,
       };
     default:
       return { content: '', fontSize: 14, color: 'var(--foreground-primary)' };

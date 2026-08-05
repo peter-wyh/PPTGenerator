@@ -126,3 +126,63 @@ export function clampResize(
   }
   return { x, y, w, h };
 }
+
+/**
+ * 把组件从旧安全区「等比适配」到新安全区。
+ * 规则：
+ *  - page-header (full-width) 组件：仅 y 按比例映射，x/w 保持 0/canvasW 不变。
+ *  - 普通组件：在旧 safe 内的相对比例 (0~1) → 映射到新 safe 的绝对坐标。
+ *  - 组件在旧 safe 外（出血组件）：只做平移 (offset = newMargin - oldMargin)，不改 w/h。
+ *  - 新 safe 为 null（margin=0）：不动（全画布不约束）。
+ */
+export function refitToSafeArea(
+  comp: { x: number; y: number; w: number; h: number; type?: string },
+  oldSafe: SafeRect | null,
+  newSafe: SafeRect | null,
+  oldMargin: number,
+  newMargin: number,
+  cw: number,
+): { x: number; y: number; w: number; h: number } {
+  if (!newSafe) return { x: comp.x, y: comp.y, w: comp.w, h: comp.h };
+
+  // page-header: 全宽组件，只按比例映射 y
+  if (comp.type === 'page-header') {
+    const oldH = oldSafe ? oldSafe.bottom - oldSafe.top : cw;
+    const newH = newSafe.bottom - newSafe.top;
+    const ratio = oldH > 0 ? newH / oldH : 1;
+    const yOff = newMargin - oldMargin;
+    return {
+      x: 0,
+      y: oldSafe ? comp.y * ratio : Math.max(0, comp.y + yOff),
+      w: cw,
+      h: comp.h,
+    };
+  }
+
+  // 组件在旧 safe 内 → 比例映射
+  if (oldSafe) {
+    const oldW = oldSafe.right - oldSafe.left;
+    const oldH = oldSafe.bottom - oldSafe.top;
+    const relX = oldW > 0 ? (comp.x - oldSafe.left) / oldW : 0;
+    const relY = oldH > 0 ? (comp.y - oldSafe.top) / oldH : 0;
+    const relW = oldW > 0 ? comp.w / oldW : comp.w;
+    const newW = newSafe.right - newSafe.left;
+    const newH = newSafe.bottom - newSafe.top;
+    return {
+      x: Math.round(newSafe.left + relX * newW),
+      y: Math.round(newSafe.top + relY * newH),
+      w: Math.round(relW * newW),
+      h: comp.h, // 高度保持不变（避免文字组件压扁）
+    };
+  }
+
+  // 旧 safe 不存在（margin=0）→ 仅平移
+  const yOff = newMargin - oldMargin;
+  return {
+    x: Math.max(newSafe.left, comp.x + yOff),
+    y: comp.y + yOff,
+    w: comp.w,
+    h: comp.h,
+  };
+}
+

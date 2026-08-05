@@ -60,8 +60,19 @@ export const templatesApi = {
     height?: number;
     meta?: ProjectMeta;
     note?: string;
+    overwrite?: boolean;
   }) =>
     api.post<{ template: TemplateDetail }>('/templates/from-project-page', input).then((r) => r.data.template),
+
+  /** 从整个项目创建模板（ADMIN）。将项目的所有页面保存为可复用模板。 */
+  createFromProject: (input: {
+    projectId: string;
+    name: string;
+    meta?: ProjectMeta;
+    note?: string;
+    overwrite?: boolean;
+  }) =>
+    api.post<{ template: TemplateDetail }>('/templates/from-project', input).then((r) => r.data.template),
 
   /** 发布/取消发布（便捷封装）。 */
   setStatus: (id: string, status: TemplateStatus) =>

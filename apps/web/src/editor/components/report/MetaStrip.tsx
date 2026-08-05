@@ -8,7 +8,7 @@ type MetaItem = { iconKey: string; label: string; text: string };
 
 function MetaInline({ items }: { items: MetaItem[] }) {
   return (
-    <div className="flex h-full w-full flex-wrap items-center gap-2 overflow-auto">
+    <div className="flex h-full w-full flex-wrap items-center skin-gap-sm overflow-auto">
       {items.map((it, i) => {
         const Icon = findIcon(it.iconKey)?.Comp;
         return (
@@ -49,7 +49,7 @@ function MetaList({ items }: { items: MetaItem[] }) {
       {items.map((it, i) => {
         const Icon = findIcon(it.iconKey)?.Comp;
         return (
-          <div key={i} className="flex items-baseline justify-between gap-3 py-1.5">
+          <div key={i} className="flex items-baseline justify-between skin-gap-md py-1.5">
             <span className="flex items-center gap-1.5">
               {Icon && <Icon size={13} className="text-foreground-secondary" />}
               <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{it.label}</span>
@@ -64,11 +64,11 @@ function MetaList({ items }: { items: MetaItem[] }) {
 
 function MetaCards({ items }: { items: MetaItem[] }) {
   return (
-    <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto">
+    <div className="grid h-full w-full grid-cols-3 skin-gap-sm overflow-auto">
       {items.map((it, i) => {
         const Icon = findIcon(it.iconKey)?.Comp;
         return (
-          <div key={i} className="flex flex-col justify-center gap-1 skin-card-flat skin-pad-sm">
+          <div key={i} className="flex flex-col justify-center skin-gap-xs skin-card skin-pad-sm">
             <span className="flex items-center gap-1.5">
               {Icon && <Icon size={14} className="text-foreground-secondary" />}
               <span className="text-[11px] uppercase tracking-wide text-foreground-secondary">{it.label}</span>
@@ -88,7 +88,7 @@ function MetaStat({ items }: { items: MetaItem[] }) {
         const Icon = findIcon(it.iconKey)?.Comp;
         return (
           <div key={i} className="flex flex-col">
-            <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary">
+            <span className="flex items-center skin-gap-xs text-[11px] uppercase tracking-wide text-foreground-secondary">
               {Icon && <Icon size={13} className="text-foreground-secondary" />}
               {it.label}
             </span>

@@ -342,7 +342,7 @@ export function Templates() {
                         onClick={() => void handleToggleStatus(t)}
                         disabled={togglingId === t.id}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary disabled:opacity-50"
-                        title={t.status === 'DRAFT' ? '发布：BD 可基于此模板创建项目' : '取消发布'}
+                        title={t.status === 'DRAFT' ? '发布：BD 可基于此模板创建报告' : '取消发布'}
                       >
                         {t.status === 'DRAFT' ? '发布' : '取消发布'}
                       </button>

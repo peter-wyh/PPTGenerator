@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import type { Campaign, ProjectMeta, Scenario, ScenarioSub } from '@mediakit/shared';
+import type { Campaign, ProjectMeta, ReportPeriod, Scenario, ScenarioSub, TemplateSummary } from '@mediakit/shared';
 import { Button } from './Button';
 import { Input } from './Input';
 import {
   ADVERTISERS,
   BUSINESS_LINES,
   isCampaignScenario,
+  SCENARIO_LABELS,
   SCENARIOS,
   TEMPLATE_TYPES,
 } from '@/projectsMeta';
 import { listCampaigns } from '@/api/campaigns';
 import { lookupApi } from '@/api/lookup';
+import { templatesApi } from '@/api/templates';
 
 /** PPT 多页固定 16:9（1920×1080），不支持自定义。 */
 const PPT_SIZE = { w: 1920, h: 1080 };
@@ -40,6 +42,50 @@ const CREATOR_SUGGESTIONS = ['alex', 'stella', 'reese', 'stacey'];
 const selectCls =
   'w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary';
 
+/** 报告时间范围类型。月报→选月，周报/双周报→选日期范围。 */
+function isMonthly(sub: string) {
+  return sub === 'monthly' || sub === 'wrap-up';
+}
+
+/** 从 month 字符串推导 startDate/endDate。 */
+function monthToRange(month: string): { startDate: string; endDate: string } {
+  const [y, m] = month.split('-').map(Number);
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0); // last day of month
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { startDate: fmt(start), endDate: fmt(end) };
+}
+
+
+/** 解析报告时间范围 → {startDate, endDate}(月报→month 推导;周报/双周报→直接)。无则 null。 */
+function resolveReportPeriod(
+  p: { month?: string; startDate?: string; endDate?: string } | null,
+  sub: string | undefined,
+): { startDate: string; endDate: string } | null {
+  if (!p || !sub) return null;
+  if (isMonthly(sub)) return p.month ? monthToRange(p.month) : null;
+  if (sub === 'weekly' || sub === 'biweekly') {
+    if (p.startDate && p.endDate) return { startDate: p.startDate, endDate: p.endDate };
+  }
+  return null;
+}
+
+/** 报告时间范围是否在 Campaign 范围内;越界返回错误文案,否则 null(无 Campaign/无日期→跳过)。 */
+function reportPeriodRangeError(
+  period: { startDate: string; endDate: string } | null,
+  campaign: { startDate?: string; endDate?: string } | null,
+): string | null {
+  if (!period || !campaign) return null;
+  const cs = campaign.startDate;
+  const ce = campaign.endDate;
+  if (!cs || !ce) return null; // Campaign 无日期 → 不校验
+  if (period.startDate && period.startDate < cs)
+    return `报告开始日期(${period.startDate})早于 Campaign 开始日期(${cs})`;
+  if (period.endDate && period.endDate > ce)
+    return `报告结束日期(${period.endDate})晚于 Campaign 结束日期(${ce})`;
+  return null;
+}
+
 export interface ProjectFormInitial {
   name: string;
   width: number;
@@ -58,7 +104,7 @@ interface Props {
   title?: string;
   submitLabel?: string;
   onCancel: () => void;
-  onSubmit: (values: { name: string; width: number; height: number; meta: ProjectMeta }) => void;
+  onSubmit: (values: { name: string; width: number; height: number; meta: ProjectMeta; templateId?: string }) => void;
 }
 
 /** 新建/编辑项目表单：场景驱动，campaign 类型从上游接口(mock)选择具体 campaign 并联动填充。 */
@@ -68,7 +114,7 @@ export function CreateProjectDialog({
   error,
   initial,
   lockScenario = false,
-  title = '新建项目',
+  title = '新建报告',
   submitLabel = '创建',
   onCancel,
   onSubmit,
@@ -79,10 +125,20 @@ export function CreateProjectDialog({
   const [creator, setCreator] = useState('');
   const [styleType, setStyleType] = useState<'ppt' | 'single' | 'ai-html'>('ppt');
 
+  // 创建模式：'blank' = 从空白创建，'template' = 从模版创建
+  const [createMode, setCreateMode] = useState<'blank' | 'template'>('blank');
+  // 已发布模版列表
+  const [publishedTemplates, setPublishedTemplates] = useState<TemplateSummary[]>([]);
+  const [templatesFetching, setTemplatesFetching] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+
   // campaign（上游 mock）
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignId, setCampaignId] = useState('');
+
+  // 报告时间范围（月报=选月，周报/双周报=选日期范围）
+  const [reportPeriod, setReportPeriod] = useState<ReportPeriod>({});
 
   // 业务线(顶层必填;campaign 场景由 campaign 自动回填,可改)
   const [businessLine, setBusinessLine] = useState('');
@@ -99,6 +155,29 @@ export function CreateProjectDialog({
   const [singleW, setSingleW] = useState(SINGLE_PRESETS[1].w);
   const [singleH, setSingleH] = useState(SINGLE_PRESETS[1].h);
   const isSingle = styleType === 'single';
+
+  // 拉取已发布模版列表（模版模式下展示）
+  useEffect(() => {
+    if (!open || createMode !== 'template') return;
+    let cancelled = false;
+    setTemplatesFetching(true);
+    templatesApi
+      .list({ status: 'PUBLISHED' })
+      .then((list) => {
+        if (cancelled) return;
+        setPublishedTemplates(list);
+        setSelectedTemplateId(list[0]?.id ?? '');
+      })
+      .catch(() => {
+        if (!cancelled) setPublishedTemplates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTemplatesFetching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, createMode]);
 
   const isCampaign = isCampaignScenario(scenario as Scenario);
   const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
@@ -179,12 +258,34 @@ export function CreateProjectDialog({
 
   // Campaign 现为可选绑定：不再要求 campaign 场景必须选择 Campaign。
   // 仅校验项目名 + 业务线必填。
-  const canSubmit = !!name.trim() && !!businessLine;
+  // 报告时间范围必须落在所选 Campaign 的 [startDate, endDate] 内
+  const reportSubForCheck =
+    scenario === 'campaign-report' ? (templateType || scenarioSub) : undefined;
+  const dateRangeError = reportPeriodRangeError(
+    resolveReportPeriod(reportPeriod, reportSubForCheck),
+    selectedCampaign,
+  );
+
+  const canSubmit = createMode === 'template'
+    ? !!name.trim() && !!selectedTemplateId
+    : !!name.trim() && !!businessLine && !dateRangeError;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed || !canSubmit) return;
+
+    // 模版模式：直接传 templateId，由父组件调用 createProjectFromTemplate
+    if (createMode === 'template' && selectedTemplateId) {
+      onSubmit({
+        name: trimmed,
+        width: PPT_SIZE.w,
+        height: PPT_SIZE.h,
+        meta: {} as ProjectMeta,
+        templateId: selectedTemplateId,
+      });
+      return;
+    }
 
     // PPT 固定 1920×1080；单页面用预设或自定义
     const w = isSingle ? Math.max(200, Math.min(5000, Math.round(singleW))) : PPT_SIZE.w;
@@ -193,6 +294,20 @@ export function CreateProjectDialog({
     // campaign-report 的模版类型取值与 scenarioSub 同集合;报告类型下拉双写两者。
     const reportSub: ScenarioSub | undefined =
       scenario === 'campaign-report' ? ((templateType || scenarioSub) as ScenarioSub) : undefined;
+
+    // 计算 reportPeriod（月报→month 推导 startDate/endDate；周报→直接使用）
+    let finalPeriod: ReportPeriod | undefined;
+    if (reportSub && isMonthly(reportSub)) {
+      if (reportPeriod.month) {
+        const range = monthToRange(reportPeriod.month);
+        finalPeriod = { month: reportPeriod.month, ...range };
+      }
+    } else if (reportSub === 'weekly' || reportSub === 'biweekly') {
+      if (reportPeriod.startDate || reportPeriod.endDate) {
+        finalPeriod = { startDate: reportPeriod.startDate, endDate: reportPeriod.endDate };
+      }
+    }
+
     // 编辑模式：保留现有 meta 的所有字段，仅覆盖对话框管理的字段。
     const preservedFields = initial?.meta ? { ...initial.meta } : {};
     const meta: ProjectMeta = {
@@ -203,6 +318,7 @@ export function CreateProjectDialog({
       templateType: (templateType || reportSub) || undefined,
       scenarioSub: reportSub,
       styleType,
+      reportPeriod: finalPeriod,
     };
 
     // campaign-report 场景：仅在用户确实选择了 Campaign 时覆盖 campaignId 等字段。
@@ -238,9 +354,102 @@ export function CreateProjectDialog({
       >
         <h3 className="font-headings text-base font-semibold text-foreground-primary">{title}</h3>
 
+        {/* 创建模式切换：从空白 / 从模版（编辑模式不显示） */}
+        {!lockScenario && (
+          <div className="mt-3 flex gap-1 rounded-lg bg-surface-hover p-1">
+            <button
+              type="button"
+              onClick={() => setCreateMode('blank')}
+              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                createMode === 'blank'
+                  ? 'bg-surface-primary text-foreground-primary shadow-sm'
+                  : 'text-foreground-secondary hover:text-foreground-primary'
+              }`}
+            >
+              从空白创建
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateMode('template')}
+              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                createMode === 'template'
+                  ? 'bg-surface-primary text-foreground-primary shadow-sm'
+                  : 'text-foreground-secondary hover:text-foreground-primary'
+              }`}
+            >
+              从模版创建
+            </button>
+          </div>
+        )}
+
+        {/* ========== 模版模式：选择已发布模版 ========== */}
+        {createMode === 'template' && !lockScenario ? (
+          <div className="mt-4 space-y-4">
+            <Input
+              label="报告名称"
+              name="name"
+              placeholder="输入报告名称"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              required
+            />
+            <div>
+              <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">选择模版</span>
+              {templatesFetching ? (
+                <p className="py-8 text-center text-sm text-foreground-muted">加载模版…</p>
+              ) : publishedTemplates.length === 0 ? (
+                <div className="rounded-lg border border-border-subtle bg-surface-hover/40 p-4 text-center">
+                  <p className="text-sm text-foreground-muted">暂无已发布模版</p>
+                  <p className="mt-1 text-xs text-foreground-muted">请在「模版管理」中创建并发布模版</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {publishedTemplates.map((t) => {
+                    const active = t.id === selectedTemplateId;
+                    const bl = t.meta?.businessLine ?? '';
+                    const sc = t.meta?.scenario ? SCENARIO_LABELS[t.meta.scenario as Scenario] : '';
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setSelectedTemplateId(t.id)}
+                        className={`overflow-hidden rounded-lg border text-left transition ${
+                          active
+                            ? 'border-accent-primary ring-2 ring-accent-primary/20'
+                            : 'border-border-default hover:border-border-hover hover:bg-surface-hover'
+                        }`}
+                      >
+                        <div
+                          className="flex aspect-video items-center justify-center text-xl font-bold"
+                          style={{
+                            background: active
+                              ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary, #6366f1))'
+                              : 'linear-gradient(135deg, #f0f0f0, #e8e8e8)',
+                            color: active ? '#fff' : '#bbb',
+                          }}
+                        >
+                          {(bl || 'TPL').slice(0, 3).toUpperCase()}
+                        </div>
+                        <div className="p-2">
+                          <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{t.name}</div>
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                            {bl && <span className="rounded bg-surface-hover px-1 text-[10px] text-foreground-secondary">{bl}</span>}
+                            {sc && <span className="rounded bg-surface-hover px-1 text-[10px] text-foreground-secondary">{sc}</span>}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+        /* ========== 空白模式：原有表单 ========== */
         <div className="mt-4 space-y-4">
           <Input
-            label="项目名称"
+            label="报告名称"
             name="name"
             placeholder="例如：2026 Q4 增长复盘"
             value={name}
@@ -403,6 +612,69 @@ export function CreateProjectDialog({
                   </select>
                 </label>
               )}
+
+              {/* 报告时间范围：月报→选月，周报/双周报→选日期范围 */}
+              {scenario === 'campaign-report' && (templateType || scenarioSub) && (
+                <div className="space-y-2">
+                  <span className="block text-sm font-medium text-foreground-secondary">
+                    报告时间范围
+                  </span>
+                  {isMonthly(templateType || scenarioSub) ? (
+                    /* 月报/总结：月份选择器 */
+                    <input
+                      type="month"
+                      className={selectCls}
+                      value={reportPeriod.month ?? ''}
+                      onChange={(e) => setReportPeriod((p: ReportPeriod) => ({ ...p, month: e.target.value }))}
+                    />
+                  ) : (
+                    /* 周报/双周报：日期范围选择器 */
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="date"
+                        className={selectCls}
+                        value={reportPeriod.startDate ?? ''}
+                        onChange={(e) => setReportPeriod((p: ReportPeriod) => ({ ...p, startDate: e.target.value }))}
+                        placeholder="开始日期"
+                      />
+                      <input
+                        type="date"
+                        className={selectCls}
+                        value={reportPeriod.endDate ?? ''}
+                        onChange={(e) => setReportPeriod((p: ReportPeriod) => ({ ...p, endDate: e.target.value }))}
+                        placeholder="结束日期"
+                      />
+                    </div>
+                  )}
+                  {(() => {
+                    const sub = templateType || scenarioSub;
+                    const period = reportPeriod;
+                    if (isMonthly(sub) && period.month) {
+                      const r = monthToRange(period.month);
+                      return (
+                        <p className="text-[11px] text-foreground-muted">
+                          时间范围：{r.startDate} ~ {r.endDate}
+                        </p>
+                      );
+                    }
+                    if ((sub === 'weekly' || sub === 'biweekly') && period.startDate && period.endDate) {
+                      return (
+                        <p className="text-[11px] text-foreground-muted">
+                          时间范围：{period.startDate} ~ {period.endDate}
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="text-[11px] text-foreground-muted">
+                        {isMonthly(sub) ? '请选择报告月份' : '请选择报告起止日期'}
+                      </p>
+                    );
+                  })()}
+                  {dateRangeError && (
+                    <p className="text-[11px] text-red">{dateRangeError}</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -485,6 +757,7 @@ export function CreateProjectDialog({
 
           {error && <p className="text-sm text-red">{error}</p>}
         </div>
+        )}
 
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>

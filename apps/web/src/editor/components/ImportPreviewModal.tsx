@@ -25,10 +25,10 @@ export function ImportPreviewModal({ kind, items, onConfirm, onCancel }: Props) 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div
-        className="flex max-h-[90vh] w-[860px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        className="flex max-h-[90vh] w-[860px] flex-col skin-gap-md overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="font-headings text-sm font-semibold text-foreground-primary">
+        <div className="font-headings text-sm skin-fw-heading text-foreground-primary">
           导入预览 · {labelMap[kind] ?? kind} · 共 {items.length} 行(有效 {valid.length})
         </div>
         <div className="overflow-auto rounded-lg border border-border-default">
@@ -36,9 +36,9 @@ export function ImportPreviewModal({ kind, items, onConfirm, onCancel }: Props) 
             <thead>
               <tr className="bg-surface-hover text-left text-foreground-muted">
                 {columns.map((c) => (
-                  <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">{c}</th>
+                  <th key={c} className="whitespace-nowrap px-2 py-1.5 skin-fw-body">{c}</th>
                 ))}
-                <th className="px-2 py-1.5 font-medium">校验</th>
+                <th className="px-2 py-1.5 skin-fw-body">校验</th>
               </tr>
             </thead>
             <tbody>
@@ -57,7 +57,7 @@ export function ImportPreviewModal({ kind, items, onConfirm, onCancel }: Props) 
             </tbody>
           </table>
         </div>
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end skin-gap-sm">
           <button
             onClick={onCancel}
             className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"

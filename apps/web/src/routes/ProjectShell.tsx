@@ -30,7 +30,7 @@ export function ProjectShell() {
     projectsApi
       .get(id)
       .then(setProject)
-      .catch(() => setError('项目加载失败或不存在'));
+      .catch(() => setError('报告加载失败或不存在'));
   }, [id]);
 
   if (error) return <div className="p-8 text-sm text-red">{error}</div>;
@@ -58,7 +58,7 @@ function SeedHintBanner({ seeded, onDismiss }: { seeded: boolean; onDismiss: () 
       role="status"
     >
       <span>
-        {seeded ? '已套用默认模板的页面骨架与样式' : '未配置该业务线的默认模板,已创建空白项目'}
+        {seeded ? '已套用默认模板的页面骨架与样式' : '未配置该业务线的默认模板,已创建空白报告'}
       </span>
       <button
         type="button"

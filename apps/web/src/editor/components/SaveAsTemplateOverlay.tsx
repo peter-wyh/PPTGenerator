@@ -49,6 +49,7 @@ export function SaveAsTemplateOverlay({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -56,9 +57,10 @@ export function SaveAsTemplateOverlay({
   const tplTypeOptions: [string, string][] =
     scenario && TEMPLATE_TYPES[scenario] ? TEMPLATE_TYPES[scenario] : [];
 
-  async function handleSave() {
+  async function handleSave(overwrite = false) {
     setError(null);
     setSuccess(null);
+    setConflict(null);
     setSaving(true);
     try {
       const meta: Partial<ProjectMeta> = {};
@@ -75,10 +77,16 @@ export function SaveAsTemplateOverlay({
         height: canvasHeight,
         meta: meta as ProjectMeta,
         note: note || undefined,
+        overwrite,
       });
-      setSuccess(`已保存为模板「${tpl.name}」，可在模板管理中查看和发布。`);
-    } catch {
-      setError('保存失败，请重试');
+      setSuccess(`已${overwrite ? '覆盖' : '保存为'}模板「${tpl.name}」，可在模板管理中查看和发布。`);
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { error?: { message?: string } } } };
+      if (e.response?.status === 409) {
+        setConflict(e.response?.data?.error?.message ?? '已存在同名模板，是否覆盖？');
+      } else {
+        setError('保存失败，请重试');
+      }
     } finally {
       setSaving(false);
     }
@@ -91,7 +99,7 @@ export function SaveAsTemplateOverlay({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
-          <h2 className="text-base font-semibold text-foreground-primary">保存为模板</h2>
+          <h2 className="text-base skin-fw-heading text-foreground-primary">保存为模板</h2>
           <button onClick={onClose} className="text-foreground-muted hover:text-foreground-primary">✕</button>
         </div>
 
@@ -106,7 +114,7 @@ export function SaveAsTemplateOverlay({
             {success ? (
               <div className="space-y-3">
                 <p className="rounded-lg bg-green/10 px-3 py-2 text-sm text-green">{success}</p>
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end skin-gap-sm">
                   <button
                     onClick={onClose}
                     className="rounded-lg border border-border-default px-4 py-2 text-sm hover:bg-surface-hover"
@@ -118,7 +126,7 @@ export function SaveAsTemplateOverlay({
             ) : (
               <>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-foreground-secondary">模板名称</label>
+                  <label className="mb-1 block text-xs skin-fw-body text-foreground-secondary">模板名称</label>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -127,9 +135,9 @@ export function SaveAsTemplateOverlay({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 skin-gap-md">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-foreground-secondary">业务线</label>
+                    <label className="mb-1 block text-xs skin-fw-body text-foreground-secondary">业务线</label>
                     <select
                       value={businessLine}
                       onChange={(e) => setBusinessLine(e.target.value)}
@@ -142,7 +150,7 @@ export function SaveAsTemplateOverlay({
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-foreground-secondary">场景</label>
+                    <label className="mb-1 block text-xs skin-fw-body text-foreground-secondary">场景</label>
                     <select
                       value={scenario}
                       onChange={(e) => {
@@ -164,7 +172,7 @@ export function SaveAsTemplateOverlay({
                 {/* 场景子类：ScenarioSub 有 3 个固定值 */}
                 {scenario && (
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-foreground-secondary">场景子类</label>
+                    <label className="mb-1 block text-xs skin-fw-body text-foreground-secondary">场景子类</label>
                     <select
                       value={scenarioSub}
                       onChange={(e) => setScenarioSub(e.target.value as ScenarioSub | '')}
@@ -181,7 +189,7 @@ export function SaveAsTemplateOverlay({
                 {/* 模版类型：按场景动态 */}
                 {scenario && tplTypeOptions.length > 0 && (
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-foreground-secondary">模版类型</label>
+                    <label className="mb-1 block text-xs skin-fw-body text-foreground-secondary">模版类型</label>
                     <select
                       value={templateType}
                       onChange={(e) => setTemplateType(e.target.value)}
@@ -196,7 +204,7 @@ export function SaveAsTemplateOverlay({
                 )}
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-foreground-secondary">备注（可选）</label>
+                  <label className="mb-1 block text-xs skin-fw-body text-foreground-secondary">备注（可选）</label>
                   <input
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
@@ -213,22 +221,46 @@ export function SaveAsTemplateOverlay({
                   <p className="text-sm text-red">{error}</p>
                 )}
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    onClick={onClose}
-                    disabled={saving}
-                    className="rounded-lg border border-border-default px-4 py-2 text-sm hover:bg-surface-hover disabled:opacity-50"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving || !name.trim()}
-                    className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50"
-                  >
-                    {saving ? '保存中…' : '保存模板'}
-                  </button>
-                </div>
+                {conflict && (
+                  <div className="space-y-2 rounded-lg bg-orange/10 border border-orange/30 px-3 py-2">
+                    <p className="text-sm text-orange-dark">{conflict}</p>
+                    <div className="flex skin-gap-sm">
+                      <button
+                        onClick={() => handleSave(true)}
+                        disabled={saving}
+                        className="rounded-lg bg-orange px-3 py-1.5 text-xs skin-fw-body text-white hover:bg-orange-dark disabled:opacity-50"
+                      >
+                        {saving ? '覆盖中…' : '覆盖已有模板'}
+                      </button>
+                      <button
+                        onClick={() => setConflict(null)}
+                        disabled={saving}
+                        className="rounded-lg border border-border-default px-3 py-1.5 text-xs hover:bg-surface-hover disabled:opacity-50"
+                      >
+                        修改名称
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!conflict && (
+                  <div className="flex justify-end skin-gap-sm pt-2">
+                    <button
+                      onClick={onClose}
+                      disabled={saving}
+                      className="rounded-lg border border-border-default px-4 py-2 text-sm hover:bg-surface-hover disabled:opacity-50"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={() => handleSave(false)}
+                      disabled={saving || !name.trim()}
+                      className="rounded-lg bg-accent-primary px-4 py-2 text-sm skin-fw-body text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50"
+                    >
+                      {saving ? '保存中…' : '保存模板'}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>

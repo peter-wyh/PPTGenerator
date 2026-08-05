@@ -11,6 +11,7 @@ import { shareRoutes } from '../modules/share/share.routes';
 import { uploadRoutes } from '../modules/upload/upload.routes';
 import { fontsRoutes } from '../modules/fonts/fonts.routes';
 import { schemesRoutes } from '../modules/schemes/schemes.routes';
+import { htmlTemplateRoutes } from '../modules/html-templates/html-templates.routes';
 
 export const apiRouter = Router();
 
@@ -28,3 +29,4 @@ apiRouter.use('/share', shareRoutes);
 apiRouter.use('/uploads', uploadRoutes);
 apiRouter.use('/fonts', fontsRoutes);
 apiRouter.use('/schemes', schemesRoutes);
+apiRouter.use('/html-templates', htmlTemplateRoutes);

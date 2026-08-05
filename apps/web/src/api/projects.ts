@@ -21,6 +21,14 @@ export const projectsApi = {
   duplicate: (id: string) =>
     api.post<{ project: ProjectDetail }>(`/projects/${id}/duplicate`).then((r) => r.data.project),
 
+  /** 取某报告的 HTML 源码(仅供列表预览/下载/复制,按需 fetch)。 */
+  getHtml: (id: string) =>
+    api
+      .get<{ id: string; name: string; html: string; updatedAt: string }>(
+        `/projects/${id}/html`,
+      )
+      .then((r) => r.data),
+
   /** 导出图片（PNG ZIP）：返回 Blob。
    *  format=images，后端用 puppeteer 逐页截图 2x 高清 PNG，打包 ZIP。 */
   exportImages: (id: string) =>

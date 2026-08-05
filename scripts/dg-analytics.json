@@ -1,0 +1,158 @@
+{
+  "trend": [
+    {"date":"2026-03-01","revenue":820,"spend":180,"commission":98,"orders":9,"roas":4.6},
+    {"date":"2026-03-02","revenue":1450,"spend":320,"commission":174,"orders":15,"roas":4.5},
+    {"date":"2026-03-03","revenue":2100,"spend":450,"commission":252,"orders":22,"roas":4.7},
+    {"date":"2026-03-04","revenue":1850,"spend":400,"commission":222,"orders":19,"roas":4.6},
+    {"date":"2026-03-05","revenue":1680,"spend":380,"commission":202,"orders":18,"roas":4.4},
+    {"date":"2026-03-06","revenue":2240,"spend":460,"commission":269,"orders":24,"roas":4.9},
+    {"date":"2026-03-07","revenue":2890,"spend":520,"commission":347,"orders":31,"roas":5.6},
+    {"date":"2026-03-08","revenue":3120,"spend":540,"commission":374,"orders":33,"roas":5.8},
+    {"date":"2026-03-09","revenue":2680,"spend":500,"commission":322,"orders":28,"roas":5.4},
+    {"date":"2026-03-10","revenue":2340,"spend":480,"commission":281,"orders":25,"roas":4.9},
+    {"date":"2026-03-11","revenue":1950,"spend":420,"commission":234,"orders":21,"roas":4.6},
+    {"date":"2026-03-12","revenue":2120,"spend":440,"commission":254,"orders":23,"roas":4.8},
+    {"date":"2026-03-13","revenue":2680,"spend":510,"commission":322,"orders":28,"roas":5.3},
+    {"date":"2026-03-14","revenue":3450,"spend":600,"commission":414,"orders":36,"roas":5.8},
+    {"date":"2026-03-15","revenue":3890,"spend":650,"commission":467,"orders":41,"roas":6.0},
+    {"date":"2026-03-16","revenue":3120,"spend":560,"commission":374,"orders":33,"roas":5.6},
+    {"date":"2026-03-17","revenue":2680,"spend":500,"commission":322,"orders":28,"roas":5.4},
+    {"date":"2026-03-18","revenue":2240,"spend":460,"commission":269,"orders":24,"roas":4.9},
+    {"date":"2026-03-19","revenue":2560,"spend":490,"commission":307,"orders":27,"roas":5.2},
+    {"date":"2026-03-20","revenue":3340,"spend":590,"commission":401,"orders":35,"roas":5.7},
+    {"date":"2026-03-21","revenue":4120,"spend":680,"commission":494,"orders":44,"roas":6.1},
+    {"date":"2026-03-22","revenue":4480,"spend":720,"commission":538,"orders":48,"roas":6.2},
+    {"date":"2026-03-23","revenue":3560,"spend":620,"commission":427,"orders":38,"roas":5.7},
+    {"date":"2026-03-24","revenue":2890,"spend":540,"commission":347,"orders":31,"roas":5.4},
+    {"date":"2026-03-25","revenue":2340,"spend":470,"commission":281,"orders":25,"roas":5.0},
+    {"date":"2026-03-26","revenue":2680,"spend":510,"commission":322,"orders":28,"roas":5.3},
+    {"date":"2026-03-27","revenue":3340,"spend":590,"commission":401,"orders":35,"roas":5.7},
+    {"date":"2026-03-28","revenue":4230,"spend":700,"commission":508,"orders":45,"roas":6.0},
+    {"date":"2026-03-29","revenue":4680,"spend":740,"commission":562,"orders":50,"roas":6.3},
+    {"date":"2026-03-30","revenue":3890,"spend":670,"commission":467,"orders":41,"roas":5.8},
+    {"date":"2026-03-31","revenue":3120,"spend":580,"commission":374,"orders":33,"roas":5.4},
+    {"date":"2026-04-01","revenue":2680,"spend":520,"commission":322,"orders":28,"roas":5.2},
+    {"date":"2026-04-02","revenue":2890,"spend":540,"commission":347,"orders":31,"roas":5.4},
+    {"date":"2026-04-03","revenue":3560,"spend":610,"commission":427,"orders":38,"roas":5.8},
+    {"date":"2026-04-04","revenue":4120,"spend":680,"commission":494,"orders":44,"roas":6.1},
+    {"date":"2026-04-05","revenue":4480,"spend":720,"commission":538,"orders":48,"roas":6.2},
+    {"date":"2026-04-06","revenue":3890,"spend":660,"commission":467,"orders":41,"roas":5.9},
+    {"date":"2026-04-07","revenue":3120,"spend":580,"commission":374,"orders":33,"roas":5.4},
+    {"date":"2026-04-08","revenue":2680,"spend":510,"commission":322,"orders":28,"roas":5.3},
+    {"date":"2026-04-09","revenue":2890,"spend":540,"commission":347,"orders":31,"roas":5.4},
+    {"date":"2026-04-10","revenue":3560,"spend":610,"commission":427,"orders":38,"roas":5.8},
+    {"date":"2026-04-11","revenue":3890,"spend":640,"commission":467,"orders":41,"roas":6.1},
+    {"date":"2026-04-12","revenue":3120,"spend":560,"commission":374,"orders":33,"roas":5.6},
+    {"date":"2026-04-13","revenue":2340,"spend":470,"commission":281,"orders":25,"roas":5.0},
+    {"date":"2026-04-14","revenue":1680,"spend":380,"commission":202,"orders":18,"roas":4.4},
+    {"date":"2026-04-15","revenue":980,"spend":240,"commission":118,"orders":10,"roas":4.1}
+  ],
+  "weeklyTrend": [
+    {"week":"W1","start":"2026-03-01","revenue":13130,"spend":2710,"orders":140,"roas":4.8},
+    {"week":"W2","start":"2026-03-08","revenue":18780,"spend":3550,"orders":200,"roas":5.3},
+    {"week":"W3","start":"2026-03-15","revenue":19010,"spend":3660,"orders":203,"roas":5.2},
+    {"week":"W4","start":"2026-03-22","revenue":22940,"spend":4120,"orders":245,"roas":5.6},
+    {"week":"W5","start":"2026-03-29","revenue":14380,"spend":2710,"orders":155,"roas":5.3},
+    {"week":"W6","start":"2026-04-05","revenue":23140,"spend":4170,"orders":248,"roas":5.6},
+    {"week":"W7","start":"2026-04-12","revenue":5000,"spend":1060,"orders":53,"roas":4.7}
+  ],
+  "customerSplit": {
+    "newCustomers": 1089,
+    "returningCustomers": 647,
+    "newCustomerRate": "62.7%"
+  },
+  "insights": [
+    {
+      "kind": "best-creator",
+      "severity": "good",
+      "subjectType": "creator",
+      "subjectId": "cre-marcus",
+      "subjectName": "Marcus Webb",
+      "metrics": [
+        {"label": "GMV", "value": "$86,364"},
+        {"label": "ROAS", "value": "6.0x"},
+        {"label": "Orders", "value": "414"}
+      ],
+      "rationale": "Marcus Webb generated 53% of total campaign GMV with the second-highest ROAS (6.0x). His audience overlaps strongly with the MOTION target demographic (fitness enthusiasts aged 25-34).",
+      "action": "Prioritize Marcus for Q3 MOTION relaunch with expanded product lineup. Consider exclusive capsule collection to deepen partnership."
+    },
+    {
+      "kind": "roas-warning",
+      "severity": "warn",
+      "subjectType": "creator",
+      "subjectId": "cre-tom",
+      "subjectName": "Tom Reyes",
+      "metrics": [
+        {"label": "ROAS", "value": "3.0x"},
+        {"label": "GMV", "value": "$27,465"},
+        {"label": "CVR", "value": "0.2%"}
+      ],
+      "rationale": "Tom Reyes delivered the lowest ROAS (3.0x) despite high engagement (12% engagement rate). His micro-tier audience drove 515 orders but at lower AOV, suggesting price-sensitivity or mismatched product recommendation.",
+      "action": "For future campaigns, pair Tom with entry-level products or bundle deals to improve conversion value. Re-evaluate tier suitability for premium SKUs."
+    },
+    {
+      "kind": "scale-opportunity",
+      "severity": "opportunity",
+      "subjectType": "creator",
+      "subjectId": "cre-stella",
+      "subjectName": "Stella Zhou",
+      "metrics": [
+        {"label": "ROAS", "value": "8.0x"},
+        {"label": "GMV", "value": "$29,238"},
+        {"label": "CVR", "value": "0.3%"}
+      ],
+      "rationale": "Stella Zhou achieved the highest ROAS (8.0x) and best CVR (0.3%) among all creators. Her single post generated exceptional efficiency, indicating strong product-market fit with her audience.",
+      "action": "Scale Stella's collaboration: request multi-post series, expand to Reels/TikTok cross-posting. Allocate additional budget for boosted content."
+    },
+    {
+      "kind": "best-placement",
+      "severity": "good",
+      "subjectType": "campaign",
+      "subjectName": "YouTube Long-form Reviews",
+      "metrics": [
+        {"label": "Total GMV", "value": "$162,536"},
+        {"label": "Overall ROAS", "value": "6.7x"},
+        {"label": "Total Orders", "value": "1,736"}
+      ],
+      "rationale": "YouTube long-form seeding format outperformed expectations. Average watch-time correlated strongly with conversion — viewers who watched 50%+ of review content converted at 3x the baseline rate.",
+      "action": "Continue YouTube-first seeding strategy for DG line. Invest in brand search retargeting to capture high-intent viewers post-watch."
+    }
+  ],
+  "newCustomers": 1089,
+  "aov": "$93.6",
+  "topCategories": [
+    {"name": "Performance Running Shoes", "revenue": "$58,513", "share": 36},
+    {"name": "Athletic Apparel Sets", "revenue": "$40,634", "share": 25},
+    {"name": "Compression Gear", "revenue": "$24,380", "share": 15},
+    {"name": "Sports Accessories", "revenue": "$17,879", "share": 11},
+    {"name": "Recovery Equipment", "revenue": "$11,378", "share": 7},
+    {"name": "Other", "revenue": "$9,752", "share": 6}
+  ],
+  "topProducts": [
+    {"name": "MOTION Velocity Pro Running Shoes", "revenue": "$34,134", "orders": "365", "category": "Performance Running Shoes"},
+    {"name": "MOTION FlexFit Athletic Set (Men)", "revenue": "$22,755", "orders": "243", "category": "Athletic Apparel Sets"},
+    {"name": "MOTION Core Compression Leggings", "revenue": "$17,869", "orders": "191", "category": "Compression Gear"},
+    {"name": "MOTION Velocity Pro Running Shoes (Women)", "revenue": "$16,254", "orders": "174", "category": "Performance Running Shoes"},
+    {"name": "MOTION AeroBreath Training Top", "revenue": "$12,997", "orders": "139", "category": "Athletic Apparel Sets"},
+    {"name": "MOTION Pro Recovery Foam Roller", "revenue": "$9,752", "orders": "104", "category": "Recovery Equipment"},
+    {"name": "MOTION Anti-Slip Sports Headband", "revenue": "$6,502", "orders": "70", "category": "Sports Accessories"},
+    {"name": "MOTION FlexFit Athletic Set (Women)", "revenue": "$5,849", "orders": "62", "category": "Athletic Apparel Sets"}
+  ],
+  "topMarkets": [
+    {"name": "United States", "revenue": "$97,522", "share": 60},
+    {"name": "United Kingdom", "revenue": "$21,130", "share": 13},
+    {"name": "Germany", "revenue": "$12,202", "share": 8},
+    {"name": "Australia", "revenue": "$9,752", "share": 6},
+    {"name": "Canada", "revenue": "$8,127", "share": 5},
+    {"name": "Japan", "revenue": "$6,502", "share": 4},
+    {"name": "Other", "revenue": "$7,301", "share": 4}
+  ],
+  "promotionOffers": [
+    {"name": "MOTIONSPRING15", "type": "Creator Exclusive Code", "revenue": "$48,761", "usageCount": 521},
+    {"name": "Spring Bundle Deal (Shoes + Apparel)", "type": "Bundle", "revenue": "$35,758", "usageCount": 382},
+    {"name": "MOTIONSTELLA20", "type": "Creator Exclusive Code", "revenue": "$23,243", "usageCount": 248},
+    {"name": "Flash Sale: 25% OFF Recovery Gear", "type": "Flash Sale", "revenue": "$17,869", "usageCount": 191},
+    {"name": "Free Shipping Weekend", "type": "Site-wide", "revenue": "$14,628", "usageCount": 156},
+    {"name": "MOTIONMARCUS10", "type": "Creator Exclusive Code", "revenue": "$12,188", "usageCount": 130}
+  ]
+}

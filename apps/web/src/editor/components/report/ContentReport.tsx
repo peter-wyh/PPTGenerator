@@ -19,15 +19,15 @@ export function DeviceBreakdownView({ data }: { data: DeviceBreakdownData }) {
   const { title, items = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
-      {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
-      <div className="grid flex-1 grid-cols-3 gap-2">
+      {title && <div className="flex-none text-sm skin-fw-heading text-foreground-primary">{title}</div>}
+      <div className="grid flex-1 grid-cols-3 skin-gap-sm">
         {items.map((d, i) => (
-          <div key={i} className="flex flex-col items-center justify-center gap-1 rounded-lg bg-surface-hover p-2 text-center">
+          <div key={i} className="flex flex-col items-center justify-center skin-gap-xs rounded-lg bg-surface-hover p-2 text-center">
             <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{d.device}</div>
             <div className="text-lg font-bold text-foreground-primary">{d.share}</div>
             <div className="text-[10px] text-foreground-secondary">{d.revenue}</div>
             <div className="text-[9px] text-foreground-muted">{d.sessions} sessions</div>
-            <span className={`text-[9px] font-medium ${d.trend.startsWith('-') ? 'skin-text-negative' : 'skin-text-positive'}`}>{d.trend}</span>
+            <span className={`text-[9px] skin-fw-body ${d.trend.startsWith('-') ? 'skin-text-negative' : 'skin-text-positive'}`}>{d.trend}</span>
           </div>
         ))}
       </div>
@@ -41,14 +41,14 @@ export function ContentTopicView({ data }: { data: ContentTopicPerformanceData }
   const { title, items = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
-      {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
+      {title && <div className="flex-none text-sm skin-fw-heading text-foreground-primary">{title}</div>}
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full text-left text-[11px]">
           <thead className="sticky top-0 bg-surface-primary">
             <tr className="border-b border-border-primary">
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted" />
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted" />
               {['Topic', 'Posts', 'Impressions', 'Engagement', 'Revenue', 'ROAS'].map((h) => (
-                <th key={h} className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">{h}</th>
+                <th key={h} className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">{h}</th>
               ))}
             </tr>
           </thead>
@@ -56,11 +56,11 @@ export function ContentTopicView({ data }: { data: ContentTopicPerformanceData }
             {items.map((it, i) => (
               <tr key={i} className="border-b border-border-primary/50">
                 <td className="py-1 pr-2"><span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT_STYLES[it.status]}`} /></td>
-                <td className="py-1 pr-2 font-medium text-foreground-primary">{it.topic}</td>
+                <td className="py-1 pr-2 skin-fw-body text-foreground-primary">{it.topic}</td>
                 <td className="py-1 pr-2 text-foreground-secondary">{it.posts}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.impressions}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.engagement}</td>
-                <td className="py-1 pr-2 text-right font-semibold text-foreground-primary">{it.revenue}</td>
+                <td className="py-1 pr-2 text-right skin-fw-heading text-foreground-primary">{it.revenue}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.roas}</td>
               </tr>
             ))}
@@ -77,14 +77,14 @@ export function SearchTermTableView({ data }: { data: SearchTermTableData }) {
   const { title, items = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
-      {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
+      {title && <div className="flex-none text-sm skin-fw-heading text-foreground-primary">{title}</div>}
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full text-left text-[11px]">
           <thead className="sticky top-0 bg-surface-primary">
             <tr className="border-b border-border-primary">
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted" />
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted" />
               {['Keyword', 'Clicks', 'Conv.', 'CTR', 'Revenue'].map((h) => (
-                <th key={h} className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">{h}</th>
+                <th key={h} className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">{h}</th>
               ))}
             </tr>
           </thead>
@@ -92,11 +92,11 @@ export function SearchTermTableView({ data }: { data: SearchTermTableData }) {
             {items.map((it, i) => (
               <tr key={i} className="border-b border-border-primary/50">
                 <td className="py-1 pr-2"><span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT_STYLES[it.status]}`} /></td>
-                <td className="py-1 pr-2 font-medium text-foreground-primary">{it.term}</td>
+                <td className="py-1 pr-2 skin-fw-body text-foreground-primary">{it.term}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.clicks}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.conversions}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{it.ctr}</td>
-                <td className="py-1 pr-2 text-right font-semibold text-foreground-primary">{it.revenue}</td>
+                <td className="py-1 pr-2 text-right skin-fw-heading text-foreground-primary">{it.revenue}</td>
               </tr>
             ))}
           </tbody>
@@ -121,10 +121,10 @@ export function HourlyHeatmapView({ data }: { data: HourlyHeatmapData }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+    <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
         </div>
       )}

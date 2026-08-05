@@ -79,8 +79,8 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
         role="dialog"
         aria-modal="true"
       >
-        <h3 className="font-headings text-base font-semibold text-foreground-primary">从模板新建项目</h3>
-        <p className="mt-0.5 text-xs text-foreground-muted">选择一个已发布模板，深拷贝其页面/尺寸作为新项目起点。</p>
+        <h3 className="font-headings text-base font-semibold text-foreground-primary">从模板新建报告</h3>
+        <p className="mt-0.5 text-xs text-foreground-muted">选择一个已发布模板，深拷贝其页面/尺寸作为新报告起点。</p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1 text-xs text-foreground-secondary">
@@ -197,7 +197,7 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
         {selected && (
           <div className="mt-3">
             <Input
-              label="项目名称（可选）"
+              label="报告名称（可选）"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={selected.name}
@@ -212,7 +212,7 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
             取消
           </Button>
           <Button onClick={submit} loading={loading} disabled={!canSubmit}>
-            创建项目
+            创建报告
           </Button>
         </div>
       </div>

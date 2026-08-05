@@ -51,7 +51,7 @@ import {
 } from './components/report';
 import { WorkScreenshot, WorkMetrics, CommentWordcloud } from './components/WorksComponents';
 import { ImageGroupComponent } from './components/ImageGroupComponent';
-import { TitleBlock } from './components/BasicComponents';
+import { TitleBlock, PageHeader, CardsRow } from './components/BasicComponents';
 import { parseCreatorLink } from './creatorLink';
 import {
   ReportCreatorAvatarImporter,
@@ -74,6 +74,7 @@ import { CampaignSummaryImporter } from './property-panel/CampaignSummaryImporte
 export type PropertyFieldKind =
   | 'text'
   | 'textarea'
+  | 'rich-text' // 富文本编辑（加粗/斜体/列表），存 HTML
   | 'number'
   | 'color'
   | 'select'
@@ -196,7 +197,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     defaultSize: DEFAULT_SIZES.text,
     defaultData: () => getDefaultData('text'),
     propertySchema: [
-      { key: 'content', label: '内容', kind: 'textarea' },
+      { key: 'content', label: '内容', kind: 'rich-text' },
       { key: 'fontSize', label: '字号', kind: 'number' },
       { key: 'fontWeight', label: '粗细', kind: 'select', options: FONT_WEIGHTS },
       { key: 'color', label: '颜色', kind: 'color' },
@@ -356,6 +357,7 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
       { id: 'row', label: '列表行' },
       { id: 'compact', label: '紧凑' },
       { id: 'detailed', label: '详细+受众' },
+      { id: 'gallery', label: '大图网格' },
     ],
     dataSource: {
       modes: ['manual', 'project'],
@@ -891,6 +893,31 @@ export const REGISTRY: Record<ComponentType, BlockDef> = {
     ],
     // 字段(模块增删/导入)交给自定义面板 CreatorAudienceProfileFields
     propertySchema: [],
+  },
+  'page-header': {
+    Component: PageHeader,
+    defaultSize: DEFAULT_SIZES['page-header'],
+    defaultData: () => getDefaultData('page-header'),
+    propertySchema: [
+      { key: 'leftLogo.src', label: '左侧 Logo 图片', kind: 'image-url' },
+      { key: 'leftLogo.text', label: '左侧名称', kind: 'text' },
+      { key: 'leftLogo.initials', label: '左侧缩写', kind: 'text' },
+      { key: 'leftLogo.logoHeight', label: '左侧 Logo 高度', kind: 'number' },
+      { key: 'rightLogo.src', label: '右侧 Logo 图片', kind: 'image-url' },
+      { key: 'rightLogo.text', label: '右侧名称', kind: 'text' },
+      { key: 'rightLogo.initials', label: '右侧缩写', kind: 'text' },
+      { key: 'rightLogo.logoHeight', label: '右侧 Logo 高度', kind: 'number' },
+      { key: 'dateLabel', label: '日期标签', kind: 'text' },
+      { key: 'background', label: '背景色', kind: 'color' },
+    ],
+  },
+  'cards-row': {
+    Component: CardsRow,
+    defaultSize: DEFAULT_SIZES['cards-row'],
+    defaultData: () => getDefaultData('cards-row'),
+    propertySchema: [
+      { key: 'gap', label: '卡片间距', kind: 'number' },
+    ],
   },
 };
 

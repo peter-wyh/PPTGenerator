@@ -559,6 +559,7 @@ export function KpiBoardFields({ comp }: { comp: EditorComponent }) {
 
 // WorkScreenshotFields 已拆到独立文件（含样式选择器 + 文本显隐开关）
 export { WorkScreenshotFields } from './custom-fields/WorkScreenshotFields';
+export { CreatorWorksListFields } from './custom-fields/CreatorWorksListFields';
 
 export function StrategyBlockFields({ comp }: { comp: EditorComponent }) {
   const update = useDataUpdate(comp);

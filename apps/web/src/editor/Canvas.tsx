@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorStore, type ResizeDir } from './store';
 import type { EditorComponent } from '@mediakit/shared';
 import { CanvasComponent } from './components/CanvasComponent';
+import { GlobalHeader, GlobalFooter } from './components/GlobalHeaderFooter';
 import { ContextMenu, type MenuItem } from './components/ContextMenu';
 import { PALETTE_MIME, type PalettePayload } from './ComponentPanel';
 import { resolvePageBackground } from './background';
@@ -36,6 +37,9 @@ export function Canvas() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const isPanning = useEditorStore((s) => s.isPanning);
   const currentPage = useEditorStore((s) => s.currentPage());
+  const projectMeta = useEditorStore((s) => s.projectMeta);
+  const pages = useEditorStore((s) => s.pages);
+  const currentPageId = useEditorStore((s) => s.currentPageId);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; compId: string } | null>(null);
 
@@ -361,6 +365,23 @@ export function Canvas() {
               onHoverDelete={handleHoverDelete}
             />
           ))}
+          {/* 全局页眉/页脚（非画布组件，由 projectMeta 配置） */}
+          {(() => {
+            const hc = projectMeta?.headerConfig;
+            const fc = projectMeta?.footerConfig;
+            const pageIdx = pages.findIndex((p) => p.id === currentPageId) + 1;
+            const total = pages.length;
+            return (
+              <>
+                {hc?.enabled && (
+                  <GlobalHeader config={hc} width={canvasWidth} pageIndex={pageIdx} totalPages={total} />
+                )}
+                {fc?.enabled && (
+                  <GlobalFooter config={fc} canvasHeight={canvasHeight} width={canvasWidth} pageIndex={pageIdx} totalPages={total} />
+                )}
+              </>
+            );
+          })()}
           {/* 业务线 Logo（右上角，位置/尺寸由 theme.branding.blBadge 配置） */}
           {blLogoVisible && blLogoSrc && !currentPage?.suppressLogo && (
             <img

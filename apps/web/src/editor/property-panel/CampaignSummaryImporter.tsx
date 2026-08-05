@@ -159,7 +159,7 @@ export function CampaignSummaryImporter({ comp }: { comp: EditorComponent }) {
           {/* 已绑定 Campaign 快捷提示 */}
           {boundCampaign && (
             <p className="text-[10px] text-accent-primary">
-              🔗 项目绑定：{boundCampaign.name}
+              🔗 报告绑定：{boundCampaign.name}
             </p>
           )}
 

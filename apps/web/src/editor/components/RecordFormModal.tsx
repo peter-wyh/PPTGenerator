@@ -268,18 +268,18 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div
-        className="flex max-h-[90vh] w-[560px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        className="flex max-h-[90vh] w-[560px] flex-col skin-gap-md overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="font-headings text-sm font-semibold text-foreground-primary">
+        <div className="font-headings text-sm skin-fw-heading text-foreground-primary">
           {record ? '编辑' : '新增'} · {isCampaign ? 'Campaign' : '达人库'}
         </div>
 
         {isCampaign ? (
           /* ─── Campaign 表单 ─── */
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 skin-gap-sm">
             {/* 名称占整行 */}
-            <label className="col-span-2 flex flex-col gap-1 text-xs text-foreground-secondary">
+            <label className="col-span-2 flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               名称
               <input
                 value={vals.name ?? ''}
@@ -289,7 +289,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </label>
 
             {/* 业务线 → 选择框 */}
-            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               业务线
               <select
                 value={businessLine}
@@ -309,7 +309,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </label>
 
             {/* 广告主 → 选择框（联动业务线） */}
-            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               广告主
               <select
                 value={advertiser}
@@ -327,7 +327,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </label>
 
             {/* P1-7: 平台 → 多选预设 + 可手动添加 */}
-            <div className="col-span-2 flex flex-col gap-1 text-xs text-foreground-secondary">
+            <div className="col-span-2 flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               平台（可多选，支持手动新增）
               <div className="flex flex-wrap gap-1.5">
                 {PLATFORMS.map((p) => {
@@ -362,7 +362,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
                   ))}
               </div>
               {/* 手动添加平台 */}
-              <div className="mt-1 flex gap-1">
+              <div className="mt-1 flex skin-gap-xs">
                 <input
                   value={customPlatform}
                   onChange={(e) => setCustomPlatform(e.target.value)}
@@ -386,7 +386,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </div>
 
             {/* P1-8: 开始日期 → DatePicker */}
-            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               开始日期
               <input
                 type="date"
@@ -397,7 +397,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </label>
 
             {/* P1-8: 结束日期 → DatePicker */}
-            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               结束日期
               <input
                 type="date"
@@ -408,8 +408,8 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </label>
 
             {/* P1-9: 预算 + 币种 */}
-            <div className="col-span-2 flex gap-1">
-              <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            <div className="col-span-2 flex skin-gap-xs">
+              <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
                 币种
                 <select
                   value={currency}
@@ -423,7 +423,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-1 flex-col gap-1 text-xs text-foreground-secondary">
+              <label className="flex flex-1 flex-col skin-gap-xs text-xs text-foreground-secondary">
                 预算金额
                 <input
                   type="number"
@@ -436,7 +436,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </div>
 
             {/* P1-10: 状态 → 枚举下拉 */}
-            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               状态
               <select
                 value={status}
@@ -453,7 +453,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             </label>
 
             {/* P1-11: 归属者 */}
-            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+            <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
               归属者
               <input
                 value={owner}
@@ -465,12 +465,12 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
           </div>
         ) : (
           /* ─── Creator 表单 ─── */
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 skin-gap-sm">
             {CREATOR_FORM_FIELDS.map((f) => {
               // avatar 用 ImageInput（文本 + 上传 + 裁剪），占整行。
               if (f.key === 'avatar') {
                 return (
-                  <label key={f.key} className="col-span-2 flex flex-col gap-1 text-xs text-foreground-secondary">
+                  <label key={f.key} className="col-span-2 flex flex-col skin-gap-xs text-xs text-foreground-secondary">
                     {f.label}
                     <ImageInput
                       value={vals[f.key] ?? ''}
@@ -483,7 +483,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               // P1-13: 层级 → 下拉
               if (f.key === 'tier') {
                 return (
-                  <label key={f.key} className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                  <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
                     {f.label}
                     <Combobox
                       value={vals[f.key] ?? ''}
@@ -497,7 +497,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               // P1-13: 平台 → 下拉（可手动新增）
               if (f.key === 'platform') {
                 return (
-                  <label key={f.key} className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                  <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
                     {f.label}
                     <Combobox
                       value={vals[f.key] ?? ''}
@@ -512,7 +512,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               // P1-13: 品类 → 下拉（可手动新增）
               if (f.key === 'category') {
                 return (
-                  <label key={f.key} className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                  <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
                     {f.label}
                     <Combobox
                       value={vals[f.key] ?? ''}
@@ -527,7 +527,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               const idReadOnly = f.key === 'id' && !record;
               const autoLabel = f.key === 'id' && !record;
               return (
-                <label key={f.key} className="flex flex-col gap-1 text-xs text-foreground-secondary">
+                <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
                   {f.label}{autoLabel ? '(自动)' : ''}
                   <input
                     value={vals[f.key] ?? ''}
@@ -542,7 +542,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end skin-gap-sm">
           <button
             onClick={onCancel}
             className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"

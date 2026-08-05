@@ -10,7 +10,6 @@ import { DataSourceSection } from './DataSourceSection';
 import {
   ReportCreatorFanGenderImporter,
   ReportCreatorFanAgeImporter,
-  KpiImportButton,
 } from './importers';
 import {
   FieldEditor,
@@ -22,15 +21,17 @@ import {
   BusinessFields,
   CreatorStatsFields,
   CreatorAudienceProfileFields,
-  KpiRowStyleField,
   KpiBoardFields,
   WorkScreenshotFields,
+  CreatorWorksListFields,
   StrategyBlockFields,
   ImageGroupFields,
   WorkMetricsFields,
   CommentWordcloudFields,
   ShapeFields,
 } from './custom-fields';
+import { CardsRowFields } from './custom-fields/CardsRowFields';
+import { PageHeaderSyncButton } from './custom-fields/PageHeaderSyncButton';
 
 /**
  * 标题块:序号/主色/底部分割线 三个字段按当前样式变体显隐(联动)。
@@ -156,16 +157,20 @@ export function PropertyPanel() {
       {comp.type === 'creator-audience-profile' && <CreatorAudienceProfileFields comp={comp} />}
       {comp.type === 'creator-fan-gender' && <ReportCreatorFanGenderImporter comp={comp} />}
       {comp.type === 'creator-fan-age' && <ReportCreatorFanAgeImporter comp={comp} />}
-      {comp.type === 'kpi-board' && <KpiImportButton comp={comp} />}
+      {/* kpi-board: KpiBoardFields integrates label/value/compare + per-row style
+          (color, icon, trend) into a single unified table editor. Excel import
+          and Campaign import are handled by the DataSourceSection above. */}
       {comp.type === 'kpi-board' && <KpiCompareLabelField comp={comp} />}
-      {comp.type === 'kpi-board' && <KpiRowStyleField comp={comp} />}
       {comp.type === 'kpi-board' && <KpiBoardFields comp={comp} />}
       {comp.type === 'work-screenshot' && <WorkScreenshotFields comp={comp} />}
+      {comp.type === 'creator-works-list' && <CreatorWorksListFields comp={comp} />}
       {comp.type === 'work-metrics' && <WorkMetricsFields comp={comp} />}
       {comp.type === 'comment-wordcloud' && <CommentWordcloudFields comp={comp} />}
       {comp.type === 'shape' && <ShapeFields comp={comp} />}
       {comp.type === 'image-group' && <ImageGroupFields comp={comp} />}
       {comp.type === 'strategy-block' && <StrategyBlockFields comp={comp} />}
+      {comp.type === 'cards-row' && <CardsRowFields comp={comp} />}
+      {comp.type === 'page-header' && <PageHeaderSyncButton comp={comp} />}
 
       <div className="mt-auto border-t border-border-subtle pt-3">
         <Button

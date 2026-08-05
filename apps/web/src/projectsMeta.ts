@@ -11,12 +11,12 @@ export const ADVERTISERS = ['GlowLab', 'LUMIÈRE', 'NOVA Home', 'MOTION', 'EVERY
 
 /** Business line structured data (key corresponds 1:1 with BUSINESS_LINES). */
 export const BUSINESS_LINE_META: Record<string, BusinessLine> = {
-  FT: { code: 'FT', name: 'FineTech',    logo: 'https://placehold.co/120x120/2563eb/ffffff?text=FT' },
-  SM: { code: 'SM', name: 'SocialMove',  logo: 'https://placehold.co/120x120/16a34a/ffffff?text=SM' },
-  CX: { code: 'CX', name: 'CosmeX',      logo: 'https://placehold.co/120x120/db2777/ffffff?text=CX' },
-  DG: { code: 'DG', name: 'DigitalGo',   logo: 'https://placehold.co/120x120/ea580c/ffffff?text=DG' },
-  KN: { code: 'KN', name: 'KitchenNest', logo: 'https://placehold.co/120x120/9333ea/ffffff?text=KN' },
-  DM: { code: 'DM', name: 'DreamMart',   logo: 'https://placehold.co/120x120/0891b2/ffffff?text=DM' },
+  FT: { code: 'FT', name: 'FineTech',    logo: 'https://placehold.co/120x120/2563eb/ffffff?text=FT', color: '#2563eb' },
+  SM: { code: 'SM', name: 'SocialMove',  logo: 'https://placehold.co/120x120/16a34a/ffffff?text=SM', color: '#16a34a' },
+  CX: { code: 'CX', name: 'CosmeX',      logo: 'https://placehold.co/120x120/db2777/ffffff?text=CX', color: '#db2777' },
+  DG: { code: 'DG', name: 'DigitalGo',   logo: 'https://placehold.co/120x120/ea580c/ffffff?text=DG', color: '#ea580c' },
+  KN: { code: 'KN', name: 'KitchenNest', logo: 'https://placehold.co/120x120/9333ea/ffffff?text=KN', color: '#9333ea' },
+  DM: { code: 'DM', name: 'DreamMart',   logo: 'https://placehold.co/120x120/0891b2/ffffff?text=DM', color: '#0891b2' },
 };
 
 /** Merchant list (advertisers reference via merchantId). */

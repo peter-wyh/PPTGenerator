@@ -70,7 +70,11 @@ export type ComponentType =
   | 'search-term-table'
   | 'hourly-heatmap'
   // 达人域：用户画像复合容器（性别/年龄/城市等可增删子模块，从绑定达人 audience 填充）
-  | 'creator-audience-profile';
+  | 'creator-audience-profile'
+  // 基础组件：页眉（左侧广告主logo + 右侧业务线logo，通栏）
+  | 'page-header'
+  // 基础组件：卡片行（多卡片自动等分水平排列）
+  | 'cards-row';
 
 /* ---- 数据来源标记（所有组件 data 通用元字段） ---- */
 
@@ -171,6 +175,30 @@ export interface TitleBlockData {
   underlineColor?: 'brand' | 'black';
   /** 是否显示底部分割线 */
   divider?: boolean;
+}
+
+/* ---- 页眉：左侧广告主 logo + 右侧业务线 logo，通栏 ---- */
+
+export interface PageHeaderLogo {
+  /** 图片 URL（优先）或文字缩写（如 "GL"） */
+  src?: string;
+  /** 文字名称（图片下方或图片缺失时显示） */
+  text?: string;
+  /** 文字缩写（无图片时的圆形/方形占位符） */
+  initials?: string;
+  /** Logo 高度（px），默认 28 */
+  logoHeight?: number;
+}
+
+export interface PageHeaderData {
+  /** 左侧广告主 logo */
+  leftLogo: PageHeaderLogo;
+  /** 右侧业务线 logo */
+  rightLogo: PageHeaderLogo;
+  /** 可选中间日期标签 */
+  dateLabel?: string;
+  /** 背景色 */
+  background?: string;
 }
 
 /* ---- 内容卡片（带标题 + 正文 + 可选图片/标签）---- */
@@ -479,7 +507,10 @@ export interface CreatorStatsStripData {
  * 约定列顺序：[封面URL, 标题, 转, 赞, 评]；渲染层把列0当图片、列2-4当互动数据。
  * 注：试点刻意复用 table 字段编辑器，强类型 object-list 留后续。
  */
-export type CreatorWorksVariant = 'cards' | 'row' | 'compact' | 'detailed';
+export type CreatorWorksVariant = 'cards' | 'row' | 'compact' | 'detailed' | 'gallery';
+
+/** gallery 子风格（复用 WorkScreenshot 的视觉风格名）。 */
+export type GalleryStyle = 'grid' | 'mosaic' | 'skew' | 'overlap' | 'filmstrip' | 'diagonal';
 
 /** 作品趋势数据点（时间→数值，用于作品详情的趋势迷你图）。 */
 export interface WorkTrendPoint {
@@ -508,6 +539,8 @@ export interface CreatorWorksListData {
   rows: string[][];
   /** 'detailed' 变体下，按 rows 索引对齐的受众洞察数据；缺省=无洞察。 */
   insights?: WorkAudienceInsight[];
+  /** gallery 变体下的视觉子风格（grid/mosaic/skew/overlap/filmstrip/diagonal）。 */
+  galleryStyle?: GalleryStyle;
 }
 
 /**
@@ -724,7 +757,9 @@ export type WorkScreenshotStyle = 'grid' | 'skew' | 'overlap' | 'filmstrip' | 'd
 
 /** 作品截图「组合版式」预设（仅 style==='mosaic' 时生效；缺省 'auto' = 按张数自动选模板）。 */
 export type WorkScreenshotMosaicLayout =
-  | 'auto' | 'hero-3' | 'hero-4' | 'hero-5' | 'pinzhi' | 'staircase' | 'staggered' | 'grid-3x3';
+  | 'auto' | 'hero-3' | 'hero-4' | 'hero-5' | 'pinzhi' | 'staircase' | 'staggered' | 'grid-3x3'
+  // 杂志/分镜式非对称版式（2026-08-04 新增）：等分网格仍走 style==='grid'，此处专攻 grid 做不到的切分。
+  | 'hero-top' | 'hero-right' | 'pz-top' | 'pz-bottom' | 'hero-2up' | 'magazine' | 'strip-h' | 'split-half';
 
 export interface WorkScreenshotItem {
   src: string;
@@ -784,6 +819,19 @@ export interface CommentWordcloudData {
   words: CommentWordItem[];
 }
 
+export interface CardsRowItem {
+  title: string;
+  body?: string;
+  icon?: string;
+  footer?: string;
+}
+
+export interface CardsRowData {
+  items: CardsRowItem[];
+  /** 卡片间距（px），缺省 16 */
+  gap?: number;
+}
+
 export type ComponentData =
   | TextData
   | ImageData
@@ -829,7 +877,9 @@ export type ComponentData =
   | ContentTopicPerformanceData
   | SearchTermTableData
   | HourlyHeatmapData
-  | CreatorAudienceProfileData;
+  | CreatorAudienceProfileData
+  | PageHeaderData
+  | CardsRowData;
 
 export interface EditorComponent {
   id: string;

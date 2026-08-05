@@ -21,7 +21,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
       <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
-            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
@@ -39,7 +39,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                 {m.value}
               </div>
               {m.sub && (
-                <div className="text-[10px] font-medium" style={{ color: m.color ?? 'var(--green)' }}>{m.sub}</div>
+                <div className="text-[10px] skin-fw-body" style={{ color: m.color ?? 'var(--green)' }}>{m.sub}</div>
               )}
             </div>
           ))}
@@ -50,23 +50,23 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
 
   if (variant === 'card') {
     return (
-      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+      <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
-            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
-        <div className="flex flex-1 gap-3">
+        <div className="flex flex-1 skin-gap-md">
           {(cover || workName) && (
             <div className="flex flex-none flex-col items-center justify-center gap-1.5" style={{ width: 96 }}>
               <ImgOrPlaceholder url={cover ?? ''} label={workName ?? ''} cls="h-20 w-20" />
               {workName && (
-                <div className="line-clamp-2 text-center text-[11px] font-medium text-foreground-primary">{workName}</div>
+                <div className="line-clamp-2 text-center text-[11px] skin-fw-body text-foreground-primary">{workName}</div>
               )}
             </div>
           )}
-          <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+          <div className="grid min-w-0 flex-1 grid-cols-2 skin-gap-sm">
             {metrics.map((m, i) => (
               <div key={i} className="flex flex-col justify-center">
                 <div className="text-[10px] text-foreground-muted">{m.label}</div>
@@ -77,7 +77,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
                   {m.value}
                 </div>
                 {m.sub && (
-                  <div className="text-[10px] font-medium" style={{ color: m.color ?? 'var(--green)' }}>{m.sub}</div>
+                  <div className="text-[10px] skin-fw-body" style={{ color: m.color ?? 'var(--green)' }}>{m.sub}</div>
                 )}
               </div>
             ))}
@@ -93,11 +93,11 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
       <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
-            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
-        <div className="grid flex-1 grid-cols-3 gap-2">
+        <div className="grid flex-1 grid-cols-3 skin-gap-sm">
           {metrics.map((m, i) => {
             const color = m.color ?? CAMPAIGN_COLORS[i % CAMPAIGN_COLORS.length];
             return (
@@ -108,7 +108,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
               >
                 <div className="text-[10px] text-foreground-muted">{m.label}</div>
                 <div className="font-data text-lg font-bold" style={{ color }}>{m.value}</div>
-                {m.sub && <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? 'var(--red)' : 'var(--green)' }}>{m.sub}</div>}
+                {m.sub && <div className="text-[10px] skin-fw-body" style={{ color: m.sub.startsWith('-') ? 'var(--red)' : 'var(--green)' }}>{m.sub}</div>}
               </div>
             );
           })}
@@ -121,24 +121,24 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     // 受众画像：顶部作品信息 + 性别水平堆叠条 + 年龄段迷你条。
     const ins = data.audience;
     return (
-      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+      <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
-            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
         {ins ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+          <div className="flex min-h-0 flex-1 flex-col skin-gap-md overflow-auto">
             {/* 性别分布：水平堆叠条 */}
             {ins.genderSplit && ins.genderSplit.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <div className="text-[10px] font-medium text-foreground-secondary">Gender Distribution</div>
+              <div className="flex flex-col skin-gap-xs">
+                <div className="text-[10px] skin-fw-body text-foreground-secondary">Gender Distribution</div>
                 <div className="flex h-5 w-full overflow-hidden rounded-full bg-surface-hover">
                   {ins.genderSplit.map((g, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-center text-[10px] font-medium text-white"
+                      className="flex items-center justify-center text-[10px] skin-fw-body text-white"
                       style={{
                         width: `${Math.max(g.value, 4)}%`,
                         backgroundColor: g.color ?? (g.label.match(/^(f|female|女)/i) ? 'var(--purple)' : 'var(--blue)'),
@@ -152,8 +152,8 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
             )}
             {/* 年龄段：迷你水平占比条 */}
             {ins.ageRange && ins.ageRange.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <div className="text-[10px] font-medium text-foreground-secondary">Age Distribution</div>
+              <div className="flex flex-col skin-gap-xs">
+                <div className="text-[10px] skin-fw-body text-foreground-secondary">Age Distribution</div>
                 {ins.ageRange.map((a, i) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <span className="w-12 flex-none text-[10px] text-foreground-secondary">{a.label}</span>
@@ -183,17 +183,17 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     const ins = data.audience;
     const cities = ins?.topCities ?? [];
     return (
-      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+      <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
-            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
         {cities.length > 0 ? (
           <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5 overflow-auto">
             {cities.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex items-center skin-gap-sm">
                 <span className="w-16 flex-none truncate text-[11px] text-foreground-secondary">{c.label}</span>
                 <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-hover">
                   <div
@@ -220,10 +220,10 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     const trend = ins?.trend ?? [];
     const trendLabel = ins?.trendLabel ?? 'Data Trend';
     return (
-      <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+      <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
-            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
@@ -266,11 +266,11 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
         </div>
       )}
-      <div className="grid flex-1 grid-cols-3 gap-2">
+      <div className="grid flex-1 grid-cols-3 skin-gap-sm">
         {metrics.map((m, i) => (
           <div key={i} className="flex flex-col justify-center">
             <div className="text-[10px] text-foreground-muted">{m.label}</div>
@@ -281,7 +281,7 @@ export function CreatorWorkMetrics({ data }: { data: CreatorWorkMetricsData }) {
               {m.value}
             </div>
             {m.sub && (
-              <div className="text-[10px] font-medium" style={{ color: m.sub.startsWith('-') ? 'var(--red)' : 'var(--green)' }}>
+              <div className="text-[10px] skin-fw-body" style={{ color: m.sub.startsWith('-') ? 'var(--red)' : 'var(--green)' }}>
                 {m.sub}
               </div>
             )}

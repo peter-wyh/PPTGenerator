@@ -27,6 +27,32 @@ import {
 /* ① CSS 变量映射                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * 混合两个 HEX 颜色，ratio 为第二个颜色的占比（0-1）。
+ * 用于从 neutralBg/neutralText 派生 surface/foreground 层次色。
+ * 例：colorMix('#ffffff', '#000000', 0.03) → #f7f7f7
+ */
+function colorMix(base: string, mix: string, ratio: number): string {
+  const b = hexToRgb(base);
+  const m = hexToRgb(mix);
+  if (!b || !m) return base;
+  const r = Math.round(b.r * (1 - ratio) + m.r * ratio);
+  const g = Math.round(b.g * (1 - ratio) + m.g * ratio);
+  const bl = Math.round(b.b * (1 - ratio) + m.b * ratio);
+  return `#${[r, g, bl].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** HEX → {r,g,b}；无效返回 null。 */
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const h = hex.replace('#', '');
+  if (h.length !== 6 && h.length !== 3) return null;
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return isNaN(r) || isNaN(g) || isNaN(b) ? null : { r, g, b };
+}
+
 /** 密度→间距像素派生表。 */
 const DENSITY_SPACING: Record<ThemeDensity, { sm: number; md: number; lg: number }> = {
   compact: { sm: 6, md: 10, lg: 14 },
@@ -68,18 +94,38 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     // 字体
     '--font-text': getFontStack(t.font.text, DEFAULT_THEME.font.text),
     '--font-number': getFontStack(t.font.number, DEFAULT_THEME.font.number),
+    // 字重
+    '--font-weight-heading': String(t.font.weight?.heading ?? 600),
+    '--font-weight-body': String(t.font.weight?.body ?? 500),
+    '--font-weight-label': String(t.font.weight?.label ?? 500),
     // 颜色（语义）
     '--color-primary': t.color.primary,
     '--color-secondary': t.color.secondary,
     '--color-neutral-text': t.color.neutralText,
     '--color-neutral-bg': t.color.neutralBg,
+    // 表面色层次：主题自定义优先，缺省由 neutralBg 派生
+    '--surface-primary': t.color.surface?.primary ?? t.color.neutralBg,
+    '--surface-subtle': t.color.surface?.subtle ?? colorMix(t.color.neutralBg, '#000', 0.03),
+    '--surface-hover': t.color.surface?.hover ?? colorMix(t.color.neutralBg, '#000', 0.06),
+    // 前景色层次：主题自定义优先，缺省由 neutralText 派生
+    '--foreground-primary': t.color.foreground?.primary ?? t.color.neutralText,
+    '--foreground-secondary': t.color.foreground?.secondary ?? colorMix(t.color.neutralText, '#000', 0.35),
+    '--foreground-muted': t.color.foreground?.muted ?? colorMix(t.color.neutralText, '#000', 0.5),
+    // 边框色：主题自定义优先，缺省用固定浅灰
+    '--border-default': t.color.borderColor ?? '#e5e7eb',
+    '--border-subtle': t.color.borderColor ? `${t.color.borderColor}80` : '#f3f4f6',
     // 圆角
     '--radius-card': `${radius.card}px`,
     '--radius-pill': `${radius.pill}px`,
-    // 间距
+    // 间距（padding 层级）
     '--space-pad-sm': `${spacing.sm}px`,
     '--space-pad-md': `${spacing.md}px`,
     '--space-pad-lg': `${spacing.lg}px`,
+    // 间距（gap 层级）：与 density 联动
+    '--space-gap-xs': `${Math.round(spacing.sm * 0.4)}px`,
+    '--space-gap-sm': `${Math.round(spacing.sm * 0.8)}px`,
+    '--space-gap-md': `${Math.round(spacing.md * 0.75)}px`,
+    '--space-gap-lg': `${spacing.md}px`,
     // 注：--accent-primary / --accent-secondary 刻意【不】在此覆盖 —— 它们是编辑器
     // chrome（选中框 / 面板高亮 / 库图标）的固定强调色，由 index.css :root 提供常量，
     // 不应随品牌色变化。品牌色统一走 --color-primary / --color-secondary（组件内容引用）。

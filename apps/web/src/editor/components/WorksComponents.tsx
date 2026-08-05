@@ -14,10 +14,10 @@ import type {
 /* ------------------------------ shared shell ------------------------------ */
 
 /** 卡片外壳：可选标题 + 主体区。 */
-function Shell({ title, children }: { title?: string; children: React.ReactNode }) {
+export function Shell({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <div className="flex h-full w-full flex-col skin-card skin-pad-sm">
-      {title && <div className="mb-2 text-sm font-semibold text-foreground-primary">{title}</div>}
+      {title && <div className="mb-2 text-sm skin-fw-heading text-foreground-primary">{title}</div>}
       <div className="min-h-0 flex-1">{children}</div>
     </div>
   );
@@ -26,7 +26,7 @@ function Shell({ title, children }: { title?: string; children: React.ReactNode 
 /* ------------------------------ work screenshot ------------------------------ */
 
 /** 单张截图：有 src 渲染图片，无 src 渲染占位；可选底部说明条（支持显隐）。 */
-function Screenshot({
+export function Screenshot({
   src,
   caption,
   captionHidden,
@@ -58,7 +58,7 @@ function Screenshot({
 /** 按图片数量返回最佳列数，确保尽量无空位。
  *  1→1列, 2→2列, 3→3列(单行), 4→2列(2×2), 5→3列(3+2,末张跨2列),
  *  6→3列(3×2), 7→4列(4+3), 8→4列(4×2), 9→3列(3×3), 10→5列, 11→4列, 12→4列(4×3) */
-function autoCols(n: number): number {
+export function autoCols(n: number): number {
   const TABLE: Record<number, number> = {
     1: 1, 2: 2, 3: 3, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 9: 3, 10: 5, 11: 4, 12: 4,
   };
@@ -70,7 +70,7 @@ function autoCols(n: number): number {
  *  例如 5 张图 3 列：前 3 张各 span 1，第 4 张 span 1，第 5 张 span 2 → 无空位。
  *  7 张图 4 列：前 4 张各 span 1，后 3 张 → span 分别 2,1,1 也不行…
  *  更好的策略：最后一行的图片均分剩余列数。 */
-function gridSpans(count: number, cols: number): number[] {
+export function gridSpans(count: number, cols: number): number[] {
   const rows = Math.ceil(count / cols);
   const lastRowCount = count - (rows - 1) * cols;
   // 最后一行满 → 全部 span 1
@@ -98,10 +98,10 @@ function smartGrid(count: number): { cols: number; rows: number; rowHeights: str
 
 /** 非对称拼图模板：按图片数量定义 grid 单元格排列。
  *  每个 template 定义一个 grid 的列数、行数、以及每张图的单元格坐标。 */
-interface MosaicCell { col: number; row: number; colSpan: number; rowSpan: number }
-interface MosaicTemplate { gridCols: number; gridRows: number; cells: MosaicCell[] }
+export interface MosaicCell { col: number; row: number; colSpan: number; rowSpan: number }
+export interface MosaicTemplate { gridCols: number; gridRows: number; cells: MosaicCell[] }
 
-const MOSAIC_TEMPLATES: MosaicTemplate[] = [
+export const MOSAIC_TEMPLATES: MosaicTemplate[] = [
   // [0]: 1 张 → 全幅
   { gridCols: 1, gridRows: 1, cells: [{ col: 0, row: 0, colSpan: 1, rowSpan: 1 }] },
   // [1]: 2 张 → 1:1 对半
@@ -190,8 +190,9 @@ const MOSAIC_TEMPLATES: MosaicTemplate[] = [
 ];
 
 /** 命名组合版式：用户在属性面板显式挑选（仅 style==='mosaic' 生效）。
- *  auto / staggered 不走 cell 模板（auto 用 MOSAIC_TEMPLATES；staggered 走偏移渲染）。 */
-const MOSAIC_LAYOUTS: Record<Exclude<WorkScreenshotMosaicLayout, 'auto' | 'staggered'>, MosaicTemplate> = {
+ *  auto / staggered 不走 cell 模板（auto 用 MOSAIC_TEMPLATES；staggered 走偏移渲染）。
+ *  导出供属性面板缩略图选择器与测试复用。 */
+export const MOSAIC_LAYOUTS: Record<Exclude<WorkScreenshotMosaicLayout, 'auto' | 'staggered'>, MosaicTemplate> = {
   // 1大2小（3 张）：左大 1×2 + 右侧 2 张竖排
   'hero-3': { gridCols: 2, gridRows: 2, cells: [
     { col: 0, row: 0, colSpan: 1, rowSpan: 2 },
@@ -236,6 +237,60 @@ const MOSAIC_LAYOUTS: Record<Exclude<WorkScreenshotMosaicLayout, 'auto' | 'stagg
   'grid-3x3': { gridCols: 3, gridRows: 3, cells: Array.from({ length: 9 }, (_, i) => ({
     col: i % 3, row: Math.floor(i / 3), colSpan: 1, rowSpan: 1,
   })) },
+  // ── 2026-08-04 新增：杂志/分镜式非对称版式（等分网格仍走 style==='grid'）──
+  // 上大 + 下横排（4 张）
+  'hero-top': { gridCols: 3, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 3, rowSpan: 2 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 右大 + 左竖列（4 张）
+  'hero-right': { gridCols: 2, gridRows: 3, cells: [
+    { col: 1, row: 0, colSpan: 1, rowSpan: 3 },
+    { col: 0, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 品字：上宽 + 下双（3 张）
+  'pz-top': { gridCols: 2, gridRows: 2, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 1 },
+    { col: 0, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 倒品字：双 + 下宽（3 张）
+  'pz-bottom': { gridCols: 2, gridRows: 2, cells: [
+    { col: 0, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 1, colSpan: 2, rowSpan: 1 },
+  ]},
+  // 上大 + 下双行（5 张）
+  'hero-2up': { gridCols: 2, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 2, rowSpan: 1 },
+    { col: 0, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 杂志拼版（5 张）：左大 + 右上/右下 + 底部两块
+  'magazine': { gridCols: 6, gridRows: 6, cells: [
+    { col: 0, row: 0, colSpan: 4, rowSpan: 4 },
+    { col: 4, row: 0, colSpan: 2, rowSpan: 2 },
+    { col: 4, row: 2, colSpan: 2, rowSpan: 2 },
+    { col: 0, row: 4, colSpan: 2, rowSpan: 2 },
+    { col: 2, row: 4, colSpan: 4, rowSpan: 2 },
+  ]},
+  // 三横条（3 张）
+  'strip-h': { gridCols: 1, gridRows: 3, cells: [
+    { col: 0, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 1, colSpan: 1, rowSpan: 1 },
+    { col: 0, row: 2, colSpan: 1, rowSpan: 1 },
+  ]},
+  // 左右对半（2 张）
+  'split-half': { gridCols: 2, gridRows: 1, cells: [
+    { col: 0, row: 0, colSpan: 1, rowSpan: 1 },
+    { col: 1, row: 0, colSpan: 1, rowSpan: 1 },
+  ]},
 };
 
 /** 组合版式可选项：属性面板按钮组与渲染分流共用（单一事实源）。minImages 用于按张数禁用。 */
@@ -248,7 +303,85 @@ export const MOSAIC_LAYOUT_OPTIONS: { value: WorkScreenshotMosaicLayout; label: 
   { value: 'staircase', label: '阶梯', minImages: 7 },
   { value: 'staggered', label: '错落', minImages: 4 },
   { value: 'grid-3x3', label: '九宫格', minImages: 9 },
+  // 2026-08-04 新增：杂志/分镜式非对称版式
+  { value: 'hero-top', label: '上大+下排', minImages: 4 },
+  { value: 'hero-right', label: '右大+左列', minImages: 4 },
+  { value: 'pz-top', label: '品字(上宽)', minImages: 3 },
+  { value: 'pz-bottom', label: '倒品字', minImages: 3 },
+  { value: 'hero-2up', label: '上大+下双行', minImages: 5 },
+  { value: 'magazine', label: '杂志拼版', minImages: 5 },
+  { value: 'strip-h', label: '三横条', minImages: 3 },
+  { value: 'split-half', label: '左右对半', minImages: 2 },
 ];
+
+/* ----------------------- 版式缩略图（属性面板可视化选择器复用）----------------------- */
+
+const THUMB_CELL_STYLE = {
+  background: 'var(--surface-hover, #eef1f5)',
+  borderRadius: 2,
+  minWidth: 0,
+  minHeight: 0,
+};
+
+/** 按模板渲染迷你 CSS Grid 线框（每个 cell 一个方块）。 */
+function TemplateThumbnail({ template }: { template: MosaicTemplate }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gap: 2,
+        width: '100%',
+        aspectRatio: '4 / 3',
+        gridTemplateColumns: `repeat(${template.gridCols}, 1fr)`,
+        gridTemplateRows: `repeat(${template.gridRows}, 1fr)`,
+      }}
+    >
+      {template.cells.map((c, i) => (
+        <span
+          key={i}
+          style={{
+            ...THUMB_CELL_STYLE,
+            gridColumn: `${c.col + 1} / span ${c.colSpan}`,
+            gridRow: `${c.row + 1} / span ${c.rowSpan}`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 版式缩略图：属性面板「组合版式」可视化选择器用。
+ * - cell 型版式（hero-3 / pz-top / magazine …）直接按 MOSAIC_LAYOUTS 渲染；
+ * - auto → 用 4 张代表模板预览；
+ * - staggered → 3 列错落示意（无单一 cell 模板）。
+ */
+export function LayoutThumbnail({ value }: { value: WorkScreenshotMosaicLayout }) {
+  if (value === 'auto') {
+    return <TemplateThumbnail template={MOSAIC_TEMPLATES[3]} />;
+  }
+  if (value === 'staggered') {
+    return (
+      <div
+        style={{
+          display: 'grid',
+          gap: 2,
+          width: '100%',
+          aspectRatio: '4 / 3',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{ ...THUMB_CELL_STYLE, transform: `translateY(${['0%', '18%', '9%'][i]})` }}
+          />
+        ))}
+      </div>
+    );
+  }
+  return <TemplateThumbnail template={MOSAIC_LAYOUTS[value]} />;
+}
 
 /** 作品截图墙：支持 6 种视觉风格（grid / mosaic / skew / overlap / filmstrip / diagonal）。 */
 export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
@@ -274,7 +407,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     return (
       <Shell title={title}>
         <div
-          className="grid h-full w-full content-center gap-1 overflow-hidden"
+          className="grid h-full w-full content-center skin-gap-xs overflow-hidden"
           style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
         >
           {images.map((im, i) => {
@@ -331,7 +464,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
     return (
       <Shell title={title}>
         <div
-          className="grid h-full w-full gap-2 overflow-hidden rounded-lg p-2"
+          className="grid h-full w-full skin-gap-sm overflow-hidden rounded-lg p-2"
           style={{
             gridTemplateColumns: `repeat(${cols}, 1fr)`,
             background: 'color-mix(in srgb, var(--color-neutral-bg, #f5f5f5) 60%, #000 8%)',
@@ -397,7 +530,7 @@ export function WorkScreenshot({ data }: { data: WorkScreenshotData }) {
       return (
         <Shell title={title}>
           <div
-            className="grid h-full w-full content-stretch gap-2 overflow-hidden"
+            className="grid h-full w-full content-stretch skin-gap-sm overflow-hidden"
             style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}
           >
             {shown.map((im, i) => (
@@ -524,9 +657,9 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
 
   return (
     <Shell title={title}>
-      <div className="flex h-full w-full flex-col gap-3">
+      <div className="flex h-full w-full flex-col skin-gap-md">
         {(cover || workName || subtitle) && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center skin-gap-md">
             {cover && (
               <img
                 src={cover}
@@ -536,17 +669,17 @@ export function WorkMetrics({ data }: { data: WorkMetricsData }) {
               />
             )}
             <div className="min-w-0">
-              {workName && <div className="truncate text-sm font-semibold text-foreground-primary">{workName}</div>}
+              {workName && <div className="truncate text-sm skin-fw-heading text-foreground-primary">{workName}</div>}
               {subtitle && <div className="truncate text-[11px] text-foreground-secondary">{subtitle}</div>}
             </div>
           </div>
         )}
-        <div className="grid flex-1 grid-cols-3 gap-2">
+        <div className="grid flex-1 grid-cols-3 skin-gap-sm">
           {metrics.map((m, i) => (
             <div key={i} className="flex flex-col justify-center rounded-lg bg-surface-hover/60 px-3 py-2">
               <div className="text-[11px] text-foreground-secondary">{m.label}</div>
               <div
-                className="font-data text-lg font-semibold"
+                className="font-data text-lg skin-fw-heading"
                 style={m.color ? { color: m.color } : undefined}
               >
                 {m.value}

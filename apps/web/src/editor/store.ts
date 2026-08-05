@@ -21,7 +21,7 @@ import {
   DEFAULT_GRID_SIZE,
   titleHeightForFontSize,
 } from './defaults';
-import { snapMove, snapResize, clampRect, clampResize } from './snap';
+import { snapMove, snapResize, clampRect, clampResize, safeRectFrom, refitToSafeArea } from './snap';
 import { getBusinessItem, getLayout } from './business/catalog';
 import { getTemplate, getTemplateByPageType } from './templates';
 import { applyPageBinding as applyPageBindingReducer } from './pageBinding';
@@ -301,6 +301,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
         // 报告全局数据上下文：从 projectMeta.reportData 初始化。
         reportData: projectMeta?.reportData ?? {},
       });
+
+      // 新建单页面项目：若 meta 中携带 metaInitialTemplate，自动应用模版到第一页。
+      const initTpl = projectMeta?.metaInitialTemplate;
+      if (initTpl && pages.length > 0 && pages[0].components.length === 0) {
+        // 延迟调用以避免在 set() 过程中嵌套 set
+        queueMicrotask(() => {
+          const st = get();
+          const targetPage = st.pages[0];
+          if (targetPage && targetPage.components.length === 0) {
+            st.setPageType(targetPage.id, initTpl as any);
+            // 清除标记，避免重复应用
+            const cleanedMeta = { ...st.projectMeta };
+            delete cleanedMeta.metaInitialTemplate;
+            set({ projectMeta: cleanedMeta });
+          }
+        });
+      }
+
       refreshAllReportTitles();
     },
 
@@ -312,20 +330,26 @@ export const useEditorStore = create<EditorState>((set, get) => {
       // 当达人列表更新时，为未绑定 creatorId 的 creator-case / creator-collab 页面自动分配达人
       const allCr = allReportCreators(data);
       let crIdx = 0;
+      // 当 campaign 数据加载时，为未绑定 campaignId 的 campaign-report 页面自动分配
+      const campaignId = data.campaign?.id;
       let pages = s.pages.map((p) => {
         const cat = pageCategory(p.pageType);
+        let next = p;
         if ((cat === 'creator-case' || cat === 'creator-collab') && !p.creatorId && allCr.length > 0) {
           const cr = allCr[crIdx % allCr.length];
           crIdx++;
-          return { ...p, creatorId: cr.id };
+          next = { ...next, creatorId: cr.id };
         }
-        return p;
+        if (cat === 'campaign-report' && !next.campaignId && campaignId) {
+          next = { ...next, campaignId };
+        }
+        return next;
       });
-      // 如果有页面被更新了 creatorId，重新跑一次绑定填充数据
-      if (crIdx > 0) {
+      // 如果有页面被更新了 creatorId / campaignId，重新跑一次绑定填充数据
+      if (crIdx > 0 || (campaignId && s.pages.some((p) => pageCategory(p.pageType) === 'campaign-report' && !p.campaignId))) {
         for (const p of pages) {
           const cat = pageCategory(p.pageType);
-          if (cat === 'creator-case' || cat === 'creator-collab') {
+          if (cat === 'creator-case' || cat === 'creator-collab' || cat === 'campaign-report') {
             pages = applyPageBindingReducer(pages, p.id, data, new Set(p.components.map((c) => c.id)), s.projectMeta);
           }
         }
@@ -490,12 +514,45 @@ export const useEditorStore = create<EditorState>((set, get) => {
             }),
           }));
         }
+
+        // 钩子4：安全距离变化 → 所有组件等比适配到新安全区。
+        const newMargin = patch.layout?.safeMargin;
+        const prevMargin = (current.layout ?? DEFAULT_THEME.layout)?.safeMargin;
+        if (newMargin !== undefined && prevMargin !== undefined && newMargin !== prevMargin) {
+          const oldSafe = safeRectFrom(prevMargin, s.canvasWidth, s.canvasHeight);
+          const newSafe = safeRectFrom(newMargin, s.canvasWidth, s.canvasHeight);
+          pagesOut = pagesOut.map((pg) => ({
+            ...pg,
+            components: pg.components.map((c) => {
+              const refitted = refitToSafeArea(
+                { x: c.x, y: c.y, w: c.w, h: c.h, type: c.type },
+                oldSafe,
+                newSafe,
+                prevMargin,
+                newMargin,
+                s.canvasWidth,
+              );
+              return { ...c, x: refitted.x, y: refitted.y, w: refitted.w, h: refitted.h };
+            }),
+          }));
+        }
         const out: Partial<EditorState> = {
           projectMeta: { ...(s.projectMeta ?? {}), theme: merged } as ProjectMeta,
         };
         if (pagesOut !== s.pages) out.pages = pagesOut;
         return out;
       }),
+
+    /** 更新 projectMeta 的部分字段（浅合并）。 */
+    updateProjectMeta: (patch: Partial<ProjectMeta>) => {
+      mutateAndCommit((s) => ({
+        projectMeta: { ...(s.projectMeta ?? {}), ...patch } as ProjectMeta,
+      }));
+      // reportPeriod / scenarioSub / advertiser 变化时刷新所有报告页标题
+      if ('reportPeriod' in patch || 'scenarioSub' in patch || 'advertiser' in patch) {
+        refreshAllReportTitles();
+      }
+    },
 
     setZoom: (z) => set({ zoom: Math.round(z * 100) / 100 }),
     zoomByDelta: (delta) =>
@@ -1203,8 +1260,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
             if (tpl) {
               const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
               next.components = comps;
-              // 单页超长模板：自动调整画板高度以容纳所有组件
-              if (tpl.canvasHeight && tpl.canvasHeight > s.canvasHeight) {
+              // 单页超长模板：仅在单页面模式下自动调整画板高度以容纳所有组件
+              if (tpl.canvasHeight && tpl.canvasHeight > s.canvasHeight && s.projectMeta?.styleType === 'single') {
                 canvasHeightOverride = tpl.canvasHeight;
               }
               // 如果模板有 pageTitleIndex，设置标题组件

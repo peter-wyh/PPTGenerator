@@ -28,6 +28,7 @@ model User {
   campaigns    Campaign[]
   creators     Creator[]
   schemes      ReportScheme[]
+  htmlTemplates HtmlTemplate[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -46,6 +47,8 @@ model Project {
   meta       Json?
   /// 报告方案版本（追溯生成报告时所用的方案版本）。
   reportSchemeVersion String?
+  /// AI/模板生成的 HTML 报告内容（单文件，内联 CSS）。styleType='ai-html' 时使用。
+  htmlContent String? @db.LongText
   owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -386,4 +389,31 @@ model CpsPerformance {
 
   @@unique([campaignCreatorId, contentType])
   @@index([campaignCreatorId])
+}
+
+// ─── Phase 5: HTML Report Templates & AI Generation ──────────────────────────
+// 独立 HTML 模板体系，用于一键生成 HTML 报告（与 PPT 模板分开管理）。
+
+/// HTML 报告模板：含占位符的 HTML 文件，由 ADMIN 维护。
+model HtmlTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  /// 模板 HTML 内容（含 {{placeholder}} 变量占位符）。
+  html        String   @db.LongText
+  /// 模板描述（可选）。
+  description String?
+  /// 模板分类标签（如 '投放结案' '达人复盘'）。
+  category    String?
+  /// 缩略图 URL（可选）。
+  thumbnail   String?
+  /// 发布状态（草稿/已发布），与 PPT 模板一致。
+  status      TemplateStatus @default(DRAFT)
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([category])
 }

@@ -40,7 +40,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
         {value}
       </div>
       {compare && (
-        <div className="text-[11px] font-medium" style={{ color: compareColor(compare, direction) }}>
+        <div className="text-[11px] skin-fw-body" style={{ color: compareColor(compare, direction) }}>
           {compare}
         </div>
       )}
@@ -53,7 +53,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
         {items.map((it, i) => (
           <div key={i} className="flex items-baseline gap-1.5">
             <span className="text-[11px] text-foreground-secondary">{it.label}</span>
-            <span className="font-data text-base font-semibold text-foreground-primary">{it.value}</span>
+            <span className="font-data text-base skin-fw-heading text-foreground-primary">{it.value}</span>
             {it.compare && (
               <span className="text-[10px]" style={{ color: compareColor(it.compare, it.direction) }}>
                 {it.compare}
@@ -67,7 +67,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
 
   if (variant === 'row') {
     return (
-      <div className="flex h-full w-full items-stretch gap-2">
+      <div className="flex h-full w-full items-stretch skin-gap-sm">
         {items.map((it, i) => (
           <div key={i} className="flex-1">
             <Card {...it} />
@@ -80,7 +80,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
   if (variant === 'gradient') {
     // 渐变深色卡片：每个 KPI 用渐变背景 + 白色文字，2 列网格。
     return (
-      <div className="grid h-full w-full grid-cols-2 gap-3 overflow-auto">
+      <div className="grid h-full w-full grid-cols-2 skin-gap-md overflow-auto">
         {items.map((it, i) => {
           const token = data.valueColors?.[i] ?? 'primary';
           const c = KPI_COLOR_TOKENS[token];
@@ -93,7 +93,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
               <div className="text-xs text-white/70">{it.label}</div>
               <div className="font-data text-2xl font-bold text-white">{it.value}</div>
               {it.compare && (
-                <div className="text-[11px] font-medium text-white/80">{it.compare}</div>
+                <div className="text-[11px] skin-fw-body text-white/80">{it.compare}</div>
               )}
             </div>
           );
@@ -105,7 +105,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
   if (variant === 'minimal') {
     // 极简线框：无背景色，顶部 2px 颜色线 + label + 大数值，等宽排列。
     return (
-      <div className="grid h-full w-full grid-cols-3 gap-2 overflow-auto">
+      <div className="grid h-full w-full grid-cols-3 skin-gap-sm overflow-auto">
         {items.map((it, i) => {
           const token = data.valueColors?.[i] ?? null;
           const color = token && token !== 'primary' ? KPI_COLOR_TOKENS[token].fg : 'var(--foreground-muted)';
@@ -114,7 +114,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
               <div className="mt-2 text-[11px] text-foreground-secondary">{it.label}</div>
               <div className="font-data text-xl font-bold text-foreground-primary">{it.value}</div>
               {it.compare && (
-                <div className="text-[11px] font-medium" style={{ color: compareColor(it.compare, it.direction) }}>
+                <div className="text-[11px] skin-fw-body" style={{ color: compareColor(it.compare, it.direction) }}>
                   {it.compare}
                 </div>
               )}
@@ -129,7 +129,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
     // 平铺指标条（参考图风格）：单行等宽卡 —— 标题 + 大数值（按类型染色）+ 环比 + 对比基准锚点。
     const compareLabel = data.compareLabel?.trim() ? data.compareLabel : 'vs last period';
     return (
-      <div className="flex h-full w-full items-stretch gap-2 overflow-auto">
+      <div className="flex h-full w-full items-stretch skin-gap-sm overflow-auto">
         {items.map((it, i) => (
           <div
             key={i}
@@ -144,7 +144,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
             </div>
             <div className="mt-0.5 flex items-baseline gap-1.5">
               {it.compare && (
-                <span className="text-[11px] font-semibold" style={{ color: compareColor(it.compare, it.direction) }}>
+                <span className="text-[11px] skin-fw-heading" style={{ color: compareColor(it.compare, it.direction) }}>
                   {it.compare}
                 </span>
               )}
@@ -159,7 +159,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
   if (variant === 'card') {
     return (
       <div
-        className="grid h-full w-full gap-3 overflow-auto"
+        className="grid h-full w-full skin-gap-md overflow-auto"
         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
       >
         {items.map((it, i) => {
@@ -171,9 +171,9 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
           return (
             <div
               key={i}
-              className="flex items-center justify-between rounded-2xl bg-surface-primary p-5 shadow-sm"
+              className="skin-card flex items-center justify-between p-5"
             >
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col skin-gap-xs">
                 <div className="text-xs text-foreground-secondary">{it.label}</div>
                 <div
                   className="font-data text-2xl font-bold text-foreground-primary"
@@ -182,7 +182,7 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
                   {it.value}
                 </div>
                 {it.compare && (
-                  <div className="text-xs font-medium" style={{ color: compareColor(it.compare, it.direction) }}>
+                  <div className="text-xs skin-fw-body" style={{ color: compareColor(it.compare, it.direction) }}>
                     {it.compare}
                   </div>
                 )}

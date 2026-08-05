@@ -8,9 +8,12 @@
  */
 import { Fragment, useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Campaign, CampaignMetric } from '@mediakit/shared';
+import type { Campaign, CampaignMetric, ProjectMeta } from '@mediakit/shared';
 import { listCampaigns } from '@/api/campaigns';
+import { projectsApi } from '@/api/projects';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
+import { CreateProjectDialog } from '@/components/CreateProjectDialog';
+import { GenerateHtmlReportOverlay } from '@/editor/components/GenerateHtmlReportOverlay';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { RecordFormModal } from '@/editor/components/RecordFormModal';
 import {
@@ -23,10 +26,19 @@ import { parseFile } from '@/editor/datasource/parse';
 import { toast } from '../components/Toast';
 
 export function CampaignPage() {
+  const navigate = useNavigate();
   const { records, loading, reload } = useCampaignRecords();
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
   const [editing, setEditing] = useState<DataRecordDTO | null>(null);
   const [adding, setAdding] = useState(false);
+
+  // ⚡生成HTML 流程：step1 = 先创建报告（CreateProjectDialog 预填），step2 = AI 生成
+  const [genHtmlFor, setGenHtmlFor] = useState<Campaign | null>(null);
+  const [genHtmlCreating, setGenHtmlCreating] = useState(false);
+  const [genHtmlError, setGenHtmlError] = useState<string | null>(null);
+  /** 报告创建成功后，持有 projectId + campaignId 进入 AI 生成 overlay */
+  const [genHtmlOverlay, setGenHtmlOverlay] = useState<{ projectId: string; campaignId: string; campaignName: string } | null>(null);
+
   const csvRef = useRef<HTMLInputElement>(null);
   const jsonRef = useRef<HTMLInputElement>(null);
 
@@ -123,6 +135,7 @@ export function CampaignPage() {
           })
         }
         onDelete={(id) => void del(id)}
+        onGenerateHtml={(c) => setGenHtmlFor(c)}
       />
       {preview && (
         <ImportPreviewModal
@@ -152,6 +165,73 @@ export function CampaignPage() {
             await reload();
           }}
           onCancel={() => setEditing(null)}
+        />
+      )}
+      {/* ⚡生成HTML — Step 1: 先创建报告（预填 campaign 数据） */}
+      {genHtmlFor && (
+        <CreateProjectDialog
+          open
+          loading={genHtmlCreating}
+          error={genHtmlError}
+          title="新建报告 — 生成 HTML"
+          submitLabel="创建并生成"
+          initial={{
+            name: `${genHtmlFor.name} — 投放结案报告`,
+            width: 1280,
+            height: 800,
+            meta: {
+              scenario: 'campaign-report',
+              scenarioSub: 'wrap-up',
+              styleType: 'ai-html',
+              businessLine: genHtmlFor.businessLine || undefined,
+              advertiser: genHtmlFor.advertiser || undefined,
+              campaignId: genHtmlFor.id,
+              campaignInfo: {
+                campaignName: genHtmlFor.name,
+                platform: genHtmlFor.platform,
+                startDate: genHtmlFor.startDate,
+                endDate: genHtmlFor.endDate,
+                budget: genHtmlFor.budget,
+              },
+            } as ProjectMeta,
+          }}
+          onCancel={() => {
+            setGenHtmlFor(null);
+            setGenHtmlError(null);
+          }}
+          onSubmit={async (values) => {
+            setGenHtmlCreating(true);
+            setGenHtmlError(null);
+            try {
+              const { project } = await projectsApi.create(values.name, values.width, values.height, values.meta);
+              // 报告创建成功 → 进入 Step 2: AI 生成 overlay
+              setGenHtmlFor(null);
+              setGenHtmlOverlay({
+                projectId: project.id,
+                campaignId: genHtmlFor.id,
+                campaignName: genHtmlFor.name,
+              });
+            } catch {
+              setGenHtmlError('报告创建失败，请重试');
+            } finally {
+              setGenHtmlCreating(false);
+            }
+          }}
+        />
+      )}
+
+      {/* ⚡生成HTML — Step 2: AI 生成 overlay（已有报告 projectId） */}
+      {genHtmlOverlay && (
+        <GenerateHtmlReportOverlay
+          projectId={genHtmlOverlay.projectId}
+          campaignId={genHtmlOverlay.campaignId}
+          campaignName={genHtmlOverlay.campaignName}
+          onClose={() => setGenHtmlOverlay(null)}
+          onSaved={(projectId) => {
+            setGenHtmlOverlay(null);
+            toast.success('HTML 报告已保存');
+            navigate(`/projects/${projectId}`);
+          }}
         />
       )}
     </div>
@@ -209,11 +289,13 @@ function CampaignList({
   loading,
   onEdit,
   onDelete,
+  onGenerateHtml,
 }: {
   records: Campaign[];
   loading: boolean;
   onEdit: (c: Campaign) => void;
   onDelete: (id: string) => void;
+  onGenerateHtml: (c: Campaign) => void;
 }) {
   const navigate = useNavigate();
   if (loading) {
@@ -303,6 +385,13 @@ function CampaignList({
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.owner ?? '—'}</td>
                 <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 text-right hover:bg-surface-hover/50">
                   <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => onGenerateHtml(d)}
+                      className="rounded bg-accent-primary/10 px-2 py-1 text-xs font-medium text-accent-primary hover:bg-accent-primary/20"
+                      title="根据此 Campaign 数据生成 HTML 报告"
+                    >
+                      ⚡生成HTML
+                    </button>
                     <button
                       onClick={() => navigate('/data/campaign-collabs', { state: { campaignId: d.id } })}
                       className="text-xs text-accent-primary hover:underline"

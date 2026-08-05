@@ -282,7 +282,7 @@ export function TemplateFormDialog({
                 className={selectCls}
               >
                 <option value="DRAFT">草稿（仅 ADMIN 可见）</option>
-                <option value="PUBLISHED">已发布（BD 可基于此创建项目）</option>
+                <option value="PUBLISHED">已发布（BD 可基于此创建报告）</option>
               </select>
             </label>
           )}

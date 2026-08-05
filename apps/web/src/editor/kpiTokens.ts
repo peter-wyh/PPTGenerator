@@ -17,10 +17,10 @@ export const KPI_COLOR_TOKENS: Record<KpiColorToken, { fg: string; softBg: strin
   brand: { fg: 'var(--color-primary)', softBg: 'color-mix(in srgb, var(--color-primary) 12%, transparent)' },
 };
 
-export const KPI_COLOR_OPTIONS: { token: KpiColorToken; label: string }[] = [
-  { token: 'black', label: '黑色' },
-  { token: 'white', label: '白色' },
-  { token: 'brand', label: '品牌色' },
+export const KPI_COLOR_OPTIONS: { token: KpiColorToken; label: string; desc: string }[] = [
+  { token: 'black', label: '强调', desc: '强调色（深色文字，适合浅色背景）' },
+  { token: 'white', label: '高亮', desc: '高亮色（白色文字，适合深色/渐变背景）' },
+  { token: 'brand', label: '品牌', desc: '品牌主色' },
 ];
 
 export function resolveKpiColor(token?: KpiColorToken | null) {

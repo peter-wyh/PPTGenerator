@@ -26,6 +26,10 @@ router.post('/', validate({ body: createCampaignSchema }), campaignController.cr
 router.patch('/:id', validate({ params: idParamSchema, body: updateCampaignSchema }), campaignController.update);
 router.delete('/:id', validate({ params: idParamSchema }), campaignController.remove);
 
+// ─── Analytics (Campaign 级分析数据) ──────────────────────────────────────────
+router.get('/:campaignId/analytics', campaignController.getAnalytics);
+router.put('/:campaignId/analytics', campaignController.updateAnalytics);
+
 // ─── Creator ─────────────────────────────────────────────────────────────────
 router.get('/creators/list', validate({ query: listCreatorsQuerySchema }), campaignController.listCreators);
 router.get('/creators/:id', validate({ params: idParamSchema }), campaignController.getCreator);

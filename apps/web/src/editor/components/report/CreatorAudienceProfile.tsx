@@ -19,8 +19,8 @@ function ModuleCard({ module }: { module: AudienceModule }) {
   const items = module.items ?? [];
   const label = MODULE_LABEL[module.key] ?? module.key;
   return (
-    <div className="flex min-h-0 flex-col gap-1.5 rounded-lg bg-surface-secondary p-2">
-      <div className="text-[11px] font-semibold text-foreground-secondary">{label}</div>
+    <div className="skin-card-flat flex min-h-0 flex-col gap-1.5 p-2">
+      <div className="text-[11px] skin-fw-heading text-foreground-secondary">{label}</div>
       {items.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-[10px] text-foreground-muted">暂无数据</div>
       ) : module.key === 'gender' ? (
@@ -29,7 +29,7 @@ function ModuleCard({ module }: { module: AudienceModule }) {
           {items.map((it, i) => {
             const c = it.color ?? GENDER_COLORS[i % GENDER_COLORS.length];
             return (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex items-center skin-gap-sm">
                 <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ backgroundColor: c }} />
                 <span className="font-data text-lg font-bold leading-none" style={{ color: c }}>
                   {it.value}%
@@ -40,7 +40,7 @@ function ModuleCard({ module }: { module: AudienceModule }) {
           })}
         </div>
       ) : (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col skin-gap-xs">
           {items.map((it, i) => (
             <MiniBar key={i} label={it.label} value={it.value} color={it.color} index={i} />
           ))}
@@ -62,17 +62,17 @@ export function CreatorAudienceProfile({ data }: { data: CreatorAudienceProfileD
 
   if (active.length === 0) {
     return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl bg-surface-primary p-3 text-xs text-foreground-muted">
+      <div className="skin-card flex h-full w-full items-center justify-center p-3 text-xs text-foreground-muted">
         暂未启用画像模块
       </div>
     );
   }
 
   return (
-    <div className="flex h-full w-full flex-col rounded-xl bg-surface-primary p-3">
+    <div className="skin-card flex h-full w-full flex-col p-3">
       {(title || subtitle) && (
         <div className="mb-2 flex-none">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-muted">{subtitle}</div>}
         </div>
       )}

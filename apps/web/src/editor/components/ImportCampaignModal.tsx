@@ -50,10 +50,10 @@ export function ImportCampaignModal({
       onClick={onCancel}
     >
       <div
-        className="flex max-h-[90vh] w-[560px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        className="flex max-h-[90vh] w-[560px] flex-col skin-gap-md overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="font-headings text-sm font-semibold text-foreground-primary">
+        <div className="font-headings text-sm skin-fw-heading text-foreground-primary">
           从 Campaign 导入
         </div>
 
@@ -115,7 +115,7 @@ export function ImportCampaignModal({
               )}
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end skin-gap-sm">
               <button
                 onClick={onCancel}
                 className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"

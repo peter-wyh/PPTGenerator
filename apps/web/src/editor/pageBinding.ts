@@ -1,4 +1,4 @@
-import type { Page, ReportCampaign, ReportCreator, ReportDataContext, EditorComponent, ComponentData, DataSourceMode, DmMonthlyData, DmBiweeklyData } from '@mediakit/shared';
+import type { Page, ReportCampaign, ReportCreator, ReportDataContext, EditorComponent, ComponentData, DataSourceMode, DmMonthlyData, DmBiweeklyData, ProjectTheme } from '@mediakit/shared';
 import { pageCategory } from '@mediakit/shared';
 import { allReportCreators } from './store';
 import {
@@ -49,6 +49,7 @@ export const COMPONENT_BINDING_KIND: Partial<Record<string, 'creator' | 'campaig
   // text 组件仅在 _dataSource==='project' 时填充（用户通过属性面板显式标记「跟随项目」）。
   'text': 'project',
   'strategy-block': 'project',
+  'page-header': 'project',
   // dm 型（DM 月报/双周报专用，取 reportData.dmMonthly / dmBiweekly）
   'dm-hero': 'dm',
   'dm-channel-content': 'dm',
@@ -83,11 +84,12 @@ export function resolvePageCampaign(page: Page, reportData: ReportDataContext): 
 export function projectPatch(
   compType: string,
   page: Page,
-  projectMeta: { advertiser?: string; scenarioSub?: string; scenario?: string; businessLine?: string } | null | undefined,
+  projectMeta: { advertiser?: string; scenarioSub?: string; scenario?: string; businessLine?: string; theme?: ProjectTheme } | null | undefined,
   reportData: ReportDataContext,
 ): Record<string, unknown> | null {
   const campaign = reportData.campaign;
   const cat = pageCategory(page.pageType);
+  const branding = projectMeta?.theme?.branding;
 
   if (compType === 'text') {
     // 封面页：非标题 text 组件自动填充副标题
@@ -123,6 +125,31 @@ export function projectPatch(
     if (campaign.status) lines.push(`Status: ${campaign.status}`);
     if (lines.length === 0) return null;
     return { content: lines.join('<br/>') };
+  }
+
+  if (compType === 'page-header') {
+    const advName = campaign?.advertiser || projectMeta?.advertiser || branding?.title || '';
+    const blName = projectMeta?.businessLine || '';
+    if (!advName && !blName) return null;
+
+    const leftLogo: Record<string, unknown> = {};
+    if (branding?.logo) leftLogo.src = branding.logo;
+    if (advName) { leftLogo.text = advName; leftLogo.initials = advName.slice(0, 2).toUpperCase(); }
+    if (branding?.logoHeight) leftLogo.logoHeight = branding.logoHeight;
+
+    const rightLogo: Record<string, unknown> = {};
+    if (branding?.blBadge?.logo) rightLogo.src = branding.blBadge.logo;
+    if (blName) { rightLogo.text = blName; rightLogo.initials = blName.slice(0, 2).toUpperCase(); }
+    if (branding?.blBadge?.height) rightLogo.logoHeight = branding.blBadge.height;
+
+    let dateLabel = '';
+    if (campaign?.startDate && campaign?.endDate) dateLabel = `${campaign.startDate} ~ ${campaign.endDate}`;
+
+    return {
+      leftLogo,
+      rightLogo,
+      ...(dateLabel ? { dateLabel } : {}),
+    };
   }
 
   return null;
@@ -508,7 +535,7 @@ export function applyPageBinding(
   pageId: string,
   reportData: ReportDataContext,
   newCompIds: Set<string>,
-  projectMeta?: { advertiser?: string; scenarioSub?: string; scenario?: string; businessLine?: string } | null,
+  projectMeta?: { advertiser?: string; scenarioSub?: string; scenario?: string; businessLine?: string; theme?: ProjectTheme } | null,
 ): Page[] {
   const idx = pages.findIndex((p) => p.id === pageId);
   if (idx < 0) return pages;

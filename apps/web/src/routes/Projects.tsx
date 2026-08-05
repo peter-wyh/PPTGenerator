@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectsApi } from '@/api/projects';
+import { templatesApi } from '@/api/templates';
 import { createProjectFromTemplate } from '@/api/templates';
 import { Button } from '@/components/Button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
+import { GenerateHtmlReportOverlay } from '@/editor/components/GenerateHtmlReportOverlay';
 import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 import type { ProjectMeta, ProjectSummary, Scenario } from '@mediakit/shared';
 import { toast } from '../components/Toast';
@@ -39,6 +41,66 @@ export function Projects() {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  // 存为模版
+  const [saveTplFor, setSaveTplFor] = useState<ProjectSummary | null>(null);
+  const [tplSaving, setTplSaving] = useState(false);
+  const [tplError, setTplError] = useState<string | null>(null);
+  const [tplSuccess, setTplSuccess] = useState(false);
+  const [tplConflict, setTplConflict] = useState<string | null>(null);
+
+  // ai-html 行的 HTML 操作:下拉开合 + 按行缓存 + busy
+  const [htmlMenuFor, setHtmlMenuFor] = useState<string | null>(null);
+  const [htmlCache, setHtmlCache] = useState<Record<string, string>>({});
+  const [htmlBusy, setHtmlBusy] = useState<string | null>(null);
+
+  async function ensureHtml(p: ProjectSummary): Promise<string | null> {
+    if (htmlCache[p.id] !== undefined) return htmlCache[p.id];
+    setHtmlBusy(p.id);
+    try {
+      const { html } = await projectsApi.getHtml(p.id);
+      setHtmlCache((prev) => ({ ...prev, [p.id]: html }));
+      return html;
+    } catch {
+      toast.error('读取 HTML 失败');
+      return null;
+    } finally {
+      setHtmlBusy(null);
+    }
+  }
+
+  async function handlePreviewHtml(p: ProjectSummary) {
+    const html = await ensureHtml(p);
+    if (html === null) return;
+    if (!html) { toast.error('该报告暂无 HTML 内容'); return; }
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  async function handleDownloadHtml(p: ProjectSummary) {
+    const html = await ensureHtml(p);
+    if (html === null) return;
+    if (!html) { toast.error('该报告暂无 HTML 内容'); return; }
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${p.name}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleCopyHtml(p: ProjectSummary) {
+    const html = await ensureHtml(p);
+    if (html === null) return;
+    if (!html) { toast.error('该报告暂无 HTML 内容'); return; }
+    try {
+      await navigator.clipboard.writeText(html);
+      toast.success('已复制 HTML 源码');
+    } catch {
+      toast.error('复制失败，请手动复制');
+    }
+  }
+
   // 列表筛选
   const [filterBL, setFilterBL] = useState<string>('');
   const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
@@ -68,15 +130,39 @@ export function Projects() {
     void refresh();
   }, []);
 
-  async function handleCreate(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta }) {
+  // AI 生成 HTML：创建报告后进入生成 overlay（与数据管理入口同一流程链路）
+  const [genHtmlOverlay, setGenHtmlOverlay] = useState<{
+    projectId: string;
+    campaignId?: string;
+    campaignName?: string;
+  } | null>(null);
+
+  async function handleCreate(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta; templateId?: string }) {
     setCreating(true);
     setCreateError(null);
     try {
+      // 模版模式：走 createProjectFromTemplate
+      if (values.templateId) {
+        const p = await createProjectFromTemplate(values.templateId, values.name);
+        setShowCreate(false);
+        navigate(`/projects/${p.id}`);
+        return;
+      }
       const { project: p, seeded } = await projectsApi.create(values.name, values.width, values.height, values.meta);
       setShowCreate(false);
+      // AI 生成 HTML：进入生成 overlay（与数据管理入口同一流程链路）
+      if (values.meta.styleType === 'ai-html') {
+        setGenHtmlOverlay({
+          projectId: p.id,
+          campaignId: values.meta.campaignId,
+          campaignName: values.meta.campaignInfo?.campaignName,
+        });
+        return;
+      }
       navigate(`/projects/${p.id}`, { state: { seeded } });
-    } catch {
-      setCreateError('创建失败，请重试');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: { message?: string } } } };
+      setCreateError(e.response?.data?.error?.message ?? '创建失败，请重试');
     } finally {
       setCreating(false);
     }
@@ -111,13 +197,8 @@ export function Projects() {
       );
       setEditing(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error && 'response' in err
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ? (err as any)?.response?.data?.error?.issues?.[0]?.message
-          ?? (err as any)?.response?.data?.message
-          ?? '保存失败，请重试'
-        : '保存失败，请重试';
-      setEditError(msg);
+      const e = err as { response?: { data?: { error?: { message?: string } } } };
+      setEditError(e.response?.data?.error?.message ?? '保存失败，请重试');
     } finally {
       setEditSubmitting(false);
     }
@@ -146,6 +227,32 @@ export function Projects() {
     }
   }
 
+  async function handleSaveAsTemplate(overwrite = false) {
+    if (!saveTplFor) return;
+    setTplSaving(true);
+    setTplError(null);
+    setTplConflict(null);
+    try {
+      await templatesApi.createFromProject({
+        projectId: saveTplFor.id,
+        name: `${saveTplFor.name} 模板`,
+        meta: saveTplFor.meta,
+        overwrite,
+      });
+      setTplSuccess(true);
+      toast.success('已保存为模板');
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { error?: { message?: string } } } };
+      if (e.response?.status === 409) {
+        setTplConflict(e.response?.data?.error?.message ?? '已存在同名模板，是否覆盖？');
+      } else {
+        setTplError('保存失败，请重试');
+      }
+    } finally {
+      setTplSaving(false);
+    }
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* 左侧侧栏 */}
@@ -153,14 +260,14 @@ export function Projects() {
         <div className="px-4 py-4">
           <h1 className="font-headings text-lg font-semibold text-foreground-primary">我的报告</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
-            管理 · 筛选 · 创建报告项目
+            管理 · 筛选 · 创建报告
           </p>
         </div>
         <div className="flex flex-col gap-2 px-3 pb-3">
           <Button variant="secondary" onClick={() => setShowFromTemplate(true)} className="w-full">
             从模板新建
           </Button>
-          <Button onClick={() => setShowCreate(true)} className="w-full">+ 新建项目</Button>
+          <Button onClick={() => setShowCreate(true)} className="w-full">+ 新建报告</Button>
         </div>
 
         {/* 筛选器 */}
@@ -196,7 +303,7 @@ export function Projects() {
               </button>
             )}
             <span className="text-[10px] text-foreground-muted">
-              {filtered.length} / {projects.length} 个项目
+              {filtered.length} / {projects.length} 个报告
             </span>
           </div>
         </div>
@@ -234,15 +341,15 @@ export function Projects() {
         {loading ? (
           <p className="text-sm text-foreground-muted">加载中…</p>
         ) : projects.length === 0 ? (
-          <p className="text-sm text-foreground-muted">还没有项目，点击左侧「新建项目」开始吧。</p>
+          <p className="text-sm text-foreground-muted">还没有报告，点击左侧「新建报告」开始吧。</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-foreground-muted">没有符合筛选条件的项目。</p>
+          <p className="text-sm text-foreground-muted">没有符合筛选条件的报告。</p>
         ) : (
           <div className="overflow-auto rounded-lg border border-border-default">
             <table className="w-full min-w-[880px] border-collapse text-sm">
               <thead>
                 <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
-                  <th className="px-3 py-2 font-medium">项目名称</th>
+                  <th className="px-3 py-2 font-medium">报告名称</th>
                   <th className="px-3 py-2 font-medium">样式</th>
                   <th className="px-3 py-2 font-medium">业务线</th>
                   <th className="px-3 py-2 font-medium">场景</th>
@@ -297,6 +404,49 @@ export function Projects() {
                       >
                         {p.meta?.styleType === 'ai-html' ? 'GrapesJS' : '可视化编辑'}
                       </button>
+                      {p.meta?.styleType === 'ai-html' && (
+                        <span className="relative ml-1 inline-block">
+                          <button
+                            onClick={() => setHtmlMenuFor(htmlMenuFor === p.id ? null : p.id)}
+                            className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+                          >
+                            HTML ▾
+                          </button>
+                          {htmlMenuFor === p.id && (
+                            <>
+                              {/* 点击外部关闭 */}
+                              <button
+                                className="fixed inset-0 z-10 cursor-default"
+                                tabIndex={-1}
+                                onClick={() => setHtmlMenuFor(null)}
+                              />
+                              <span className="absolute right-0 z-20 mt-1 w-28 rounded-md border border-border-default bg-surface-primary py-1 shadow-lg">
+                                <button
+                                  disabled={htmlBusy === p.id}
+                                  onClick={() => { setHtmlMenuFor(null); void handlePreviewHtml(p); }}
+                                  className="block w-full px-3 py-1.5 text-left text-xs text-foreground-primary hover:bg-surface-hover disabled:opacity-50"
+                                >
+                                  预览
+                                </button>
+                                <button
+                                  disabled={htmlBusy === p.id}
+                                  onClick={() => { setHtmlMenuFor(null); void handleDownloadHtml(p); }}
+                                  className="block w-full px-3 py-1.5 text-left text-xs text-foreground-primary hover:bg-surface-hover disabled:opacity-50"
+                                >
+                                  下载
+                                </button>
+                                <button
+                                  disabled={htmlBusy === p.id}
+                                  onClick={() => { setHtmlMenuFor(null); void handleCopyHtml(p); }}
+                                  className="block w-full px-3 py-1.5 text-left text-xs text-foreground-primary hover:bg-surface-hover disabled:opacity-50"
+                                >
+                                  复制源码
+                                </button>
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      )}
                       <button
                         onClick={() => { setEditError(null); setEditing(p); }}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -306,9 +456,21 @@ export function Projects() {
                       <button
                         onClick={() => void handleDuplicate(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
-                        title="复制项目"
+                        title="复制报告"
                       >
                         复制
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSaveTplFor(p);
+                          setTplError(null);
+                          setTplConflict(null);
+                          setTplSuccess(false);
+                        }}
+                        className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
+                        title="将报告保存为可复用模板"
+                      >
+                        存模版
                       </button>
                       <button
                         onClick={() => setPendingDelete(p)}
@@ -328,7 +490,7 @@ export function Projects() {
       {/* 弹窗 */}
       <ConfirmDialog
         open={!!pendingDelete}
-        title="删除项目？"
+        title="删除报告？"
         description={`「${pendingDelete?.name ?? ''}」将被永久删除，此操作不可撤销。`}
         confirmText="删除"
         loading={deleting}
@@ -356,13 +518,111 @@ export function Projects() {
         open={!!editing}
         loading={editSubmitting}
         error={editError}
-        title="编辑项目"
+        title="编辑报告"
         submitLabel="保存"
         lockScenario
         initial={editing ? { name: editing.name, width: editing.width, height: editing.height, meta: editing.meta } : null}
         onCancel={() => !editSubmitting && setEditing(null)}
         onSubmit={handleEdit}
       />
+
+      {/* AI 生成 HTML：创建后进入生成 overlay（与数据管理入口同一流程） */}
+      {genHtmlOverlay && (
+        <GenerateHtmlReportOverlay
+          projectId={genHtmlOverlay.projectId}
+          campaignId={genHtmlOverlay.campaignId}
+          campaignName={genHtmlOverlay.campaignName}
+          onClose={() => setGenHtmlOverlay(null)}
+          onSaved={(pid) => {
+            setGenHtmlOverlay(null);
+            navigate(`/projects/${pid}`);
+          }}
+        />
+      )}
+
+      {/* 存为模版对话框 */}
+      {saveTplFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !tplSaving && setSaveTplFor(null)}>
+          <div
+            className="w-[420px] rounded-xl bg-surface-primary shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
+              <h2 className="text-base font-semibold text-foreground-primary">存为模板</h2>
+              <button
+                onClick={() => !tplSaving && setSaveTplFor(null)}
+                className="text-foreground-muted hover:text-foreground-primary"
+              >✕</button>
+            </div>
+            <div className="space-y-3 px-5 py-4">
+              {tplSuccess ? (
+                <div className="space-y-3">
+                  <p className="rounded-lg bg-green/10 px-3 py-2 text-sm text-green">
+                    模板「{saveTplFor.name} 模板」已保存，可在模板管理中查看和发布。
+                  </p>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setSaveTplFor(null)}
+                      className="rounded-lg border border-border-default px-4 py-2 text-sm hover:bg-surface-hover"
+                    >
+                      关闭
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-foreground-secondary">
+                    将报告「<span className="font-medium text-foreground-primary">{saveTplFor.name}</span>」的全部 {saveTplFor.pageCount} 页保存为模板？
+                  </p>
+                  <p className="rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
+                    模板名称：「{saveTplFor.name} 模板」 · 尺寸 {saveTplFor.width}×{saveTplFor.height} · 组件布局和样式将被保留，数据绑定将被清除。
+                  </p>
+                  {tplError && <p className="text-sm text-red">{tplError}</p>}
+                  {tplConflict && (
+                    <div className="space-y-2 rounded-lg border border-orange/30 bg-orange/10 px-3 py-2">
+                      <p className="text-sm text-orange-dark">{tplConflict}</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => void handleSaveAsTemplate(true)}
+                          disabled={tplSaving}
+                          className="rounded-lg bg-orange px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-dark disabled:opacity-50"
+                        >
+                          {tplSaving ? '覆盖中…' : '覆盖已有模板'}
+                        </button>
+                        <button
+                          onClick={() => setTplConflict(null)}
+                          disabled={tplSaving}
+                          className="rounded-lg border border-border-default px-3 py-1.5 text-xs hover:bg-surface-hover disabled:opacity-50"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!tplConflict && (
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        onClick={() => setSaveTplFor(null)}
+                        disabled={tplSaving}
+                        className="rounded-lg border border-border-default px-4 py-2 text-sm hover:bg-surface-hover disabled:opacity-50"
+                      >
+                        取消
+                      </button>
+                      <button
+                        onClick={() => void handleSaveAsTemplate(false)}
+                        disabled={tplSaving}
+                        className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50"
+                      >
+                        {tplSaving ? '保存中…' : '保存模板'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

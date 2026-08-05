@@ -33,7 +33,7 @@ export function ScenarioOverlay({ onClose }: Props) {
         role="dialog"
         aria-modal="true"
       >
-        <div className="mb-1 font-headings text-lg font-semibold text-foreground-primary">新建完整报告</div>
+        <div className="mb-1 font-headings text-lg skin-fw-heading text-foreground-primary">新建完整报告</div>
         <p className="mb-4 text-sm text-foreground-secondary">一键生成多页报告骨架，可在其上增删改</p>
         <div className="space-y-3">
           {SCENARIO_TEMPLATES.map((sc) => (
@@ -46,7 +46,7 @@ export function ScenarioOverlay({ onClose }: Props) {
               className="block w-full rounded-lg border border-border-default p-4 text-left transition hover:border-accent-primary hover:bg-surface-hover"
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-foreground-primary">{sc.name}</span>
+                <span className="skin-fw-body text-foreground-primary">{sc.name}</span>
                 <span className="text-xs text-foreground-muted">{sc.pages.length} 页</span>
               </div>
               <div className="mt-0.5 text-xs text-foreground-muted">{sc.description}</div>

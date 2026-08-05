@@ -6,7 +6,7 @@ import type {
 import { useEditorStore } from '../../store';
 import { ImageInput } from '@/components/ImageInput';
 import { FieldGroup } from '../helpers';
-import { MOSAIC_LAYOUT_OPTIONS } from '@/editor/components/WorksComponents';
+import { MOSAIC_LAYOUT_OPTIONS, LayoutThumbnail } from '@/editor/components/WorksComponents';
 
 const STYLE_OPTIONS: { value: WorkScreenshotStyle; label: string; hint: string }[] = [
   { value: 'grid', label: '网格', hint: '标准马赛克' },
@@ -65,10 +65,10 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
         </p>
       </FieldGroup>
 
-      {/* 组合版式（仅 mosaic 风格） */}
+      {/* 组合版式（仅 mosaic 风格）—— 缩略图可视化选择器 */}
       {style === 'mosaic' && (
         <FieldGroup title="组合版式">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             {MOSAIC_LAYOUT_OPTIONS.map((opt) => {
               const enabled = displayCount >= opt.minImages;
               const active = mosaicLayout === opt.value || (!mosaicLayout && opt.value === 'auto');
@@ -77,14 +77,19 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
                   key={opt.value}
                   disabled={!enabled}
                   onClick={() => write({ mosaicLayout: opt.value === 'auto' ? undefined : opt.value })}
-                  title={!enabled ? `需 ${opt.minImages} 张` : undefined}
-                  className={`rounded border px-2.5 py-1 text-xs transition ${
+                  title={!enabled ? `需 ${opt.minImages} 张` : opt.label}
+                  className={`flex flex-col items-center gap-1 rounded border p-1 transition ${
                     active
-                      ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                      : 'border-border-default text-foreground-secondary hover:border-foreground-muted'
+                      ? 'border-accent-primary bg-accent-primary/10'
+                      : 'border-border-default hover:border-foreground-muted'
                   } ${!enabled ? 'cursor-not-allowed opacity-40' : ''}`}
                 >
-                  {opt.label}
+                  <LayoutThumbnail value={opt.value} />
+                  <span
+                    className={`text-[10px] ${active ? 'text-accent-primary' : 'text-foreground-secondary'}`}
+                  >
+                    {opt.label}
+                  </span>
                 </button>
               );
             })}

@@ -76,10 +76,10 @@ export function ImportDataModal({ file, chartType, prevTitle, onConfirm, onCance
       onClick={onCancel}
     >
       <div
-        className="flex max-h-[90vh] w-[640px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
+        className="flex max-h-[90vh] w-[640px] flex-col skin-gap-md overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="font-headings text-sm font-semibold text-foreground-primary">
+        <div className="font-headings text-sm skin-fw-heading text-foreground-primary">
           导入数据 · {file.name}
         </div>
 
@@ -108,7 +108,7 @@ export function ImportDataModal({ file, chartType, prevTitle, onConfirm, onCance
               </label>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 skin-gap-sm">
               <label className="block text-xs text-foreground-secondary">
                 <span className="mb-1 block">标签列</span>
                 <select
@@ -127,9 +127,9 @@ export function ImportDataModal({ file, chartType, prevTitle, onConfirm, onCance
               {isLine ? (
                 <div className="text-xs text-foreground-secondary">
                   <span className="mb-1 block">数值列（可多选）</span>
-                  <div className="flex max-h-32 flex-wrap gap-2 overflow-auto rounded border border-border-default p-1">
+                  <div className="flex max-h-32 flex-wrap skin-gap-sm overflow-auto rounded border border-border-default p-1">
                     {columns.map((c) => (
-                      <label key={c} className="flex items-center gap-1">
+                      <label key={c} className="flex items-center skin-gap-xs">
                         <input
                           type="checkbox"
                           checked={valueColumns.includes(c)}
@@ -176,7 +176,7 @@ export function ImportDataModal({ file, chartType, prevTitle, onConfirm, onCance
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end skin-gap-sm">
               <button
                 onClick={onCancel}
                 className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"

@@ -117,6 +117,12 @@ mark {
 .skin-pad-md { padding: var(--space-pad-md, 16px); }
 .skin-pad-lg { padding: var(--space-pad-lg, 22px); }
 
+/* 子元素间距（响应 density token）。 */
+.skin-gap-xs { gap: var(--space-gap-xs, 4px); }
+.skin-gap-sm { gap: var(--space-gap-sm, 8px); }
+.skin-gap-md { gap: var(--space-gap-md, 12px); }
+.skin-gap-lg { gap: var(--space-gap-lg, 16px); }
+
 /* 品牌色文字（图标、标签强调色）。 */
 .skin-text-brand { color: var(--color-primary); }
 .skin-text-brand-2 { color: var(--color-secondary); }
@@ -141,3 +147,22 @@ mark {
 .skin-bg-good   { background: var(--color-success-bg); }
 .skin-bg-warn   { background: var(--color-warning-bg); }
 .skin-bg-bad    { background: var(--color-danger-bg); }
+
+/* ============================================================
+ * 字重语义类 —— 组件引用 var(--font-weight-*) 替代硬编码 Tailwind font-*。
+ * ============================================================ */
+.skin-fw-heading { font-weight: var(--font-weight-heading, 600); }
+.skin-fw-body    { font-weight: var(--font-weight-body, 500); }
+.skin-fw-label   { font-weight: var(--font-weight-label, 500); }
+
+/* 前景色语义类 —— 组件引用 var(--foreground-*) 替代硬编码 text-gray-*。 */
+.skin-fg-primary   { color: var(--foreground-primary, #1a1a1a); }
+.skin-fg-secondary { color: var(--foreground-secondary, #666); }
+.skin-fg-muted     { color: var(--foreground-muted, #888); }
+.skin-fg-inverse   { color: var(--foreground-inverse, #fff); }
+
+/* 表面色语义类 —— 组件引用 var(--surface-*) 替代硬编码 bg-white/bg-gray-*。 */
+.skin-bg-primary { background: var(--surface-primary, #fff); }
+.skin-bg-subtle  { background: var(--surface-subtle, #fafafa); }
+.skin-bg-hover   { background: var(--surface-hover, #f9fafb); }
+

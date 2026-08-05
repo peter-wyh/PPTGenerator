@@ -13,14 +13,14 @@ export function PlacementWideTableView({ data }: { data: PlacementWideTableData 
   const { title, rows = [] } = data;
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
-      {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
+      {title && <div className="flex-none text-sm skin-fw-heading text-foreground-primary">{title}</div>}
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full text-left text-[10px]">
           <thead className="sticky top-0 bg-surface-primary">
             <tr className="border-b border-border-primary">
-              <th className="py-1 pr-2 text-[8px] font-medium uppercase text-foreground-muted" />
+              <th className="py-1 pr-2 text-[8px] skin-fw-body uppercase text-foreground-muted" />
               {['Placement', 'Publisher', 'Clicks', 'CTR', 'Conv.', 'CVR', 'Revenue', 'EPC'].map((h) => (
-                <th key={h} className="py-1 pr-2 text-[8px] font-medium uppercase text-foreground-muted">{h}</th>
+                <th key={h} className="py-1 pr-2 text-[8px] skin-fw-body uppercase text-foreground-muted">{h}</th>
               ))}
             </tr>
           </thead>
@@ -30,13 +30,13 @@ export function PlacementWideTableView({ data }: { data: PlacementWideTableData 
                 <td className="py-1 pr-2">
                   <span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT_STYLES[r.status]}`} />
                 </td>
-                <td className="py-1 pr-2 font-medium text-foreground-primary">{r.placement}</td>
+                <td className="py-1 pr-2 skin-fw-body text-foreground-primary">{r.placement}</td>
                 <td className="py-1 pr-2 text-foreground-secondary">{r.publisher}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{r.clicks}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{r.ctr}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{r.conversions}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{r.cvr}</td>
-                <td className="py-1 pr-2 text-right font-semibold text-foreground-primary">{r.revenue}</td>
+                <td className="py-1 pr-2 text-right skin-fw-heading text-foreground-primary">{r.revenue}</td>
                 <td className="py-1 pr-2 text-right text-foreground-secondary">{r.epc}</td>
               </tr>
             ))}
@@ -56,7 +56,7 @@ export function PlacementTypeSummaryView({ data }: { data: PlacementTypeSummaryD
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
         </div>
       )}
@@ -64,18 +64,18 @@ export function PlacementTypeSummaryView({ data }: { data: PlacementTypeSummaryD
         <table className="w-full text-left text-[11px]">
           <thead className="sticky top-0 bg-surface-primary">
             <tr className="border-b border-border-primary">
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">Type</th>
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">Revenue</th>
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">Share</th>
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">ROAS</th>
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">Trend</th>
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">Type</th>
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">Revenue</th>
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">Share</th>
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">ROAS</th>
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">Trend</th>
             </tr>
           </thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i} className="border-b border-border-primary/50">
-                <td className="py-1 pr-2 font-medium text-foreground-primary">{it.type}</td>
-                <td className="py-1 pr-2 font-semibold text-foreground-primary">{it.revenue}</td>
+                <td className="py-1 pr-2 skin-fw-body text-foreground-primary">{it.type}</td>
+                <td className="py-1 pr-2 skin-fw-heading text-foreground-primary">{it.revenue}</td>
                 <td className="py-1 pr-2 text-foreground-secondary">{it.revenueShare}</td>
                 <td className="py-1 pr-2 text-foreground-secondary">{it.roas}</td>
                 <td className="py-1 pr-2">

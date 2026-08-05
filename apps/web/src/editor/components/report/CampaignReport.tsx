@@ -30,7 +30,7 @@ import { useChartColors, STATUS_DOT_STYLES } from './shared';
 export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
   const { title, campaignName, period, metrics = [], customerSplit } = data;
   return (
-    <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-md">
+    <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-md">
       {(title || campaignName) && (
         <div className="flex flex-none items-baseline justify-between">
           <div>
@@ -40,7 +40,7 @@ export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
           {period && <div className="text-[11px] text-foreground-secondary">{period}</div>}
         </div>
       )}
-      <div className="grid flex-1 grid-cols-4 gap-2">
+      <div className="grid flex-1 grid-cols-4 skin-gap-sm">
         {metrics.map((m, i) => {
           const isPositive = m.compare?.startsWith('+');
           const isNegative = m.compare?.startsWith('-');
@@ -49,7 +49,7 @@ export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
               <div className="text-[10px] text-foreground-muted">{m.label}</div>
               <div className="text-base font-bold text-foreground-primary">{m.value}</div>
               {m.compare && (
-                <div className={`text-[10px] font-medium ${isNegative ? 'skin-text-negative' : isPositive ? 'skin-text-positive' : 'text-foreground-muted'}`}>
+                <div className={`text-[10px] skin-fw-body ${isNegative ? 'skin-text-negative' : isPositive ? 'skin-text-positive' : 'text-foreground-muted'}`}>
                   {m.compare}
                 </div>
               )}
@@ -58,8 +58,8 @@ export function CampaignSummaryBoard({ data }: { data: CampaignSummaryData }) {
         })}
       </div>
       {customerSplit && (
-        <div className="flex flex-none items-center gap-2 rounded-lg bg-primary/5 p-2">
-          <span className="text-[11px] font-medium text-primary">New {customerSplit.newCustomerRate}</span>
+        <div className="flex flex-none items-center skin-gap-sm rounded-lg bg-primary/5 p-2">
+          <span className="text-[11px] skin-fw-body text-primary">New {customerSplit.newCustomerRate}</span>
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
             <div
               className="h-full rounded-full bg-primary"
@@ -82,10 +82,10 @@ export function FunnelChartView({ data }: { data: FunnelChartData }) {
   const max = Math.max(...steps.map((s) => s.value), 1);
 
   return (
-    <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+    <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
         </div>
       )}
@@ -94,10 +94,10 @@ export function FunnelChartView({ data }: { data: FunnelChartData }) {
           const widthPct = (s.value / max) * 100;
           const nextVal = steps[i + 1]?.value;
           return (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center skin-gap-sm">
               <div className="flex-1">
                 <div
-                  className="flex items-center justify-center rounded-md py-1.5 text-[11px] font-semibold text-white"
+                  className="flex items-center justify-center rounded-md py-1.5 text-[11px] skin-fw-heading text-white"
                   style={{
                     width: `${Math.max(widthPct, 15)}%`,
                     margin: '0 auto',
@@ -108,7 +108,7 @@ export function FunnelChartView({ data }: { data: FunnelChartData }) {
                 </div>
               </div>
               <div className="flex w-16 flex-none flex-col items-end">
-                {s.rate && <span className="text-[10px] font-medium text-foreground-secondary">{s.rate}</span>}
+                {s.rate && <span className="text-[10px] skin-fw-body text-foreground-secondary">{s.rate}</span>}
                 {nextVal !== undefined && (
                   <span className="text-[9px] text-foreground-muted">
                     ↓{(((nextVal / s.value) * 100) || 0).toFixed(0)}%
@@ -121,7 +121,7 @@ export function FunnelChartView({ data }: { data: FunnelChartData }) {
       </div>
       {insight && (
         <div className="flex-none rounded-lg bg-primary/5 p-2">
-          <div className="mb-0.5 text-[10px] font-semibold text-primary">Insight</div>
+          <div className="mb-0.5 text-[10px] skin-fw-heading text-primary">Insight</div>
           <div className="text-[11px] text-foreground-secondary">{insight}</div>
         </div>
       )}
@@ -142,10 +142,10 @@ export function RevenueTimelineChart({ data }: { data: RevenueTimelineData }) {
   };
 
   return (
-    <div className="flex h-full w-full flex-col gap-2 skin-card skin-pad-sm">
+    <div className="flex h-full w-full flex-col skin-gap-sm skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
         </div>
       )}
@@ -197,14 +197,14 @@ export function PublisherTable({ data }: { data: PublisherTableData }) {
 
   return (
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
-      {title && <div className="flex-none text-sm font-semibold text-foreground-primary">{title}</div>}
+      {title && <div className="flex-none text-sm skin-fw-heading text-foreground-primary">{title}</div>}
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full text-left text-[11px]">
           <thead className="sticky top-0 bg-surface-primary">
             <tr className="border-b border-border-primary">
-              <th className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">Status</th>
+              <th className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">Status</th>
               {cols.map((c) => (
-                <th key={c.key} className="py-1 pr-2 text-[9px] font-medium uppercase text-foreground-muted">
+                <th key={c.key} className="py-1 pr-2 text-[9px] skin-fw-body uppercase text-foreground-muted">
                   {c.label}
                 </th>
               ))}
@@ -241,7 +241,7 @@ export function GeoDistribution({ data }: { data: GeoDistributionData }) {
       <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
         {(title || subtitle) && (
           <div className="flex flex-none flex-col">
-            {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+            {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
             {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
           </div>
         )}
@@ -250,7 +250,7 @@ export function GeoDistribution({ data }: { data: GeoDistributionData }) {
             <tbody>
               {items.map((d, i) => (
                 <tr key={i} className="border-b border-border-primary/40">
-                  <td className="py-1 font-medium text-foreground-primary">{d.name}</td>
+                  <td className="py-1 skin-fw-body text-foreground-primary">{d.name}</td>
                   <td className="py-1 text-right text-foreground-secondary">{d.display}</td>
                   <td className="py-1 pl-2 text-right text-[10px] text-foreground-muted">{d.share}</td>
                 </tr>
@@ -266,14 +266,14 @@ export function GeoDistribution({ data }: { data: GeoDistributionData }) {
     <div className="flex h-full w-full flex-col gap-1.5 skin-card skin-pad-sm">
       {(title || subtitle) && (
         <div className="flex flex-none flex-col">
-          {title && <div className="text-sm font-semibold text-foreground-primary">{title}</div>}
+          {title && <div className="text-sm skin-fw-heading text-foreground-primary">{title}</div>}
           {subtitle && <div className="text-[11px] text-foreground-secondary">{subtitle}</div>}
         </div>
       )}
       <div className="flex flex-1 flex-col justify-center gap-1.5">
         {items.map((d, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="w-16 flex-none text-[10px] font-medium text-foreground-secondary">{d.name}</span>
+          <div key={i} className="flex items-center skin-gap-sm">
+            <span className="w-16 flex-none text-[10px] skin-fw-body text-foreground-secondary">{d.name}</span>
             <div className="h-3 flex-1 overflow-hidden rounded-sm bg-surface-hover">
               <div
                 className="flex h-full items-center justify-end rounded-sm px-1 text-[8px] font-bold text-white"
