@@ -69,6 +69,14 @@ model HtmlVersion {
   html        String   @db.LongText
   /// 来源信息：哪个 preset 生成的、用的什么 prompt
   source      String?
+  /// recipe 报告:用哪套 recipe(ai 报告为 null)
+  recipeId          String?
+  /// recipe 报告:渲染用数据快照(CampaignReportContent)
+  reportContent     Json?
+  /// recipe 报告:配色/字体覆盖(只存改过的 key)
+  tokenOverrides    Json?
+  /// recipe 报告:组件顺序 + 显隐 { order: string[], hidden: string[] }
+  manifestOverrides Json?
   /// 是否为当前激活版本（前端默认展示）
   isActive    Boolean  @default(false)
   ownerId     String
