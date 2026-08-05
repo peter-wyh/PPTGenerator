@@ -136,6 +136,23 @@ This is a single-page STATIC report — NOT a web app. Do NOT include:
 - ❌ Page footers with internal links (only show brand attribution + generation date)
 The report should be a single continuous scroll: Header → KPI → Charts → Tables → Insights → Footer.
 
+═══ LANGUAGE RULES (CRITICAL) ═══
+All report UI text MUST be in Simplified Chinese (简体中文). This includes:
+- Section titles → "核心指标总览" not "KPI Overview", "趋势分析" not "Performance Trend"
+- Table column headers → "创作者" not "Creator", "平台" not "Platform", "收入" not "Revenue"
+- KPI card labels → "总收入" not "Total Revenue", "点击数" not "Clicks", "订单量" not "Orders"
+- Chart axis labels, legends, tooltips → "收入（¥）" not "Revenue (¥)"
+- Insight card titles and body text → all in Chinese
+- Footer text → "报告期" not "Report Period", "由 XX 制作" not "Prepared by XX"
+- Tag/badge text → "美妆" not "Beauty", "头部" not "MEGA"
+
+EXCEPTION — Data values keep their original language from campaign JSON AS-IS:
+- Creator names (e.g. "Leo Sato" stays "Leo Sato")
+- Product names, category names, offer names
+- Platform names (YouTube, TikTok, Douyin — keep original)
+- Brand names, advertiser names, campaign names
+- Numbers, dates, currency symbols
+
 ═══ OUTPUT CONSTRAINT ═══
 Keep HTML concise but complete. Do not exceed 14000 tokens of output.`;
 
@@ -244,6 +261,24 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 - ❌ Footer 内部链接（仅品牌归属 + 日期）
 
 **报告是单连续滚动**：Header → KPI → Charts → Tables → Insights → Footer
+
+## 🌐 语言规则 (LANGUAGE RULES)
+
+**所有报告 UI 文案必须使用简体中文**，包括：
+- Section 标题 → "核心指标总览"而非"KPI Overview"
+- 表头列名 → "创作者"而非"Creator"、"收入"而非"Revenue"
+- KPI 标签 → "总收入"而非"Total Revenue"、"订单量"而非"Orders"
+- 图表轴标签 / 图例 / Tooltip → "收入（¥）"而非"Revenue (¥)"
+- 洞察卡片标题和正文 → 全中文
+- Footer → "报告期"而非"Report Period"、"由 XX 制作"而非"Prepared by XX"
+- 标签/徽章 → "美妆"而非"Beauty"、"头部"而非"MEGA"
+
+**例外**——数据值保持 JSON 原始语言：
+- 创作者名称（如"Leo Sato"保留原文）
+- 商品名称、品类、Offer 名称
+- 平台名称（YouTube、TikTok、Douyin 保留原名）
+- 品牌/广告主/Campaign 名称
+- 数字、日期、货币符号
 
 ## 📦 输出约束
 
