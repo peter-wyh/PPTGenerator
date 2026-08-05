@@ -137,17 +137,12 @@ This is a single-page STATIC report — NOT a web app. Do NOT include:
 The report should be a single continuous scroll: Header → KPI → Charts → Tables → Insights → Footer.
 
 ═══ LANGUAGE RULES (CRITICAL) ═══
-All report UI text MUST be in Simplified Chinese (简体中文). This includes:
-- Section titles → "核心指标总览" not "KPI Overview", "趋势分析" not "Performance Trend"
-- Table column headers → "创作者" not "Creator", "平台" not "Platform", "收入" not "Revenue"
-- KPI card labels → "总收入" not "Total Revenue", "点击数" not "Clicks", "订单量" not "Orders"
-- Chart axis labels, legends, tooltips → "收入（¥）" not "Revenue (¥)"
-- Insight card titles and body text → all in Chinese
-- Footer text → "报告期" not "Report Period", "由 XX 制作" not "Prepared by XX"
-- Tag/badge text → "美妆" not "Beauty", "头部" not "MEGA"
+All report UI text MUST be in English. This includes section titles, table column headers, KPI card labels, chart axis labels/legends/tooltips, insight card titles and body text, footer text, and tag/badge text.
+
+Do NOT mix languages — never output partially translated labels like "收入" next to "Clicks", or "创作者" next to "Platform".
 
 EXCEPTION — Data values keep their original language from campaign JSON AS-IS:
-- Creator names (e.g. "Leo Sato" stays "Leo Sato")
+- Creator names (e.g. "Leo Sato" stays "Leo Sato" — do NOT translate to Chinese)
 - Product names, category names, offer names
 - Platform names (YouTube, TikTok, Douyin — keep original)
 - Brand names, advertiser names, campaign names
@@ -264,17 +259,12 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 
 ## 🌐 语言规则 (LANGUAGE RULES)
 
-**所有报告 UI 文案必须使用简体中文**，包括：
-- Section 标题 → "核心指标总览"而非"KPI Overview"
-- 表头列名 → "创作者"而非"Creator"、"收入"而非"Revenue"
-- KPI 标签 → "总收入"而非"Total Revenue"、"订单量"而非"Orders"
-- 图表轴标签 / 图例 / Tooltip → "收入（¥）"而非"Revenue (¥)"
-- 洞察卡片标题和正文 → 全中文
-- Footer → "报告期"而非"Report Period"、"由 XX 制作"而非"Prepared by XX"
-- 标签/徽章 → "美妆"而非"Beauty"、"头部"而非"MEGA"
+**所有报告 UI 文案必须使用英文**，包括 Section 标题、表头列名、KPI 标签、图表轴标签/图例/Tooltip、洞察卡片标题和正文、Footer、标签/徽章。
+
+**禁止语言混用**——不要出现"收入"和"Clicks"并排、"创作者"和"Platform"并排的半翻译状态。
 
 **例外**——数据值保持 JSON 原始语言：
-- 创作者名称（如"Leo Sato"保留原文）
+- 创作者名称（如"Leo Sato"保留原文，不翻译成中文）
 - 商品名称、品类、Offer 名称
 - 平台名称（YouTube、TikTok、Douyin 保留原名）
 - 品牌/广告主/Campaign 名称
