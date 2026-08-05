@@ -3,7 +3,6 @@ import { htmlTemplateService } from './html-templates.service';
 import { aiGenerateService } from './ai-generate.service';
 import { SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 import { asyncHandler } from '../../utils/asyncHandler';
-import { ApiError } from '../../utils/ApiError';
 import type { AuthPayload } from '../../types/express';
 import type { TemplateStatus } from '@prisma/client';
 
@@ -59,23 +58,15 @@ export const htmlTemplateController = {
     res.status(204).json({ ok: true });
   }),
 
-  /** Generate HTML report: template mode or AI mode */
+  /** Generate HTML report: recipe mode (template-driven, data-swap-ready) or AI mode */
   generate: asyncHandler(async (req: Request, res: Response) => {
-    const { mode, templateId, prompt, campaignId, reportPeriod } = req.body;
-
+    const { mode, recipeId, prompt, campaignId, theme, reportPeriod } = req.body;
     let html: string;
-
-    if (mode === 'template') {
-      if (!templateId) throw ApiError.badRequest('template 模式需要选择模板（templateId）');
-      // Build campaign context if available
-      let campaignData: Record<string, any> = {};
-      if (campaignId) {
-        const json = await aiGenerateService.buildCampaignContext(campaignId, reportPeriod);
-        campaignData = JSON.parse(json);
-      }
-      html = await htmlTemplateService.generateFromTemplate(templateId, campaignData);
+    if (mode === 'recipe') {
+      const { getRecipe } = await import('./recipe');
+      html = await getRecipe(recipeId ?? 'campaign-report').render({ campaignId, theme, designMd: req.body.designMd });
     } else {
-      // AI mode
+      // ai mode(现状,不动)
       html = await aiGenerateService.generateHtml({
         campaignId,
         prompt: prompt || 'Generate a comprehensive campaign performance report',
@@ -83,7 +74,6 @@ export const htmlTemplateController = {
         reportPeriod,
       });
     }
-
     res.json({ html });
   }),
 

@@ -132,22 +132,6 @@ export const htmlTemplateService = {
     await prisma.htmlTemplate.delete({ where: { id } });
   },
 
-  /** 模板模式：将 campaign 数据填充到模板占位符 */
-  async generateFromTemplate(templateId: string, campaignData: Record<string, any>): Promise<string> {
-    const tpl = await prisma.htmlTemplate.findUnique({ where: { id: templateId } });
-    if (!tpl) throw ApiError.notFound('HTML 模板不存在');
-    if (tpl.status === 'DRAFT') throw ApiError.badRequest('模板未发布，无法用于生成');
-
-    // 简单变量替换：{{key}} → campaignData[key]
-    let html = tpl.html;
-    const flattenData = flattenObject(campaignData);
-    for (const [key, value] of Object.entries(flattenData)) {
-      const placeholder = new RegExp(`\\{\\{\\s*${escapeRegExp(key)}\\s*\\}\\}`, 'g');
-      html = html.replace(placeholder, String(value ?? ''));
-    }
-    return html;
-  },
-
   /** 保存生成的 HTML 到项目（向后兼容旧字段 + 新 HtmlVersion 表） */
   async saveHtmlToProject(projectId: string, _ownerId: string, html: string): Promise<void> {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
@@ -433,22 +417,3 @@ export const htmlTemplateService = {
     return project;
   },
 };
-
-function flattenObject(obj: Record<string, any>, prefix = ''): Record<string, any> {
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const newKey = prefix ? `${prefix}.${key}` : key;
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      Object.assign(result, flattenObject(value, newKey));
-    } else if (Array.isArray(value)) {
-      result[newKey] = value.map((v) => (typeof v === 'object' ? JSON.stringify(v) : v)).join(', ');
-    } else {
-      result[newKey] = value;
-    }
-  }
-  return result;
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}

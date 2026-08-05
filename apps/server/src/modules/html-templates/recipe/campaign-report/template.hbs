@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{header.brand.name}} - Campaign Report</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Noto+Sans:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { primary: '{{tokens.brandPrimary}}', 85: '{{tokens.brand85}}', 95: 'rgba(255,9,158,0.05)' },
+                        grey: { primary: '{{tokens.greyPrimary}}', secondary: '{{tokens.greySecondary}}', tertiary: '{{tokens.greyTertiary}}', disabled: '{{tokens.greyDisabled}}' },
+                        bg: { layout: '{{tokens.bgLayout}}', card: '{{tokens.bgCard}}' },
+                        stroke: { line: '{{tokens.strokeLine}}', card: '{{tokens.strokeCard}}' }
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                        number: ['Barlow Condensed', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: {{tokens.bgLayout}}; color: {{tokens.greyPrimary}}; font-family: {{{tokens.fontBody}}}; -webkit-font-smoothing: antialiased; }
+        .card { background: {{tokens.bgCard}}; border-radius: 8px; border: 1px solid {{tokens.strokeCard}}; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .module-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: {{tokens.greyPrimary}}; margin-bottom: 16px; display: flex; align-items: center; }
+        .module-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background-color: {{tokens.brandPrimary}}; border-radius: 2px; margin-right: 8px; }
+        .digchic-table { width: 100%; text-align: left; border-collapse: collapse; }
+        .digchic-table th { border-bottom: 1px solid rgba(0,0,0,0.08); font-weight: 600; color: {{tokens.greySecondary}}; font-size: 13px; padding: 12px 16px; }
+        .digchic-table td { border-bottom: 1px solid rgba(0,0,0,0.08); font-weight: 400; color: {{tokens.greyPrimary}}; font-size: 14px; padding: 12px 16px; vertical-align: middle; }
+        .digchic-table tbody tr:hover td { background-color: {{tokens.brand85}}; transition: background-color 0.2s; cursor: pointer; }
+        .tag { border-radius: 4px; padding: 4px 8px; font-weight: 600; font-size: 12px; }
+        .tag-creator { background: rgba(255,9,158,0.1); color: {{tokens.brandPrimary}}; }
+        .tag-fb { background: #eef2ff; color: #4f46e5; }
+        .tag-tg { background: #f0fdf4; color: #16a34a; }
+        .tag-site { background: #fffbeb; color: #d97706; }
+        .insight-ol { padding-left: 16px; margin-bottom: 16px; }
+        .insight-ol li { margin-bottom: 8px; font-size: 13px; color: {{tokens.greyPrimary}}; padding-left: 4px; }
+        .insight-ol li span.highlight { color: {{tokens.brandPrimary}}; font-weight: 500; }
+        .insight-ol li span.sub { display: block; color: {{tokens.greySecondary}}; font-size: 12px; margin-top: 2px; }
+    </style>
+</head>
+<body class="py-6">
+    <div class="max-w-[1280px] mx-auto px-4 md:px-[72px] space-y-6">
+
+        {{!-- 1. HEADER --}}
+        <div class="card flex justify-between items-center !py-4">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-grey-primary text-white rounded-full flex items-center justify-center font-bold font-poppins">{{header.merchant.logoText}}</div>
+                    <span class="font-bold text-[18px] tracking-tight">{{header.merchant.name}}</span>
+                </div>
+                <div class="h-6 w-px bg-stroke-line"></div>
+                <span class="font-bold font-poppins text-[20px] tracking-wide text-black lowercase">{{header.brand.logoText}}</span>
+            </div>
+            <div class="text-sm font-medium text-grey-secondary bg-bg-layout px-4 py-2 rounded-md">
+                {{header.period.display}}
+            </div>
+        </div>
+
+        {{!-- 2. KPI OVERVIEW --}}
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {{#each kpis}}
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">{{label}}</p>
+                <h3 class="font-number font-semibold text-[32px] leading-tight {{#if highlight}}text-brand-primary{{else}}text-grey-primary{{/if}}">{{value}}</h3>
+            </div>
+            {{/each}}
+        </div>
+
+        {{!-- 3. PERFORMANCE TREND --}}
+        <div class="card">
+            <h2 class="module-title">Performance Trend</h2>
+            <div class="h-[300px] w-full">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        {{!-- 4. PUBLISHER PERFORMANCE OVERVIEW --}}
+        <div class="card !px-0">
+            <div class="px-5"><h2 class="module-title">Publisher Performance Overview</h2></div>
+            <div class="overflow-x-auto">
+                <table class="digchic-table">
+                    <thead class="bg-bg-layout">
+                        <tr>
+                            <th>Publisher</th><th>Type</th><th>Screenshot</th>
+                            <th class="text-right">Sales (Revenue)</th>
+                            <th class="text-right">Clicks</th>
+                            <th class="text-right">Conversion</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each publishers}}
+                        <tr onclick="window.open('{{#if linkUrl}}{{linkUrl}}{{else}}#{{/if}}', '_blank')" title="Click to view Publisher">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-[4px] bg-blue-100 text-blue-600 flex items-center justify-center font-bold">{{initials name}}</div>
+                                    <div>
+                                        <div class="font-semibold text-grey-primary">{{name}}</div>
+                                        {{#if handle}}<div class="text-[12px] text-grey-tertiary">{{handle}}</div>{{/if}}
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="tag tag-{{type.kind}}">{{type.label}}</span></td>
+                            <td><img src="{{screenshotUrl}}" class="h-[34px] rounded border border-stroke-card"></td>
+                            <td class="text-right font-number font-semibold text-[18px]">{{revenue}}</td>
+                            <td class="text-right">{{clicks}}</td>
+                            <td class="text-right">{{orders}}</td>
+                            <td class="text-center"><i class="fas fa-external-link-alt text-grey-tertiary hover:text-brand-primary"></i></td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{!-- 5. INSIGHT & ANALYSIS(静态五子卡;数据驱动段用 #if 守卫) --}}
+        {{#if insights}}
+        <h2 class="module-title !mb-0 mt-8">Insight & Analysis</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {{#if insights.topCategories}}
+            <div class="card">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase">1. Top-Selling Categories</h3>
+                <div class="flex items-center justify-center h-[180px]">
+                    <div class="w-[150px] relative"><canvas id="categoryChart"></canvas></div>
+                    <div class="ml-6 space-y-3">
+                        {{#each insights.topCategories}}
+                        <div class="flex items-center gap-2 text-sm"><div class="w-3 h-3 rounded-full" style="background:{{color}}"></div>{{label}} ({{pct}}%)</div>
+                        {{/each}}
+                    </div>
+                </div>
+            </div>
+            {{/if}}
+
+            {{#if insights.topProducts}}
+            <div class="card !px-0 flex flex-col">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-2 px-5 uppercase">2. Top-Selling Products</h3>
+                <div class="flex-1 overflow-y-auto">
+                    <table class="digchic-table text-[13px]"><tbody>
+                        {{#each insights.topProducts}}
+                        <tr><td>{{name}}</td><td class="text-right font-number font-semibold text-[16px]">{{revenue}}</td></tr>
+                        {{/each}}
+                    </tbody></table>
+                </div>
+            </div>
+            {{/if}}
+
+            {{#if insights.topMarket}}
+            <div class="card">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase">3. Top Market (By Sales)</h3>
+                <div class="space-y-4 mt-4">
+                    {{#each insights.topMarket}}
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold">{{country}}</span><span class="font-number text-[16px]">{{revenue}}</span></div>
+                        <div class="w-full bg-bg-layout rounded-full h-2"><div class="h-2 rounded-full" style="width:{{pct}}%;background:{{color}}"></div></div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            {{/if}}
+
+            {{#if insights.topPromotion}}
+            <div class="card lg:col-span-2 !px-0">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-2 px-5 uppercase">4. Top Promotion Offer</h3>
+                <table class="digchic-table">
+                    <thead class="bg-bg-layout"><tr><th>Offer Name</th><th>Type</th><th class="text-right">Revenue Driven</th><th class="text-right">Usage Count</th></tr></thead>
+                    <tbody>
+                        {{#each insights.topPromotion}}
+                        <tr>
+                            <td><span class="tag tag-{{tagKind}} text-[13px]">{{name}}</span></td>
+                            <td>{{type}}</td>
+                            <td class="text-right font-number font-semibold text-[16px]">{{revenue}}</td>
+                            <td class="text-right">{{usage}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+            {{/if}}
+
+            {{#if insights.newCustomerRate}}
+            <div class="card flex flex-col justify-center items-center text-center">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase w-full text-left">5. New Customer Rate</h3>
+                <div class="relative w-[120px] h-[120px] mb-2">
+                    <canvas id="newCustChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="font-number font-semibold text-[32px] text-brand-primary leading-none">{{insights.newCustomerRate.rate}}</span>
+                    </div>
+                </div>
+                <p class="text-[13px] text-grey-secondary mt-2">{{insights.newCustomerRate.newCount}} New / {{insights.newCustomerRate.totalOrders}} Total Orders</p>
+                {{#if insights.newCustomerRate.deltaPct}}
+                <div class="mt-2 text-[12px] bg-green-50 text-green-600 px-3 py-1 rounded"><i class="fas fa-arrow-up mr-1"></i> {{insights.newCustomerRate.deltaPct}} vs last period</div>
+                {{/if}}
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+
+        {{!-- 6. ACTIONABLE INSIGHTS(AI 文案) --}}
+        {{#if actionable.length}}
+        <h2 class="module-title !mb-0 mt-8">Actionable Insights</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {{#each actionable}}
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-{{color}}-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-{{color}}-50 text-{{color}}-500 flex items-center justify-center text-xs"><i class="fas fa-{{icon}}"></i></div>
+                    <h3 class="font-bold text-[13px] text-{{color}}-600 uppercase tracking-wide">{{title}}</h3>
+                </div>
+                <div class="flex-1">
+                    <ol class="list-decimal insight-ol">
+                        {{#each items}}
+                        <li><span class="highlight">{{text}}</span>{{#if sub}}<span class="sub">{{sub}}</span>{{/if}}</li>
+                        {{/each}}
+                    </ol>
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">{{footer}}</p>
+            </div>
+            {{/each}}
+        </div>
+        {{else}}
+        <div class="card text-center text-grey-secondary text-sm mt-8">洞察暂不可用,请稍后重试。</div>
+        {{/if}}
+
+    </div>
+
+    <script>
+        // Performance Trend(line + bar)—— 数据由 mapper 注入,不经 AI
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: {{{json trend.labels}}},
+                datasets: [
+                    { type: 'line', label: 'Revenue ($)', data: {{{json trend.revenue}}}, borderColor: '{{tokens.brandPrimary}}', backgroundColor: '{{tokens.brandPrimary}}', borderWidth: 3, tension: 0.4, yAxisID: 'yRevenue', order: 1 },
+                    { type: 'line', label: 'Clicks', data: {{{json trend.clicks}}}, borderColor: '{{tokens.greyPrimary}}', borderWidth: 2, borderDash: [5,5], tension: 0.4, yAxisID: 'yCount', pointRadius: 0, order: 2 },
+                    { type: 'bar', label: 'Orders', data: {{{json trend.orders}}}, backgroundColor: 'rgba(255,9,158,0.15)', borderRadius: 4, yAxisID: 'yCount', order: 3 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { family: 'Outfit', size: 12 } } } },
+                scales: {
+                    x: { grid: { display: false } },
+                    yRevenue: { type: 'linear', display: true, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, title: { display: true, text: 'Revenue (USD)' }, ticks: { callback: v => '$' + v/1000 + 'k' } },
+                    yCount: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Clicks / Orders' } }
+                }
+            }
+        });
+
+        {{#if insights.topCategories}}
+        new Chart(document.getElementById('categoryChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: {{{json (map insights.topCategories "label")}}}, datasets: [{ data: {{{json (map insights.topCategories "pct")}}}, backgroundColor: {{{json (map insights.topCategories "color")}}}, borderWidth: 0, cutout: '65%' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+        {{/if}}
+
+        {{#if insights.newCustomerRate}}
+        new Chart(document.getElementById('newCustChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [{{insights.newCustomerRate.newCount}}, {{minus insights.newCustomerRate.totalOrders insights.newCustomerRate.newCount}}], backgroundColor: ['{{tokens.brandPrimary}}', '{{tokens.bgLayout}}'], borderWidth: 0, cutout: '80%' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+        });
+        {{/if}}
+    </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`render > HTML 快照(DG 保真基线) 1`] = `
+"<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FT - Campaign Report</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Noto+Sans:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { primary: '#ff099e', 85: '#fff6f9', 95: 'rgba(255,9,158,0.05)' },
+                        grey: { primary: '#1e1c24', secondary: '#626166', tertiary: '#999999', disabled: '#dddddd' },
+                        bg: { layout: '#f5f7fa', card: '#ffffff' },
+                        stroke: { line: 'rgba(0,0,0,0.08)', card: '#ebebeb' }
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                        number: ['Barlow Condensed', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f5f7fa; color: #1e1c24; font-family: 'Outfit', sans-serif; -webkit-font-smoothing: antialiased; }
+        .card { background: #ffffff; border-radius: 8px; border: 1px solid #ebebeb; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .module-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: #1e1c24; margin-bottom: 16px; display: flex; align-items: center; }
+        .module-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background-color: #ff099e; border-radius: 2px; margin-right: 8px; }
+        .digchic-table { width: 100%; text-align: left; border-collapse: collapse; }
+        .digchic-table th { border-bottom: 1px solid rgba(0,0,0,0.08); font-weight: 600; color: #626166; font-size: 13px; padding: 12px 16px; }
+        .digchic-table td { border-bottom: 1px solid rgba(0,0,0,0.08); font-weight: 400; color: #1e1c24; font-size: 14px; padding: 12px 16px; vertical-align: middle; }
+        .digchic-table tbody tr:hover td { background-color: #fff6f9; transition: background-color 0.2s; cursor: pointer; }
+        .tag { border-radius: 4px; padding: 4px 8px; font-weight: 600; font-size: 12px; }
+        .tag-creator { background: rgba(255,9,158,0.1); color: #ff099e; }
+        .tag-fb { background: #eef2ff; color: #4f46e5; }
+        .tag-tg { background: #f0fdf4; color: #16a34a; }
+        .tag-site { background: #fffbeb; color: #d97706; }
+        .insight-ol { padding-left: 16px; margin-bottom: 16px; }
+        .insight-ol li { margin-bottom: 8px; font-size: 13px; color: #1e1c24; padding-left: 4px; }
+        .insight-ol li span.highlight { color: #ff099e; font-weight: 500; }
+        .insight-ol li span.sub { display: block; color: #626166; font-size: 12px; margin-top: 2px; }
+    </style>
+</head>
+<body class="py-6">
+    <div class="max-w-[1280px] mx-auto px-4 md:px-[72px] space-y-6">
+
+        <div class="card flex justify-between items-center !py-4">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-grey-primary text-white rounded-full flex items-center justify-center font-bold font-poppins">GL</div>
+                    <span class="font-bold text-[18px] tracking-tight">GlowLab</span>
+                </div>
+                <div class="h-6 w-px bg-stroke-line"></div>
+                <span class="font-bold font-poppins text-[20px] tracking-wide text-black lowercase">ft</span>
+            </div>
+            <div class="text-sm font-medium text-grey-secondary bg-bg-layout px-4 py-2 rounded-md">
+                Oct 12 - Nov 10, 2026
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Total Revenues</p>
+                <h3 class="font-number font-semibold text-[32px] leading-tight text-grey-primary">$876,360</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Clicks</p>
+                <h3 class="font-number font-semibold text-[32px] leading-tight text-grey-primary">348,619</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Orders</p>
+                <h3 class="font-number font-semibold text-[32px] leading-tight text-grey-primary">4,636</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">New Customer Acquisition</p>
+                <h3 class="font-number font-semibold text-[32px] leading-tight text-brand-primary">1,604</h3>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">AOV</p>
+                <h3 class="font-number font-semibold text-[32px] leading-tight text-grey-primary">$189</h3>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="module-title">Performance Trend</h2>
+            <div class="h-[300px] w-full">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card !px-0">
+            <div class="px-5"><h2 class="module-title">Publisher Performance Overview</h2></div>
+            <div class="overflow-x-auto">
+                <table class="digchic-table">
+                    <thead class="bg-bg-layout">
+                        <tr>
+                            <th>Publisher</th><th>Type</th><th>Screenshot</th>
+                            <th class="text-right">Sales (Revenue)</th>
+                            <th class="text-right">Clicks</th>
+                            <th class="text-right">Conversion</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr onclick="window.open('https://tiktok.com/@miaglowup', '_blank')" title="Click to view Publisher">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-[4px] bg-blue-100 text-blue-600 flex items-center justify-center font-bold">MC</div>
+                                    <div>
+                                        <div class="font-semibold text-grey-primary">Mia Chen</div>
+                                        <div class="text-[12px] text-grey-tertiary">@miaglowup</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="tag tag-creator">Creator</span></td>
+                            <td><img src="https://placehold.co/120x68/f5f7fa/1e1c24?text&#x3D;TikTok" class="h-[34px] rounded border border-stroke-card"></td>
+                            <td class="text-right font-number font-semibold text-[18px]">$192,000</td>
+                            <td class="text-right">124,678</td>
+                            <td class="text-right">1,016</td>
+                            <td class="text-center"><i class="fas fa-external-link-alt text-grey-tertiary hover:text-brand-primary"></i></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h2 class="module-title !mb-0 mt-8">Insight & Analysis</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+
+
+
+            <div class="card flex flex-col justify-center items-center text-center">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase w-full text-left">5. New Customer Rate</h3>
+                <div class="relative w-[120px] h-[120px] mb-2">
+                    <canvas id="newCustChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="font-number font-semibold text-[32px] text-brand-primary leading-none">34.6%</span>
+                    </div>
+                </div>
+                <p class="text-[13px] text-grey-secondary mt-2">1604 New / 4636 Total Orders</p>
+            </div>
+        </div>
+
+        <h2 class="module-title !mb-0 mt-8">Actionable Insights</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-green-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-green-50 text-green-500 flex items-center justify-center text-xs"><i class="fas fa-trophy"></i></div>
+                    <h3 class="font-bold text-[13px] text-green-600 uppercase tracking-wide">Top Performers</h3>
+                </div>
+                <div class="flex-1">
+                    <ol class="list-decimal insight-ol">
+                        <li><span class="highlight">Mia</span><span class="sub">(ROAS 4.10)</span></li>
+                    </ol>
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">Scale.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Performance Trend(line + bar)—— 数据由 mapper 注入,不经 AI
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: ["Oct 12","Nov 10"],
+                datasets: [
+                    { type: 'line', label: 'Revenue ($)', data: [50000,166360], borderColor: '#ff099e', backgroundColor: '#ff099e', borderWidth: 3, tension: 0.4, yAxisID: 'yRevenue', order: 1 },
+                    { type: 'line', label: 'Clicks', data: [15000,83619], borderColor: '#1e1c24', borderWidth: 2, borderDash: [5,5], tension: 0.4, yAxisID: 'yCount', pointRadius: 0, order: 2 },
+                    { type: 'bar', label: 'Orders', data: [250,876], backgroundColor: 'rgba(255,9,158,0.15)', borderRadius: 4, yAxisID: 'yCount', order: 3 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { family: 'Outfit', size: 12 } } } },
+                scales: {
+                    x: { grid: { display: false } },
+                    yRevenue: { type: 'linear', display: true, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, title: { display: true, text: 'Revenue (USD)' }, ticks: { callback: v => '$' + v/1000 + 'k' } },
+                    yCount: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Clicks / Orders' } }
+                }
+            }
+        });
+
+
+        new Chart(document.getElementById('newCustChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [1604, 3032], backgroundColor: ['#ff099e', '#f5f7fa'], borderWidth: 0, cutout: '80%' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+        });
+    </script>
+</body>
+</html>
+"
+`;
