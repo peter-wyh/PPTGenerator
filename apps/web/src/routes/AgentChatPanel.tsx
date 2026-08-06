@@ -1,6 +1,7 @@
 /**
  * AgentChatPanel — Report Agent 对话面板。
  * 用户输入编辑指令 → 调用 AI 增量编辑 → 返回修改后 HTML → 自动保存。
+ * 支持图片上传（vision 多模态）和 HTML 文件导入。
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/Button';
@@ -22,6 +23,9 @@ const QUICK_ACTIONS = [
   { label: '改图表', prompt: '把图表类型改为：' },
 ];
 
+// 图片大小限制（base data URL，~4MB）
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+
 export function AgentChatPanel({
   projectId,
   currentHtml,
@@ -33,34 +37,102 @@ export function AgentChatPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  const htmlInputRef = useRef<HTMLInputElement>(null);
+
+  // ★ 已选择的图片（base64 data URL 数组），随消息一起发送
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
 
   // 自动滚动到底部
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [agentHistory, loading]);
+  }, [agentHistory, loading, pendingImages]);
+
+  // ── 图片上传处理 ──
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const newImages: string[] = [];
+    Array.from(files).forEach((file) => {
+      if (file.size > MAX_IMAGE_SIZE) {
+        setError(`图片 "${file.name}" 超过 4MB 限制`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        newImages.push(reader.result as string);
+        if (newImages.length === Math.min(files.length, 5)) {
+          setPendingImages((prev) => [...prev, ...newImages].slice(0, 5));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    // reset input value 以便可以重复选择同一文件
+    e.target.value = '';
+  }, []);
+
+  const removePendingImage = useCallback((idx: number) => {
+    setPendingImages((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  // ── HTML 文件导入处理 ──
+  const handleHtmlImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const html = reader.result as string;
+      onHtmlChange(html);
+      const userMsg: AgentChatMessage = {
+        role: 'user',
+        content: `📄 已导入 HTML 文件: ${file.name}`,
+        ts: new Date().toISOString(),
+      };
+      const aiMsg: AgentChatMessage = {
+        role: 'assistant',
+        content: 'HTML 已加载到编辑器 ✅ 可以继续对话修改',
+        ts: new Date().toISOString(),
+      };
+      const newHistory = [...agentHistory, userMsg, aiMsg];
+      onHistoryChange(newHistory);
+      // 自动保存
+      void htmlTemplatesApi.autoSave(projectId, html, newHistory);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, [agentHistory, onHtmlChange, onHistoryChange, projectId]);
 
   const handleSend = useCallback(
     async (instruction?: string) => {
       const text = (instruction ?? input).trim();
-      if (!text || loading || !currentHtml) return;
+      if ((!text && pendingImages.length === 0) || loading || !currentHtml) return;
+
+      const hasImages = pendingImages.length > 0;
+      const displayContent = hasImages
+        ? `${text || '请参考上传的图片修改报告'}\n📎 ${pendingImages.length}张图片`
+        : text;
 
       const userMsg: AgentChatMessage = {
         role: 'user',
-        content: text,
+        content: displayContent,
+        images: hasImages ? pendingImages : undefined,
         ts: new Date().toISOString(),
       };
       const newHistory = [...agentHistory, userMsg];
       onHistoryChange(newHistory);
       setInput('');
+      const sentImages = pendingImages;
+      setPendingImages([]);
       setLoading(true);
       setError('');
 
       try {
         const html = await htmlTemplatesApi.agentEdit({
           currentHtml,
-          instruction: text,
+          instruction: text || '请参考上传的图片修改报告',
+          images: hasImages ? sentImages : undefined,
         });
         onHtmlChange(html);
 
@@ -90,7 +162,7 @@ export function AgentChatPanel({
         setLoading(false);
       }
     },
-    [input, loading, currentHtml, agentHistory, onHtmlChange, onHistoryChange, projectId],
+    [input, loading, currentHtml, agentHistory, onHtmlChange, onHistoryChange, projectId, pendingImages],
   );
 
   return (
@@ -126,6 +198,19 @@ export function AgentChatPanel({
                   : 'bg-surface-hover text-foreground-primary'
               }`}
             >
+              {/* 显示消息中的图片缩略图 */}
+              {msg.images && msg.images.length > 0 && (
+                <div className="mb-1.5 flex flex-wrap gap-1">
+                  {msg.images.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img}
+                      alt={`upload-${i}`}
+                      className="max-h-16 rounded border border-white/20 object-cover"
+                    />
+                  ))}
+                </div>
+              )}
               {msg.content}
             </div>
           </div>
@@ -145,9 +230,71 @@ export function AgentChatPanel({
         )}
       </div>
 
+      {/* 待发送图片预览条 */}
+      {pendingImages.length > 0 && (
+        <div className="flex items-center gap-1.5 border-t border-border-default px-3 pt-2">
+          {pendingImages.map((img, idx) => (
+            <div key={idx} className="relative">
+              <img
+                src={img}
+                alt={`pending-${idx}`}
+                className="h-12 w-12 rounded border border-border-default object-cover"
+              />
+              <button
+                onClick={() => removePendingImage(idx)}
+                className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red text-[8px] text-white"
+                title="移除"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 输入框 */}
       <div className="shrink-0 border-t border-border-default p-3">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* 图片上传按钮 */}
+          <button
+            onClick={() => imgInputRef.current?.click()}
+            disabled={loading}
+            className="shrink-0 rounded-md border border-border-default p-2 text-foreground-secondary transition hover:bg-surface-hover disabled:opacity-50"
+            title="上传图片（AI 可参考图片编辑）"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M14 4v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2zM5 7l1.5-1.5L9 8l3-3 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6l1 1h1zM5.5 5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+            </svg>
+          </button>
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleImageUpload}
+          />
+
+          {/* HTML 导入按钮 */}
+          <button
+            onClick={() => htmlInputRef.current?.click()}
+            disabled={loading}
+            className="shrink-0 rounded-md border border-border-default p-2 text-foreground-secondary transition hover:bg-surface-hover disabled:opacity-50"
+            title="导入 HTML 文件"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 3h12v3h-1V4H3v8h4v1H2V3zm8 6l3 3-3 3v-2H6v-2h4V9z"/>
+            </svg>
+          </button>
+          <input
+            ref={htmlInputRef}
+            type="file"
+            accept=".html,.htm,text/html"
+            className="hidden"
+            onChange={handleHtmlImport}
+          />
+
+          {/* 文本输入 */}
           <input
             type="text"
             value={input}
@@ -158,14 +305,14 @@ export function AgentChatPanel({
                 void handleSend();
               }
             }}
-            placeholder="输入编辑指令… (如：把 KPI 卡片改成渐变色)"
+            placeholder={pendingImages.length > 0 ? '描述你想让 AI 怎么参考图片修改…' : '输入编辑指令… (如：把 KPI 卡片改成渐变色)'}
             disabled={loading}
             className="flex-1 rounded-lg border border-border-default bg-surface-secondary px-3 py-2 text-xs text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary focus:outline-none disabled:opacity-50"
           />
           <Button
             onClick={() => void handleSend()}
             loading={loading}
-            disabled={!input.trim() || loading}
+            disabled={(!input.trim() && pendingImages.length === 0) || loading}
             className="shrink-0 px-3 py-2 text-xs"
           >
             发送

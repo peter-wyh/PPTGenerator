@@ -51,6 +51,7 @@ export const saveHtmlAsProjectSchema = z.object({
 export const agentEditSchema = z.object({
   currentHtml: z.string().min(1),
   instruction: z.string().min(1).max(2000),
+  images: z.array(z.string()).optional(), // base64 编码的图片（data URL）
 });
 
 /**

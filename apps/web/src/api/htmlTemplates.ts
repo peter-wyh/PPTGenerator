@@ -51,6 +51,8 @@ export interface AgentChatMessage {
   content: string;
   action?: 'generate' | 'edit' | 'fix' | 'manual';
   ts: string;
+  /** 附件图片的 base64 data URL 列表（vision 多模态编辑用） */
+  images?: string[];
 }
 
 export const htmlTemplatesApi = {
@@ -197,8 +199,8 @@ export const htmlTemplatesApi = {
       .post<{ ok: boolean; projectId: string }>('/html-templates/projects/html', input)
       .then((r) => r.data),
 
-  /** Agent 增量编辑：当前 HTML + 指令 → 修改后的 HTML */
-  agentEdit: (input: { currentHtml: string; instruction: string }) =>
+  /** Agent 增量编辑：当前 HTML + 指令（可选附带图片）→ 修改后的 HTML */
+  agentEdit: (input: { currentHtml: string; instruction: string; images?: string[] }) =>
     api
       .post<{ html: string }>('/html-templates/agent-edit', input, {
         timeout: 300000,

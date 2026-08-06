@@ -746,6 +746,7 @@ export const aiGenerateService = {
   async editHtml(params: {
     currentHtml: string;
     instruction: string;
+    images?: string[];
   }): Promise<string> {
     if (!DEEPSEEK_API_KEY) {
       throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
@@ -757,6 +758,20 @@ export const aiGenerateService = {
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     const maxTokens = isReasoningModel ? 16000 : 8192;
+
+    // 构建 messages：如果有图片，user message 使用 OpenAI vision 多模态格式
+    const userMessage: any = params.images && params.images.length > 0
+      ? {
+          role: 'user',
+          content: [
+            { type: 'text', text: userPrompt },
+            ...params.images.map((img) => ({
+              type: 'image_url',
+              image_url: { url: img },
+            })),
+          ],
+        }
+      : { role: 'user', content: userPrompt };
 
     // 编辑操作通常比全量生成快，但仍设 290s 超时保护
     const DEEPSEEK_TIMEOUT_MS = 290_000;
@@ -775,7 +790,7 @@ export const aiGenerateService = {
           model: DEEPSEEK_MODEL,
           messages: [
             { role: 'system', content: EDIT_SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt },
+            userMessage,
           ],
           temperature: 0.3, // 编辑用低 temperature 保持精确性
           max_tokens: maxTokens,

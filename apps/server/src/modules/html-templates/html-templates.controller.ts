@@ -138,12 +138,13 @@ export const htmlTemplateController = {
     res.status(201).json({ ok: true, projectId: project.id });
   }),
 
-  /** Agent 增量编辑：当前 HTML + 用户指令 → 修改后的完整 HTML */
+  /** Agent 增量编辑：当前 HTML + 用户指令（可选附带图片）→ 修改后的完整 HTML */
   agentEdit: asyncHandler(async (req: Request, res: Response) => {
-    const { currentHtml, instruction } = req.body;
+    const { currentHtml, instruction, images } = req.body;
     const html = await aiGenerateService.editHtml({
       currentHtml,
       instruction,
+      images,
     });
     res.json({ html });
   }),
