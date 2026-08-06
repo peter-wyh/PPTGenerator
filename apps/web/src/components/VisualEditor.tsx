@@ -175,15 +175,6 @@ export function VisualEditor({
 
     editorRef.current = editor;
 
-    // ★ 关键：在 setComponents 之前注册，确保所有组件（含 td/th/p/div/span）
-    //   都标记为 editable，这样双击才能进入 RTE 内联编辑
-    editor.on('component:create', (model: any) => {
-      if (!model?.set) return;
-      const type = model.get('type');
-      if (type === 'textnode' || type === 'text') return; // 已默认可编辑
-      model.set({ editable: true });
-    });
-
     // 加载 body 组件
     editor.setComponents(parsed.bodyHtml);
     lastLoadedBodyRef.current = parsed.bodyHtml;
@@ -307,6 +298,105 @@ export function VisualEditor({
       if (smContainer && editor.StyleManager) {
         editor.StyleManager.render();
       }
+
+      // ★★★ 核心功能：双击文本元素进入 contenteditable 编辑 ★★★
+      // GrapesJS 内置 RTE 对复杂 HTML 结构不可靠，用原生 contenteditable 替代。
+      // 策略：双击 canvas 中的元素 → 找到含直接文本的最小元素 → contenteditable=true
+      //       失焦时关闭编辑并同步回 GrapesJS 组件模型
+      const canvasBody = canvasDoc.body;
+      const TEXT_TAGS = ['TD', 'TH', 'P', 'SPAN', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+                         'LI', 'LABEL', 'CAPTION', 'DIV', 'A', 'STRONG', 'B', 'EM', 'I',
+                         'SMALL', 'DD', 'DT', 'BLOCKQUOTE', 'FIGCAPTION'];
+
+      // 找到「包含直接文本内容」的最近祖先元素
+      const findEditableTarget = (el: Element): Element | null => {
+        let node: Element | null = el;
+        while (node && node !== canvasBody) {
+          // 如果元素直接包含文本节点（非空），就是它
+          const hasDirectText = Array.from(node.childNodes).some(
+            n => n.nodeType === 3 && n.textContent && n.textContent.trim().length > 0
+          );
+          if (hasDirectText && TEXT_TAGS.includes(node.tagName)) {
+            return node;
+          }
+          node = node.parentElement;
+        }
+        // fallback：如果元素本身在 TEXT_TAGS 中
+        if (el !== canvasBody && TEXT_TAGS.includes(el.tagName)) {
+          return el;
+        }
+        return null;
+      };
+
+      let currentEditable: HTMLElement | null = null;
+
+      // 结束编辑：关闭 contenteditable，把修改同步到 GrapesJS
+      const finishEditing = () => {
+        if (!currentEditable) return;
+        currentEditable.removeAttribute('contenteditable');
+        currentEditable = null;
+        // GrapesJS getHtml() 直接读取 canvas DOM，DOM 已是最新的。
+        // 手动触发 selected 组件的 content change，让 debouncedChange 回调拿到最新 HTML。
+        const selected = editor.getSelected();
+        if (selected) {
+          selected.trigger('change:content');
+        }
+      };
+
+      // 双击 → 进入编辑
+      canvasBody.addEventListener('dblclick', (e: Event) => {
+        const target = e.target as Element;
+        const editableEl = findEditableTarget(target);
+
+        if (editableEl) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // 先结束之前的编辑
+          if (currentEditable && currentEditable !== editableEl) {
+            finishEditing();
+          }
+
+          currentEditable = editableEl as HTMLElement;
+          currentEditable.setAttribute('contenteditable', 'true');
+          currentEditable.focus();
+
+          // 选中全部文本
+          const range = canvasDoc.createRange();
+          range.selectNodeContents(currentEditable);
+          const sel = canvasDoc.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      });
+
+      // 失焦/Enter → 结束编辑
+      canvasBody.addEventListener('focusout', (e: Event) => {
+        const target = e.target as HTMLElement;
+        if (target.getAttribute('contenteditable') === 'true') {
+          setTimeout(() => {
+            if (currentEditable) finishEditing();
+          }, 100);
+        }
+      });
+
+      canvasBody.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (!currentEditable) return;
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          finishEditing();
+        }
+        // Shift+Enter 插入换行，单独 Enter 结束编辑
+        if (e.key === 'Enter' && !e.shiftKey) {
+          // 检查是否在 td/th 中（多行文本可以换行）
+          const tag = currentEditable.tagName;
+          if (tag === 'TD' || tag === 'TH' || tag === 'DIV' || tag === 'P') {
+            return; // 允许换行
+          }
+          e.preventDefault();
+          finishEditing();
+        }
+      });
     });
 
     return () => {
