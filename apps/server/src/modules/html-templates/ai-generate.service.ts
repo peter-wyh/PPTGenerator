@@ -4,7 +4,9 @@ import { config } from '../../config';
 
 /**
  * AI HTML 报告生成服务。
- * 使用 DeepSeek API（用户已有 key），将 campaign 数据 + 用户提示词生成完整 HTML 报告。
+ * 通过 OpenAI 兼容 API（DEEPSEEK_API_URL）调用 LLM，
+ * 将 campaign 数据 + 用户提示词生成完整 HTML 报告。
+ * 当前: GLM-5.2 via ai-gateway.g2h3.com（也兼容 DeepSeek API 格式）
  */
 
 const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1';
@@ -515,7 +517,7 @@ export const aiGenerateService = {
     reportPeriod?: { startDate?: string; endDate?: string };
   }): Promise<string> {
     if (!DEEPSEEK_API_KEY) {
-      throw ApiError.internal('DeepSeek API key 未配置（DEEPSEEK_API_KEY）');
+      throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
     }
 
     const campaignData = params.campaignId
@@ -542,11 +544,12 @@ export const aiGenerateService = {
       userPrompt += DESIGN_GUIDE_SUFFIX.replace('{{DESIGN_GUIDE}}', designGuide.trim());
     }
 
-    // V4 Pro 等推理模型支持更大的输出；非推理模型上限较低
-    const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4');
+    // 推理模型（deepseek-v4-pro / glm-5.2 等）支持更大的输出；非推理模型上限较低
+    // glm-5.2 推理过程消耗大量 token，需要更大 max_tokens 确保 content 有足够空间
+    const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     const maxTokens = isReasoningModel ? 16000 : 8192;
 
-    // 超时保护：DeepSeek 生成耗时不稳定（复杂报告 2-5 分钟，偶发更久）。
+    // 超时保护：AI 生成耗时不稳定（复杂报告 2-5 分钟，偶发更久）。
     // 设 290s 主动中断，略早于 vite proxy 超时（600s）——确保 server 先返回
     // 友好的 JSON 错误，而不是让 proxy 返回裸 500（前端只看到 "Request failed with status code 500"）。
     const DEEPSEEK_TIMEOUT_MS = 290_000;
@@ -586,7 +589,7 @@ export const aiGenerateService = {
         err?.code === 'ECONNRESET' ||
         (typeof err?.code === 'string' && err.code.startsWith('UND_ERR'));
       if (isNetworkAbort) {
-        throw ApiError.internal('AI 生成超时或连接中断（DeepSeek 响应中断），请稍后重试');
+        throw ApiError.internal('AI 生成超时或连接中断，请稍后重试');
       }
       throw err;
     }
@@ -601,8 +604,15 @@ export const aiGenerateService = {
     const choice = data.choices?.[0];
     const content: string = choice?.message?.content ?? '';
 
-    // 推理模型：reasoning_content 字段单独存在，不需要处理
-    // 但 content 可能包含残留的推理文本、markdown fences、或被截断
+    // 推理模型（glm-5.2 / deepseek-v4）：reasoning_content 占大量 token，
+    // 极端情况下 content 可能为空（推理耗尽 token），需明确报错
+    if (!content && choice?.message?.reasoning_content) {
+      throw ApiError.internal(
+        'AI 推理过程消耗过多 token，content 为空（finish_reason: ' +
+          (choice?.finish_reason ?? 'unknown') +
+          '），请减少 prompt 复杂度或重试',
+      );
+    }
 
     let html = content;
 
@@ -738,14 +748,14 @@ export const aiGenerateService = {
     instruction: string;
   }): Promise<string> {
     if (!DEEPSEEK_API_KEY) {
-      throw ApiError.internal('DeepSeek API key 未配置（DEEPSEEK_API_KEY）');
+      throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
     }
 
     const userPrompt = EDIT_USER_PROMPT_TEMPLATE
       .replace('{{EDIT_INSTRUCTION}}', params.instruction)
       .replace('{{CURRENT_HTML}}', params.currentHtml);
 
-    const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4');
+    const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     const maxTokens = isReasoningModel ? 16000 : 8192;
 
     // 编辑操作通常比全量生成快，但仍设 290s 超时保护
