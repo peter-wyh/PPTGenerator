@@ -356,6 +356,16 @@ mark {
 }
 
 /* ── Spectrum 颜色选择器精简 ── */
+/* ★ 核心：强制隐藏 sp-hidden 容器（Spectrum 默认只设 visibility/topleft，
+   不设 display:none，导致多个隐藏的颜色选择器占满页面底部） */
+.sp-container.sp-hidden {
+  display: none !important;
+}
+/* 颜色选择器弹出层使用绝对定位，不占文档流 */
+.sp-container:not(.sp-hidden) {
+  position: absolute !important;
+  z-index: 10000 !important;
+}
 /* 隐藏 "less/more" 调色板切换、⨯ 取消、Ok 确认按钮（每个颜色属性都重复渲染） */
 .gjs-sm-container .sp-replacer,
 .gjs-sm-container .sp-preview,
