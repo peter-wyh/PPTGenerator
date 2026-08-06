@@ -198,22 +198,46 @@ mark {
 
 /* ── 浅色主题覆盖（GrapesJS 默认深色） ── */
 
+/* ── Style Manager 浅色主题覆盖（GrapesJS 默认深色） ── */
+
+/* ★ 核心：强制约束 sector title 内 SVG 尺寸（GrapesJS 默认不限制导致 273px 巨型图标） */
+.gjs-sm-sector-title .gjs-sm-sector-caret,
+.gjs-sm-sector-caret svg {
+  width: 12px !important;
+  height: 12px !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+}
+
 /* Style Manager 整体 */
 .gjs-sm-container .gjs-sm-sectors {
   background: transparent !important;
 }
-/* Sector 标题栏 */
+/* Sector 本身——折叠时不要留多余高度 */
+.gjs-sm-container .gjs-sm-sector {
+  border-bottom: 1px solid var(--border-subtle, #f3f4f6) !important;
+}
+
+/* Sector 标题栏——flex 布局保证 caret + label 水平排列 */
 .gjs-sm-container .gjs-sm-sector-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
   background: var(--surface-hover, #f9fafb) !important;
   color: var(--foreground-secondary, #374151) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
-  padding: 6px 10px !important;
-  border-bottom: 1px solid var(--border-subtle, #f3f4f6) !important;
-  cursor: pointer;
+  padding: 7px 10px !important;
+  height: 32px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  border: none !important;
 }
 .gjs-sm-sector-title:hover {
   background: var(--surface-active, #f3f4f6) !important;
+}
+.gjs-sm-sector-label {
+  line-height: 1 !important;
 }
 /* Sector 展开内容区 */
 .gjs-sm-container .gjs-sm-properties {
