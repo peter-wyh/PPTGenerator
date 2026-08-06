@@ -152,43 +152,32 @@ export function VisualEditor({
         appendTo: '#gjs-sm',
         sectors: [
           {
-            name: '尺寸',
+            name: '布局',
             open: true,
-            buildProps: ['width', 'min-width', 'max-width', 'height', 'min-height', 'max-height'],
-          },
-          {
-            name: '间距',
-            open: false,
-            buildProps: ['margin', 'padding'],
+            buildProps: ['width', 'height', 'margin', 'padding'],
           },
           {
             name: '排版',
             open: false,
             buildProps: [
-              'font-family', 'font-size', 'font-weight', 'font-style',
-              'text-align', 'text-decoration', 'color', 'line-height',
-              'letter-spacing',
+              'font-family', 'font-size', 'font-weight',
+              'text-align', 'color', 'line-height',
             ],
           },
           {
             name: '背景',
             open: false,
-            buildProps: ['background-color', 'background-image', 'background-repeat', 'background-position', 'background-size'],
+            buildProps: ['background-color'],
           },
           {
             name: '边框',
             open: false,
-            buildProps: ['border', 'border-radius', 'border-color', 'border-style', 'border-width'],
+            buildProps: ['border-radius', 'border', 'border-color'],
           },
           {
             name: '效果',
             open: false,
-            buildProps: ['opacity', 'box-shadow', 'display', 'flex-direction', 'justify-content', 'align-items', 'gap'],
-          },
-          {
-            name: '定位',
-            open: false,
-            buildProps: ['position', 'top', 'right', 'bottom', 'left', 'z-index'],
+            buildProps: ['display', 'flex-direction', 'justify-content', 'align-items', 'gap', 'opacity'],
           },
         ],
       },
@@ -339,6 +328,30 @@ export function VisualEditor({
 
   // ── 图层/样式面板切换 ──
   const [activePanel, setActivePanel] = useState<'layers' | 'style'>('style');
+  const [selectedInfo, setSelectedInfo] = useState<string>('未选中元素');
+
+  // 选中元素时自动切换到样式面板
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const editor = editorRef.current;
+    const onSelect = () => {
+      const sel = editor.getSelected();
+      if (sel) {
+        const tag = sel.get('tagName') || 'div';
+        const cls = (sel.get('classes') || []).map((c: { get: (k: string) => string }) => c.get('name')).filter(Boolean).slice(0, 2).join(' ');
+        setSelectedInfo(`<${tag}>${cls ? ' .' + cls : ''}`);
+      } else {
+        setSelectedInfo('未选中元素');
+      }
+    };
+    editor.on('component:selected', onSelect);
+    editor.on('component:deselected', onSelect);
+    return () => {
+      editor.off('component:selected', onSelect);
+      editor.off('component:deselected', onSelect);
+    };
+  }, []);
+
   const showPanel = useCallback((panel: 'layers' | 'style') => {
     setActivePanel(panel);
     const layersEl = document.querySelector('#gjs-layers');
@@ -429,6 +442,13 @@ export function VisualEditor({
         {/* 右侧面板：图层 + 样式 */}
         {!previewMode && (
           <div className="flex w-[300px] shrink-0 flex-col border-l border-border-default bg-surface-primary">
+            {/* 选中元素信息条 */}
+            <div className="flex items-center gap-2 border-b border-border-default px-3 py-2 bg-surface-hover/50">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-accent-primary shrink-0">
+                <path d="M3 1h10v2H3V1zm0 4h10v10H3V5zm2 2v6h6V7H5z"/>
+              </svg>
+              <span className="text-xs font-mono text-foreground-secondary truncate">{selectedInfo}</span>
+            </div>
             {/* Tabs */}
             <div className="flex border-b border-border-default">
               <button
@@ -449,7 +469,7 @@ export function VisualEditor({
               </button>
             </div>
             {/* 面板容器 */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto gjs-panel-scroll">
               <div id="gjs-layers" className="gjs-layers-container text-xs" style={{ display: activePanel === 'layers' ? 'block' : 'none' }} />
               <div id="gjs-sm" className="gjs-sm-container text-xs" style={{ display: activePanel === 'style' ? 'block' : 'none' }} />
             </div>
