@@ -309,20 +309,23 @@ export function VisualEditor({
         editor.StyleManager.render();
       }
 
-      // ★★★ 核心功能：双击文本元素进入 contenteditable 编辑 ★★★
-      // GrapesJS 内置 RTE 对复杂 HTML 结构不可靠，用原生 contenteditable 替代。
-      // 策略：双击 canvas 中的元素 → 找到含直接文本的最小元素 → contenteditable=true
-      //       失焦时关闭编辑并同步回 GrapesJS 组件模型
-      const canvasBody = canvasDoc.body;
+      // ★★★ 核心功能：双击任何元素进入编辑 ★★★
+      // 策略：
+      // 1) 有文本的元素（TD/P/H1/SPAN等）→ contenteditable 编辑文本
+      // 2) 图标元素（<i class="fas fa-xxx">）→ contenteditable 编辑 class 名
+      // 3) 图片元素 → 选中后通过右侧面板编辑（已有逻辑）
+      // 失焦时关闭编辑并同步回 GrapesJS 组件模型，触发 update 事件确保保存
+      const canvasBody = canvasDoc!.body;
       const TEXT_TAGS = ['TD', 'TH', 'P', 'SPAN', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
                          'LI', 'LABEL', 'CAPTION', 'DIV', 'A', 'STRONG', 'B', 'EM', 'I',
-                         'SMALL', 'DD', 'DT', 'BLOCKQUOTE', 'FIGCAPTION'];
+                         'SMALL', 'DD', 'DT', 'BLOCKQUOTE', 'FIGCAPTION',
+                         'BUTTON', 'SUMMARY', 'TIME', 'MARK', 'SUB', 'SUP'];
 
-      // 找到「包含直接文本内容」的最近祖先元素
+      // 找到「可编辑」的目标元素——优先找有文本的，fallback 到图标类
       const findEditableTarget = (el: Element): Element | null => {
         let node: Element | null = el;
+        // 第一轮：找有直接文本的 TEXT_TAGS 元素
         while (node && node !== canvasBody) {
-          // 如果元素直接包含文本节点（非空），就是它
           const hasDirectText = Array.from(node.childNodes).some(
             n => n.nodeType === 3 && n.textContent && n.textContent.trim().length > 0
           );
@@ -331,7 +334,12 @@ export function VisualEditor({
           }
           node = node.parentElement;
         }
-        // fallback：如果元素本身在 TEXT_TAGS 中
+        // 第二轮：如果是图标元素（<i class="fa...">），直接返回
+        if (el.tagName === 'I' || el.tagName === 'EM') {
+          // 图标元素——双击编辑 class（替换图标）
+          return el;
+        }
+        // 第三轮：fallback 到点击元素本身（如果在 TEXT_TAGS 中）
         if (el !== canvasBody && TEXT_TAGS.includes(el.tagName)) {
           return el;
         }
@@ -339,18 +347,60 @@ export function VisualEditor({
       };
 
       let currentEditable: HTMLElement | null = null;
+      let isIconEdit: boolean = false; // 标记当前是否在编辑图标 class
 
       // 结束编辑：关闭 contenteditable，把修改同步到 GrapesJS
       const finishEditing = () => {
         if (!currentEditable) return;
         currentEditable.removeAttribute('contenteditable');
-        currentEditable = null;
-        // GrapesJS getHtml() 直接读取 canvas DOM，DOM 已是最新的。
-        // 手动触发 selected 组件的 content change，让 debouncedChange 回调拿到最新 HTML。
+        currentEditable.removeAttribute('title');
+
+        const edited = currentEditable;
+
+        // GrapesJS 需要手动通知组件模型更新
         const selected = editor.getSelected();
         if (selected) {
+          // 找到对应的 GrapesJS 组件并触发更新
+          // GrapesJS 没有 DOM→Component 的直接映射，遍历所有组件查找匹配的 DOM 元素
+          const wrapper = editor.DomComponents.getWrapper();
+          let foundComp: any = null;
+          const searchComp = (comp: any): void => {
+            if (!comp) return;
+            if (comp.getEl && comp.getEl() === edited) { foundComp = comp; return; }
+            const children = comp.components?.();
+            if (children) {
+              for (let i = 0; i < children.length; i++) {
+                searchComp(children[i] ?? children.models?.[i]);
+                if (foundComp) return;
+              }
+            }
+          };
+          searchComp(wrapper);
+          const comp = foundComp;
+          if (comp) {
+            if (isIconEdit) {
+              // 图标编辑：把 class 同步到组件属性
+              comp.setAttributes({ class: edited.className });
+            } else {
+              // 文本编辑：把 innerHTML 同步到组件
+              comp.set('content', edited.innerHTML);
+            }
+            comp.trigger('change:content');
+            comp.trigger('change:attributes');
+          }
           selected.trigger('change:content');
         }
+
+        // 直接触发 debouncedChange（确保保存）
+        const editedHtml = editor.getHtml();
+        const editedCss = editor.getCss() ?? '';
+        const orig = originalHtmlRef.current;
+        const scripts = bodyScriptsRef.current;
+        const fullHtml = reconstructFullHtml(orig, editedHtml, editedCss, scripts);
+        onHtmlChange?.(fullHtml);
+
+        currentEditable = null;
+        isIconEdit = false;
       };
 
       // 双击 → 进入编辑（capture 阶段抢先，阻止 GrapesJS 内置 RTE 抢占）
@@ -368,15 +418,34 @@ export function VisualEditor({
           }
 
           currentEditable = editableEl as HTMLElement;
-          currentEditable.setAttribute('contenteditable', 'true');
-          currentEditable.focus();
 
-          // 选中全部文本
-          const range = canvasDoc.createRange();
-          range.selectNodeContents(currentEditable);
-          const sel = canvasDoc.getSelection();
-          sel?.removeAllRanges();
-          sel?.addRange(range);
+          // 判断是否是图标编辑
+          isIconEdit = (editableEl.tagName === 'I' || editableEl.tagName === 'EM')
+            && !Array.from(editableEl.childNodes).some(n => n.nodeType === 3 && n.textContent?.trim());
+
+          if (isIconEdit) {
+            // 图标编辑模式：提示用户可以修改 class
+            currentEditable.setAttribute('contenteditable', 'true');
+            currentEditable.setAttribute('title', '编辑图标 class（如 fas fa-chart-bar）');
+            currentEditable.focus();
+            // 选中 class 文本——先填入当前 class 供编辑
+            const currentClass = currentEditable.className;
+            currentEditable.textContent = currentClass;
+            const range = canvasDoc!.createRange();
+            range.selectNodeContents(currentEditable);
+            const sel = canvasDoc!.getSelection();
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          } else {
+            // 文本编辑模式
+            currentEditable.setAttribute('contenteditable', 'true');
+            currentEditable.focus();
+            const range = canvasDoc!.createRange();
+            range.selectNodeContents(currentEditable);
+            const sel = canvasDoc!.getSelection();
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
         }
       }, true); // ← capture: true，先于 GrapesJS 处理
 
@@ -384,9 +453,14 @@ export function VisualEditor({
       canvasBody.addEventListener('focusout', (e: Event) => {
         const target = e.target as HTMLElement;
         if (target.getAttribute('contenteditable') === 'true') {
+          // 延迟检查，避免选择内部子元素时误触
           setTimeout(() => {
-            if (currentEditable) finishEditing();
-          }, 100);
+            // 检查焦点是否还在当前可编辑元素内
+            const focused = canvasDoc!.activeElement;
+            if (currentEditable && focused !== currentEditable) {
+              finishEditing();
+            }
+          }, 50);
         }
       });
 
@@ -398,7 +472,18 @@ export function VisualEditor({
         }
         // Shift+Enter 插入换行，单独 Enter 结束编辑
         if (e.key === 'Enter' && !e.shiftKey) {
-          // 检查是否在 td/th 中（多行文本可以换行）
+          // 图标编辑模式：Enter 直接保存
+          if (isIconEdit) {
+            e.preventDefault();
+            // 把编辑后的 class 写回元素的 class 属性
+            const newClass = currentEditable.textContent?.trim() || '';
+            currentEditable.setAttribute('class', newClass);
+            // 清空文本（图标不应该有文本内容）
+            currentEditable.textContent = '';
+            finishEditing();
+            return;
+          }
+          // 检查是否在 td/th/div/p 中（多行文本可以换行）
           const tag = currentEditable.tagName;
           if (tag === 'TD' || tag === 'TH' || tag === 'DIV' || tag === 'P') {
             return; // 允许换行
