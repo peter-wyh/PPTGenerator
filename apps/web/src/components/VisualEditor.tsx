@@ -175,6 +175,15 @@ export function VisualEditor({
 
     editorRef.current = editor;
 
+    // ★ 关键：标记所有组件 editable，让 GrapesJS 知道这些组件可以编辑
+    //   （配合下方原生 contenteditable 双保险）
+    editor.on('component:create', (model: any) => {
+      if (!model?.set) return;
+      const type = model.get('type');
+      if (type === 'textnode' || type === 'text') return;
+      model.set({ editable: true });
+    });
+
     // 加载 body 组件
     editor.setComponents(parsed.bodyHtml);
     lastLoadedBodyRef.current = parsed.bodyHtml;
@@ -343,7 +352,7 @@ export function VisualEditor({
         }
       };
 
-      // 双击 → 进入编辑
+      // 双击 → 进入编辑（capture 阶段抢先，阻止 GrapesJS 内置 RTE 抢占）
       canvasBody.addEventListener('dblclick', (e: Event) => {
         const target = e.target as Element;
         const editableEl = findEditableTarget(target);
@@ -368,7 +377,7 @@ export function VisualEditor({
           sel?.removeAllRanges();
           sel?.addRange(range);
         }
-      });
+      }, true); // ← capture: true，先于 GrapesJS 处理
 
       // 失焦/Enter → 结束编辑
       canvasBody.addEventListener('focusout', (e: Event) => {
