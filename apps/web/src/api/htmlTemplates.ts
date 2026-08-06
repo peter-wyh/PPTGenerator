@@ -13,6 +13,15 @@ export interface HtmlTemplateDetail extends HtmlTemplateSummary {
   html: string;
 }
 
+/** Recipe 报告的结构覆盖(组件顺序/隐藏)。 */
+export interface ManifestOverrides {
+  order?: string[];
+  hidden?: string[];
+}
+
+/** 生成报告时的输入 mode:ai(DeepSeek 生成) | recipe(本地模板渲染)。 */
+export type GenerateMode = 'ai' | 'recipe';
+
 export interface HtmlVersionSummary {
   id: string;
   name: string;
@@ -26,6 +35,14 @@ export interface HtmlVersionDetail extends HtmlVersionSummary {
   html: string;
   projectId: string;
   ownerId: string;
+  /** recipe 版本标识(非空 = recipe 模式,可编辑四层配置)。 */
+  recipeId?: string | null;
+  /** recipe 数据快照(直接喂模板,跳过 mapCampaign)。 */
+  reportContent?: unknown | null;
+  /** recipe 风格层覆盖(dgTokens 子集)。 */
+  tokenOverrides?: Record<string, unknown> | null;
+  /** recipe 结构层覆盖。 */
+  manifestOverrides?: ManifestOverrides | null;
 }
 
 /** Agent 对话消息 */
@@ -77,7 +94,7 @@ export const htmlTemplatesApi = {
 
   /** 生成 HTML 报告（DeepSeek V4 Pro 推理模型需要 2-3 分钟） */
   generate: (input: {
-    mode: 'template' | 'ai';
+    mode: GenerateMode;
     templateId?: string;
     prompt?: string;
     campaignId?: string;
@@ -89,6 +106,35 @@ export const htmlTemplatesApi = {
         timeout: 300000, // 5 分钟超时（V4 Pro 推理模型需要更长时间）
       })
       .then((r) => r.data.html),
+
+  /** Recipe 实时重渲染（不保存,编辑器预览用）。 */
+  reRender: (input: {
+    recipeId?: string;
+    campaignId?: string;
+    reportContent?: unknown;
+    tokenOverrides?: Record<string, unknown>;
+    manifestOverrides?: ManifestOverrides;
+  }) =>
+    api
+      .post<{ html: string }>('/html-templates/recipe/render', input)
+      .then((r) => r.data.html),
+
+  /** 保存 recipe 配置到 HtmlVersion（reportContent/tokenOverrides/manifestOverrides）,
+   *  触发重渲染并写回 html。仅 recipe 版本可用;未传字段沿用 version 现值。 */
+  saveRecipeConfig: (
+    versionId: string,
+    cfg: {
+      reportContent?: unknown;
+      tokenOverrides?: Record<string, unknown>;
+      manifestOverrides?: ManifestOverrides;
+    },
+  ) =>
+    api
+      .patch<{ ok: boolean; versionId: string }>(
+        `/html-templates/html-versions/${versionId}/recipe-config`,
+        cfg,
+      )
+      .then((r) => r.data),
 
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
   getDesignGuide: (campaignId: string) =>

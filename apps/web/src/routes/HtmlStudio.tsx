@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   htmlTemplatesApi,
-  type HtmlTemplateSummary,
+  type HtmlVersionDetail,
   type AgentChatMessage,
 } from '@/api/htmlTemplates';
 import { projectsApi } from '@/api/projects';
@@ -20,8 +20,9 @@ import { MarkdownPreview } from '@/components/MarkdownEditor';
 import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
 import { getPresetsForBL } from '@/report-presets';
 import { AgentChatPanel } from './AgentChatPanel';
+import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
 
-type Mode = 'template' | 'ai';
+type Mode = 'ai' | 'recipe';
 
 export function HtmlStudio() {
   const { id } = useParams<{ id: string }>();
@@ -38,8 +39,6 @@ export function HtmlStudio() {
 
   // 配置面板状态
   const [mode, setMode] = useState<Mode>('ai');
-  const [templates, setTemplates] = useState<HtmlTemplateSummary[]>([]);
-  const [selectedTpl, setSelectedTpl] = useState<string>('');
 
   // ★ 根据 project 关联的业务线动态获取预设
   const blCode = project?.meta?.businessLine as string | undefined;
@@ -87,6 +86,10 @@ export function HtmlStudio() {
   // ★ 源码面板（右侧可折叠）
   const [showSource, setShowSource] = useState(false);
 
+  // ★ Recipe 模式:当前 HtmlVersion 完整记录(含 recipeId/reportContent/tokenOverrides/manifestOverrides)
+  // 由 listHtmlVersions → getHtmlVersion(activeId) 加载,recipeId 非空时切到 RecipeEditor。
+  const [activeVersion, setActiveVersion] = useState<HtmlVersionDetail | null>(null);
+
   // 加载项目信息
   useEffect(() => {
     if (!id) return;
@@ -119,6 +122,18 @@ export function HtmlStudio() {
                   },
                 ]);
               }
+              // ★ Recipe 模式检测:取激活版本完整记录(含 recipeId)
+              htmlTemplatesApi
+                .listHtmlVersions(id!)
+                .then((vs) => {
+                  const activeId = vs.find((v) => v.isActive)?.id ?? vs[0]?.id;
+                  if (!activeId) return;
+                  return htmlTemplatesApi.getHtmlVersion(activeId);
+                })
+                .then((v) => {
+                  if (v) setActiveVersion(v);
+                })
+                .catch(() => {});
             }
           })
           .catch(() => {});
@@ -126,11 +141,6 @@ export function HtmlStudio() {
       .catch(() => setProjectError('报告加载失败或不存在'))
       .finally(() => setLoadingProject(false));
   }, [id]);
-
-  // 加载 templates
-  useEffect(() => {
-    htmlTemplatesApi.list({ status: 'PUBLISHED' }).then(setTemplates).catch(() => {});
-  }, []);
 
   // Esc 键关闭全屏
   useEffect(() => {
@@ -179,6 +189,22 @@ export function HtmlStudio() {
     [id, project],
   );
 
+  // ★ RecipeEditor 保存后刷新激活版本(后端已重渲染并写回 html)
+  const reloadVersion = useCallback(async () => {
+    if (!id || !activeVersion) return;
+    try {
+      const v = await htmlTemplatesApi.getHtmlVersion(activeVersion.id);
+      setActiveVersion(v);
+      setGeneratedHtml(v.html);
+      setSaved(true);
+    } catch {
+      // 静默
+    }
+  }, [id, activeVersion]);
+
+  // ★ Recipe 模式:有激活版本且 recipeId 非空
+  const isRecipe = !!activeVersion?.recipeId;
+
   // ★ handleGenerate — 生成成功后自动保存 + 切换到 chat 阶段
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
@@ -189,7 +215,6 @@ export function HtmlStudio() {
     try {
       const html = await htmlTemplatesApi.generate({
         mode,
-        templateId: mode === 'template' ? selectedTpl : undefined,
         prompt: mode === 'ai' ? prompt : undefined,
         campaignId,
         designMd: mode === 'ai' && designMd.trim() ? designMd.trim() : undefined,
@@ -234,7 +259,7 @@ export function HtmlStudio() {
     } finally {
       setGenerating(false);
     }
-  }, [mode, selectedTpl, prompt, campaignId, designMd, reportPeriod, updateAiHtmlStatus, id]);
+  }, [mode, prompt, campaignId, designMd, reportPeriod, updateAiHtmlStatus, id]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(generatedHtml);
@@ -346,6 +371,22 @@ export function HtmlStudio() {
 
       {/* ────── Main Area ────── */}
       <div className="flex flex-1 overflow-hidden">
+        {/* ── Recipe 模式:四层编辑器替代 AI/Agent UI ── */}
+        {isRecipe && activeVersion ? (
+          <RecipeEditor
+            versionId={activeVersion.id}
+            recipeId={activeVersion.recipeId!}
+            campaignId={campaignId}
+            reportPeriod={reportPeriod}
+            reportContent={activeVersion.reportContent ?? {}}
+            tokenOverrides={(activeVersion.tokenOverrides as Record<string, unknown>) ?? {}}
+            manifestOverrides={
+              (activeVersion.manifestOverrides as { order?: string[]; hidden?: string[] }) ?? {}
+            }
+            onSaved={reloadVersion}
+          />
+        ) : (
+        <>
         {/* ── Left Panel: Config (phase=config) or Chat (phase=chat) ── */}
         {!panelCollapsed && (
           <aside className="flex w-[380px] shrink-0 flex-col overflow-hidden border-r border-border-default bg-surface-primary">
@@ -366,14 +407,14 @@ export function HtmlStudio() {
                       🤖 AI 生成
                     </button>
                     <button
-                      onClick={() => setMode('template')}
+                      onClick={() => setMode('recipe')}
                       className={`flex-1 rounded-lg px-3 py-2 text-sm transition ${
-                        mode === 'template'
+                        mode === 'recipe'
                           ? 'bg-accent-primary text-foreground-inverse'
                           : 'bg-surface-hover text-foreground-secondary'
                       }`}
                     >
-                      📋 模板填充
+                      📋 Recipe 模板
                     </button>
                   </div>
                 </div>
@@ -511,31 +552,17 @@ export function HtmlStudio() {
                     </div>
                   </div>
                 ) : (
-                  <div>
-                    <label className="mb-2 block text-xs font-medium text-foreground-muted">选择模板</label>
-                    {templates.length === 0 ? (
-                      <p className="rounded-lg bg-surface-hover px-3 py-4 text-center text-xs text-foreground-muted">
-                        暂无已发布的 HTML 模板
+                  <div className="rounded-lg bg-surface-hover px-3 py-4 text-center">
+                    <p className="text-xs text-foreground-secondary">
+                      📋 Recipe 模板模式
+                    </p>
+                    <p className="mt-1 text-[11px] text-foreground-muted">
+                      用本地结构化模板渲染报告(快速、稳定、可四层编辑)。
+                    </p>
+                    {!campaignId && (
+                      <p className="mt-1.5 text-[10px] text-amber-500">
+                        ⚠️ 未绑定 Campaign,需填 Campaign ID 才能渲染真实数据
                       </p>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {templates.map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => setSelectedTpl(t.id)}
-                            className={`rounded-lg border px-3 py-2 text-left transition ${
-                              selectedTpl === t.id
-                                ? 'border-accent-primary bg-accent-primary/10'
-                                : 'border-border-default hover:border-border-strong'
-                            }`}
-                          >
-                            <div className="text-sm font-medium text-foreground-primary">{t.name}</div>
-                            {t.description && (
-                              <div className="mt-0.5 text-[11px] text-foreground-muted">{t.description}</div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
                     )}
                   </div>
                 )}
@@ -588,7 +615,7 @@ export function HtmlStudio() {
                   <Button
                     onClick={handleGenerate}
                     loading={generating}
-                    disabled={mode === 'template' ? !selectedTpl : generating}
+                    disabled={mode === 'recipe' ? !campaignId : generating}
                     className="w-full"
                   >
                     {generating ? '生成中… (~2-3min)' : '✨ 生成报告'}
@@ -747,6 +774,8 @@ export function HtmlStudio() {
             </div>
           )}
         </main>
+        </>
+        )}
       </div>
 
       {/* ── Fullscreen Modal: Prompt Editor ── */}

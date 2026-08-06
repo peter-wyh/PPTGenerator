@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { htmlTemplatesApi, type HtmlTemplateSummary, type HtmlVersionSummary } from '@/api/htmlTemplates';
+import { htmlTemplatesApi, type HtmlVersionSummary } from '@/api/htmlTemplates';
 import { Button } from '@/components/Button';
 import { BUSINESS_LINES } from '@/projectsMeta';
 import { getPresetsForBL } from '@/report-presets';
@@ -17,7 +17,7 @@ interface Props {
   onSaved?: (projectId: string) => void;
 }
 
-type Mode = 'template' | 'ai';
+type Mode = 'ai' | 'recipe';
 
 
 
@@ -33,8 +33,6 @@ const selectCls = 'w-full rounded-lg border border-border-default bg-surface-pri
  */
 export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName, reportPeriod, onClose, onSaved }: Props) {
   const [mode, setMode] = useState<Mode>('ai');
-  const [templates, setTemplates] = useState<HtmlTemplateSummary[]>([]);
-  const [selectedTpl, setSelectedTpl] = useState<string>('');
   // ★ 从 design guide API 获取 BL code，动态加载预设
   const [blCode, setBlCode] = useState('');
   const presets = useMemo(() => getPresetsForBL(blCode || undefined), [blCode]);
@@ -73,11 +71,6 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
   const [versions, setVersions] = useState<HtmlVersionSummary[]>([]);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-
-  // 加载 templates
-  useEffect(() => {
-    htmlTemplatesApi.list({ status: 'PUBLISHED' }).then(setTemplates).catch(() => {});
-  }, []);
 
   // ★ 加载已有版本（已有报告模式）
   useEffect(() => {
@@ -119,7 +112,6 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
     try {
       const html = await htmlTemplatesApi.generate({
         mode,
-        templateId: mode === 'template' ? selectedTpl : undefined,
         prompt: mode === 'ai' ? `${designSpec}\n\n${prompt}`.trim() : undefined,
         campaignId,
         designMd: mode === 'ai' && designMd.trim() ? designMd.trim() : undefined,
@@ -136,7 +128,7 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
     } finally {
       setLoading(false);
     }
-  }, [mode, selectedTpl, prompt, campaignId, designMd, reportPeriod]);
+  }, [mode, prompt, campaignId, designMd, designSpec, reportPeriod]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(generatedHtml);
@@ -255,14 +247,14 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
                   🤖 AI 生成
                 </button>
                 <button
-                  onClick={() => setMode('template')}
+                  onClick={() => setMode('recipe')}
                   className={`flex-1 rounded-lg px-3 py-2 text-sm transition ${
-                    mode === 'template'
+                    mode === 'recipe'
                       ? 'bg-accent-primary text-foreground-inverse'
                       : 'bg-surface-hover text-foreground-secondary'
                   }`}
                 >
-                  📋 模板填充
+                  📋 Recipe 模板
                 </button>
               </div>
             </div>
@@ -334,38 +326,17 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
                 </div>
               </div>
             ) : (
-              <div>
-                <label className="mb-2 block text-xs skin-fw-body text-foreground-muted">
-                  选择模板
-                </label>
-                {templates.length === 0 ? (
-                  <p className="rounded-lg bg-surface-hover px-3 py-4 text-center text-xs text-foreground-muted">
-                    暂无已发布的 HTML 模板
+              <div className="rounded-lg bg-surface-hover px-3 py-4 text-center">
+                <p className="text-xs text-foreground-secondary">
+                  📋 Recipe 模板模式
+                </p>
+                <p className="mt-1 text-[11px] text-foreground-muted">
+                  用本地结构化模板渲染报告(快速、稳定),生成后可在 HtmlStudio 里四层编辑。
+                </p>
+                {!campaignId && (
+                  <p className="mt-1.5 text-[10px] text-amber-500">
+                    ⚠️ 需绑定 Campaign 才能渲染真实数据
                   </p>
-                ) : (
-                  <div className="flex flex-col skin-gap-sm">
-                    {templates.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setSelectedTpl(t.id)}
-                        className={`rounded-lg border px-3 py-2 text-left transition ${
-                          selectedTpl === t.id
-                            ? 'border-accent-primary bg-accent-primary/10'
-                            : 'border-border-default hover:border-border-strong'
-                        }`}
-                      >
-                        <div className="text-sm skin-fw-body text-foreground-primary">{t.name}</div>
-                        {t.description && (
-                          <div className="mt-0.5 text-[11px] text-foreground-muted">{t.description}</div>
-                        )}
-                        {t.category && (
-                          <span className="mt-1 inline-block rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">
-                            {t.category}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
                 )}
               </div>
             )}
@@ -417,7 +388,7 @@ export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName,
             <Button
               onClick={handleGenerate}
               loading={loading && !generatedHtml}
-              disabled={mode === 'template' ? !selectedTpl : loading}
+              disabled={mode === 'recipe' ? !campaignId : loading}
               className="w-full"
             >
               {loading && !generatedHtml ? '生成中… (~15s)' : '✨ 生成报告'}
