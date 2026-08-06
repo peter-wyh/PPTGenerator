@@ -13,14 +13,14 @@ import {
 
 const router = Router();
 
-// 所有操作需登录
+// GET /system-prompt — 公开端点，无需登录（必须在 authenticate 之前 + /:id 之前注册）
+router.get('/system-prompt', htmlTemplateController.getSystemPrompt);
+
+// 所有其他操作需登录
 router.use(authenticate);
 
 // HTML 模板列表 + 详情：已登录用户均可（service 按角色过滤草稿/已发布）
 router.get('/', htmlTemplateController.list);
-
-// GET /system-prompt — 获取系统提示词（必须在 /:id 之前注册，否则会被通配匹配）
-router.get('/system-prompt', htmlTemplateController.getSystemPrompt);
 
 router.get('/:id', validate({ params: idParamSchema }), htmlTemplateController.get);
 
