@@ -196,7 +196,7 @@ export function VisualEditor({
       changeTimerRef.current = setTimeout(() => {
         if (!onHtmlChange) return;
         const editedHtml = editor.getHtml();
-        const editedCss = editor.getCss();
+        const editedCss = editor.getCss() ?? '';
         const orig = originalHtmlRef.current as string;
         const scripts = bodyScriptsRef.current;
         const fullHtml = reconstructFullHtml(orig, editedHtml, editedCss, scripts);
@@ -248,6 +248,7 @@ export function VisualEditor({
 
     editor.on('load', () => {
       const canvasDoc = editor.Canvas.getDocument();
+      if (!canvasDoc) return;
       const canvasHead = canvasDoc.head;
 
       // 1) 注入 <style> 块
@@ -433,6 +434,7 @@ export function VisualEditor({
     editor.UndoManager.clear();
 
     const canvasDoc = editor.Canvas.getDocument();
+    if (!canvasDoc) return;
     if (parsed.headCss && canvasDoc.head) {
       canvasDoc.head.querySelectorAll('style').forEach(s => s.remove());
       const styleEl = canvasDoc.createElement('style');
