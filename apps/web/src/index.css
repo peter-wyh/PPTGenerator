@@ -291,12 +291,26 @@ mark {
 }
 
 /* ── Layers 面板 ── */
-.gjs-layers-container {
-  background: var(--surface-primary, #fff) !important;
+/* ★ 核心：强制约束 layer 内所有 SVG 尺寸（同 sector caret 问题） */
+.gjs-layers-container svg,
+.gjs-layer svg,
+.gjs-layer-caret svg,
+.gjs-layer-vis svg,
+.gjs-layer-vis-on svg {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0 !important;
 }
+/* ★ 强制每个 layer-item 行固定高度 */
 .gjs-layers-container .gjs-layer {
   border-bottom: 1px solid var(--border-subtle, #f3f4f6) !important;
   color: var(--foreground-primary, #374151) !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.gjs-layers-container .gjs-layer-item {
+  height: 28px !important;
+  padding-left: 4px !important;
 }
 .gjs-layers-container .gjs-layer:hover {
   background: var(--surface-hover, #f9fafb) !important;
@@ -308,8 +322,16 @@ mark {
 .gjs-layers-container .gjs-layer-name {
   font-size: 11px !important;
   color: inherit !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 .gjs-layers-container .gjs-layer-caret {
+  color: var(--foreground-muted, #9ca3af) !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+.gjs-layers-container .gjs-layer-vis {
   color: var(--foreground-muted, #9ca3af) !important;
 }
 

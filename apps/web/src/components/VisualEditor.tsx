@@ -8,7 +8,7 @@
  * - 导出时：用原始 <head>（含 CDN scripts）+ 编辑后的 <body> + 编辑器 CSS 重组。
  * - 这样 Chart.js 等脚本在最终导出的 HTML 中照常运行，编辑器中只做静态布局编辑。
  */
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import grapesjs from 'grapesjs';
 import type { Editor } from 'grapesjs';
 
@@ -24,6 +24,17 @@ interface VisualEditorProps {
   onHtmlChange?: (html: string) => void;
   editable?: boolean;
   defaultDevice?: 'desktop' | 'tablet' | 'mobile';
+}
+
+// ★ 自定义图层节点
+interface LayerNode {
+  id: string;
+  cid?: string;
+  path: string;
+  label: string;
+  depth: number;
+  hasChildren: boolean;
+  childCount: number;
 }
 
 const DEVICE_WIDTHS: Record<string, string> = {
@@ -261,11 +272,16 @@ export function VisualEditor({
       if (smContainer && editor.StyleManager) {
         editor.StyleManager.render();
       }
-      // 渲染图层面板
+      // 渲染图层面板 — 使用自定义 React 组件，不渲染 GrapesJS 原生面板
       const layersContainer = document.querySelector('#gjs-layers');
-      if (layersContainer && editor.Layers) {
-        editor.runCommand('open-layers');
+      // GrapesJS LayerManager 数据已通过 layerManager.appendTo 自动挂载到 #gjs-layers
+      // 但我们用自定义 React 图层树替代原生渲染（避免 775 节点 DOM 爆炸）
+      // 隐藏原生面板，自定义面板会读取 editor.Layers API
+      if (layersContainer) {
+        (layersContainer as HTMLElement).style.display = 'none';
       }
+      // ★ editor 加载完成后触发图层重渲染
+      setLayerVersion(v => v + 1);
     });
 
     return () => {
@@ -329,6 +345,63 @@ export function VisualEditor({
   // ── 图层/样式面板切换 ──
   const [activePanel, setActivePanel] = useState<'layers' | 'style'>('style');
   const [selectedInfo, setSelectedInfo] = useState<string>('未选中元素');
+  // ★ 自定义图层树：展开的节点路径 Set
+  const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
+  // ★ 触发图层重渲染的计数器（editor load 后递增）
+  const [layerVersion, setLayerVersion] = useState(0);
+
+  // ★ 从 GrapesJS 组件树递归构建可见图层列表（只展开 expandedLayers 中的路径）
+  const visibleLayers: LayerNode[] = useMemo(() => {
+    if (!editorRef.current) return [];
+    const editor = editorRef.current;
+    const wrapper = editor.DomComponents.getWrapper();
+    if (!wrapper) return [];
+
+    const result: LayerNode[] = [];
+
+    const buildLabel = (comp: any): string => {
+      const tag = comp.get('tagName') || 'div';
+      const type = comp.get('type') || 'default';
+      if (type === 'textnode') {
+        const txt = comp.get('content')?.trim().substring(0, 25);
+        return txt || 'text';
+      }
+      const classes = (comp.get('classes') || []).map((c: any) => c.get('name')).filter((n: string) => !n.startsWith('_')).slice(0, 2);
+      return classes.length > 0 ? `${tag}.${classes.join('.')}` : tag;
+    };
+
+    const walk = (component: any, depth: number, path: string) => {
+      const children = component.components();
+      const childModels = children.models || children;
+      const childArray = Array.from(childModels) as any[];
+
+      childArray.forEach((child: any, i: number) => {
+        const childPath = `${path}-${i}`;
+        const grandChildren = child.components();
+        const gcModels = grandChildren.models || grandChildren;
+        const gcArray = Array.from(gcModels) as any[];
+
+        const node: LayerNode = {
+          id: child.cid || childPath,
+          cid: child.cid,
+          path: childPath,
+          label: buildLabel(child),
+          depth,
+          hasChildren: gcArray.length > 0,
+          childCount: gcArray.length,
+        };
+        result.push(node);
+
+        // 如果当前路径在 expandedLayers 中，递归子节点
+        if (expandedLayers.has(childPath) && gcArray.length > 0) {
+          walk(child, depth + 1, childPath);
+        }
+      });
+    };
+
+    walk(wrapper, 0, 'root');
+    return result;
+  }, [expandedLayers, layerVersion]);
 
   // 选中元素时自动切换到样式面板
   useEffect(() => {
@@ -354,10 +427,54 @@ export function VisualEditor({
 
   const showPanel = useCallback((panel: 'layers' | 'style') => {
     setActivePanel(panel);
-    const layersEl = document.querySelector('#gjs-layers');
+    // 原生面板已隐藏，这里只控制自定义面板显示
     const smEl = document.querySelector('#gjs-sm');
-    if (layersEl) (layersEl as HTMLElement).style.display = panel === 'layers' ? 'block' : 'none';
     if (smEl) (smEl as HTMLElement).style.display = panel === 'style' ? 'block' : 'none';
+  }, []);
+
+  // ★ 图层点击：选中组件
+  const handleLayerClick = useCallback((cid?: string) => {
+    if (!editorRef.current || !cid) return;
+    const editor = editorRef.current;
+    // 兼容不同 GrapesJS 版本：尝试 getById、allById[cid]、遍历查找
+    const dc = editor.DomComponents as any;
+    let comp = null;
+    if (typeof dc.getById === 'function') {
+      comp = dc.getById(cid);
+    }
+    if (!comp && dc.allById) {
+      comp = dc.allById[cid];
+    }
+    if (!comp) {
+      // 遍历 wrapper 查找匹配 cid 的组件
+      const wrapper = dc.getWrapper();
+      const find = (c: any): any => {
+        if (c.cid === cid) return c;
+        const children = c.components().models || c.components();
+        for (const child of Array.from(children)) {
+          const found = find(child);
+          if (found) return found;
+        }
+        return null;
+      };
+      comp = wrapper ? find(wrapper) : null;
+    }
+    if (comp) {
+      editor.select(comp);
+    }
+  }, []);
+
+  // ★ 图层展开/折叠
+  const handleLayerToggle = useCallback((path: string) => {
+    setExpandedLayers(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
   }, []);
 
   return (
@@ -470,8 +587,56 @@ export function VisualEditor({
             </div>
             {/* 面板容器 */}
             <div className="flex-1 overflow-y-auto gjs-panel-scroll">
-              <div id="gjs-layers" className="gjs-layers-container text-xs" style={{ display: activePanel === 'layers' ? 'block' : 'none' }} />
+              {/* ★ 自定义图层树（惰性渲染，避免 775 节点 DOM 爆炸） */}
+              {activePanel === 'layers' && (
+                <div className="text-xs">
+                  {visibleLayers.length === 0 && (
+                    <div className="px-3 py-4 text-center text-foreground-muted">暂无图层</div>
+                  )}
+                  {visibleLayers.map(node => (
+                    <div
+                      key={node.id}
+                      className="flex items-center gap-1 border-b border-border-subtle/50 px-1 py-1.5 hover:bg-surface-hover cursor-pointer transition"
+                      style={{ paddingLeft: `${4 + node.depth * 14}px` }}
+                      onClick={() => handleLayerClick(node.cid)}
+                    >
+                      {/* 展开/折叠箭头 */}
+                      <span
+                        className="flex h-4 w-4 shrink-0 items-center justify-center text-foreground-muted"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (node.hasChildren) handleLayerToggle(node.path);
+                        }}
+                      >
+                        {node.hasChildren ? (
+                          <svg
+                            width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
+                            style={{
+                              transform: expandedLayers.has(node.path) ? 'rotate(90deg)' : 'rotate(0)',
+                              transition: 'transform 0.15s',
+                            }}
+                          >
+                            <path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                          </svg>
+                        ) : null}
+                      </span>
+                      {/* 图层标签 */}
+                      <span className="truncate font-mono text-[11px] text-foreground-secondary">
+                        {node.label}
+                      </span>
+                      {node.childCount > 0 && (
+                        <span className="ml-auto shrink-0 text-[9px] text-foreground-muted">
+                          {node.childCount}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* GrapesJS 样式面板（原生，保留） */}
               <div id="gjs-sm" className="gjs-sm-container text-xs" style={{ display: activePanel === 'style' ? 'block' : 'none' }} />
+              {/* 隐藏的原生图层面板（GrapesJS LayerManager 数据源） */}
+              <div id="gjs-layers" style={{ display: 'none' }} />
             </div>
           </div>
         )}
