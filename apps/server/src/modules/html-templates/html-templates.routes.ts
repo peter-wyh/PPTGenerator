@@ -9,6 +9,8 @@ import {
   generateHtmlSchema,
   saveHtmlAsProjectSchema,
   agentEditSchema,
+  saveRecipeConfigSchema,
+  reRenderSchema,
 } from './html-templates.schema';
 
 const router = Router();
@@ -101,6 +103,14 @@ router.delete(
   htmlTemplateController.deleteHtmlVersion,
 );
 
+// PATCH /api/v1/html-templates/html-versions/:versionId/recipe-config
+//   保存 recipe 配置(reportContent/tokenOverrides/manifestOverrides) + 重渲染写回 html
+router.patch(
+  '/html-versions/:versionId/recipe-config',
+  validate({ body: saveRecipeConfigSchema }),
+  htmlTemplateController.saveRecipeConfig,
+);
+
 // POST /api/v1/html-templates/projects/html — 从 Campaign 创建新报告并保存 HTML
 router.post(
   '/projects/html',
@@ -112,6 +122,13 @@ router.post(
 router.get(
   '/campaign/:campaignId/design-guide',
   htmlTemplateController.getDesignGuide,
+);
+
+// POST /api/v1/html-templates/recipe/render — 实时重渲染(不保存,编辑器预览用)
+router.post(
+  '/recipe/render',
+  validate({ body: reRenderSchema }),
+  htmlTemplateController.reRender,
 );
 
 export const htmlTemplateRoutes = router;

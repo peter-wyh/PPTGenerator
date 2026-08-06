@@ -52,3 +52,34 @@ export const agentEditSchema = z.object({
   currentHtml: z.string().min(1),
   instruction: z.string().min(1).max(2000),
 });
+
+/**
+ * 保存 recipe 配置到 HtmlVersion(reportContent/tokenOverrides/manifestOverrides),
+ * 触发重渲染并写回 html。所有字段 optional — 未传则沿用 version 现值。
+ */
+export const saveRecipeConfigSchema = z.object({
+  reportContent: z.any().optional(),
+  tokenOverrides: z.record(z.any()).optional(),
+  manifestOverrides: z
+    .object({
+      order: z.array(z.string()).optional(),
+      hidden: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+
+/**
+ * 实时重渲染(不保存)。编辑器预览用,支持任意 recipeId/campaignId + 三类覆盖。
+ */
+export const reRenderSchema = z.object({
+  recipeId: z.string().optional(),
+  campaignId: z.string().optional(),
+  reportContent: z.any().optional(),
+  tokenOverrides: z.record(z.any()).optional(),
+  manifestOverrides: z
+    .object({
+      order: z.array(z.string()).optional(),
+      hidden: z.array(z.string()).optional(),
+    })
+    .optional(),
+});

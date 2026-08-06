@@ -1,6 +1,7 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { TemplateStatus } from '@prisma/client';
+import { getRecipe } from './recipe';
 
 export interface HtmlTemplateSummary {
   id: string;
@@ -415,5 +416,60 @@ export const htmlTemplateService = {
       },
     });
     return project;
+  },
+
+  /**
+   * 保存 recipe 配置(reportContent/tokenOverrides/manifestOverrides)到 HtmlVersion,
+   * 触发重渲染并写回 html。campaignId 从 Project.meta 取。
+   * 仅 recipe 版本(recipeId 非空)可用;未传字段沿用 version 现值。
+   */
+  async saveRecipeConfig(
+    versionId: string,
+    cfg: {
+      reportContent?: any;
+      tokenOverrides?: Record<string, any>;
+      manifestOverrides?: { order?: string[]; hidden?: string[] };
+    },
+  ): Promise<void> {
+    const version = await prisma.htmlVersion.findUnique({
+      where: { id: versionId },
+    });
+    if (!version) throw ApiError.notFound('HTML 版本不存在');
+    if (!version.recipeId)
+      throw ApiError.badRequest('该版本不是 recipe 报告');
+
+    // 未传字段沿用现值
+    const reportContent = cfg.reportContent ?? version.reportContent;
+    const tokenOverrides =
+      cfg.tokenOverrides ?? (version.tokenOverrides as Record<string, any> | null);
+    const manifestOverrides =
+      cfg.manifestOverrides ?? (version.manifestOverrides as any | null);
+
+    // campaignId 从 Project.meta 取
+    const project = await prisma.project.findUnique({
+      where: { id: version.projectId },
+      select: { meta: true },
+    });
+    const meta = (project?.meta as Record<string, unknown> | null) ?? {};
+    const campaignId = (meta.campaignId as string | undefined) ?? '';
+
+    const html = await getRecipe(version.recipeId).render({
+      campaignId,
+      reportContent,
+      tokenOverrides: tokenOverrides ?? undefined,
+      manifestOverrides: manifestOverrides ?? undefined,
+    });
+
+    // Json? 列不接受 JS null(需 Prisma.JsonNull);为空时直接 omit
+    const data: Record<string, unknown> = { html };
+    if (reportContent !== undefined && reportContent !== null)
+      data.reportContent = reportContent;
+    if (tokenOverrides) data.tokenOverrides = tokenOverrides;
+    if (manifestOverrides) data.manifestOverrides = manifestOverrides;
+
+    await prisma.htmlVersion.update({
+      where: { id: versionId },
+      data: data as any,
+    });
   },
 };

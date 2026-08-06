@@ -183,4 +183,31 @@ export const htmlTemplateController = {
   getSystemPrompt: asyncHandler(async (_req: Request, res: Response) => {
     res.json({ systemPrompt: SYSTEM_PROMPT_DISPLAY });
   }),
+
+  /** 保存 recipe 配置(reportContent/tokenOverrides/manifestOverrides)到 HtmlVersion,
+   *  触发重渲染并写回 html。编辑器「保存」用。 */
+  saveRecipeConfig: asyncHandler(async (req: Request, res: Response) => {
+    const { versionId } = req.params;
+    const { reportContent, tokenOverrides, manifestOverrides } = req.body;
+    await htmlTemplateService.saveRecipeConfig(versionId, {
+      reportContent,
+      tokenOverrides,
+      manifestOverrides,
+    });
+    res.json({ ok: true });
+  }),
+
+  /** 实时重渲染不保存(编辑器预览用,debounced)。 */
+  reRender: asyncHandler(async (req: Request, res: Response) => {
+    const { recipeId, campaignId, reportContent, tokenOverrides, manifestOverrides } =
+      req.body;
+    const { getRecipe } = await import('./recipe');
+    const html = await getRecipe(recipeId ?? 'campaign-report').render({
+      campaignId,
+      reportContent,
+      tokenOverrides,
+      manifestOverrides,
+    });
+    res.json({ html });
+  }),
 };
