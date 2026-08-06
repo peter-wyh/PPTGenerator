@@ -133,15 +133,28 @@ Tables in the report MUST have perfect column alignment between headers and cell
 3. Do NOT wrap cell content in extra <div> containers that break vertical alignment — use inline-flex or simple spans instead.
 4. Ensure the Creator column (with avatar + name) uses vertical-align:middle and aligns the avatar baseline with the text baseline.
 
-═══ LAYOUT PROHIBITIONS (CRITICAL) ═══
-This is a single-page STATIC report — NOT a web app. Do NOT include:
-- ❌ Navigation bars, nav menus, sidebars, or breadcrumbs (<nav>, .navbar, .sidebar, .menu)
-- ❌ Tab bars or section anchor links (sticky tab navigation, <a href="#section"> menus)
-- ❌ Sticky/fixed headers that stay on screen while scrolling
-- ❌ Hamburger menus, dropdown menus, or any interactive navigation
-- ❌ "Back to top" buttons or floating action buttons
-- ❌ Page footers with internal links (only show brand attribution + generation date)
-The report should be a single continuous scroll: Header → KPI → Charts → Tables → Insights → Footer.
+═══ LAYOUT PROHIBITIONS (CRITICAL — ZERO TOLERANCE) ═══
+This is a single-page STATIC report — NOT a web app. The report will be embedded inside an <iframe>. ANY interactive navigation will break the host page.
+
+The following are STRICTLY FORBIDDEN. If your output contains ANY of these, it will be rejected:
+
+1. ❌ NEVER output <nav>, <nav class="...">, or ANY element with class containing "nav", "navbar", "menu", "sidebar", "breadcrumb", "anchor-nav", "tab-bar"
+2. ❌ NEVER output <a href="#..."> — section anchor links are FORBIDDEN. Sections should have titles (h2/h3) but NOT clickable anchor links pointing to them.
+3. ❌ NEVER output section id="..." attributes whose only purpose is to be an anchor target (id="kpi", id="trend", etc. are navigation artifacts — remove them).
+4. ❌ NEVER output sticky/fixed positioned headers that stay on screen while scrolling
+5. ❌ NEVER output hamburger menus, dropdown menus, tab bars, or "Back to top" buttons
+6. ❌ NEVER output footers with internal links — only show brand attribution + generation date
+
+CORRECT PATTERN: The report is a single continuous scroll:
+  Header → KPI → Charts → Tables → Insights → Footer
+Each section starts with a numbered heading (<h2>01 Overall KPI</h2>) but has NO navigation links pointing to it.
+
+WRONG (will be rejected):
+  <nav class="anchor-nav"><a href="#kpi">01 KPI</a><a href="#trend">02 Trend</a></nav>
+  <section id="kpi">...</section>
+
+RIGHT:
+  <section><h2>01 Overall KPI</h2>...</section>
 
 ═══ LANGUAGE RULES (CRITICAL) ═══
 All report UI text MUST be in English. This includes section titles, table column headers, KPI card labels, chart axis labels/legends/tooltips, insight card titles and body text, footer text, and tag/badge text.
@@ -258,18 +271,22 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 
 **固定结构模式**——用户提示词中指定 §1~§N 时，严格遵循用户指令
 
-## 🚧 布局禁令 (LAYOUT PROHIBITIONS)
+## 🚧 布局禁令 (LAYOUT PROHIBITIONS — 零容忍)
 
-这是单页**静态报告**，不是 Web 应用：
+这是单页**静态报告**，嵌入在 iframe 中。任何交互式导航都会破坏宿主页面。
 
-- ❌ 导航栏 / 侧边栏 / 面包屑（\`<nav>\`、\`.navbar\`、\`.sidebar\`）
-- ❌ Tab 栏 / 锚点链接
-- ❌ 固定/粘性 Header
-- ❌ 汉堡菜单 / 下拉菜单
-- ❌ "返回顶部"按钮 / 浮动操作按钮
-- ❌ Footer 内部链接（仅品牌归属 + 日期）
+**以下严格禁止，出现即拒绝：**
 
-**报告是单连续滚动**：Header → KPI → Charts → Tables → Insights → Footer
+1. ❌ 禁止输出 &lt;nav&gt; 或任何 class 含 "nav"、"navbar"、"menu"、"sidebar"、"breadcrumb"、"anchor-nav"、"tab-bar" 的元素
+2. ❌ 禁止输出 &lt;a href="#"&gt; 锚点链接——章节有标题（h2/h3）但不能有指向它们的可点击链接
+3. ❌ 禁止输出仅用于锚点目标的 section id（如 id="kpi"、id="trend" 是导航残留，删除）
+4. ❌ 禁止 sticky/fixed 定位的头部
+5. ❌ 禁止汉堡菜单、下拉菜单、Tab 栏、"返回顶部"按钮
+6. ❌ 禁止 Footer 内部链接（仅品牌归属 + 日期）
+
+**正确模式**：单连续滚动，每个 section 用编号标题开头，无导航链接：
+- ❌ nav.anchor-nav + a[href="#kpi"] + section#kpi
+- ✅ section > h2 "01 Overall KPI"
 
 ## 🌐 语言规则 (LANGUAGE RULES)
 
