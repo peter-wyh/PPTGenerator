@@ -34,55 +34,45 @@ const DEVICE_WIDTHS: Record<string, string> = {
 
 // ── HTML 预处理工具 ──
 
-/** 从完整 HTML 文档中提取 <body> 内部 HTML，剥离所有 <script> 标签 */
-function extractBodyForEditor(fullHtml: string): { bodyContent: string; headScripts: string; headMeta: string } {
-  // 提取 <head> 内容
+/**
+ * 从完整 HTML 中提取编辑器所需信息。
+ * 返回：bodyHTML（不含 script/canvas）、headCss（<style> 块原始文本）、
+ * headLinks（stylesheet/font 链接）、tailwindCdn（Tailwind script URL，如有）
+ */
+function parseHtmlForEditor(
+  fullHtml: string
+): { bodyHtml: string; headCss: string; headLinks: string[]; tailwindCdn: string | null; fullHead: string } {
   const headMatch = fullHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
   const headContent = headMatch ? headMatch[1] : '';
 
-  // 分离 <style> 和其他 head 内容
-  const styleBlocks: string[] = [];
-  const otherHead: string[] = [];
-  const headLines = headContent.split(/(?=<(?:style|link|script|meta)[^>]*>)/i);
+  // 提取 <style> 块内容
+  const styleBlocks = headContent.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) || [];
+  const headCss = styleBlocks.map(s => s.replace(/<\/?style[^>]*>/gi, '')).join('\n');
 
-  for (const segment of headLines) {
-    const trimmed = segment.trim();
-    if (!trimmed) continue;
-    // 保留 <style> 块（编辑器中需要看到样式）
-    if (/^<style/i.test(trimmed)) {
-      styleBlocks.push(trimmed);
-    }
-    // 保留 <link rel="stylesheet">（字体等）
-    else if (/^<link[^>]*stylesheet/i.test(trimmed)) {
-      otherHead.push(trimmed);
-    }
-    // 保留 <meta> 标签
-    else if (/^<meta/i.test(trimmed)) {
-      otherHead.push(trimmed);
-    }
-    // 跳过 <script> 标签（编辑器中不执行）
-  }
+  // 提取 <link> 标签
+  const linkTags = headContent.match(/<link[^>]*>/gi) || [];
+  const headLinks = linkTags.filter(l =>
+    /stylesheet/i.test(l) || /fonts\.googleapis/i.test(l) || /font-awesome/i.test(l) || /preconnect/i.test(l)
+  );
+
+  // 检测 Tailwind CDN
+  const twMatch = headContent.match(/<script[^>]*src="(https:\/\/cdn\.tailwindcss\.com[^"]*)"/i);
+  const tailwindCdn = twMatch ? twMatch[1] : null;
 
   // 提取 <body> 内容
   const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  let bodyContent = bodyMatch ? bodyMatch[1] : fullHtml;
+  let bodyHtml = bodyMatch ? bodyMatch[1] : fullHtml;
 
-  // 从 body 中剥离 <script> 标签
-  bodyContent = bodyContent.replace(/<script[\s\S]*?<\/script>/gi, '');
+  // 剥离 <script>
+  bodyHtml = bodyHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
 
-  // 从 body 中剥离 <canvas>（Chart.js 渲染目标，在编辑器中无意义）
-  bodyContent = bodyContent.replace(/<canvas[^>]*><\/canvas>/gi, '<div class="chart-placeholder" style="background:#f3f4f6;border-radius:8px;min-height:200px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px;">📊 图表区域（导出后自动渲染）</div>');
+  // 保留 canvas 但标记为占位（保持布局）
+  bodyHtml = bodyHtml.replace(
+    /<canvas([^>]*)><\/canvas>/gi,
+    '<div class="chart-placeholder"$1 style="background:repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 10px,#e5e7eb 10px,#e5e7eb 20px);border-radius:8px;min-height:200px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px;border:1px dashed #d1d5db;">📊 Chart</div>'
+  );
 
-  // 注入 head 中的 style 到 body 开头（GrapesJS 只渲染 body）
-  const injectedStyles = styleBlocks.length > 0
-    ? styleBlocks.join('\n')
-    : '';
-
-  return {
-    bodyContent: injectedStyles + bodyContent,
-    headScripts: headContent.match(/<script[\s\S]*?<\/script>/gi)?.join('\n') || '',
-    headMeta: otherHead.join('\n'),
-  };
+  return { bodyHtml, headCss, headLinks, tailwindCdn, fullHead: headContent };
 }
 
 /** 重组完整 HTML 文档：原始 head scripts + 编辑后的 body */
@@ -142,7 +132,7 @@ export function VisualEditor({
     if (!containerRef.current) return;
 
     originalHtmlRef.current = html;
-    const { bodyContent } = extractBodyForEditor(html);
+    const parsed = parseHtmlForEditor(html);
 
     const editor = grapesjs.init({
       container: containerRef.current,
@@ -209,9 +199,9 @@ export function VisualEditor({
 
     editorRef.current = editor;
 
-    // 加载预处理后的 body 内容
-    editor.setComponents(bodyContent);
-    lastLoadedBodyRef.current = bodyContent;
+    // 加载 body 组件
+    editor.setComponents(parsed.bodyHtml);
+    lastLoadedBodyRef.current = parsed.bodyHtml;
 
     editor.setDevice(defaultDevice);
 
@@ -244,8 +234,39 @@ export function VisualEditor({
     editor.on('component:remove', updateUndoRedo);
 
     editor.on('load', () => {
+      // ★ 关键：将 CSS、字体、Tailwind 注入 canvas iframe 的 <head>
+      const canvasDoc = editor.Canvas.getDocument();
+      const canvasHead = canvasDoc.head;
+
+      // 1) 注入 <style> 块（报告自带样式）
+      if (parsed.headCss) {
+        const styleEl = canvasDoc.createElement('style');
+        styleEl.textContent = parsed.headCss;
+        canvasHead.appendChild(styleEl);
+      }
+
+      // 2) 注入 Tailwind CDN（让 tailwind class 生效）
+      if (parsed.tailwindCdn) {
+        const twScript = canvasDoc.createElement('script');
+        twScript.src = parsed.tailwindCdn;
+        canvasHead.appendChild(twScript);
+      }
+
+      // 3) 注入字体和样式链接
+      for (const linkTag of parsed.headLinks) {
+        const href = linkTag.match(/href="([^"]*)"/i);
+        const rel = linkTag.match(/rel="([^"]*)"/i);
+        if (href) {
+          const linkEl = canvasDoc.createElement('link');
+          linkEl.href = href[1];
+          if (rel) linkEl.rel = rel[1];
+          canvasHead.appendChild(linkEl);
+        }
+      }
+
       updateUndoRedo();
       setIsLoading(false);
+
       // 渲染样式面板
       const smContainer = document.querySelector('#gjs-sm');
       if (smContainer && editor.StyleManager) {
@@ -270,15 +291,25 @@ export function VisualEditor({
   useEffect(() => {
     if (!editorRef.current) return;
 
-    const { bodyContent } = extractBodyForEditor(html);
+    const parsed = parseHtmlForEditor(html);
     // 避免自身 onChange 触发的循环
-    if (bodyContent === lastLoadedBodyRef.current) return;
+    if (parsed.bodyHtml === lastLoadedBodyRef.current) return;
 
     originalHtmlRef.current = html;
     const editor = editorRef.current;
-    editor.setComponents(bodyContent);
-    lastLoadedBodyRef.current = bodyContent;
+    editor.setComponents(parsed.bodyHtml);
+    lastLoadedBodyRef.current = parsed.bodyHtml;
     editor.UndoManager.clear();
+
+    // 重新注入 CSS 到 canvas
+    const canvasDoc = editor.Canvas.getDocument();
+    if (parsed.headCss && canvasDoc.head) {
+      // 清除旧 style 标签
+      canvasDoc.head.querySelectorAll('style').forEach(s => s.remove());
+      const styleEl = canvasDoc.createElement('style');
+      styleEl.textContent = parsed.headCss;
+      canvasDoc.head.appendChild(styleEl);
+    }
   }, [html]);
 
   // ── 设备切换 ──
