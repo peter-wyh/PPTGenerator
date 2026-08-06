@@ -355,5 +355,38 @@ mark {
   z-index: 99;
 }
 
+/* ── Spectrum 颜色选择器精简 ── */
+/* 隐藏 "less/more" 调色板切换、⨯ 取消、Ok 确认按钮（每个颜色属性都重复渲染） */
+.gjs-sm-container .sp-replacer,
+.gjs-sm-container .sp-preview,
+.gjs-sm-container .sp-preview-inner,
+.gjs-sm-container .sp-dd {
+  display: none !important;
+}
+/* 隐藏颜色选择器弹出层中的多余按钮 */
+.sp-container .sp-palette-toggle,
+.sp-container .sp-cancel,
+.sp-container .sp-choose {
+  display: none !important;
+}
+/* 隐藏整个 sp-container 底部按钮区 */
+.sp-container .sp-button-container {
+  display: none !important;
+}
+/* 精简颜色选择器容器 */
+.sp-container {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+  border: 1px solid var(--border-default, #e5e7eb) !important;
+}
+.sp-picker-container {
+  border-left: none !important;
+  padding: 8px !important;
+}
+.sp-palette-container {
+  border-right: none !important;
+  padding: 8px !important;
+}
+
 
 
