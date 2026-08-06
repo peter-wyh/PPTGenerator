@@ -167,11 +167,28 @@ mark {
 .skin-bg-hover   { background: var(--surface-hover, #f9fafb); }
 
 /* ── GrapesJS 自定义样式覆盖 ── */
+
+/* 关键：强制编辑器容器填满父容器（GrapesJS 会写入固定 px 值） */
+.gjs-editor-cont,
 .gjs-editor {
+  width: 100% !important;
+  height: 100% !important;
   font-size: 12px;
 }
+.gjs-editor {
+  display: flex !important;
+  flex-direction: column !important;
+}
+/* canvas 区域占满剩余空间 */
 .gjs-cv-canvas {
   background: #f0f0f0;
+  flex: 1 1 auto !important;
+  height: auto !important;
+  width: 100% !important;
+}
+/* 隐藏 GrapesJS 自带的 panels（我们用自定义 React 工具栏） */
+.gjs-pn-panels {
+  display: none !important;
 }
 .gjs-pn-panel {
   background: var(--surface-primary, #fff);
@@ -179,6 +196,18 @@ mark {
 }
 .gjs-pn-btn {
   color: var(--foreground-secondary, #666);
+}
+/* canvas iframe 填满 — GrapesJS 默认 150px，需逐层强制（0.22+ BEM 命名） */
+.gjs-frames,
+.gjs-frame-wrapper,
+.gjs-frame,
+.gjs-cv-canvas__frames {
+  width: 100% !important;
+  height: 100% !important;
+}
+/* 隐藏 GrapesJS canvas tools（不需要的浮动工具条） */
+.gjs-cv-canvas__tools {
+  display: none !important;
 }
 /* 图层面板 */
 .gjs-layers-container .gjs-layer {
@@ -210,5 +239,6 @@ mark {
 .gjs-com-badge {
   z-index: 99;
 }
+
 
 
