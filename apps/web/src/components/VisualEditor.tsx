@@ -195,9 +195,24 @@ export function VisualEditor({
       layerManager: {
         appendTo: '#gjs-layers',
       },
+      // ★ 启用富文本编辑：双击文本组件（td/span/p/div 等）进入内联编辑
+      richTextEditor: {
+        custom: true,
+        actions: ['bold', 'italic', 'underline', 'strikethrough', 'link'],
+      },
     });
 
     editorRef.current = editor;
+
+    // ★ 在加载组件前注册：确保所有组件可编辑
+    editor.on('component:create', (model: any) => {
+      if (!model?.set) return;
+      const type = model.get('type');
+      // textnode 和 text 类型已默认可编辑
+      if (type === 'textnode' || type === 'text') return;
+      // 其他组件（td/th/div/span 等）也标记为可编辑
+      model.set({ editable: true });
+    });
 
     // 加载 body 组件
     editor.setComponents(parsed.bodyHtml);
