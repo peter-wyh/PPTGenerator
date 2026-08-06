@@ -122,6 +122,9 @@ importers:
       axios:
         specifier: ^1.7.7
         version: 1.18.1
+      grapesjs:
+        specifier: ^0.23.4
+        version: 0.23.4
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -878,6 +881,9 @@ packages:
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
+  '@types/backbone@1.4.15':
+    resolution: {integrity: sha512-WWeKtYlsIMtDyLbbhkb96taJMEbfQBnuz7yw1u0pkphCOtksemoWhIXhK74VRCY9hbjnsH3rsJu2uUiFtnsEYg==}
+
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
 
@@ -938,6 +944,9 @@ packages:
   '@types/http-errors@2.0.5':
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
 
+  '@types/jquery@4.0.1':
+    resolution: {integrity: sha512-9a59A/tycXgYuPABcp6/3spSShn0NT2UOM4EfHvMumjYi4lJWTsK5SZWjhx3yRm9IHGCeWXdV2YfNsrWrft/CA==}
+
   '@types/methods@1.1.4':
     resolution: {integrity: sha512-ymXWVrDiCxTBE3+RIrrP533E70eA+9qu7zdWoHuOmGujkYtzf4HQF96b8nwHLqhuf4ykX61IGRIB38CC6/sImQ==}
 
@@ -984,6 +993,9 @@ packages:
 
   '@types/supertest@6.0.3':
     resolution: {integrity: sha512-8WzXq62EXFhJ7QsH3Ocb/iKQ/Ty9ZVWnVzoTKc9tyyFRRF3a74Tk2+TLFgaFFw364Ere+npzHKEJ6ga2LzIL7w==}
+
+  '@types/underscore@1.13.0':
+    resolution: {integrity: sha512-L6LBgy1f0EFQZ+7uSA57+n2g/s4Qs5r06Vwrwn0/nuK1de+adz00NWaztRQ30aEqw5qOaWbPI8u2cGQ52lj6VA==}
 
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
@@ -1139,6 +1151,13 @@ packages:
       react-native-b4a:
         optional: true
 
+  backbone-undo@0.2.6:
+    resolution: {integrity: sha512-AsfpNiljLXlk7TcffDUu3EAUq7CxWbyTNwARWrql5XTzN4vh6WzEEBZYaKK4kTTz+iW1tSzqUooaGRIwO83kWA==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+
+  backbone@1.4.1:
+    resolution: {integrity: sha512-ADy1ztN074YkWbHi8ojJVFe3vAanO/lrzMGZWUClIP7oDD/Pjy2vrASraUP+2EVCfIiTtCW4FChVow01XneivA==}
+
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
@@ -1285,6 +1304,12 @@ packages:
   cluster-key-slot@1.1.1:
     resolution: {integrity: sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw==}
     engines: {node: '>=0.10.0'}
+
+  codemirror-formatting@1.0.0:
+    resolution: {integrity: sha512-br9yM6eJI3pJHekEnoyHaBEb1B7XxxDjju+vRyBe8QGLp5saTIXXkZ+eFCTqXSAtI8QEZDFVEX2/SOjH2sVWRQ==}
+
+  codemirror@5.63.0:
+    resolution: {integrity: sha512-KlLWRPggDg2rBD1Mx7/EqEhaBdy+ybBCVh/efgjBDsPpMeEu6MbTAJzIT4TuCzvmbTEgvKOGzVT6wdBTNusqrg==}
 
   codepage@1.15.0:
     resolution: {integrity: sha512-3g6NUTPd/YtuuGrhMnOMRjFc+LJw/bnMp3+0r/Wcz3IXUuCosKRJvMphm5+Q+bvTVGcJJuRvVLuYba+WojaFaA==}
@@ -1730,6 +1755,9 @@ packages:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
 
+  grapesjs@0.23.4:
+    resolution: {integrity: sha512-fe3+ZRU1YsR8cFqdjl0TFlNywgBPjlQjDLevyavP8UmT9dfVla5JnfQrFc66gzMBdN1ftNPA23YRdTQJRFTKQA==}
+
   handlebars@4.7.9:
     resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
     engines: {node: '>=0.4.7'}
@@ -1757,6 +1785,9 @@ packages:
   html-encoding-sniffer@4.0.0:
     resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
     engines: {node: '>=18'}
+
+  html-entities@1.4.0:
+    resolution: {integrity: sha512-8nxjcBcd8wovbeKx7h3wTji4e6+rhaVuPNpMqwWgnHh+N9ToqsCs6XztWRBPQ+UtzsoMAdKZtUENoVzU/EMtZA==}
 
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
@@ -2215,6 +2246,9 @@ packages:
     resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
     engines: {node: '>= 0.6.0'}
 
+  promise-polyfill@8.3.0:
+    resolution: {integrity: sha512-H5oELycFml5yto/atYqmjyigJoAo3+OXwolYiH7OfQuYlAqhxNvTfiNMbV9hsC6Yp83yE5r2KTVmtrG6R9i6Pg==}
+
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
@@ -2653,6 +2687,9 @@ packages:
     resolution: {integrity: sha512-v3Xu+yuwBXisp6QYTcH4UbH+xYJXqnq2m/LtQVWKWzYc1iehYnLixoQDN9FH6/j9/oybfd6W9Ghwkl8+UMKTKQ==}
     engines: {node: '>=0.8.0'}
     hasBin: true
+
+  underscore@1.13.8:
+    resolution: {integrity: sha512-DXtD3ZtEQzc7M8m4cXotyHR+FAS18C64asBYY5vqZexfYryNNnDc02W4hKg3rdQuqOYas1jkseX0+nZXjTXnvQ==}
 
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
@@ -3400,6 +3437,11 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.7
 
+  '@types/backbone@1.4.15':
+    dependencies:
+      '@types/jquery': 4.0.1
+      '@types/underscore': 1.13.0
+
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
@@ -3465,6 +3507,8 @@ snapshots:
 
   '@types/http-errors@2.0.5': {}
 
+  '@types/jquery@4.0.1': {}
+
   '@types/methods@1.1.4': {}
 
   '@types/mime@1.3.5': {}
@@ -3522,6 +3566,8 @@ snapshots:
     dependencies:
       '@types/methods': 1.1.4
       '@types/superagent': 8.1.10
+
+  '@types/underscore@1.13.0': {}
 
   '@vitejs/plugin-react@4.7.0(vite@5.4.21(@types/node@20.19.43))':
     dependencies:
@@ -3713,6 +3759,15 @@ snapshots:
 
   b4a@1.8.1: {}
 
+  backbone-undo@0.2.6:
+    dependencies:
+      backbone: 1.4.1
+      underscore: 1.13.8
+
+  backbone@1.4.1:
+    dependencies:
+      underscore: 1.13.8
+
   balanced-match@4.0.4: {}
 
   bare-events@2.9.1: {}
@@ -3860,6 +3915,10 @@ snapshots:
   clsx@2.1.1: {}
 
   cluster-key-slot@1.1.1: {}
+
+  codemirror-formatting@1.0.0: {}
+
+  codemirror@5.63.0: {}
 
   codepage@1.15.0: {}
 
@@ -4313,6 +4372,17 @@ snapshots:
 
   gopd@1.2.0: {}
 
+  grapesjs@0.23.4:
+    dependencies:
+      '@types/backbone': 1.4.15
+      backbone: 1.4.1
+      backbone-undo: 0.2.6
+      codemirror: 5.63.0
+      codemirror-formatting: 1.0.0
+      html-entities: 1.4.0
+      promise-polyfill: 8.3.0
+      underscore: 1.13.8
+
   handlebars@4.7.9:
     dependencies:
       minimist: 1.2.8
@@ -4339,6 +4409,8 @@ snapshots:
   html-encoding-sniffer@4.0.0:
     dependencies:
       whatwg-encoding: 3.1.1
+
+  html-entities@1.4.0: {}
 
   http-errors@2.0.1:
     dependencies:
@@ -4763,6 +4835,8 @@ snapshots:
   process-warning@5.0.0: {}
 
   process@0.11.10: {}
+
+  promise-polyfill@8.3.0: {}
 
   prop-types@15.8.1:
     dependencies:
@@ -5315,6 +5389,8 @@ snapshots:
 
   uglify-js@3.19.3:
     optional: true
+
+  underscore@1.13.8: {}
 
   undici-types@6.21.0: {}
 

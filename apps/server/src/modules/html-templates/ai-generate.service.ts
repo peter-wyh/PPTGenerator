@@ -107,6 +107,12 @@ Define these reusable classes. Use colors from the design guide, NOT hardcoded v
 3. CRITICAL: Always set animation:false, responsive:true, maintainAspectRatio:false in options.
 4. For mixed charts: use dual Y-axes — y (left, revenue) + y1 (right, clicks/orders, grid:{drawOnChartArea:false}).
 5. Line tension: 0.4 for smooth curves. Use brand color (from design guide) for primary line.
+6. CRITICAL — DYNAMIC AXIS RANGE: Do NOT hardcode axis max values or tick arrays. Compute them from the actual data:
+   - const maxOrders = Math.ceil(Math.max(...data.map(d => d.orders)) / 50) * 50;
+   - const maxRoas = Math.ceil(Math.max(...data.map(d => d.roas)) + 0.5);
+   - Y-axis ticks: Array.from({length: 6}, (_, i) => Math.round(maxOrders * i / 5))
+   - For inline canvas (no Chart.js), use Array.from(...) for tick generation — never write literal arrays like [0, 70, 140, 210, 280, 350].
+   - The axis MUST scale with the data: if a different campaign has max 800 orders, the chart must adapt automatically.
 
 ═══ REPORT STRUCTURE (DEFAULT) ═══
 Unless the user's instruction specifies a fixed section layout, generate a report by analyzing the campaign data and choosing the most informative modules:
@@ -249,6 +255,12 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 3. **必须**设 \`animation: false\`、\`responsive: true\`、\`maintainAspectRatio: false\`
 4. 混合图表用双 Y 轴——y（左，收入）+ y1（右，点击/订单）
 5. 线条 tension 设 0.4，品牌色用于主线
+6. **动态坐标轴范围（关键）**：禁止硬编码轴最大值或刻度数组，必须从数据动态计算
+   - \`const maxOrders = Math.ceil(Math.max(...data.map(d => d.orders)) / 50) * 50\`
+   - \`const maxRoas = Math.ceil(Math.max(...data.map(d => d.roas)) + 0.5)\`
+   - Y 轴刻度：\`Array.from({length: 6}, (_, i) => Math.round(maxOrders * i / 5))\`
+   - 内联 canvas（无 Chart.js）同样用 \`Array.from(...)\` 生成刻度——禁止写死 \`[0, 70, 140, 210, 280, 350]\`
+   - 坐标轴必须随数据缩放：换一个 campaign 数据不同，图表自适应
 
 ## 🔧 CSS 类系统
 

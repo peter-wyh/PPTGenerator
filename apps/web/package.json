@@ -15,6 +15,7 @@
     "@mediakit/shared": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "axios": "^1.7.7",
+    "grapesjs": "^0.23.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-image-crop": "^11.1.2",

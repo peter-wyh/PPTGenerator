@@ -166,3 +166,49 @@ mark {
 .skin-bg-subtle  { background: var(--surface-subtle, #fafafa); }
 .skin-bg-hover   { background: var(--surface-hover, #f9fafb); }
 
+/* ── GrapesJS 自定义样式覆盖 ── */
+.gjs-editor {
+  font-size: 12px;
+}
+.gjs-cv-canvas {
+  background: #f0f0f0;
+}
+.gjs-pn-panel {
+  background: var(--surface-primary, #fff);
+  border-color: var(--border-default, #e5e7eb);
+}
+.gjs-pn-btn {
+  color: var(--foreground-secondary, #666);
+}
+/* 图层面板 */
+.gjs-layers-container .gjs-layer {
+  border-bottom: 1px solid var(--border-subtle, #f3f4f6);
+}
+.gjs-layers-container .gjs-layer-name {
+  font-size: 11px;
+}
+/* 样式面板 */
+.gjs-sm-container .gjs-sm-sector-title {
+  font-size: 11px;
+  font-weight: 500;
+}
+.gjs-sm-container .gjs-sm-property {
+  font-size: 11px;
+}
+.gjs-sm-container .gjs-sm-label {
+  font-size: 10px;
+  color: var(--foreground-muted, #888);
+}
+.gjs-sm-container input,
+.gjs-sm-container select {
+  font-size: 11px;
+  border: 1px solid var(--border-default, #e5e7eb);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+/* 选中高亮 */
+.gjs-com-badge {
+  z-index: 99;
+}
+
+

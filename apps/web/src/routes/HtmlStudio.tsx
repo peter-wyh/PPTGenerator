@@ -21,6 +21,7 @@ import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
 import { getPresetsForBL } from '@/report-presets';
 import { AgentChatPanel } from './AgentChatPanel';
 import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
+import { VisualEditor } from '@/components/VisualEditor';
 
 type Mode = 'ai' | 'recipe';
 
@@ -74,7 +75,7 @@ export function HtmlStudio() {
 
   // 系统提示词回显
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(true);
   const [systemPromptFullscreen, setSystemPromptFullscreen] = useState(false);
 
   // 提示词编辑器全屏
@@ -83,8 +84,11 @@ export function HtmlStudio() {
   // 左侧面板折叠（沉浸模式）
   const [panelCollapsed, setPanelCollapsed] = useState(false);
 
-  // ★ 源码面板（右侧可折叠）
+  // 源码面板（右侧可折叠）
   const [showSource, setShowSource] = useState(false);
+
+  // ★ 可视化编辑模式：preview（只读 iframe，默认）vs visual（GrapesJS 编辑器）
+  const [viewMode, setViewMode] = useState<'preview' | 'visual'>('preview');
 
   // ★ Recipe 模式:当前 HtmlVersion 完整记录(含 recipeId/reportContent/tokenOverrides/manifestOverrides)
   // 由 listHtmlVersions → getHtmlVersion(activeId) 加载,recipeId 非空时切到 RecipeEditor。
@@ -154,6 +158,11 @@ export function HtmlStudio() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [promptFullscreen, systemPromptFullscreen]);
+
+  // 加载系统提示词（页面打开即加载，默认展开）
+  useEffect(() => {
+    htmlTemplatesApi.getSystemPrompt().then(setSystemPrompt).catch(() => {});
+  }, []);
 
   // 加载 design.md
   const campaignId = project?.meta?.campaignId;
@@ -329,21 +338,6 @@ export function HtmlStudio() {
               <span className="h-1.5 w-1.5 rounded-full bg-green" /> 已保存
             </span>
           )}
-          {/* 源码面板切换（仅 chat 阶段） */}
-          {phase === 'chat' && (
-            <button
-              onClick={() => setShowSource(!showSource)}
-              className={`rounded-md px-2 py-1 text-xs transition ${
-                showSource
-                  ? 'bg-accent-primary text-foreground-inverse'
-                  : 'text-foreground-secondary hover:bg-surface-hover'
-              }`}
-              title="查看/编辑 HTML 源码"
-            >
-              {'</>'} 源码
-            </button>
-          )}
-          {/* 返回配置（仅 chat 阶段，允许重新生成） */}
           {phase === 'chat' && (
             <button
               onClick={() => {
@@ -422,41 +416,32 @@ export function HtmlStudio() {
                 {/* Mode-specific config */}
                 {mode === 'ai' ? (
                   <div className="space-y-4">
-                    {/* 提示词模板 */}
+                    {/* 提示词模板 — 下拉选择 */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-foreground-muted">
                         提示词模板
                       </label>
-                      <div className="flex flex-col gap-1.5">
+                      <select
+                        value={selectedPresetIdx}
+                        onChange={(e) => {
+                          const idx = Number(e.target.value);
+                          setSelectedPresetIdx(idx);
+                          setPrompt(presets[idx].requirement);
+                        }}
+                        className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary"
+                      >
                         {presets.map((p, idx) => (
-                          <button
-                            key={p.label}
-                            onClick={() => {
-                              setSelectedPresetIdx(idx);
-                              setPrompt(p.requirement);
-                            }}
-                            className={`rounded-lg border px-3 py-2 text-left transition ${
-                              selectedPresetIdx === idx
-                                ? 'border-accent-primary bg-accent-primary/5'
-                                : 'border-border-default hover:border-border-strong hover:bg-surface-hover'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-foreground-primary">{p.label}</span>
-                              {idx === 0 && (
-                                <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[9px] text-foreground-muted">
-                                  默认
-                                </span>
-                              )}
-                            </div>
-                            {p.description && (
-                              <p className="mt-0.5 text-[10px] leading-relaxed text-foreground-muted">
-                                {p.description}
-                              </p>
-                            )}
-                          </button>
+                          <option key={p.label} value={idx}>
+                            {p.label}
+                            {idx === 0 ? '（默认）' : ''}
+                          </option>
                         ))}
-                      </div>
+                      </select>
+                      {presets[selectedPresetIdx]?.description && (
+                        <p className="mt-1 text-[10px] leading-relaxed text-foreground-muted">
+                          {presets[selectedPresetIdx].description}
+                        </p>
+                      )}
                     </div>
 
                     {/* 提示词编辑器 */}
@@ -510,40 +495,46 @@ export function HtmlStudio() {
                           className="mt-1.5 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-mono text-[11px] leading-relaxed text-slate-700 outline-none focus:border-blue-500"
                         />
                       )}
-                      {/* 系统提示词回显 */}
-                      <button
-                        onClick={() => {
-                          if (!systemPrompt) {
-                            htmlTemplatesApi.getSystemPrompt().then(setSystemPrompt);
-                          }
-                          setShowSystemPrompt(!showSystemPrompt);
-                        }}
-                        className="mt-2 flex items-center gap-1 text-[10px] text-foreground-muted hover:text-foreground-primary"
-                      >
-                        {showSystemPrompt ? '▾' : '▸'} 查看系统提示词
-                        <span className="rounded bg-surface-hover px-1 py-0.5">SYSTEM_PROMPT</span>
-                      </button>
-                      {showSystemPrompt && systemPrompt && (
-                        <div className="mt-1.5 max-h-[400px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 relative">
+                      {/* 系统提示词回显 — header 与提示词 section 保持一致 */}
+                      <div>
+                        <div className="mb-1.5 flex items-center justify-between">
                           <button
-                            onClick={() => setSystemPromptFullscreen(true)}
-                            className="absolute right-2 top-2 text-[10px] text-slate-400 hover:text-slate-700"
-                            title="全屏查看"
+                            onClick={() => {
+                              if (!systemPrompt) {
+                                htmlTemplatesApi.getSystemPrompt().then(setSystemPrompt);
+                              }
+                              setShowSystemPrompt(!showSystemPrompt);
+                            }}
+                            className="text-xs font-medium text-foreground-muted hover:text-foreground-primary"
                           >
-                            ⛶ 全屏
+                            {showSystemPrompt ? '▾' : '▸'} 系统提示词
+                            <span className="ml-1 rounded bg-surface-hover px-1 py-0.5 text-[10px] text-foreground-muted">SYSTEM_PROMPT</span>
                           </button>
-                          <MarkdownPreview content={systemPrompt} />
-                          {designMd.trim() && (
-                            <>
-                              <hr className="my-4 border-slate-200" />
-                              <div className="mb-2 text-[12px] font-semibold text-slate-800">
-                                📎 业务线设计规范 (design.md)
-                              </div>
-                              <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[11px] leading-relaxed font-mono text-slate-600 whitespace-pre-wrap">{designMd}</pre>
-                            </>
+                          {showSystemPrompt && systemPrompt && (
+                            <button
+                              onClick={() => setSystemPromptFullscreen(true)}
+                              className="text-[10px] text-foreground-muted hover:text-foreground-primary"
+                              title="全屏查看"
+                            >
+                              ⛶ 全屏
+                            </button>
                           )}
                         </div>
-                      )}
+                        {showSystemPrompt && systemPrompt && (
+                          <div className="max-h-[400px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4">
+                            <MarkdownPreview content={systemPrompt} />
+                            {designMd.trim() && (
+                              <>
+                                <hr className="my-4 border-slate-200" />
+                                <div className="mb-2 text-[12px] font-semibold text-slate-800">
+                                  📎 业务线设计规范 (design.md)
+                                </div>
+                                <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[11px] leading-relaxed font-mono text-slate-600 whitespace-pre-wrap">{designMd}</pre>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       {!campaignId && (
                         <p className="mt-1.5 text-[10px] text-amber-500">
                           ⚠️ 未绑定 Campaign，AI 将生成通用模板（无真实数据）
@@ -644,32 +635,71 @@ export function HtmlStudio() {
               {/* Toolbar */}
               <div className="flex h-10 shrink-0 items-center justify-between border-b border-border-default bg-surface-primary px-4">
                 <div className="flex items-center gap-2">
-                  {/* Device toggle */}
-                  <div className="flex rounded-md border border-border-default">
-                    <button
-                      onClick={() => setPreviewDevice('desktop')}
-                      className={`rounded-l-md px-2.5 py-1 text-xs transition ${
-                        previewDevice === 'desktop'
-                          ? 'bg-accent-primary text-foreground-inverse'
-                          : 'text-foreground-secondary hover:bg-surface-hover'
-                      }`}
-                    >
-                      🖥️ 桌面
-                    </button>
-                    <button
-                      onClick={() => setPreviewDevice('mobile')}
-                      className={`rounded-r-md px-2.5 py-1 text-xs transition ${
-                        previewDevice === 'mobile'
-                          ? 'bg-accent-primary text-foreground-inverse'
-                          : 'text-foreground-secondary hover:bg-surface-hover'
-                      }`}
-                    >
-                      📱 移动
-                    </button>
-                  </div>
-                  <span className="text-[11px] text-foreground-muted">
-                    {previewDevice === 'desktop' ? '1280px' : '375px'} 预览
-                  </span>
+                  {/* 视图模式切换：visual / preview / source */}
+                  {phase === 'chat' && (
+                    <div className="flex rounded-md border border-border-default">
+                      <button
+                        onClick={() => { setViewMode('visual'); setShowSource(false); }}
+                        className={`rounded-l-md px-2.5 py-1 text-xs transition ${
+                          viewMode === 'visual' && !showSource
+                            ? 'bg-accent-primary text-foreground-inverse'
+                            : 'text-foreground-secondary hover:bg-surface-hover'
+                        }`}
+                      >
+                        ✏️ 编辑
+                      </button>
+                      <button
+                        onClick={() => { setViewMode('preview'); setShowSource(false); }}
+                        className={`border-l border-border-default px-2.5 py-1 text-xs transition ${
+                          viewMode === 'preview' && !showSource
+                            ? 'bg-accent-primary text-foreground-inverse'
+                            : 'text-foreground-secondary hover:bg-surface-hover'
+                        }`}
+                      >
+                        👁️ 预览
+                      </button>
+                      <button
+                        onClick={() => setShowSource(!showSource)}
+                        className={`rounded-r-md border-l border-border-default px-2.5 py-1 text-xs transition ${
+                          showSource
+                            ? 'bg-accent-primary text-foreground-inverse'
+                            : 'text-foreground-secondary hover:bg-surface-hover'
+                        }`}
+                      >
+                        {'</>'} 源码
+                      </button>
+                    </div>
+                  )}
+                  {/* 配置阶段只显示设备切换 */}
+                  {phase === 'config' && (
+                    <div className="flex rounded-md border border-border-default">
+                      <button
+                        onClick={() => setPreviewDevice('desktop')}
+                        className={`rounded-l-md px-2.5 py-1 text-xs transition ${
+                          previewDevice === 'desktop'
+                            ? 'bg-accent-primary text-foreground-inverse'
+                            : 'text-foreground-secondary hover:bg-surface-hover'
+                        }`}
+                      >
+                        🖥️ 桌面
+                      </button>
+                      <button
+                        onClick={() => setPreviewDevice('mobile')}
+                        className={`rounded-r-md px-2.5 py-1 text-xs transition ${
+                          previewDevice === 'mobile'
+                            ? 'bg-accent-primary text-foreground-inverse'
+                            : 'text-foreground-secondary hover:bg-surface-hover'
+                        }`}
+                      >
+                        📱 移动
+                      </button>
+                    </div>
+                  )}
+                  {phase === 'config' && (
+                    <span className="text-[11px] text-foreground-muted">
+                      {previewDevice === 'desktop' ? '1280px' : '375px'} 预览
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" onClick={handleCopy} className="px-2 py-1 text-xs">
@@ -681,35 +711,15 @@ export function HtmlStudio() {
                 </div>
               </div>
 
-              {/* Preview + Source side-by-side */}
-              <div className="flex flex-1 overflow-hidden">
-                {/* iframe preview */}
-                <div className="flex flex-1 items-start justify-center overflow-auto p-4">
-                  <iframe
-                    ref={iframeRef}
-                    srcDoc={generatedHtml}
-                    title="HTML Report Preview"
-                    className={`h-full bg-white shadow-lg transition-all ${
-                      previewDevice === 'desktop' ? 'w-full' : 'w-[375px]'
-                    }`}
-                    style={{
-                      borderRadius: 8,
-                      border: '1px solid var(--border-default, #e5e7eb)',
-                      height: previewDevice === 'mobile' ? '812px' : '100%',
-                    }}
-                    sandbox="allow-same-origin allow-scripts"
-                  />
-                </div>
-
-                {/* Source code panel (right, collapsible) */}
-                {showSource && phase === 'chat' && (
-                  <div className="flex h-full w-[420px] shrink-0 flex-col border-l border-border-default bg-surface-primary">
-                    <div className="flex h-10 shrink-0 items-center justify-between border-b border-border-default px-3">
-                      <span className="text-xs font-medium text-foreground-secondary">HTML 源码</span>
+              {/* ── 源码面板（全宽） ── */}
+              {showSource && phase === 'chat' ? (
+                <div className="flex flex-1 overflow-hidden">
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <div className="flex h-8 shrink-0 items-center justify-between border-b border-border-default px-3 bg-surface-primary">
+                      <span className="text-xs font-medium text-foreground-secondary">HTML 源码（手动编辑 → 保存生效）</span>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => {
-                            // 手动编辑后保存
                             if (id && generatedHtml) {
                               htmlTemplatesApi
                                 .autoSave(id, generatedHtml, agentHistory)
@@ -745,8 +755,44 @@ export function HtmlStudio() {
                       spellCheck={false}
                     />
                   </div>
-                )}
+                </div>
+              ) : phase === 'chat' && viewMode === 'visual' ? (
+                /* ── GrapesJS 可视化编辑器 ── */
+                <VisualEditor
+                  key="visual-editor"
+                  html={generatedHtml}
+                  onHtmlChange={(newHtml) => {
+                    setGeneratedHtml(newHtml);
+                    // 自动保存
+                    if (id) {
+                      htmlTemplatesApi
+                        .autoSave(id, newHtml, agentHistory)
+                        .then(() => setSaved(true))
+                        .catch(() => {});
+                    }
+                  }}
+                />
+              ) : (
+              /* ── 普通预览（iframe）── */
+              <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-1 items-start justify-center overflow-auto p-4">
+                  <iframe
+                    ref={iframeRef}
+                    srcDoc={generatedHtml}
+                    title="HTML Report Preview"
+                    className={`h-full bg-white shadow-lg transition-all ${
+                      previewDevice === 'desktop' ? 'w-full' : 'w-[375px]'
+                    }`}
+                    style={{
+                      borderRadius: 8,
+                      border: '1px solid var(--border-default, #e5e7eb)',
+                      height: previewDevice === 'mobile' ? '812px' : '100%',
+                    }}
+                    sandbox="allow-same-origin allow-scripts"
+                  />
+                </div>
               </div>
+              )}
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center">
