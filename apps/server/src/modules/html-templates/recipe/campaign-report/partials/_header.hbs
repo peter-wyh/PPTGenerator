@@ -1,0 +1,14 @@
+        {{!-- 1. HEADER --}}
+        <div class="card flex justify-between items-center !py-4">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-grey-primary text-white rounded-full flex items-center justify-center font-bold font-poppins">{{header.merchant.logoText}}</div>
+                    <span class="font-bold text-[18px] tracking-tight">{{header.merchant.name}}</span>
+                </div>
+                <div class="h-6 w-px bg-stroke-line"></div>
+                <span class="font-bold font-poppins text-[20px] tracking-wide text-black lowercase">{{header.brand.logoText}}</span>
+            </div>
+            <div class="text-sm font-medium text-grey-secondary bg-bg-layout px-4 py-2 rounded-md">
+                {{header.period.display}}
+            </div>
+        </div>

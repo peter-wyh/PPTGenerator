@@ -1,0 +1,24 @@
+        {{!-- 6. ACTIONABLE INSIGHTS(AI 文案) --}}
+        {{#if actionable.length}}
+        <h2 class="module-title !mb-0 mt-8">Actionable Insights</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {{#each actionable}}
+            <div class="card flex flex-col !p-4 h-full border-t-[3px] border-t-{{color}}-500">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-{{color}}-50 text-{{color}}-500 flex items-center justify-center text-xs"><i class="fas fa-{{icon}}"></i></div>
+                    <h3 class="font-bold text-[13px] text-{{color}}-600 uppercase tracking-wide">{{title}}</h3>
+                </div>
+                <div class="flex-1">
+                    <ol class="list-decimal insight-ol">
+                        {{#each items}}
+                        <li><span class="highlight">{{text}}</span>{{#if sub}}<span class="sub">{{sub}}</span>{{/if}}</li>
+                        {{/each}}
+                    </ol>
+                </div>
+                <p class="text-[12px] text-grey-secondary leading-relaxed pt-2 border-t border-stroke-card mt-auto">{{footer}}</p>
+            </div>
+            {{/each}}
+        </div>
+        {{else}}
+        <div class="card text-center text-grey-secondary text-sm mt-8">洞察暂不可用,请稍后重试。</div>
+        {{/if}}

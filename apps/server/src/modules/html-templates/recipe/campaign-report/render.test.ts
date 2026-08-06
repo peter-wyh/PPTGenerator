@@ -57,4 +57,22 @@ describe('render', () => {
     await expect(render({ campaignId: '' } as any)).rejects.toMatchObject({ statusCode: 400 });
     expect(prismaMock.campaign.findUnique).not.toHaveBeenCalled();
   });
+
+  it('manifestOverrides.hidden 隐藏组件', async () => {
+    const html = await render({ campaignId: 'c1', manifestOverrides: { hidden: ['insights'] } });
+    expect(html).not.toContain('Insight & Analysis');
+    // KPI 区无可见标题,用注入的真实数字锚定(KPI cards 仍在)
+    expect(html).toContain('$876,360');
+  });
+
+  it('manifestOverrides.order 调整组件顺序', async () => {
+    const html = await render({
+      campaignId: 'c1',
+      manifestOverrides: { order: ['header', 'publishers', 'kpi', 'trend', 'actionable'] },
+    });
+    const publishersIdx = html.indexOf('Publisher Performance Overview');
+    const kpiIdx = html.indexOf('$876,360');
+    expect(publishersIdx).toBeGreaterThan(0);
+    expect(publishersIdx).toBeLessThan(kpiIdx);
+  });
 });

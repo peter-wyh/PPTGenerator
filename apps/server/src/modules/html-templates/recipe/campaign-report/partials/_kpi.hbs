@@ -1,0 +1,9 @@
+        {{!-- 2. KPI OVERVIEW --}}
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {{#each kpis}}
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">{{label}}</p>
+                <h3 class="font-number font-semibold text-[32px] leading-tight {{#if highlight}}text-brand-primary{{else}}text-grey-primary{{/if}}">{{value}}</h3>
+            </div>
+            {{/each}}
+        </div>

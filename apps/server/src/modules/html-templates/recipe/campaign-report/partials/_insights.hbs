@@ -1,0 +1,81 @@
+        {{!-- 5. INSIGHT & ANALYSIS(静态五子卡;数据驱动段用 #if 守卫) --}}
+        {{#if insights}}
+        <h2 class="module-title !mb-0 mt-8">Insight & Analysis</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {{#if insights.topCategories}}
+            <div class="card">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase">1. Top-Selling Categories</h3>
+                <div class="flex items-center justify-center h-[180px]">
+                    <div class="w-[150px] relative"><canvas id="categoryChart"></canvas></div>
+                    <div class="ml-6 space-y-3">
+                        {{#each insights.topCategories}}
+                        <div class="flex items-center gap-2 text-sm"><div class="w-3 h-3 rounded-full" style="background:{{color}}"></div>{{label}} ({{pct}}%)</div>
+                        {{/each}}
+                    </div>
+                </div>
+            </div>
+            {{/if}}
+
+            {{#if insights.topProducts}}
+            <div class="card !px-0 flex flex-col">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-2 px-5 uppercase">2. Top-Selling Products</h3>
+                <div class="flex-1 overflow-y-auto">
+                    <table class="digchic-table text-[13px]"><tbody>
+                        {{#each insights.topProducts}}
+                        <tr><td>{{name}}</td><td class="text-right font-number font-semibold text-[16px]">{{revenue}}</td></tr>
+                        {{/each}}
+                    </tbody></table>
+                </div>
+            </div>
+            {{/if}}
+
+            {{#if insights.topMarket}}
+            <div class="card">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase">3. Top Market (By Sales)</h3>
+                <div class="space-y-4 mt-4">
+                    {{#each insights.topMarket}}
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold">{{country}}</span><span class="font-number text-[16px]">{{revenue}}</span></div>
+                        <div class="w-full bg-bg-layout rounded-full h-2"><div class="h-2 rounded-full" style="width:{{pct}}%;background:{{color}}"></div></div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+            {{/if}}
+
+            {{#if insights.topPromotion}}
+            <div class="card lg:col-span-2 !px-0">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-2 px-5 uppercase">4. Top Promotion Offer</h3>
+                <table class="digchic-table">
+                    <thead class="bg-bg-layout"><tr><th>Offer Name</th><th>Type</th><th class="text-right">Revenue Driven</th><th class="text-right">Usage Count</th></tr></thead>
+                    <tbody>
+                        {{#each insights.topPromotion}}
+                        <tr>
+                            <td><span class="tag tag-{{tagKind}} text-[13px]">{{name}}</span></td>
+                            <td>{{type}}</td>
+                            <td class="text-right font-number font-semibold text-[16px]">{{revenue}}</td>
+                            <td class="text-right">{{usage}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+            {{/if}}
+
+            {{#if insights.newCustomerRate}}
+            <div class="card flex flex-col justify-center items-center text-center">
+                <h3 class="font-semibold text-[14px] text-grey-secondary mb-4 uppercase w-full text-left">5. New Customer Rate</h3>
+                <div class="relative w-[120px] h-[120px] mb-2">
+                    <canvas id="newCustChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="font-number font-semibold text-[32px] text-brand-primary leading-none">{{insights.newCustomerRate.rate}}</span>
+                    </div>
+                </div>
+                <p class="text-[13px] text-grey-secondary mt-2">{{insights.newCustomerRate.newCount}} New / {{insights.newCustomerRate.totalOrders}} Total Orders</p>
+                {{#if insights.newCustomerRate.deltaPct}}
+                <div class="mt-2 text-[12px] bg-green-50 text-green-600 px-3 py-1 rounded"><i class="fas fa-arrow-up mr-1"></i> {{insights.newCustomerRate.deltaPct}} vs last period</div>
+                {{/if}}
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}

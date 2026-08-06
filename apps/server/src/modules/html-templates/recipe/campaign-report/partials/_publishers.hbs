@@ -1,0 +1,38 @@
+        {{!-- 4. PUBLISHER PERFORMANCE OVERVIEW --}}
+        <div class="card !px-0">
+            <div class="px-5"><h2 class="module-title">Publisher Performance Overview</h2></div>
+            <div class="overflow-x-auto">
+                <table class="digchic-table">
+                    <thead class="bg-bg-layout">
+                        <tr>
+                            <th>Publisher</th><th>Type</th><th>Screenshot</th>
+                            <th class="text-right">Sales (Revenue)</th>
+                            <th class="text-right">Clicks</th>
+                            <th class="text-right">Conversion</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each publishers}}
+                        <tr onclick="window.open('{{#if linkUrl}}{{linkUrl}}{{else}}#{{/if}}', '_blank')" title="Click to view Publisher">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-[4px] bg-blue-100 text-blue-600 flex items-center justify-center font-bold">{{initials name}}</div>
+                                    <div>
+                                        <div class="font-semibold text-grey-primary">{{name}}</div>
+                                        {{#if handle}}<div class="text-[12px] text-grey-tertiary">{{handle}}</div>{{/if}}
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="tag tag-{{type.kind}}">{{type.label}}</span></td>
+                            <td><img src="{{screenshotUrl}}" class="h-[34px] rounded border border-stroke-card"></td>
+                            <td class="text-right font-number font-semibold text-[18px]">{{revenue}}</td>
+                            <td class="text-right">{{clicks}}</td>
+                            <td class="text-right">{{orders}}</td>
+                            <td class="text-center"><i class="fas fa-external-link-alt text-grey-tertiary hover:text-brand-primary"></i></td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
