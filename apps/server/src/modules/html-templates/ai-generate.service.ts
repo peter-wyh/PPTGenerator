@@ -36,6 +36,13 @@ This is a CLIENT-FACING report shown to paying advertisers and brand partners.
 7. BRAND LOGO: If campaign.businessLine.logoUrl is provided, you MUST display it as a VISIBLE <img> in the report header — do NOT set display:none, do NOT use onerror to hide it, do NOT use a text/initials fallback when a logo URL exists. The logo image MUST be visible by default. Only if logoUrl is null, use a text fallback with the brand/advertiser name.
 8. The report header should show BOTH the business line logo (left) and the advertiser logo (right or nearby), establishing the partnership visually. DO NOT create text/initials placeholder spans alongside the <img> tags — use ONLY the <img> when a logoUrl is provided.
 9. CREATOR DATA: For each creator in the JSON, display their name, avatar (img if avatarUrl exists, else initials circle), platform, tier, and ALL available performance metrics (posts, engagement, impressions, engagement rate). If a creator's performance is null, display "—" for their metrics — do NOT omit the row.
+10. CROSS-SECTION DATA CONSISTENCY (CRITICAL): All data in the report MUST be internally consistent — every number must be derivable from the same source of truth.
+    a. TOTALS: The KPI summary (Total GMV, Total Orders, Total Spend, Total ROAS) MUST equal the sum of all creators' CPS data.
+    b. TREND SUM = TOTALS: If the report shows a weekly or daily trend chart (W1—W7, D1—D46, etc.), the SUM of all data points in that chart MUST exactly equal the corresponding KPI total. For example, if Total Orders = 1,736, then W1+W2+...+W7 orders MUST also = 1,736.
+    c. DISTRIBUTION SUM = TOTALS: If the report shows a market/region breakdown, the sum of all market revenues MUST equal Total GMV. Same for product breakdowns, platform splits, etc.
+    d. DERIVED METRICS: ROAS = GMV / Spend. AOV = GMV / Orders. Engagement Rate = Engagement / Impressions. Recalculate these from the raw values — do NOT copy pre-computed ratios that may be stale.
+    e. NO INDEPENDENT SEEDS: Do NOT treat analytics.weeklyTrend, analytics.dailyTrend, and creator CPS as independent datasets. They are different views of the SAME underlying data. If they disagree, trust the creator CPS aggregation (it is the most granular) and adjust the trend data to match.
+    f. PEAK/HIGHLIGHT LABELS: If the report shows "Peak Week" or "Best ROAS" callout labels, verify those values against the actual chart data array — do NOT hardcode label values that could drift from the chart.
 
 ═══ DESIGN SYSTEM (CRITICAL — READ THE BRAND DESIGN GUIDE) ═══
 The Brand Design Guide (from business line design.md) is provided at the end of the user message. You MUST follow it strictly for ALL visual decisions:
@@ -186,6 +193,13 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 7. 品牌 Logo（\`logoUrl\`）必须可见——不设 \`display:none\`
 8. Header 同时显示业务线 Logo（左）+ 广告主 Logo（右）
 9. 创建者数据完整显示：名称/头像/平台/Tier/所有指标
+10. **跨区块数据一致性（关键）**：报告中所有数字必须内部自洽——每个值都能从同一数据源推导。
+    - a. **总量一致**：KPI 汇总（Total GMV / Orders / Spend / ROAS）必须等于所有创作者 CPS 数据之和
+    - b. **趋势汇总 = 总量**：周度/日度趋势图中所有数据点的和，必须等于对应的 KPI 总量。如 Total Orders = 1,736，则 W1+W2+...+W7 也必须 = 1,736
+    - c. **分布汇总 = 总量**：市场/区域/产品/平台分解的各部分之和，必须等于对应总量
+    - d. **派生指标重算**：ROAS = GMV / Spend，AOV = GMV / Orders，Engagement Rate = Engagement / Impressions——从原始值重新计算，不复用可能过期的预计算比值
+    - e. **禁止独立 seed**：analytics.weeklyTrend、dailyTrend 和创作者 CPS 不是独立数据集，而是同一底层数据的不同视图。如有冲突，以创作者 CPS 聚合为准（最细粒度），调整趋势数据使其匹配
+    - f. **峰值/高亮标签**：报告中 "Peak Week"、"Best ROAS" 等标注必须与实际图表数据数组交叉验证，不硬编码可能漂移的标签值
 
 ## 🎨 设计系统 (DESIGN SYSTEM)
 
@@ -328,6 +342,7 @@ You receive the CURRENT HTML report and a user's EDIT INSTRUCTION. You must retu
 2. Only modify what the user asked. Keep everything else IDENTICAL — same data, same structure, same styling for unchanged parts.
 3. PRESERVE all data values (creator names, numbers, dates, avatars, URLs). Never fabricate or substitute data.
 4. Your response must start directly with <!DOCTYPE html>. No markdown fences, no explanations.
+5. DATA CONSISTENCY: When editing, ensure all numbers remain internally consistent — trend chart sums must equal KPI totals, distribution breakdowns must equal the overall total, and derived metrics (ROAS, AOV) must match their raw components. If you change a value in one place, update ALL dependent values everywhere in the report.
 
 ═══ EDIT GUIDELINES ═══
 - Style changes (colors, fonts, spacing): modify CSS in <style> or inline styles.
