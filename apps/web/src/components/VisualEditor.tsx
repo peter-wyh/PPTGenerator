@@ -113,6 +113,9 @@ export function VisualEditor({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedInfo, setSelectedInfo] = useState<string>('未选中元素');
 
+  // ★ 选中图片时的状态：null = 未选中图片，object = 选中了 img 组件
+  const [selectedImg, setSelectedImg] = useState<{ comp: any; src: string; alt: string } | null>(null);
+
   // ── 初始化 GrapesJS ──
   useEffect(() => {
     if (!containerRef.current) return;
@@ -216,15 +219,28 @@ export function VisualEditor({
     editor.on('component:create', updateUndoRedo);
     editor.on('component:remove', updateUndoRedo);
 
-    // 选中元素信息
+    // 选中元素信息 + 图片状态同步
     const onSelect = () => {
       const sel = editor.getSelected();
       if (sel) {
-        const tag = sel.get('tagName') || 'div';
+        const tag = String(sel.get('tagName') || 'div').toLowerCase();
         const cls = (sel.get('classes') || []).map((c: { get: (k: string) => string }) => c.get('name')).filter(Boolean).slice(0, 2).join(' ');
         setSelectedInfo(`<${tag}>${cls ? ' .' + cls : ''}`);
+
+        // ★ 选中图片时同步 src/alt 到状态
+        if (tag === 'img') {
+          const attrs = sel.getAttributes();
+          setSelectedImg({
+            comp: sel,
+            src: String(attrs.src || ''),
+            alt: String(attrs.alt || ''),
+          });
+        } else {
+          setSelectedImg(null);
+        }
       } else {
         setSelectedInfo('未选中元素');
+        setSelectedImg(null);
       }
     };
     editor.on('component:selected', onSelect);
@@ -350,6 +366,33 @@ export function VisualEditor({
     editorRef.current?.UndoManager.redo();
   }, []);
 
+  // ★ 更新图片 src
+  const handleImgSrcChange = useCallback((newSrc: string) => {
+    if (!selectedImg) return;
+    selectedImg.comp.addAttributes({ src: newSrc });
+    setSelectedImg(prev => prev ? { ...prev, src: newSrc } : null);
+  }, [selectedImg]);
+
+  // ★ 更新图片 alt
+  const handleImgAltChange = useCallback((newAlt: string) => {
+    if (!selectedImg) return;
+    selectedImg.comp.addAttributes({ alt: newAlt });
+    setSelectedImg(prev => prev ? { ...prev, alt: newAlt } : null);
+  }, [selectedImg]);
+
+  // ★ 本地上传图片 → base64
+  const handleImgUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedImg) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      selectedImg.comp.addAttributes({ src: dataUrl });
+      setSelectedImg(prev => prev ? { ...prev, src: dataUrl } : null);
+    };
+    reader.readAsDataURL(file);
+  }, [selectedImg]);
+
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-surface-subtle">
       {/* ── 工具栏 ── */}
@@ -440,6 +483,60 @@ export function VisualEditor({
               </svg>
               <span className="text-xs font-mono text-foreground-secondary truncate">{selectedInfo}</span>
             </div>
+            {/* ★ 图片编辑卡片：选中 img 时自动出现在样式面板上方 */}
+            {selectedImg && (
+              <div className="space-y-2.5 border-b border-border-default p-3 bg-surface-hover/30">
+                <div className="text-[11px] font-semibold text-foreground-secondary">🖼️ 图片设置</div>
+
+                {/* 预览 */}
+                <div className="overflow-hidden rounded-md border border-border-default bg-white">
+                  {selectedImg.src ? (
+                    <img
+                      src={selectedImg.src}
+                      alt="预览"
+                      className="max-h-28 w-full object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                    />
+                  ) : (
+                    <div className="flex h-16 items-center justify-center text-[11px] text-foreground-muted">无图片</div>
+                  )}
+                </div>
+
+                {/* 本地上传 */}
+                <label className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-dashed border-border-default px-3 py-2 text-[11px] text-foreground-secondary transition hover:border-accent-primary hover:text-accent-primary">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 11V3.5L5 6.5l-1-1L8 1.5l4 4-1 1L9 3.5V11H8zm-5 2h10v2H3v-2z"/>
+                  </svg>
+                  上传本地图片
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImgUpload} />
+                </label>
+
+                {/* src URL */}
+                <div>
+                  <label className="mb-1 block text-[10px] font-medium text-foreground-muted">图片地址</label>
+                  <input
+                    type="text"
+                    value={selectedImg.src}
+                    onChange={(e) => handleImgSrcChange(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full rounded-md border border-border-default bg-surface-primary px-2 py-1.5 text-[11px] text-foreground-primary focus:border-accent-primary focus:outline-none"
+                  />
+                </div>
+
+                {/* alt */}
+                <div>
+                  <label className="mb-1 block text-[10px] font-medium text-foreground-muted">替代文本</label>
+                  <input
+                    type="text"
+                    value={selectedImg.alt}
+                    onChange={(e) => handleImgAltChange(e.target.value)}
+                    placeholder="图片描述"
+                    className="w-full rounded-md border border-border-default bg-surface-primary px-2 py-1.5 text-[11px] text-foreground-primary focus:border-accent-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* GrapesJS 样式面板 */}
             <div className="flex-1 overflow-y-auto gjs-panel-scroll">
               <div id="gjs-sm" className="gjs-sm-container text-xs" />
