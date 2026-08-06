@@ -6,6 +6,7 @@ vi.mock('../../../../prisma', () => ({ prisma: prismaMock }));
 vi.mock('./narrative', () => ({ fillActionable: vi.fn().mockResolvedValue([{ icon: 'trophy', color: 'green', title: 'Top Performers', items: [{ text: 'Mia', sub: '(ROAS 4.10)' }], footer: 'Scale.' }]) }));
 
 import { render } from './render';
+import { mapCampaign } from './mapper';
 
 const campaignRow = {
   id: 'c1', name: 'GlowLab x DIGCHIC', platform: 'TikTok',
@@ -74,5 +75,19 @@ describe('render', () => {
     const kpiIdx = html.indexOf('$876,360');
     expect(publishersIdx).toBeGreaterThan(0);
     expect(publishersIdx).toBeLessThan(kpiIdx);
+  });
+
+  it('tokenOverrides 覆盖主色', async () => {
+    const html = await render({ campaignId: 'c1', tokenOverrides: { brandPrimary: '#3b82f6' } } as any);
+    expect(html).toContain('#3b82f6');
+    // 默认主色 #ff099e 不应再出现(tokens.brandPrimary 已被全覆盖,所有引用点都换成覆盖值)
+    expect(html).not.toContain('#ff099e');
+  });
+
+  it('reportContent 快照优先于 mapCampaign', async () => {
+    const base = await mapCampaign('c1');
+    base.kpis[0].label = '总收入(手改)';
+    const html = await render({ campaignId: 'c1', reportContent: base } as any);
+    expect(html).toContain('总收入(手改)');
   });
 });

@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 import Handlebars from 'handlebars';
 import { mapCampaign } from './mapper';
 import { fillActionable } from './narrative';
-import { dgTokens } from './tokens';
 import { applyManifest } from './manifest';
+import { mergeTokens } from '../overrides';
 import type { RenderInput } from '../types';
 import { ApiError } from '../../../../utils/ApiError';
 
@@ -26,11 +26,16 @@ const templateSrc = readFileSync(join(here, 'template.hbs'), 'utf8');
 const compiled = Handlebars.compile(templateSrc, { noEscape: false });
 
 export async function render(input: RenderInput): Promise<string> {
-  if (!input.campaignId) throw ApiError.badRequest('recipe 模式需要 campaignId');
-  const content = await mapCampaign(input.campaignId);
+  if (!input.campaignId && !input.reportContent) {
+    throw ApiError.badRequest('recipe 需要 campaignId 或 reportContent');
+  }
+  // reportContent 优先:编辑器重渲染已编辑数据时跳过 DB。
+  const content = input.reportContent ?? await mapCampaign(input.campaignId!);
   content.actionable = await fillActionable(content);
+  // tokens 合并默认 + 用户覆盖;无覆盖时与原 dgTokens 等价(快照不变)。
+  const tokens = mergeTokens(input.tokenOverrides);
   // 模板根字段(header/kpis/trend/publishers/insights/actionable)与 tokens.* 并列,故展开 content。
   // components 由 manifest 决定顺序/可见性;每个 element 携带 partial 名 + 全量数据。
-  const components = applyManifest(input.manifestOverrides).map((c) => ({ ...c, ...content, tokens: dgTokens }));
-  return compiled({ ...content, tokens: dgTokens, components });
+  const components = applyManifest(input.manifestOverrides).map((c) => ({ ...c, ...content, tokens }));
+  return compiled({ ...content, tokens, components });
 }

@@ -8,6 +8,8 @@ export interface RenderInput {
   theme?: 'light' | 'dark';
   designMd?: string; // v1 保留未用
   manifestOverrides?: ManifestOverrides; // 结构编辑:组件顺序/隐藏
+  reportContent?: any;                    // 直接用数据快照(跳过 mapCampaign)
+  tokenOverrides?: Record<string, any>;   // 风格层覆盖
 }
 
 export interface Recipe {
