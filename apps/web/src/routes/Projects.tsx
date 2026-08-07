@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectsApi } from '@/api/projects';
-import { templatesApi } from '@/api/templates';
 import { createProjectFromTemplate } from '@/api/templates';
 import { Button } from '@/components/Button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
+import { SaveAsTemplateDialog } from '@/components/SaveAsTemplateDialog';
 import { GenerateHtmlReportOverlay } from '@/editor/components/GenerateHtmlReportOverlay';
 import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
 import type { ProjectMeta, ProjectSummary, Scenario } from '@mediakit/shared';
@@ -43,10 +43,6 @@ export function Projects() {
 
   // 存为模版
   const [saveTplFor, setSaveTplFor] = useState<ProjectSummary | null>(null);
-  const [tplSaving, setTplSaving] = useState(false);
-  const [tplError, setTplError] = useState<string | null>(null);
-  const [tplSuccess, setTplSuccess] = useState(false);
-  const [tplConflict, setTplConflict] = useState<string | null>(null);
 
   // ai-html 行的 HTML 操作:下拉开合 + 按行缓存 + busy
   const [htmlMenuFor, setHtmlMenuFor] = useState<string | null>(null);
@@ -224,32 +220,6 @@ export function Projects() {
       toast.error('删除失败');
     } finally {
       setDeleting(false);
-    }
-  }
-
-  async function handleSaveAsTemplate(overwrite = false) {
-    if (!saveTplFor) return;
-    setTplSaving(true);
-    setTplError(null);
-    setTplConflict(null);
-    try {
-      await templatesApi.createFromProject({
-        projectId: saveTplFor.id,
-        name: `${saveTplFor.name} 模板`,
-        meta: saveTplFor.meta,
-        overwrite,
-      });
-      setTplSuccess(true);
-      toast.success('已保存为模板');
-    } catch (err: unknown) {
-      const e = err as { response?: { status?: number; data?: { error?: { message?: string } } } };
-      if (e.response?.status === 409) {
-        setTplConflict(e.response?.data?.error?.message ?? '已存在同名模板，是否覆盖？');
-      } else {
-        setTplError('保存失败，请重试');
-      }
-    } finally {
-      setTplSaving(false);
     }
   }
 
@@ -494,12 +464,7 @@ export function Projects() {
                         复制
                       </button>
                       <button
-                        onClick={() => {
-                          setSaveTplFor(p);
-                          setTplError(null);
-                          setTplConflict(null);
-                          setTplSuccess(false);
-                        }}
+                        onClick={() => setSaveTplFor(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
                         title="将报告保存为可复用模板"
                       >
@@ -575,86 +540,10 @@ export function Projects() {
 
       {/* 存为模版对话框 */}
       {saveTplFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !tplSaving && setSaveTplFor(null)}>
-          <div
-            className="w-[420px] rounded-xl bg-surface-primary shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
-              <h2 className="text-base font-semibold text-foreground-primary">存为模板</h2>
-              <button
-                onClick={() => !tplSaving && setSaveTplFor(null)}
-                className="text-foreground-muted hover:text-foreground-primary"
-              >✕</button>
-            </div>
-            <div className="space-y-3 px-5 py-4">
-              {tplSuccess ? (
-                <div className="space-y-3">
-                  <p className="rounded-lg bg-green/10 px-3 py-2 text-sm text-green">
-                    模板「{saveTplFor.name} 模板」已保存，可在模板管理中查看和发布。
-                  </p>
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => setSaveTplFor(null)}
-                      className="rounded-lg border border-border-default px-4 py-2 text-sm hover:bg-surface-hover"
-                    >
-                      关闭
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-foreground-secondary">
-                    将报告「<span className="font-medium text-foreground-primary">{saveTplFor.name}</span>」的全部 {saveTplFor.pageCount} 页保存为模板？
-                  </p>
-                  <p className="rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
-                    模板名称：「{saveTplFor.name} 模板」 · 尺寸 {saveTplFor.width}×{saveTplFor.height} · 组件布局和样式将被保留，数据绑定将被清除。
-                  </p>
-                  {tplError && <p className="text-sm text-red">{tplError}</p>}
-                  {tplConflict && (
-                    <div className="space-y-2 rounded-lg border border-orange/30 bg-orange/10 px-3 py-2">
-                      <p className="text-sm text-orange-dark">{tplConflict}</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => void handleSaveAsTemplate(true)}
-                          disabled={tplSaving}
-                          className="rounded-lg bg-orange px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-dark disabled:opacity-50"
-                        >
-                          {tplSaving ? '覆盖中…' : '覆盖已有模板'}
-                        </button>
-                        <button
-                          onClick={() => setTplConflict(null)}
-                          disabled={tplSaving}
-                          className="rounded-lg border border-border-default px-3 py-1.5 text-xs hover:bg-surface-hover disabled:opacity-50"
-                        >
-                          取消
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {!tplConflict && (
-                    <div className="flex justify-end gap-2 pt-2">
-                      <button
-                        onClick={() => setSaveTplFor(null)}
-                        disabled={tplSaving}
-                        className="rounded-lg border border-border-default px-4 py-2 text-sm hover:bg-surface-hover disabled:opacity-50"
-                      >
-                        取消
-                      </button>
-                      <button
-                        onClick={() => void handleSaveAsTemplate(false)}
-                        disabled={tplSaving}
-                        className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50"
-                      >
-                        {tplSaving ? '保存中…' : '保存模板'}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <SaveAsTemplateDialog
+          project={saveTplFor}
+          onClose={() => setSaveTplFor(null)}
+        />
       )}
     </div>
   );
