@@ -232,28 +232,39 @@ export function VisualEditor({
       return /\b(fa[srlbd]?|fi-[a-z]+|icon|material-icons|bi)\b/i.test(cls);
     };
 
-    // 选中元素信息 + 图片状态同步
+    // 选中元素信息 + 图片/图标状态同步
     const onSelect = () => {
       const sel = editor.getSelected();
       if (sel) {
-        const tag = String(sel.get('tagName') || 'div').toLowerCase();
-        const cls = (sel.get('classes') || []).map((c: { get: (k: string) => string }) => c.get('name')).filter(Boolean).slice(0, 2).join(' ');
+        // ★ 如果选中的是图标内部元素（svg/path 等），向上找到 <i class="fa-*">
+        let effectiveSel = sel;
+        let checkComp: any = sel;
+        for (let i = 0; i < 5 && checkComp; i++) {
+          if (isIconElementStr(checkComp)) {
+            effectiveSel = checkComp;
+            break;
+          }
+          checkComp = checkComp.parent?.();
+        }
+
+        const tag = String(effectiveSel.get('tagName') || 'div').toLowerCase();
+        const cls = (effectiveSel.get('classes') || []).map((c: { get: (k: string) => string }) => c.get('name')).filter(Boolean).slice(0, 2).join(' ');
         setSelectedInfo(`<${tag}>${cls ? ' .' + cls : ''}`);
 
         // ★ 选中图片时同步 src/alt 到状态
         if (tag === 'img') {
-          const attrs = sel.getAttributes();
+          const attrs = effectiveSel.getAttributes();
           setSelectedImg({
-            comp: sel,
+            comp: effectiveSel,
             src: String(attrs.src || ''),
             alt: String(attrs.alt || ''),
           });
           setSelectedIcon(null);
-        } else if (isIconElementStr(sel)) {
+        } else if (isIconElementStr(effectiveSel)) {
           // ★ 选中图标时同步 class 到状态
-          const attrs = sel.getAttributes();
+          const attrs = effectiveSel.getAttributes();
           setSelectedIcon({
-            comp: sel,
+            comp: effectiveSel,
             className: String(attrs.class || ''),
           });
           setSelectedImg(null);
