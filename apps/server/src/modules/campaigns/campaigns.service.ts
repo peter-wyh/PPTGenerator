@@ -563,6 +563,8 @@ export const importService = {
             ...('dailyOrders' in row && row.dailyOrders ? { orders: String(row.dailyOrders) } : {}),
             ...('dailyGmv' in row && row.dailyGmv ? { gmv: String(row.dailyGmv).replace(/^[$]/, '') } : {}),
             ...('dailyCommission' in row && row.dailyCommission ? { commission: String(row.dailyCommission).replace(/^[$]/, '') } : {}),
+            ...('dailySpend' in row && row.dailySpend ? { spend: String(row.dailySpend).replace(/^[$]/, '') } : {}),
+            ...('dailyNewCustomers' in row && row.dailyNewCustomers ? { newCustomers: String(row.dailyNewCustomers) } : {}),
           });
         }
 
