@@ -11,6 +11,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import grapesjs from 'grapesjs';
 import type { Editor } from 'grapesjs';
+import { IconPicker } from './IconPicker';
 
 export interface VisualEditorHandle {
   getHtml: () => string;
@@ -116,6 +117,9 @@ export function VisualEditor({
   // ★ 选中图片时的状态：null = 未选中图片，object = 选中了 img 组件
   const [selectedImg, setSelectedImg] = useState<{ comp: any; src: string; alt: string } | null>(null);
 
+  // ★ 选中图标时的状态：null = 未选中图标，object = 选中了 <i class="fa-*"> 组件
+  const [selectedIcon, setSelectedIcon] = useState<{ comp: any; className: string } | null>(null);
+
   // ── 初始化 GrapesJS ──
   useEffect(() => {
     if (!containerRef.current) return;
@@ -219,6 +223,15 @@ export function VisualEditor({
     editor.on('component:create', updateUndoRedo);
     editor.on('component:remove', updateUndoRedo);
 
+    // 判断 GrapesJS 组件是否是图标元素
+    const isIconElementStr = (comp: any): boolean => {
+      const tag = String(comp.get('tagName') || '').toLowerCase();
+      if (tag !== 'i' && tag !== 'em' && tag !== 'span') return false;
+      const attrs = comp.getAttributes();
+      const cls = String(attrs.class || '');
+      return /\b(fa[srlbd]?|fi-[a-z]+|icon|material-icons|bi)\b/i.test(cls);
+    };
+
     // 选中元素信息 + 图片状态同步
     const onSelect = () => {
       const sel = editor.getSelected();
@@ -235,12 +248,23 @@ export function VisualEditor({
             src: String(attrs.src || ''),
             alt: String(attrs.alt || ''),
           });
+          setSelectedIcon(null);
+        } else if (isIconElementStr(sel)) {
+          // ★ 选中图标时同步 class 到状态
+          const attrs = sel.getAttributes();
+          setSelectedIcon({
+            comp: sel,
+            className: String(attrs.class || ''),
+          });
+          setSelectedImg(null);
         } else {
           setSelectedImg(null);
+          setSelectedIcon(null);
         }
       } else {
         setSelectedInfo('未选中元素');
         setSelectedImg(null);
+        setSelectedIcon(null);
       }
     };
     editor.on('component:selected', onSelect);
@@ -631,6 +655,13 @@ export function VisualEditor({
     setSelectedImg(prev => prev ? { ...prev, alt: newAlt } : null);
   }, [selectedImg]);
 
+  // ★ 更新图标 class（替换图标）
+  const handleIconChange = useCallback((newClass: string) => {
+    if (!selectedIcon) return;
+    selectedIcon.comp.setAttributes({ class: newClass });
+    setSelectedIcon(prev => prev ? { ...prev, className: newClass } : null);
+  }, [selectedIcon]);
+
   // ★ 本地上传图片 → base64
   const handleImgUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -786,6 +817,14 @@ export function VisualEditor({
                   />
                 </div>
               </div>
+            )}
+
+            {/* ★ 图标替换卡片：选中 <i class="fa-*"> 时自动出现 */}
+            {selectedIcon && (
+              <IconPicker
+                currentClass={selectedIcon.className}
+                onChange={handleIconChange}
+              />
             )}
 
             {/* GrapesJS 样式面板 */}
