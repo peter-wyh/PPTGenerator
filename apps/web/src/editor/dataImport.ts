@@ -86,6 +86,7 @@ export const CPS_DAILY_FIELDS = [
   'campaignId', 'creatorId', 'collabId', 'contentType', 'date',
   'dailyClicks', 'dailyImpressions', 'dailyOrders',
   'dailyGmv', 'dailyCommission',
+  'dailySpend', 'dailyNewCustomers',
 ] as const;
 export const CPS_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 'date'];
 
@@ -130,7 +131,7 @@ export const PREVIEW_COLUMNS: Record<ImportKind, string[]> = {
   creatorWorks: ['creatorId', 'workId', 'title', 'platform', 'publishedAt', 'impressions', 'likes', 'engagementRate'],
   collaborationDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'dailyDate', 'dailyImpressions'],
   cps: ['campaignId', 'creatorId', 'collabId', 'contentType', 'linkUrl', 'clicks', 'orders', 'gmv', 'commission'],
-  cpsDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'date', 'dailyClicks', 'dailyOrders', 'dailyGmv'],
+  cpsDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'date', 'dailyClicks', 'dailyOrders', 'dailyGmv', 'dailySpend', 'dailyNewCustomers'],
 };
 
 function checkRequired(kind: ImportKind, data: Record<string, unknown>): string[] {
@@ -363,9 +364,9 @@ export function downloadTemplate(kind: ImportKind): void {
     ].join('\n');
   } else { // cpsDaily
     example = [
-      'camp-001,cre-mia,collab-001,video,2026-03-15,1800,54000,55,6500,650',
-      'camp-001,cre-mia,collab-001,video,2026-03-16,1600,48000,48,5800,580',
-      'camp-001,cre-mia,collab-001,video,2026-03-17,1400,42000,42,5200,520',
+      'camp-001,cre-mia,collab-001,video,2026-03-15,1800,54000,55,6500,650,180,12',
+      'camp-001,cre-mia,collab-001,video,2026-03-16,1600,48000,48,5800,580,150,10',
+      'camp-001,cre-mia,collab-001,video,2026-03-17,1400,42000,42,5200,520,130,8',
     ].join('\n');
     note = [
       '# 每行=一条 CPS 链接在某天的归因数据',
