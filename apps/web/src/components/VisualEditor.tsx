@@ -321,10 +321,36 @@ export function VisualEditor({
                          'SMALL', 'DD', 'DT', 'BLOCKQUOTE', 'FIGCAPTION',
                          'BUTTON', 'SUMMARY', 'TIME', 'MARK', 'SUB', 'SUP'];
 
-      // 找到「可编辑」的目标元素——优先找有文本的，fallback 到图标类
-      const findEditableTarget = (el: Element): Element | null => {
+      // 判断是否是图标元素（<i class="fa/fas/far/fab/fi-*">）
+      // Font Awesome 5+ 会把 <i> 内部替换为 <svg>，所以双击时 target 可能是 svg/path
+      const isIconElement = (el: Element | null): el is HTMLElement => {
+        if (!el) return false;
+        if (el.tagName === 'I' || el.tagName === 'EM' || el.tagName === 'SPAN') {
+          const cls = el.getAttribute('class') || '';
+          return /\b(fa[srlbd]?|fi-[a-z]+|icon|material-icons|bi|lu)\b/i.test(cls);
+        }
+        return false;
+      };
+
+      // 从当前元素向上查找图标容器
+      const findIconContainer = (el: Element): HTMLElement | null => {
         let node: Element | null = el;
-        // 第一轮：找有直接文本的 TEXT_TAGS 元素
+        while (node && node !== canvasBody) {
+          if (isIconElement(node)) return node as HTMLElement;
+          node = node.parentElement;
+        }
+        return null;
+      };
+
+      // 找到「可编辑」的目标元素——优先找图标，然后找有文本的，最后 fallback
+      const findEditableTarget = (el: Element): Element | null => {
+        // ★ 第一优先：图标元素（含 SVG 子元素的 FA5+ 图标）
+        // 双击 svg/path/use 时向上找 <i class="fa-*">
+        const icon = findIconContainer(el);
+        if (icon) return icon;
+
+        let node: Element | null = el;
+        // 第二轮：找有直接文本的 TEXT_TAGS 元素
         while (node && node !== canvasBody) {
           const hasDirectText = Array.from(node.childNodes).some(
             n => n.nodeType === 3 && n.textContent && n.textContent.trim().length > 0
@@ -333,11 +359,6 @@ export function VisualEditor({
             return node;
           }
           node = node.parentElement;
-        }
-        // 第二轮：如果是图标元素（<i class="fa...">），直接返回
-        if (el.tagName === 'I' || el.tagName === 'EM') {
-          // 图标元素——双击编辑 class（替换图标）
-          return el;
         }
         // 第三轮：fallback 到点击元素本身（如果在 TEXT_TAGS 中）
         if (el !== canvasBody && TEXT_TAGS.includes(el.tagName)) {
@@ -420,22 +441,66 @@ export function VisualEditor({
           currentEditable = editableEl as HTMLElement;
 
           // 判断是否是图标编辑
-          isIconEdit = (editableEl.tagName === 'I' || editableEl.tagName === 'EM')
+          isIconEdit = isIconElement(editableEl)
             && !Array.from(editableEl.childNodes).some(n => n.nodeType === 3 && n.textContent?.trim());
 
           if (isIconEdit) {
-            // 图标编辑模式：提示用户可以修改 class
-            currentEditable.setAttribute('contenteditable', 'true');
-            currentEditable.setAttribute('title', '编辑图标 class（如 fas fa-chart-bar）');
-            currentEditable.focus();
-            // 选中 class 文本——先填入当前 class 供编辑
-            const currentClass = currentEditable.className;
-            currentEditable.textContent = currentClass;
-            const range = canvasDoc!.createRange();
-            range.selectNodeContents(currentEditable);
-            const sel = canvasDoc!.getSelection();
-            sel?.removeAllRanges();
-            sel?.addRange(range);
+            // 图标编辑模式：用 input 浮层编辑 class，不破坏内部 SVG
+            const currentClass = (editableEl as HTMLElement).getAttribute('class') || '';
+            const classInput = canvasDoc!.createElement('input');
+            classInput.type = 'text';
+            classInput.value = currentClass;
+            classInput.style.cssText = 'position:absolute;z-index:99999;font-size:12px;padding:4px 8px;border:2px solid #3b82f6;border-radius:4px;background:#fff;color:#000;width:260px;box-shadow:0 2px 8px rgba(0,0,0,0.2)';
+            const rect = (editableEl as HTMLElement).getBoundingClientRect();
+            const canvasRect = canvasDoc!.body.getBoundingClientRect();
+            classInput.style.left = `${rect.left - canvasRect.left}px`;
+            classInput.style.top = `${rect.bottom - canvasRect.top + 4}px`;
+            canvasDoc!.body.appendChild(classInput);
+            classInput.focus();
+            classInput.select();
+
+            const finishIconEdit = () => {
+              const newClass = classInput.value.trim();
+              if (newClass && newClass !== currentClass) {
+                // 写入新的 class 到图标元素
+                (editableEl as HTMLElement).setAttribute('class', newClass);
+                // 同步到 GrapesJS 组件
+                const wrapper = editor.DomComponents.getWrapper();
+                let foundComp: any = null;
+                const searchComp = (comp: any): void => {
+                  if (!comp) return;
+                  if (comp.getEl && comp.getEl() === editableEl) { foundComp = comp; return; }
+                  const children = comp.components?.();
+                  if (children) {
+                    for (let i = 0; i < children.length; i++) {
+                      searchComp(children[i] ?? children.models?.[i]);
+                      if (foundComp) return;
+                    }
+                  }
+                };
+                searchComp(wrapper);
+                if (foundComp) {
+                  foundComp.setAttributes({ class: newClass });
+                  foundComp.trigger('change:attributes');
+                }
+                // 触发保存
+                const editedHtml = editor.getHtml();
+                const editedCss = editor.getCss() ?? '';
+                const orig = originalHtmlRef.current;
+                const scripts = bodyScriptsRef.current;
+                const fullHtml = reconstructFullHtml(orig, editedHtml, editedCss, scripts);
+                onHtmlChange?.(fullHtml);
+              }
+              classInput.remove();
+              currentEditable = null;
+              isIconEdit = false;
+            };
+
+            classInput.addEventListener('blur', finishIconEdit, { once: true });
+            classInput.addEventListener('keydown', (ev: KeyboardEvent) => {
+              if (ev.key === 'Enter') { ev.preventDefault(); classInput.blur(); }
+              if (ev.key === 'Escape') { classInput.value = currentClass; classInput.blur(); }
+            });
           } else {
             // 文本编辑模式
             currentEditable.setAttribute('contenteditable', 'true');
