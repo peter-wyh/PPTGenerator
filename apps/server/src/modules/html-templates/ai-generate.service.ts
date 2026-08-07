@@ -13,6 +13,47 @@ const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.c
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 
+// 自托管静态资源基础 URL（与 buildCampaignContext 里 logo 的绝对 URL 同源）。
+// 报告 HTML 后处理时用它把海外公共 CDN 改写为同源自托管路径；空则跳过（不破坏原 HTML）。
+const SELF_HOST_BASE = (process.env.PUBLIC_BASE_URL || config.webUrl || '').replace(/\/+$/, '');
+
+/**
+ * 把生成的报告 HTML 中引用的海外公共 CDN（国内不可达）改写为自托管绝对 URL。
+ *
+ * 资源位于 apps/web/public/vendor/，构建后由 nginx 同源托管在 /vendor/...。
+ * 报告 HTML 可能被独立打开/导出，故用绝对 URL。
+ *
+ * 与 SYSTEM_PROMPT 解耦：不改提示词、不影响 AI 行为，统一在后处理层重写，
+ * 覆盖所有生成/编辑的报告，保证不再依赖 jsdelivr / cdnjs / tailwindcss.com。
+ * 无 baseUrl（PUBLIC_BASE_URL/webUrl 未配）时原样返回，不破坏。
+ */
+export function rewriteExternalAssets(html: string, baseUrl: string): string {
+  const base = (baseUrl || '').trim().replace(/\/+$/, '');
+  if (!base) return html;
+  let out = html;
+  // Tailwind Play CDN（runtime JS；可能带 query/fragment，整体替换）
+  out = out.replace(
+    /https?:\/\/cdn\.tailwindcss\.com(?:\/[^\s"'<>]*)?/g,
+    `${base}/vendor/tailwind/play.min.js`,
+  );
+  // Chart.js UMD（jsdelivr）
+  out = out.replace(
+    /https?:\/\/cdn\.jsdelivr\.net\/npm\/chart\.js@[\d.]+\/dist\/chart\.umd\.min\.js/g,
+    `${base}/vendor/chartjs/chart.umd.min.js`,
+  );
+  // FontAwesome —— cdnjs 写法
+  out = out.replace(
+    /https?:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/font-awesome\/[\d.]+\/css\/all\.min\.css/gi,
+    `${base}/vendor/fontawesome/css/all.min.css`,
+  );
+  // FontAwesome —— jsdelivr @fortawesome 写法
+  out = out.replace(
+    /https?:\/\/cdn\.jsdelivr\.net\/npm\/@fortawesome\/fontawesome-free@[\d.]+\/css\/all\.min\.css/gi,
+    `${base}/vendor/fontawesome/css/all.min.css`,
+  );
+  return out;
+}
+
 const SYSTEM_PROMPT = `You are a senior front-end engineer. You produce beautiful, self-contained B2B marketing report pages in pure HTML, styled like a modern SaaS dashboard.
 
 CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do NOT wrap in markdown code fences. No thinking text, explanations, or commentary before or after the HTML.
@@ -736,6 +777,9 @@ export const aiGenerateService = {
       }
     );
 
+    // 9) 海外公共 CDN → 自托管（国内不可达，否则报告无样式/无图表）
+    processedHtml = rewriteExternalAssets(processedHtml, SELF_HOST_BASE);
+
     return processedHtml;
   },
 
@@ -859,6 +903,9 @@ export const aiGenerateService = {
         `AI 编辑后的 HTML 格式异常${choice?.finish_reason === 'length' ? '（输出被截断，请减少修改复杂度后重试）' : ''}`,
       );
     }
+
+    // 海外公共 CDN → 自托管（同 generateHtml）
+    content = rewriteExternalAssets(content, SELF_HOST_BASE);
 
     return content;
   },
