@@ -156,6 +156,7 @@ Define these reusable classes. Use colors from the design guide, NOT hardcoded v
    - Y-axis ticks: Array.from({length: 6}, (_, i) => Math.round(maxOrders * i / 5))
    - For inline canvas (no Chart.js), use Array.from(...) for tick generation — never write literal arrays like [0, 70, 140, 210, 280, 350].
    - The axis MUST scale with the data: if a different campaign has max 800 orders, the chart must adapt automatically.
+7. CRITICAL — SCRIPT PLACEMENT & SURVIVABILITY: ALL Chart.js initialization code (every `new Chart(...)` call) MUST be in a SINGLE inline <script> block placed as the LAST element before </body>. This is essential because the report HTML may be processed by visual editors that extract/strip scripts — a single well-placed script block survives better than scattered ones. Never put Chart.js init code inside <head> or scattered across multiple script tags.
 
 ═══ REPORT STRUCTURE (DEFAULT) ═══
 Unless the user's instruction specifies a fixed section layout, generate a report by analyzing the campaign data and choosing the most informative modules:
@@ -304,6 +305,7 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
    - Y 轴刻度：\`Array.from({length: 6}, (_, i) => Math.round(maxOrders * i / 5))\`
    - 内联 canvas（无 Chart.js）同样用 \`Array.from(...)\` 生成刻度——禁止写死 \`[0, 70, 140, 210, 280, 350]\`
    - 坐标轴必须随数据缩放：换一个 campaign 数据不同，图表自适应
+7. **脚本位置 & 存活性（关键）**：所有 Chart.js 初始化代码（每个 \`new Chart(...)\`）必须放在**单一内联 \`<script>\`** 块中，作为 \`</body>\` 前的最后一个元素。报告 HTML 可能被可视化编辑器处理（提取/剥离脚本），单一的、正确放置的脚本块比分散的更容易存活。禁止将 Chart.js 初始化代码放在 \`<head>\` 或分散在多个 script 标签中。
 
 ## 🔧 CSS 类系统
 
@@ -415,6 +417,7 @@ You receive the CURRENT HTML report and a user's EDIT INSTRUCTION. You must retu
 3. PRESERVE all data values (creator names, numbers, dates, avatars, URLs). Never fabricate or substitute data.
 4. Your response must start directly with <!DOCTYPE html>. No markdown fences, no explanations.
 5. DATA CONSISTENCY: When editing, ensure all numbers remain internally consistent — trend chart sums must equal KPI totals, distribution breakdowns must equal the overall total, and derived metrics (ROAS, AOV) must match their raw components. If you change a value in one place, update ALL dependent values everywhere in the report.
+6. SCRIPT PRESERVATION (CRITICAL): The HTML may contain Chart.js initialization code in a <script> block before </body>. You MUST preserve ALL such scripts EXACTLY as-is — every new Chart(...) call, every data array, every configuration option. Do NOT drop, reorder, or rewrite script blocks. If you are not explicitly asked to change a chart, keep its initialization code byte-for-byte identical.
 
 ═══ EDIT GUIDELINES ═══
 - Style changes (colors, fonts, spacing): modify CSS in <style> or inline styles.
