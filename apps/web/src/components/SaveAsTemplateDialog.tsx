@@ -23,8 +23,18 @@ const RENDER_TYPE_LABELS: Record<RenderType, string> = {
   'html-report': 'HTML 报告',
 };
 
-/** 根据宽高推断渲染类型（兼容旧数据）。 */
-function inferRenderType(w: number, h: number): RenderType {
+/**
+ * 根据来源项目的 styleType + 宽高推断渲染类型。
+ * 优先用 styleType（权威字段），旧数据无 styleType 时回退到宽高推断。
+ */
+function inferRenderType(
+  styleType: 'ppt' | 'single' | 'ai-html' | undefined,
+  w: number,
+  h: number,
+): RenderType {
+  if (styleType === 'ai-html') return 'html-report';
+  if (styleType === 'ppt') return 'multi-page';
+  // styleType='single' 或无 styleType 时用宽高推断
   if (h > w) return 'long-poster';
   const ratio = w / h;
   if (ratio >= 1.5) return 'multi-page';
@@ -41,7 +51,9 @@ export function SaveAsTemplateDialog({ project, onClose, onSaved }: SaveAsTempla
 
   // 从来源项目 meta 计算只读字段（一次计算，不再变化）
   const meta = project.meta ?? {};
-  const renderType = (meta.renderType as RenderType | undefined) ?? inferRenderType(project.width, project.height);
+  const renderType =
+    (meta.renderType as RenderType | undefined) ??
+    inferRenderType(meta.styleType, project.width, project.height);
   const businessLine = meta.businessLine ?? '';
   const scenario = meta.scenario ?? '';
   const templateType = meta.templateType ?? '';
