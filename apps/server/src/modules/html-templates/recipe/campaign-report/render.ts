@@ -30,7 +30,7 @@ export async function render(input: RenderInput): Promise<string> {
     throw ApiError.badRequest('recipe 需要 campaignId 或 reportContent');
   }
   // reportContent 优先:编辑器重渲染已编辑数据时跳过 DB。
-  const content = input.reportContent ?? await mapCampaign(input.campaignId!);
+  const content = input.reportContent ?? await mapCampaign(input.campaignId!, input.reportPeriod);
   content.actionable = await fillActionable(content);
   // tokens 合并默认 + 用户覆盖;无覆盖时与原 dgTokens 等价(快照不变)。
   const tokens = mergeTokens(input.tokenOverrides);

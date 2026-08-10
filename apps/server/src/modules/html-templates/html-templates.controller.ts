@@ -64,7 +64,7 @@ export const htmlTemplateController = {
     let html: string;
     if (mode === 'recipe') {
       const { getRecipe } = await import('./recipe');
-      html = await getRecipe(recipeId ?? 'campaign-report').render({ campaignId, theme, designMd: req.body.designMd });
+      html = await getRecipe(recipeId ?? 'campaign-report').render({ campaignId, theme, designMd: req.body.designMd, reportPeriod });
     } else {
       // ai mode(现状,不动)
       html = await aiGenerateService.generateHtml({

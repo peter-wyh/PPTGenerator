@@ -23,6 +23,22 @@ const campaignRow = {
   }],
 };
 
+const campaignRowWithDaily = {
+  ...campaignRow,
+  campaignCreators: [{
+    ...campaignRow.campaignCreators[0],
+    cpsPerformances: [{
+      clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0,
+      daily: [
+        { date: '2026-10-12', clicks: '100', orders: '10', gmv: '1000', spend: '100', newCustomers: '5' },
+        { date: '2026-10-15', clicks: '200', orders: '20', gmv: '2000', spend: '200', newCustomers: '8' },
+        { date: '2026-10-16', clicks: '300', orders: '30', gmv: '3000', spend: '300', newCustomers: '12' },
+        { date: '2026-10-20', clicks: '400', orders: '40', gmv: '4000', spend: '400', newCustomers: '15' },
+      ],
+    }],
+  }],
+};
+
 beforeEach(() => { vi.clearAllMocks(); prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); });
 
 describe('render', () => {
@@ -89,5 +105,15 @@ describe('render', () => {
     base.kpis[0].label = '总收入(手改)';
     const html = await render({ campaignId: 'c1', reportContent: base } as any);
     expect(html).toContain('总收入(手改)');
+  });
+
+  it('reportPeriod 透传到 mapCampaign → HTML 含期内数字、不含期外', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    const html = await render({ campaignId: 'c1', reportPeriod: { startDate: '2026-10-15', endDate: '2026-10-17' } });
+    // 期内 gmv 合计 5000 → 注入 HTML
+    expect(html).toContain('$5,000');
+    // 期外日(10-12 的 gmv 1000、10-20 的 4000)不应作为 KPI 出现
+    expect(html).not.toContain('$1,000');
+    expect(html).not.toContain('$4,000');
   });
 });
