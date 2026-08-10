@@ -52,8 +52,11 @@ function parseHtmlForEditor(
   const twMatch = headContent.match(/<script[^>]*src="(https:\/\/cdn\.tailwindcss\.com[^"]*)"/i);
   const tailwindCdn = twMatch ? twMatch[1] : null;
 
-  const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  // ★ GREEDY match (* not *?) — 确保双 body 标签时也能捕获到所有内容（含脚本）
+  const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
   let bodyHtml = bodyMatch ? bodyMatch[1] : fullHtml;
+  // ★ 剥离嵌套的 <body> 标签（GrapesJS 输出可能自带 body，防止双重 body）
+  bodyHtml = bodyHtml.replace(/<\/?body[^>]*>/gi, '');
 
   // 提取 body 内联脚本
   const bodyScripts: string[] = [];
@@ -76,7 +79,10 @@ function reconstructFullHtml(originalHtml: string, editedBodyHtml: string, edito
   const bodyTagMatch = originalHtml.match(/<body([^>]*)>/i);
   const bodyAttrs = bodyTagMatch ? bodyTagMatch[1] : '';
 
-  const cleanBody = editedBodyHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  // ★ 剥离 GrapesJS 输出中可能残留的嵌套 <body> 标签和重复的基础样式
+  const cleanBody = editedBodyHtml
+    .replace(/<style[^>]*>\* \{ box-sizing: border-box; \} body \{margin: 0;\}<\/style>/gi, '')
+    .replace(/<\/?body[^>]*>/gi, '');
 
   const scriptsTag = bodyScripts.length > 0
     ? '\n' + bodyScripts.map(s => `<script>\n${s}\n</script>`).join('\n')
