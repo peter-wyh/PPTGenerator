@@ -28,6 +28,23 @@ function renderTypeOf(t: TemplateSummary): string {
   return ratio >= 1.5 ? 'multi-page' : 'html-report';
 }
 
+/** 模版类型 → 徽章颜色（按场景分组，同场景同色系） */
+const TEMPLATE_TYPE_BADGES: Record<string, string> = {
+  // campaign-report — 蓝色系
+  weekly: 'bg-blue-100 text-blue-700',
+  biweekly: 'bg-cyan-100 text-cyan-700',
+  monthly: 'bg-indigo-100 text-indigo-700',
+  'wrap-up': 'bg-violet-100 text-violet-700',
+  // campaign-proposal — 绿色系
+  lite: 'bg-emerald-100 text-emerald-700',
+  standard: 'bg-teal-100 text-teal-700',
+  full: 'bg-green-100 text-green-700',
+  // media-kit — 粉/橙系
+  brand: 'bg-pink-100 text-pink-700',
+  creator: 'bg-amber-100 text-amber-700',
+  platform: 'bg-rose-100 text-rose-700',
+};
+
 /** 模板管理（管理后台）：仅 ADMIN 可见。列表 / 筛选 / 新建 / 编辑 / 发布·取消 / 复制 / 删除。 */
 export function Templates() {
   const navigate = useNavigate();
@@ -335,12 +352,25 @@ export function Templates() {
                     <td className="px-3 py-2 text-foreground-secondary">{t.meta?.businessLine ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{scenarioText(t.meta)}</td>
                     <td className="px-3 py-2 text-foreground-secondary">
-                      {t.meta?.templateType ? (TEMPLATE_TYPE_LABELS[t.meta.templateType] ?? t.meta.templateType) : '—'}
-                      {t.meta?.isDefault && (
-                        <span className="ml-1 inline-block rounded-full bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
-                          默认
-                        </span>
-                      )}
+                      {(() => {
+                        const tt = t.meta?.templateType;
+                        if (!tt) return <span className="text-foreground-muted">—</span>;
+                        const label = TEMPLATE_TYPE_LABELS[tt] ?? tt;
+                        const badgeCls = TEMPLATE_TYPE_BADGES[tt];
+                        return (
+                          <span className="inline-flex items-center gap-1">
+                            {badgeCls && (
+                              <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${badgeCls}`}>{label}</span>
+                            )}
+                            {!badgeCls && <span>{label}</span>}
+                            {t.meta?.isDefault && (
+                              <span className="rounded-full bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
+                                默认
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2"><StatusBadge status={t.status} /></td>
                     <td className="px-3 py-2 text-foreground-muted">{t.width}×{t.height}</td>
