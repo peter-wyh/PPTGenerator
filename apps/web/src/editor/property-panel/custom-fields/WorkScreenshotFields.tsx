@@ -137,6 +137,25 @@ export function WorkScreenshotFields({ comp }: { comp: EditorComponent }) {
       </FieldGroup>
 
       <FieldGroup title={`作品截图（${total} 张）`}>
+        {/* 全局说明文字开关 */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const allHidden = images.length > 0 && images.every((im) => im.captionHidden);
+              writeImages(images.map((im) => ({ ...im, captionHidden: !allHidden })));
+            }}
+            className={`rounded border px-2 py-1 text-xs transition ${
+              images.length > 0 && images.every((im) => im.captionHidden)
+                ? 'border-border-default text-foreground-muted'
+                : 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+            }`}
+          >
+            {images.length > 0 && images.every((im) => im.captionHidden) ? '显示说明文字' : '隐藏所有说明'}
+          </button>
+          {images.some((im) => im.captionHidden) && images.some((im) => !im.captionHidden) && (
+            <span className="text-[10px] text-foreground-muted">部分已隐藏</span>
+          )}
+        </div>
         <div className="space-y-2">
           {images.map((im, i) => (
             <div key={i} className="space-y-1 rounded border border-border-subtle p-1.5">

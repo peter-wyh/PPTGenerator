@@ -238,20 +238,113 @@ export function ImportCampaignButton({ comp }: { comp: EditorComponent }) {
 }
 
 /**
- * work-screenshot：从全局「数据配置」已绑定的 Campaign + 已选达人中选作品截图。
- * 只能选全局配置范围内的 campaign 和达人，不能超出。
+ * work-screenshot：从全局「数据配置」已绑定的 Campaign + 已选达人中多选达人，
+ * 并行拉取合作数据，合并所有截图后一次性导入。
  */
 export function ReportWorkScreenshotImporter({ comp }: { comp: EditorComponent }) {
   const updateComponentData = useEditorStore((s) => s.updateComponentData);
   const commit = useEditorStore((s) => s.commit);
-  return (
-    <DeliverablePicker
-      pickLabel="导入截图"
-      onPick={(d) => {
-        updateComponentData(comp.id, { images: d.screenshots ?? [] });
+  const campaign = useEditorStore((s) => s.reportData.campaign);
+  const pageCreatorId = useEditorStore((s) => {
+    const p = s.pages.find((pg) => pg.id === s.currentPageId);
+    return p?.creatorId;
+  });
+  const creators = allReportCreators(useEditorStore((s) => s.reportData));
+  const campaignId = campaign?.id ?? '';
+
+  // 默认选中页面绑定的达人
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(pageCreatorId ? [pageCreatorId] : []),
+  );
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string>('');
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleImport() {
+    if (selected.size === 0 || !campaignId) return;
+    setLoading(true);
+    setResult('');
+    try {
+      const ids = Array.from(selected);
+      const collaborations = await Promise.all(
+        ids.map((cid) => getCollaboration(campaignId, cid)),
+      );
+      // 合并所有达人的所有 deliverable 截图
+      const allShots = collaborations
+        .filter((c): c is NonNullable<typeof c> => !!c)
+        .flatMap((c) => c.deliverables)
+        .flatMap((d) => d.screenshots ?? [])
+        .filter((s) => s.src);
+
+      if (allShots.length === 0) {
+        setResult('所选达人暂无截图数据');
+      } else {
+        updateComponentData(comp.id, {
+          images: allShots,
+          displayCount: undefined,
+        });
         commit();
-      }}
-    />
+        setResult(`已导入 ${allShots.length} 张截图（来自 ${ids.length} 位达人）`);
+      }
+    } catch {
+      setResult('导入失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!campaignId) {
+    return (
+      <FieldGroup title="从达人合作导入">
+        <p className="text-xs text-foreground-muted">先在「数据配置」选择战役。</p>
+      </FieldGroup>
+    );
+  }
+  if (creators.length === 0) {
+    return (
+      <FieldGroup title="从达人合作导入">
+        <p className="text-xs text-foreground-muted">请先在「数据配置」选择达人。</p>
+      </FieldGroup>
+    );
+  }
+
+  return (
+    <FieldGroup title="从达人合作导入">
+      <p className="text-[11px] text-foreground-muted">勾选多个达人，合并导入截图</p>
+      <div className="max-h-44 space-y-1 overflow-y-auto rounded border border-border-subtle p-1.5">
+        {creators.map((c) => (
+          <label
+            key={c.id}
+            className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1 text-xs hover:bg-surface-hover"
+          >
+            <input
+              type="checkbox"
+              checked={selected.has(c.id)}
+              onChange={() => toggle(c.id)}
+              className="accent-accent-primary"
+            />
+            <span className="text-foreground-secondary">{c.name}</span>
+            <span className="text-foreground-muted">· {c.platform ?? ''}</span>
+          </label>
+        ))}
+      </div>
+      <button
+        onClick={handleImport}
+        disabled={selected.size === 0 || loading}
+        className="w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-50"
+      >
+        {loading ? '导入中…' : `导入 ${selected.size} 位达人截图`}
+      </button>
+      {result && <p className="text-[11px] text-foreground-muted">{result}</p>}
+    </FieldGroup>
   );
 }
 
