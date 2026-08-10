@@ -142,14 +142,14 @@ export function KpiBoard({ data }: { data: KpiBoardData }) {
             >
               {it.value}
             </div>
-            <div className="mt-0.5 flex items-baseline gap-1.5">
-              {it.compare && (
+            {it.compare ? (
+              <div className="mt-0.5 flex items-baseline gap-1.5">
                 <span className="text-[11px] skin-fw-heading" style={{ color: compareColor(it.compare, it.direction) }}>
                   {it.compare}
                 </span>
-              )}
-              <span className="text-[10px] text-foreground-muted">{compareLabel}</span>
-            </div>
+                <span className="text-[10px] text-foreground-muted">{compareLabel}</span>
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
