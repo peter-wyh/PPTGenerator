@@ -12,7 +12,7 @@ import { formatExecPrice, formatCPE, formatCPM } from '@/lib/format';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { ImportCampaignModal } from '../components/ImportCampaignModal';
 import { metricsToRows } from '../campaignMetrics';
-import { campaignDataPatch, creatorPatch } from '../pageBinding';
+import { campaignDataPatch, campaignPatch, creatorPatch } from '../pageBinding';
 
 /**
  * 从当前页面的 creatorId 绑定中自动获取达人。
@@ -729,8 +729,51 @@ export function KpiBoardImporter({ comp }: { comp: EditorComponent }) {
   return (
     <>
       <KpiImportButton comp={comp} />
-      <ImportCampaignButton comp={comp} />
+      <KpiCampaignImporter comp={comp} />
     </>
+  );
+}
+
+/** kpi-board 专用 Campaign 导入：与其他组件风格统一（🔗 提示 + 下拉 + 导入按钮）。 */
+function KpiCampaignImporter({ comp }: { comp: EditorComponent }) {
+  const setComponentData = useEditorStore((s) => s.setComponentData);
+  const boundCampaign = useEditorStore((s) => s.reportData.campaign);
+  const defaultCampaignId = useEditorStore((s) => s.projectMeta?.campaignId);
+  const [campaignId, setCampaignId] = useState(boundCampaign?.id ?? defaultCampaignId ?? '');
+
+  function apply() {
+    if (!campaignId) return;
+    // kpi-board 使用 campaignPatch（内部 metricsToRows）而非 campaignDataPatch
+    const c = boundCampaign;
+    const patch = c ? campaignPatch('kpi-board', c) : null;
+    if (patch) {
+      setComponentData(comp.id, { ...comp.data, ...patch });
+    }
+  }
+
+  return (
+    <FieldGroup title="从 Campaign 导入">
+      {boundCampaign && (
+        <p className="mb-1 text-[10px] text-accent-primary">
+          🔗 绑定 Campaign：{boundCampaign.name}
+        </p>
+      )}
+      <select
+        value={campaignId}
+        onChange={(e) => setCampaignId(e.target.value)}
+        className="w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs"
+      >
+        <option value="">选择 Campaign…</option>
+        {boundCampaign && <option value={boundCampaign.id}>{boundCampaign.name}</option>}
+      </select>
+      <button
+        onClick={apply}
+        disabled={!campaignId}
+        className="mt-1 w-full rounded border border-accent-primary bg-accent-primary px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-40"
+      >
+        ⚡ 导入 Campaign 数据
+      </button>
+    </FieldGroup>
   );
 }
 
