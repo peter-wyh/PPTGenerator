@@ -831,7 +831,7 @@ export function PageHeader({ data }: { data: PageHeaderData }) {
   // 业务线 code → 中文名 + 颜色（统一从 BUSINESS_LINE_META 获取）
   const blInfo = blCode ? BUSINESS_LINE_META[blCode] : undefined;
 
-  // 左侧 logo = 广告主；右侧 logo = 业务线
+  // 左侧 logo = 广告主；右侧 logo = 业务线（仅在用户手动上传图片时显示）
   const leftLogo: PageHeaderLogo = {
     ...data.leftLogo,
     text: data.leftLogo.text && data.leftLogo.text !== '广告主' ? data.leftLogo.text : (advertiserName || '广告主'),
@@ -840,12 +840,8 @@ export function PageHeader({ data }: { data: PageHeaderData }) {
     ...data.rightLogo,
     text: data.rightLogo.text && data.rightLogo.text !== '业务线' ? data.rightLogo.text : (blInfo?.name || data.rightLogo.text || '业务线'),
   };
-  // 业务线颜色用于占位符（无图片时）
-  if (blInfo && !rightLogo.src) {
-    rightLogo.initials = rightLogo.initials || blCode;
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    (rightLogo as any).bgColor = blInfo.color;
-  }
+  // 业务线颜色仅用于用户已上传图片的配色辅助——无图片时不再渲染占位符
+  // (rightLogo auto-fill removed: no default business line placeholder)
 
   return (
     <div
@@ -878,7 +874,8 @@ export function PageHeader({ data }: { data: PageHeaderData }) {
           {data.dateLabel}
         </div>
       )}
-      <HeaderLogo logo={rightLogo} side="right" />
+      {/* 右侧业务线 logo：仅在用户上传了图片时显示，不再渲染默认占位符 */}
+      {rightLogo.src?.trim() && <HeaderLogo logo={rightLogo} side="right" />}
     </div>
   );
 }
