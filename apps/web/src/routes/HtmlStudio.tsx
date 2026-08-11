@@ -7,7 +7,7 @@
  * 左侧：phase=config → 配置面板；phase=chat → AgentChatPanel
  * 右侧：预览区（iframe）+ 可选源码面板
  */
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   htmlTemplatesApi,
@@ -16,14 +16,11 @@ import {
 } from '@/api/htmlTemplates';
 import { projectsApi } from '@/api/projects';
 import { Button } from '@/components/Button';
-import { MarkdownPreview } from '@/components/MarkdownEditor';
-import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
-import { getPresetsForBL } from '@/report-presets';
+import type { ProjectDetail, ProjectMeta } from '@mediaket/shared';
 import { AgentChatPanel } from './AgentChatPanel';
+import { AiGenerateForm } from '@/editor/components/AiGenerateForm';
 import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
 import { VisualEditor } from '@/components/VisualEditor';
-
-type Mode = 'ai' | 'recipe';
 
 export function HtmlStudio() {
   const { id } = useParams<{ id: string }>();
@@ -38,26 +35,6 @@ export function HtmlStudio() {
   // ★ Agent 对话历史
   const [agentHistory, setAgentHistory] = useState<AgentChatMessage[]>([]);
 
-  // 配置面板状态
-  const [mode, setMode] = useState<Mode>('ai');
-
-  // ★ 根据 project 关联的业务线动态获取预设
-  const blCode = project?.meta?.businessLine as string | undefined;
-  const presets = useMemo(() => getPresetsForBL(blCode), [blCode]);
-
-  const [prompt, setPrompt] = useState('');
-  const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
-
-  // ★ BL 确定后自动填充该 BL 的第一个预设
-  // 用 blCode 作为依赖（而非 presets）——避免 prompt 变化触发循环
-  useEffect(() => {
-    if (presets.length > 0) {
-      setPrompt(presets[0].requirement);
-      setSelectedPresetIdx(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blCode]);
-
   // 生成状态
   const [generatedHtml, setGeneratedHtml] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -66,20 +43,6 @@ export function HtmlStudio() {
   const [saved, setSaved] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
-
-  // design.md 回显/编辑
-  const [designMd, setDesignMd] = useState('');
-  const [designMdLoading, setDesignMdLoading] = useState(false);
-  const [designMdExpanded, setDesignMdExpanded] = useState(false);
-  const [designMdSource, setDesignMdSource] = useState('');
-
-  // 系统提示词回显
-  const [systemPrompt, setSystemPrompt] = useState('');
-  const [showSystemPrompt, setShowSystemPrompt] = useState(true);
-  const [systemPromptFullscreen, setSystemPromptFullscreen] = useState(false);
-
-  // 提示词编辑器全屏
-  const [promptFullscreen, setPromptFullscreen] = useState(false);
 
   // 左侧面板折叠（沉浸模式）
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -146,42 +109,11 @@ export function HtmlStudio() {
       .finally(() => setLoadingProject(false));
   }, [id]);
 
-  // Esc 键关闭全屏
-  useEffect(() => {
-    if (!promptFullscreen && !systemPromptFullscreen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setPromptFullscreen(false);
-        setSystemPromptFullscreen(false);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [promptFullscreen, systemPromptFullscreen]);
-
-  // 加载系统提示词（页面打开即加载，默认展开）
-  useEffect(() => {
-    htmlTemplatesApi.getSystemPrompt().then(setSystemPrompt).catch(() => {});
-  }, []);
-
-  // 加载 design.md
-  const campaignId = project?.meta?.campaignId;
   // ★ reportPeriod：报告实际时间范围，优先于 campaign 全局起止日期
+  const campaignId = project?.meta?.campaignId;
   const reportPeriod = project?.meta?.reportPeriod as
     | { startDate?: string; endDate?: string }
     | undefined;
-  useEffect(() => {
-    if (!campaignId) return;
-    setDesignMdLoading(true);
-    htmlTemplatesApi
-      .getDesignGuide(campaignId)
-      .then((data) => {
-        setDesignMd(data.designMd || '');
-        setDesignMdSource(data.businessLineName || '');
-      })
-      .catch(() => {})
-      .finally(() => setDesignMdLoading(false));
-  }, [campaignId]);
 
   // 更新 meta.aiHtmlStatus
   const updateAiHtmlStatus = useCallback(
@@ -215,60 +147,64 @@ export function HtmlStudio() {
   const isRecipe = !!activeVersion?.recipeId;
 
   // ★ handleGenerate — 生成成功后自动保存 + 切换到 chat 阶段
-  const handleGenerate = useCallback(async () => {
-    setGenerating(true);
-    setError('');
-    setGeneratedHtml('');
-    setSaved(false);
-    void updateAiHtmlStatus('generating');
-    try {
-      const html = await htmlTemplatesApi.generate({
-        mode,
-        prompt: mode === 'ai' ? prompt : undefined,
-        campaignId,
-        designMd: mode === 'ai' && designMd.trim() ? designMd.trim() : undefined,
-        reportPeriod,
-      });
-      setGeneratedHtml(html);
+  // 接收来自 <AiGenerateForm onGenerate> 的表单值(mode/prompt/designMd)
+  const handleGenerate = useCallback(
+    async (vals: { mode: 'ai' | 'recipe'; prompt: string; designMd: string }) => {
+      setGenerating(true);
+      setError('');
+      setGeneratedHtml('');
+      setSaved(false);
+      void updateAiHtmlStatus('generating');
+      try {
+        const html = await htmlTemplatesApi.generate({
+          mode: vals.mode,
+          prompt: vals.mode === 'ai' ? vals.prompt : undefined,
+          campaignId,
+          designMd: vals.mode === 'ai' && vals.designMd.trim() ? vals.designMd.trim() : undefined,
+          reportPeriod,
+        });
+        setGeneratedHtml(html);
 
-      // ★ 即生即存：生成成功后自动保存到 project.htmlContent
-      if (id) {
-        try {
-          await htmlTemplatesApi.autoSave(id, html);
-          setSaved(true);
-        } catch {
-          // 自动保存失败不阻塞流程
+        // ★ 即生即存：生成成功后自动保存到 project.htmlContent
+        if (id) {
+          try {
+            await htmlTemplatesApi.autoSave(id, html);
+            setSaved(true);
+          } catch {
+            // 自动保存失败不阻塞流程
+          }
         }
+
+        void updateAiHtmlStatus('generated');
+
+        // ★ 切换到 Chat 阶段
+        setPhase('chat');
+        const genMsg: AgentChatMessage = {
+          role: 'assistant',
+          content:
+            '✨ 报告已生成并自动保存！你可以用自然语言修改，比如：「把标题改成 XXX」「KPI 卡片用品牌色渐变」',
+          action: 'generate',
+          ts: new Date().toISOString(),
+        };
+        setAgentHistory([genMsg]);
+      } catch (e: unknown) {
+        const err = e as {
+          response?: { data?: { error?: { message?: string }; message?: string } };
+          message?: string;
+        };
+        setError(
+          err.response?.data?.error?.message ||
+            err.response?.data?.message ||
+            err.message ||
+            '生成失败，请重试',
+        );
+        void updateAiHtmlStatus('pending');
+      } finally {
+        setGenerating(false);
       }
-
-      void updateAiHtmlStatus('generated');
-
-      // ★ 切换到 Chat 阶段
-      setPhase('chat');
-      const genMsg: AgentChatMessage = {
-        role: 'assistant',
-        content:
-          '✨ 报告已生成并自动保存！你可以用自然语言修改，比如：「把标题改成 XXX」「KPI 卡片用品牌色渐变」',
-        action: 'generate',
-        ts: new Date().toISOString(),
-      };
-      setAgentHistory([genMsg]);
-    } catch (e: unknown) {
-      const err = e as {
-        response?: { data?: { error?: { message?: string }; message?: string } };
-        message?: string;
-      };
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          err.message ||
-          '生成失败，请重试',
-      );
-      void updateAiHtmlStatus('pending');
-    } finally {
-      setGenerating(false);
-    }
-  }, [mode, prompt, campaignId, designMd, reportPeriod, updateAiHtmlStatus, id]);
+    },
+    [campaignId, reportPeriod, updateAiHtmlStatus, id],
+  );
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(generatedHtml);
@@ -386,235 +322,12 @@ export function HtmlStudio() {
           <aside className="flex w-[380px] shrink-0 flex-col overflow-hidden border-r border-border-default bg-surface-primary">
             {phase === 'config' ? (
               <div className="flex flex-1 flex-col overflow-y-auto p-5">
-                {/* Mode tabs */}
-                <div className="mb-4">
-                  <label className="mb-2 block text-xs font-medium text-foreground-muted">生成方式</label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setMode('ai')}
-                      className={`flex-1 rounded-lg px-3 py-2 text-sm transition ${
-                        mode === 'ai'
-                          ? 'bg-accent-primary text-foreground-inverse'
-                          : 'bg-surface-hover text-foreground-secondary'
-                      }`}
-                    >
-                      🤖 AI 生成
-                    </button>
-                    <button
-                      onClick={() => setMode('recipe')}
-                      className={`flex-1 rounded-lg px-3 py-2 text-sm transition ${
-                        mode === 'recipe'
-                          ? 'bg-accent-primary text-foreground-inverse'
-                          : 'bg-surface-hover text-foreground-secondary'
-                      }`}
-                    >
-                      📋 Recipe 模板
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mode-specific config */}
-                {mode === 'ai' ? (
-                  <div className="space-y-4">
-                    {/* 提示词模板 — 下拉选择 */}
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground-muted">
-                        提示词模板
-                      </label>
-                      <select
-                        value={selectedPresetIdx}
-                        onChange={(e) => {
-                          const idx = Number(e.target.value);
-                          setSelectedPresetIdx(idx);
-                          setPrompt(presets[idx].requirement);
-                        }}
-                        className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary"
-                      >
-                        {presets.map((p, idx) => (
-                          <option key={p.label} value={idx}>
-                            {p.label}
-                            {idx === 0 ? '（默认）' : ''}
-                          </option>
-                        ))}
-                      </select>
-                      {presets[selectedPresetIdx]?.description && (
-                        <p className="mt-1 text-[10px] leading-relaxed text-foreground-muted">
-                          {presets[selectedPresetIdx].description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* 提示词编辑器 */}
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <label className="text-xs font-medium text-foreground-muted">提示词</label>
-                        <div className="flex items-center gap-2">
-                          {designMd.trim() && (
-                            <span
-                              className="flex items-center gap-1 rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary"
-                              title="业务线设计规范会自动注入到 AI 生成请求中"
-                            >
-                              📎 {'{{design.md}}'} 已注入
-                            </span>
-                          )}
-                          <button
-                            onClick={() => setPromptFullscreen(true)}
-                            className="text-[10px] text-foreground-muted hover:text-foreground-primary"
-                            title="全屏编辑"
-                          >
-                            ⛶ 全屏
-                          </button>
-                        </div>
-                      </div>
-                      <textarea
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        rows={10}
-                        spellCheck={false}
-                        placeholder="留空 = AI 完全自主决策（推荐）&#10;&#10;或输入差异化指令，如：&#10;• 突出 ROI 和达人排名&#10;• 用深色主题 / 隐藏 Footer&#10;• 增加 Publisher 截图列"
-                        className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] leading-relaxed text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500"
-                      />
-                      {/* design.md 变量展开/编辑 */}
-                      {campaignId && designMd.trim() && (
-                        <button
-                          onClick={() => setDesignMdExpanded(!designMdExpanded)}
-                          className="mt-1.5 flex items-center gap-1 text-[10px] text-foreground-muted hover:text-foreground-primary"
-                        >
-                          {designMdExpanded ? '▾' : '▸'} 查看/编辑 design.md
-                          {designMdSource && (
-                            <span className="rounded bg-surface-hover px-1 py-0.5">{designMdSource}</span>
-                          )}
-                        </button>
-                      )}
-                      {designMdExpanded && designMd.trim() && (
-                        <textarea
-                          value={designMd}
-                          onChange={(e) => setDesignMd(e.target.value)}
-                          rows={8}
-                          spellCheck={false}
-                          className="mt-1.5 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-mono text-[11px] leading-relaxed text-slate-700 outline-none focus:border-blue-500"
-                        />
-                      )}
-                      {/* 系统提示词回显 — header 与提示词 section 保持一致 */}
-                      <div>
-                        <div className="mb-1.5 flex items-center justify-between">
-                          <button
-                            onClick={() => {
-                              if (!systemPrompt) {
-                                htmlTemplatesApi.getSystemPrompt().then(setSystemPrompt);
-                              }
-                              setShowSystemPrompt(!showSystemPrompt);
-                            }}
-                            className="text-xs font-medium text-foreground-muted hover:text-foreground-primary"
-                          >
-                            {showSystemPrompt ? '▾' : '▸'} 系统提示词
-                            <span className="ml-1 rounded bg-surface-hover px-1 py-0.5 text-[10px] text-foreground-muted">SYSTEM_PROMPT</span>
-                          </button>
-                          {showSystemPrompt && systemPrompt && (
-                            <button
-                              onClick={() => setSystemPromptFullscreen(true)}
-                              className="text-[10px] text-foreground-muted hover:text-foreground-primary"
-                              title="全屏查看"
-                            >
-                              ⛶ 全屏
-                            </button>
-                          )}
-                        </div>
-                        {showSystemPrompt && systemPrompt && (
-                          <div className="max-h-[400px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4">
-                            <MarkdownPreview content={systemPrompt} />
-                            {designMd.trim() && (
-                              <>
-                                <hr className="my-4 border-slate-200" />
-                                <div className="mb-2 text-[12px] font-semibold text-slate-800">
-                                  📎 业务线设计规范 (design.md)
-                                </div>
-                                <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[11px] leading-relaxed font-mono text-slate-600 whitespace-pre-wrap">{designMd}</pre>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {!campaignId && (
-                        <p className="mt-1.5 text-[10px] text-amber-500">
-                          ⚠️ 未绑定 Campaign，AI 将生成通用模板（无真实数据）
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-lg bg-surface-hover px-3 py-4 text-center">
-                    <p className="text-xs text-foreground-secondary">
-                      📋 Recipe 模板模式
-                    </p>
-                    <p className="mt-1 text-[11px] text-foreground-muted">
-                      用本地结构化模板渲染报告(快速、稳定、可四层编辑)。
-                    </p>
-                    {!campaignId && (
-                      <p className="mt-1.5 text-[10px] text-amber-500">
-                        ⚠️ 未绑定 Campaign,需填 Campaign ID 才能渲染真实数据
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* design.md section */}
-                {mode === 'ai' && campaignId && (
-                  <div className="mt-4 rounded-lg border border-border-default">
-                    <button
-                      onClick={() => setDesignMdExpanded(!designMdExpanded)}
-                      className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-foreground-secondary hover:bg-surface-hover"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        🎨 业务线设计规范
-                        {designMdSource && (
-                          <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted">
-                            {designMdSource}
-                          </span>
-                        )}
-                        {designMd.trim() && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-green-500" title="已加载" />
-                        )}
-                      </span>
-                      <span className="text-foreground-muted">{designMdExpanded ? '▾' : '▸'}</span>
-                    </button>
-                    {designMdExpanded && (
-                      <div className="border-t border-border-default p-3">
-                        {designMdLoading ? (
-                          <p className="text-center text-[11px] text-foreground-muted">加载中…</p>
-                        ) : (
-                          <>
-                            <p className="mb-1.5 text-[10px] text-foreground-muted">
-                              编辑后点击「生成报告」时自动注入。留空则不附加。
-                            </p>
-                            <textarea
-                              value={designMd}
-                              onChange={(e) => setDesignMd(e.target.value)}
-                              rows={6}
-                              placeholder="业务线 design.md 内容（品牌色、字体、报告结构要求等）…"
-                              className="w-full resize-y rounded border border-border-default bg-surface-secondary px-2 py-1.5 font-mono text-[11px] text-foreground-primary placeholder:text-foreground-muted focus:border-accent-primary focus:outline-none"
-                            />
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Generate button */}
-                <div className="mt-5">
-                  <Button
-                    onClick={handleGenerate}
-                    loading={generating}
-                    disabled={mode === 'recipe' ? !campaignId : generating}
-                    className="w-full"
-                  >
-                    {generating ? '生成中… (~2-3min)' : '✨ 生成报告'}
-                  </Button>
-                  {error && (
-                    <p className="mt-2 rounded-lg bg-red/10 px-3 py-2 text-xs text-red">{error}</p>
-                  )}
-                </div>
+                <AiGenerateForm
+                  campaignId={campaignId}
+                  onGenerate={handleGenerate}
+                  generating={generating}
+                  error={error}
+                />
               </div>
             ) : (
               <AgentChatPanel
@@ -685,7 +398,7 @@ export function HtmlStudio() {
                       </button>
                       <button
                         onClick={() => setPreviewDevice('mobile')}
-                        className={`rounded-r-md px-2.5 py-1 text-xs transition ${
+                        className={`rounded-r-md border-l border-border-default px-2.5 py-1 text-xs transition ${
                           previewDevice === 'mobile'
                             ? 'bg-accent-primary text-foreground-inverse'
                             : 'text-foreground-secondary hover:bg-surface-hover'
@@ -823,58 +536,6 @@ export function HtmlStudio() {
         </>
         )}
       </div>
-
-      {/* ── Fullscreen Modal: Prompt Editor ── */}
-      {promptFullscreen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white">
-          <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-            <span className="text-sm font-medium text-slate-800">提示词编辑器</span>
-            <button
-              onClick={() => setPromptFullscreen(false)}
-              className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
-            >
-              ✕ 关闭 (Esc)
-            </button>
-          </div>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            spellCheck={false}
-            autoFocus
-            className="flex-1 resize-none bg-white p-6 text-[14px] leading-relaxed text-slate-800 focus:outline-none"
-            placeholder="输入提示词…"
-          />
-        </div>
-      )}
-
-      {/* ── Fullscreen Modal: System Prompt ── */}
-      {systemPromptFullscreen && systemPrompt && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white">
-          <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-            <span className="text-sm font-medium text-slate-800">📋 系统提示词 (SYSTEM_PROMPT)</span>
-            <button
-              onClick={() => setSystemPromptFullscreen(false)}
-              className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
-            >
-              ✕ 关闭 (Esc)
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-8 py-6">
-            <div className="mx-auto max-w-4xl">
-              <MarkdownPreview content={systemPrompt} />
-              {designMd.trim() && (
-                <>
-                  <hr className="my-6 border-slate-200" />
-                  <div className="mb-3 text-sm font-semibold text-slate-800">
-                    📎 业务线设计规范 (design.md) {designMdSource && <span className="ml-1 text-slate-400">— {designMdSource}</span>}
-                  </div>
-                  <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[12px] leading-relaxed font-mono text-slate-600 whitespace-pre-wrap">{designMd}</pre>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
