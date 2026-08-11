@@ -156,7 +156,7 @@ Define these reusable classes. Use colors from the design guide, NOT hardcoded v
    - Y-axis ticks: Array.from({length: 6}, (_, i) => Math.round(maxOrders * i / 5))
    - For inline canvas (no Chart.js), use Array.from(...) for tick generation — never write literal arrays like [0, 70, 140, 210, 280, 350].
    - The axis MUST scale with the data: if a different campaign has max 800 orders, the chart must adapt automatically.
-7. CRITICAL — SCRIPT PLACEMENT & SURVIVABILITY: ALL Chart.js initialization code (every `new Chart(...)` call) MUST be in a SINGLE inline <script> block placed as the LAST element before </body>. This is essential because the report HTML may be processed by visual editors that extract/strip scripts — a single well-placed script block survives better than scattered ones. Never put Chart.js init code inside <head> or scattered across multiple script tags.
+7. CRITICAL — SCRIPT PLACEMENT & SURVIVABILITY: ALL Chart.js initialization code (every \`new Chart(...)\` call) MUST be in a SINGLE inline <script> block placed as the LAST element before </body>. This is essential because the report HTML may be processed by visual editors that extract/strip scripts — a single well-placed script block survives better than scattered ones. Never put Chart.js init code inside <head> or scattered across multiple script tags.
 
 ═══ REPORT STRUCTURE (DEFAULT) ═══
 Unless the user's instruction specifies a fixed section layout, generate a report by analyzing the campaign data and choosing the most informative modules:
