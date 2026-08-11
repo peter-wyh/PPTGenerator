@@ -55,4 +55,26 @@ describe('fillActionable', () => {
     expect(body).toMatch(/JSON|json/);
     expect(body).not.toContain('<html');
   });
+
+  it('推理模型 content 空 + reasoning_content 含 JSON → 从推理抠出', async () => {
+    const cards = [{ icon: 'trophy', color: 'green', title: 'Top Performers', items: [{ text: 'x' }], footer: 'f' }];
+    const reasoning = '1. analyze the request...\n2. draft cards:\n' + JSON.stringify(cards);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ finish_reason: 'length', message: { content: '', reasoning_content: reasoning } }] }),
+    } as any));
+    const out = await fillActionable(content);
+    expect(out).toHaveLength(1);
+    expect(out[0].title).toBe('Top Performers');
+  });
+
+  it('推理模型 content 空 + reasoning_content 无 JSON → 重试 1 次仍失败 → 降级 []', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ finish_reason: 'length', message: { content: '', reasoning_content: '1. pure chain-of-thought, no JSON array here' } }] }),
+    } as any));
+    const out = await fillActionable(content);
+    expect(out).toEqual([]);
+    expect(fetch).toHaveBeenCalledTimes(2); // 初试 + 重试 1 次
+  });
 });
