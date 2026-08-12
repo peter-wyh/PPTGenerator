@@ -213,4 +213,13 @@ describe('html-templates.service · createRecipeVersion', () => {
     await htmlTemplateService.createRecipeVersion('prj1', 'u1', {});
     expect(mapCampaignMock).toHaveBeenCalledWith('camp-x', { startDate: '2026-07-01', endDate: '2026-07-31' });
   });
+
+  it('project 不存在 → 404', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(null);
+    await expect(
+      htmlTemplateService.createRecipeVersion('nope', 'u1', {}),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(mapCampaignMock).not.toHaveBeenCalled();
+    expect(prismaMock.htmlVersion.create).not.toHaveBeenCalled();
+  });
 });
