@@ -12,3 +12,8 @@ export function formatNum(v: number): string {
 export function formatPct(v: number): string {
   return `${v}%`;
 }
+
+/** 比率/乘数 → "4.10x"(2 位小数 + x 后缀)。用于 ROAS 等。 */
+export function formatRatio(v: number): string {
+  return `${v.toFixed(2)}x`;
+}
