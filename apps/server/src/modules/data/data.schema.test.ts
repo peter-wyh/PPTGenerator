@@ -176,6 +176,52 @@ describe('data.schema · collaborationRecordDataSchema', () => {
       collaborationRecordDataSchema.parse({ ...validCollab, deliverables: [{ contentType: 'bogus' }] }),
     ).toThrow();
   });
+  it('deliverable.performance.daily 合法 → 通过', () => {
+    const c = {
+      ...validCollab,
+      deliverables: [{
+        contentType: 'post',
+        performance: {
+          daily: [{ date: '2026-08-01', clicks: 100, orders: 5, gmv: 500, newCustomers: 2, spend: 90, impressions: 8000, commission: 50 }],
+        },
+      }],
+    };
+    expect(collaborationRecordDataSchema.parse(c)).toEqual(c);
+  });
+  it('performance.daily 点缺必填 clicks → 报错', () => {
+    const c = {
+      ...validCollab,
+      deliverables: [{
+        contentType: 'post',
+        performance: { daily: [{ date: '2026-08-01', orders: 5, gmv: 500, newCustomers: 2, spend: 90 }] },
+      }],
+    };
+    expect(() => collaborationRecordDataSchema.parse(c)).toThrow();
+  });
+  it('performance.daily 日期非字符串 → 报错', () => {
+    const c = {
+      ...validCollab,
+      deliverables: [{
+        contentType: 'post',
+        performance: { daily: [{ date: 20260801, clicks: 100, orders: 5, gmv: 500, newCustomers: 2, spend: 90 }] },
+      }],
+    };
+    expect(() => collaborationRecordDataSchema.parse(c)).toThrow();
+  });
+  it('deliverable 无 performance(旧记录)→ 仍通过', () => {
+    expect(collaborationRecordDataSchema.parse(validCollab)).toEqual(validCollab);
+  });
+  it('CAMPAIGN 旧记录带 analytics → 仍通过(deprecated 不拒)', () => {
+    const c = {
+      ...validCampaign,
+      analytics: {
+        trend: [{ date: '2026-08-01', revenue: 500, spend: 90, commission: 50, orders: 5, roas: 5.5 }],
+        weeklyTrend: [],
+        insights: [],
+      },
+    };
+    expect(campaignRecordDataSchema.parse(c)).toEqual(c);
+  });
 });
 
 describe('creatorRecordDataSchema rich fields', () => {

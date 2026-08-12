@@ -61,6 +61,10 @@ export const campaignRecordDataSchema = z.object({
   owner: z.string().optional(),
   metrics: z.array(campaignMetricSchema).optional(),
   creatorIds: z.array(z.string()).optional(),
+  /**
+   * @deprecated SP1 后 campaign KPI/trend 统一从 DataRecord(COLLABORATION).deliverables[].performance.daily 派生。
+   * 此字段仅保留读旧记录;recipe/AI 不得读。彻底下线见 SP5。
+   */
   analytics: campaignAnalyticsSchema.optional(),
 });
 
@@ -178,6 +182,23 @@ const wordItemSchema = z.object({
   weight: z.number(),
   sentiment: z.enum(['pos', 'neg', 'neutral']),
 });
+/** CPS 每日明细点(per-contentType)。recipe 按此切片求和派生 KPI/trend。必填为 recipe 必需字段,impressions/commission 可选。 */
+const cpsDailyPointSchema = z.object({
+  date: z.string(),
+  clicks: z.number(),
+  orders: z.number(),
+  gmv: z.number(),
+  newCustomers: z.number(),
+  spend: z.number(),
+  impressions: z.number().optional(),
+  commission: z.number().optional(),
+});
+
+/** deliverable 级 CPS 业绩(per-contentType 每日序列)。 */
+const deliverablePerformanceSchema = z.object({
+  daily: z.array(cpsDailyPointSchema),
+});
+
 const deliverableSchema = z.object({
   contentType: contentTypeSchema,
   /// 作品原始链接（帖子/视频/直播 URL）。
@@ -188,6 +209,8 @@ const deliverableSchema = z.object({
   metrics: z.array(collaborationMetricSchema).optional(),
   audience: audienceInsightSchema.optional(),
   wordcloud: z.array(wordItemSchema).optional(),
+  /// CPS 每日业绩(per-contentType)。SP1 新增;recipe 据此派生 campaign KPI/trend。
+  performance: deliverablePerformanceSchema.optional(),
 });
 
 /** Collaboration 记录数据(达人合作:合作方式=作品类型组合 + 每类四类数据)。 */
