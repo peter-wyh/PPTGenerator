@@ -178,3 +178,51 @@ describe('kindToDb', () => {
     expect(kindToDb('collaboration')).toBe('COLLABORATION');
   });
 });
+
+describe('dataService · scopeCampaignId 同步', () => {
+  const validCollab = {
+    id: 'collab:c1:cr1',
+    campaignId: 'c1',
+    creatorId: 'cr1',
+    deliverables: [{ contentType: 'post' }],
+  };
+
+  it('create collaboration → payload.scopeCampaignId = campaignId', async () => {
+    prismaMock.dataRecord.create.mockImplementation(({ data }) =>
+      Promise.resolve(makeRecord({ ...(data as object) })));
+    await dataService.create('u1', 'collaboration', validCollab);
+    const { data } = prismaMock.dataRecord.create.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect(data.scopeCampaignId).toBe('c1');
+  });
+
+  it('create campaign → payload.scopeCampaignId = null', async () => {
+    prismaMock.dataRecord.create.mockImplementation(({ data }) =>
+      Promise.resolve(makeRecord({ ...(data as object) })));
+    await dataService.create('u1', 'campaign', validCampaign);
+    const { data } = prismaMock.dataRecord.create.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect(data.scopeCampaignId).toBeNull();
+  });
+
+  it('importMany collaboration:新建 → create 带 scope;已存在 → update 同步 scope', async () => {
+    prismaMock.dataRecord.findUnique
+      .mockResolvedValueOnce(null)                                    // item1 new → create
+      .mockResolvedValueOnce(makeRecord({ kind: 'COLLABORATION' }));  // item2 exists → update
+    await dataService.importMany('u1', 'collaboration', [
+      validCollab,
+      { ...validCollab, id: 'collab:c1:cr2' },
+    ]);
+    const createArg = prismaMock.dataRecord.create.mock.calls[0][0] as { data: Record<string, unknown> };
+    const updateArg = prismaMock.dataRecord.update.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect(createArg.data.scopeCampaignId).toBe('c1');
+    expect(updateArg.data.scopeCampaignId).toBe('c1');
+  });
+
+  it('update collaboration → payload 同步 scopeCampaignId', async () => {
+    prismaMock.dataRecord.findUnique.mockResolvedValue(makeRecord({ kind: 'COLLABORATION', data: validCollab }));
+    prismaMock.dataRecord.update.mockImplementation(({ data }) =>
+      Promise.resolve(makeRecord({ ...(data as object) })));
+    await dataService.update('collab:c1:cr1', 'u1', validCollab);
+    const arg = prismaMock.dataRecord.update.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect(arg.data.scopeCampaignId).toBe('c1');
+  });
+});

@@ -14,6 +14,16 @@ export function kindToDb(kind: Kind): 'CAMPAIGN' | 'CREATOR' | 'COLLABORATION' {
 }
 
 /**
+ * 写入 DataRecord 时填 scopeCampaignId:COLLABORATION 取 data.campaignId,其余 kind 返回 null。
+ * 供 recipe 后续按 (kind='COLLABORATION', scopeCampaignId) 索引查询。
+ */
+function scopeFor(kind: Kind, data: Record<string, unknown>): string | null {
+  if (kind !== 'collaboration') return null;
+  const cid = data?.campaignId;
+  return typeof cid === 'string' && cid ? cid : null;
+}
+
+/**
  * Campaign ID 自增:取已有 CAMPAIGN 记录里数字 id 的最大值 +1;无数字 id 时从 1 开始。
  * 非数字遗留 id(如 mock 种子的 'camp-glowlab-q4')被忽略,不影响计数。
  * 注:campaign 的 data.id 同时是 DataRecord 主键,二者同值。
@@ -71,6 +81,7 @@ export const dataService = {
         kind: kindToDb(kind),
         ownerId,
         data: valid as unknown as Prisma.InputJsonValue,
+        scopeCampaignId: scopeFor(kind, valid as Record<string, unknown>),
       },
     });
   },
@@ -97,7 +108,10 @@ export const dataService = {
         if (existing) {
           await prisma.dataRecord.update({
             where: { id: valid.id },
-            data: { data: valid as unknown as Prisma.InputJsonValue },
+            data: {
+              data: valid as unknown as Prisma.InputJsonValue,
+              scopeCampaignId: scopeFor(kind, valid as Record<string, unknown>),
+            },
           });
           updated++;
         } else {
@@ -107,6 +121,7 @@ export const dataService = {
               kind: kindToDb(kind),
               ownerId,
               data: valid as unknown as Prisma.InputJsonValue,
+              scopeCampaignId: scopeFor(kind, valid as Record<string, unknown>),
             },
           });
           created++;
@@ -128,7 +143,10 @@ export const dataService = {
     const valid = kind === 'campaign' ? { ...(parsed as object), id } : parsed;
     return prisma.dataRecord.update({
       where: { id },
-      data: { data: valid as unknown as Prisma.InputJsonValue },
+      data: {
+        data: valid as unknown as Prisma.InputJsonValue,
+        scopeCampaignId: scopeFor(kind, valid as Record<string, unknown>),
+      },
     });
   },
 
