@@ -23,6 +23,16 @@ const campaignRow = {
   }],
 };
 
+// 汇总 fixture 带 spend(metrics.totalRevenue 对齐 cps.gmv,使 ROAS 直观)
+const campaignRowWithSpend = {
+  ...campaignRow,
+  metrics: { ...campaignRow.metrics, totalRevenue: 192000 },
+  campaignCreators: [{
+    ...campaignRow.campaignCreators[0],
+    cpsPerformances: [{ clicks: 124678, impressions: 0, orders: 1016, gmv: 192000, spend: 48000, commission: 0 }],
+  }],
+};
+
 // 带 CPS daily 的 fixture(daily 值为字符串,与 importCpsDaily 落库一致)
 const campaignRowWithDaily = {
   id: 'c1', name: 'Test', platform: 'TikTok',
@@ -159,5 +169,20 @@ describe('mapCampaign', () => {
     const byLabel = Object.fromEntries(c.kpis.map((k) => [k.label, k.value]));
     expect(byLabel['New Customer Acquisition']).toBe('0');
     expect(byLabel['Total Revenues']).toBe('$2,000');
+  });
+
+  it('汇总路径 spend>0 → KPI 含 ROAS(= totalRevenue/totalSpend)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithSpend);
+    const c = await mapCampaign('c1');
+    const roas = c.kpis.find((k) => k.label === 'ROAS');
+    expect(roas).toBeDefined();
+    expect(roas!.value).toBe('4.00x'); // 192000 / 48000 = 4
+  });
+
+  it('汇总路径 spend=0 → 无 ROAS 卡(仍 5 个 KPI)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); // campaignRow 的 cps spend=0
+    const c = await mapCampaign('c1');
+    expect(c.kpis.find((k) => k.label === 'ROAS')).toBeUndefined();
+    expect(c.kpis).toHaveLength(5);
   });
 });

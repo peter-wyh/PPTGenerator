@@ -1,5 +1,5 @@
         {{!-- 2. KPI OVERVIEW --}}
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-{{kpis.length}} gap-4">
             {{#each kpis}}
             <div class="card relative overflow-hidden">
                 <p class="font-semibold text-[13px] text-grey-secondary mb-1">{{label}}</p>

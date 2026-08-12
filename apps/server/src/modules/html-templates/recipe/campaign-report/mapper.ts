@@ -1,7 +1,7 @@
 // mapper.ts
 import { prisma } from '../../../../prisma';
 import { ApiError } from '../../../../utils/ApiError';
-import { formatMoney, formatNum, formatPct } from '../format';
+import { formatMoney, formatNum, formatPct, formatRatio } from '../format';
 import type { CampaignReportContent } from './schema';
 
 type Any = Record<string, any>;
@@ -219,19 +219,26 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
       }
     : {};
 
+  const totalSpend = campaign.campaignCreators.reduce(
+    (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + Number(p.spend), 0),
+    0,
+  );
+  const kpis = [
+    { label: 'Total Revenues', value: formatMoney(totalRevenue) },
+    { label: 'Clicks', value: formatNum(clicks) },
+    { label: 'Orders', value: formatNum(orders) },
+    { label: 'New Customer Acquisition', value: formatNum(newCustomers), highlight: true },
+    { label: 'AOV', value: formatMoney(aov) },
+    ...(totalSpend > 0 ? [{ label: 'ROAS', value: formatRatio(totalRevenue / totalSpend) }] : []),
+  ];
+
   return {
     header: {
       brand: { name: campaign.businessLine?.name ?? campaign.businessLineCode ?? 'Brand', logoText: (campaign.businessLine?.name ?? campaign.businessLineCode ?? 'brand').toLowerCase() },
       merchant: { name: campaign.advertiser?.name ?? campaign.advertiserName ?? 'Merchant', logoText: (campaign.advertiser?.name ?? campaign.advertiserName ?? 'M').slice(0, 2).toUpperCase() },
       period: { start: campaign.startDate, end: campaign.endDate, display: `${shortDate(campaign.startDate)} - ${shortDate(campaign.endDate)}, ${campaign.startDate.slice(0, 4)}` },
     },
-    kpis: [
-      { label: 'Total Revenues', value: formatMoney(totalRevenue) },
-      { label: 'Clicks', value: formatNum(clicks) },
-      { label: 'Orders', value: formatNum(orders) },
-      { label: 'New Customer Acquisition', value: formatNum(newCustomers), highlight: true },
-      { label: 'AOV', value: formatMoney(aov) },
-    ],
+    kpis,
     trend,
     publishers,
     insights: Object.keys(insights).length ? insights : undefined,
