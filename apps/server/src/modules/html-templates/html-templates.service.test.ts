@@ -223,3 +223,42 @@ describe('html-templates.service · createRecipeVersion', () => {
     expect(prismaMock.htmlVersion.create).not.toHaveBeenCalled();
   });
 });
+
+describe('html-templates.service · recomputeRecipe', () => {
+  it('版本不存在 → 404', async () => {
+    prismaMock.htmlVersion.findUnique.mockResolvedValue(null);
+    await expect(
+      htmlTemplateService.recomputeRecipe('v_x', { startDate: '2026-08-01', endDate: '2026-08-11' }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(mapCampaignMock).not.toHaveBeenCalled();
+  });
+
+  it('非 recipe 版本(recipeId 为 null) → 400', async () => {
+    prismaMock.htmlVersion.findUnique.mockResolvedValue({ id: 'v1', projectId: 'prj1', recipeId: null });
+    await expect(
+      htmlTemplateService.recomputeRecipe('v1', { startDate: '2026-08-01', endDate: '2026-08-11' }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(mapCampaignMock).not.toHaveBeenCalled();
+  });
+
+  it('recipe 版本 → 重跑 mapCampaign 覆盖 reportContent/html + 同步 meta.reportPeriod', async () => {
+    prismaMock.htmlVersion.findUnique.mockResolvedValue({ id: 'v1', projectId: 'prj1', recipeId: 'campaign-report' });
+    prismaMock.project.findUnique.mockResolvedValue({ meta: { campaignId: 'camp-x' } });
+    mapCampaignMock.mockResolvedValue({ header: { period: { start: '2026-08-01', end: '2026-08-11' } } });
+    prismaMock.htmlVersion.update.mockResolvedValue({});
+    prismaMock.project.update.mockResolvedValue({});
+
+    const res = await htmlTemplateService.recomputeRecipe('v1', { startDate: '2026-08-01', endDate: '2026-08-11' });
+
+    expect(res).toEqual({ versionId: 'v1' });
+    expect(mapCampaignMock).toHaveBeenCalledWith('camp-x', { startDate: '2026-08-01', endDate: '2026-08-11' });
+    expect(prismaMock.htmlVersion.update).toHaveBeenCalledWith({
+      where: { id: 'v1' },
+      data: { reportContent: expect.any(Object), html: expect.any(String) },
+    });
+    expect(prismaMock.project.update).toHaveBeenCalledWith({
+      where: { id: 'prj1' },
+      data: { meta: expect.objectContaining({ campaignId: 'camp-x', reportPeriod: { startDate: '2026-08-01', endDate: '2026-08-11' } }) },
+    });
+  });
+});

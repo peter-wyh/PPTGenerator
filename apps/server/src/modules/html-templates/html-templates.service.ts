@@ -511,4 +511,35 @@ export const htmlTemplateService = {
     await prisma.project.update({ where: { id: projectId }, data: { meta: newMeta as any } });
     return { versionId: version.id };
   },
+
+  /**
+   * 按新 reportPeriod 重算 recipe 版本:重跑 mapCampaign 覆盖 reportContent + html,
+   * 同步 Project.meta.reportPeriod。仅 recipe 版本可用。
+   */
+  async recomputeRecipe(
+    versionId: string,
+    reportPeriod: { startDate?: string; endDate?: string },
+  ): Promise<{ versionId: string }> {
+    const version = await prisma.htmlVersion.findUnique({ where: { id: versionId } });
+    if (!version) throw ApiError.notFound('HTML 版本不存在');
+    if (!version.recipeId) throw ApiError.badRequest('该版本不是 recipe 报告');
+
+    const project = await prisma.project.findUnique({
+      where: { id: version.projectId },
+      select: { meta: true },
+    });
+    const meta = (project?.meta as Record<string, unknown> | null) ?? {};
+    const campaignId = (meta.campaignId as string | undefined) ?? '';
+    if (!campaignId) throw ApiError.badRequest('报告未绑定 Campaign,无法重算');
+
+    const reportContent = await mapCampaign(campaignId, reportPeriod);
+    const html = await getRecipe(version.recipeId).render({ campaignId, reportContent });
+
+    await prisma.htmlVersion.update({ where: { id: versionId }, data: { reportContent, html } });
+    await prisma.project.update({
+      where: { id: version.projectId },
+      data: { meta: { ...meta, reportPeriod } as any },
+    });
+    return { versionId };
+  },
 };
