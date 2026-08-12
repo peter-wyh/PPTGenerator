@@ -1,10 +1,24 @@
 import type { Request, Response } from 'express';
 import { htmlTemplateService } from './html-templates.service';
-import { aiGenerateService } from './ai-generate.service';
+import { aiGenerateService, type StreamChunk } from './ai-generate.service';
 import { SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
 import type { TemplateStatus } from '@prisma/client';
+
+/** SSE helper: write one event to the response stream */
+function sseWrite(res: Response, event: StreamChunk) {
+  res.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+/** SSE helper: set up SSE response headers */
+function initSSE(res: Response) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // nginx: disable buffering
+  res.flushHeaders?.();
+}
 
 export const htmlTemplateController = {
   list: asyncHandler(async (req: Request, res: Response) => {
@@ -149,6 +163,62 @@ export const htmlTemplateController = {
     res.json({ html });
   }),
 
+  /** SSE 流式生成 HTML 报告 */
+  generateStream: async (req: Request, res: Response) => {
+    const { prompt, campaignId, designMd, reportPeriod } = req.body;
+    initSSE(res);
+
+    // AbortController: 前端断开连接时取消上游 fetch
+    const abortCtrl = new AbortController();
+    req.on('close', () => abortCtrl.abort());
+
+    try {
+      for await (const chunk of aiGenerateService.generateHtmlStream({
+        campaignId,
+        prompt: prompt || 'Generate a comprehensive campaign performance report',
+        designMd,
+        reportPeriod,
+        signal: abortCtrl.signal,
+      })) {
+        sseWrite(res, chunk);
+      }
+    } catch (err: any) {
+      const isAbort = err?.name === 'AbortError' || /abort|terminated/i.test(String(err?.message || ''));
+      if (!isAbort) {
+        sseWrite(res, { type: 'error', message: err?.message || '流式生成失败' });
+      }
+    } finally {
+      res.end();
+    }
+  },
+
+  /** SSE 流式 Agent 增量编辑 */
+  agentEditStream: async (req: Request, res: Response) => {
+    const { currentHtml, instruction, images } = req.body;
+    initSSE(res);
+
+    const abortCtrl = new AbortController();
+    req.on('close', () => abortCtrl.abort());
+
+    try {
+      for await (const chunk of aiGenerateService.editHtmlStream({
+        currentHtml,
+        instruction,
+        images,
+        signal: abortCtrl.signal,
+      })) {
+        sseWrite(res, chunk);
+      }
+    } catch (err: any) {
+      const isAbort = err?.name === 'AbortError' || /abort|terminated/i.test(String(err?.message || ''));
+      if (!isAbort) {
+        sseWrite(res, { type: 'error', message: err?.message || '流式编辑失败' });
+      }
+    } finally {
+      res.end();
+    }
+  },
+
   /** Agent 模式自动保存（直接覆盖 htmlContent，无版本管理） */
   autoSave: asyncHandler(async (req: Request, res: Response) => {
     const { projectId } = req.params;
@@ -167,6 +237,14 @@ export const htmlTemplateController = {
       reportPeriod,
     });
     res.status(201).json(result);
+  }),
+
+  /** 按新时间段重算 recipe 版本(G2) */
+  recompute: asyncHandler(async (req: Request, res: Response) => {
+    const { versionId } = req.params;
+    const { reportPeriod } = req.body;
+    const result = await htmlTemplateService.recomputeRecipe(versionId, reportPeriod);
+    res.json(result);
   }),
 
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */

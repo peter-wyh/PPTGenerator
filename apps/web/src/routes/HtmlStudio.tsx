@@ -6,6 +6,9 @@
  *
  * 左侧：phase=config → 配置面板；phase=chat → AgentChatPanel
  * 右侧：预览区（iframe）+ 可选源码面板
+ *
+ * ★ SSE 流式：思考过程实时展示 + HTML 流式预览 + 取消按钮
+ * ★ 三栏可拉伸布局：左对话 / 中画布 / 右配置面板
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -21,6 +24,17 @@ import { AgentChatPanel } from './AgentChatPanel';
 import { AiGenerateForm } from '@/editor/components/AiGenerateForm';
 import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
 import { VisualEditor } from '@/components/VisualEditor';
+import { ThinkingPanel } from '@/components/ThinkingPanel';
+import { ResizablePanels } from '@/components/ResizablePanels';
+
+// 渐进式阶段提示
+const GEN_STAGES = [
+  '📊 正在分析 Campaign 数据…',
+  '🧠 正在推理报告结构和设计方案…',
+  '🎨 正在生成 HTML 布局和样式…',
+  '📈 正在渲染图表和数据可视化…',
+  '✨ 正在优化细节和收尾…',
+];
 
 export function HtmlStudio() {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +58,15 @@ export function HtmlStudio() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
+  // ★ SSE 流式状态
+  const [reasoning, setReasoning] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [truncated, setTruncated] = useState(false);
+  const [genStage, setGenStage] = useState(0);
+  const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const lastGenParams = useRef<{ mode: 'ai' | 'recipe'; prompt: string; designMd: string } | null>(null);
+
   // 左侧面板折叠（沉浸模式）
   const [panelCollapsed, setPanelCollapsed] = useState(false);
 
@@ -53,8 +76,7 @@ export function HtmlStudio() {
   // ★ 可视化编辑模式：preview（只读 iframe，默认）vs visual（GrapesJS 编辑器）
   const [viewMode, setViewMode] = useState<'preview' | 'visual'>('preview');
 
-  // ★ Recipe 模式:当前 HtmlVersion 完整记录(含 recipeId/reportContent/tokenOverrides/manifestOverrides)
-  // 由 listHtmlVersions → getHtmlVersion(activeId) 加载,recipeId 非空时切到 RecipeEditor。
+  // ★ Recipe 模式:当前 HtmlVersion 完整记录
   const [activeVersion, setActiveVersion] = useState<HtmlVersionDetail | null>(null);
 
   // 加载项目信息
@@ -65,7 +87,6 @@ export function HtmlStudio() {
       .get(id)
       .then((p) => {
         setProject(p);
-        // ★ 检测是否有 htmlContent → 直接进入 chat 阶段
         projectsApi
           .getHtml(id)
           .then((data) => {
@@ -73,7 +94,6 @@ export function HtmlStudio() {
               setGeneratedHtml(data.html);
               setSaved(true);
               setPhase('chat');
-              // 从 meta 加载历史对话
               const history = (p.meta as Record<string, unknown>)?.agentHistory as
                 | AgentChatMessage[]
                 | undefined;
@@ -89,7 +109,6 @@ export function HtmlStudio() {
                   },
                 ]);
               }
-              // ★ Recipe 模式检测:取激活版本完整记录(含 recipeId)
               htmlTemplatesApi
                 .listHtmlVersions(id!)
                 .then((vs) => {
@@ -109,13 +128,11 @@ export function HtmlStudio() {
       .finally(() => setLoadingProject(false));
   }, [id]);
 
-  // ★ reportPeriod：报告实际时间范围，优先于 campaign 全局起止日期
   const campaignId = project?.meta?.campaignId;
   const reportPeriod = project?.meta?.reportPeriod as
     | { startDate?: string; endDate?: string }
     | undefined;
 
-  // 更新 meta.aiHtmlStatus
   const updateAiHtmlStatus = useCallback(
     async (status: 'generated' | 'generating' | 'pending') => {
       if (!id || !project) return;
@@ -124,13 +141,12 @@ export function HtmlStudio() {
         await projectsApi.update(id, { meta: mergedMeta });
         setProject((prev) => (prev ? { ...prev, meta: mergedMeta } : prev));
       } catch {
-        // 静默失败 — 状态更新不影响核心流程
+        // 静默失败
       }
     },
     [id, project],
   );
 
-  // ★ RecipeEditor 保存后刷新激活版本(后端已重渲染并写回 html)
   const reloadVersion = useCallback(async () => {
     if (!id || !activeVersion) return;
     try {
@@ -143,68 +159,161 @@ export function HtmlStudio() {
     }
   }, [id, activeVersion]);
 
-  // ★ Recipe 模式:有激活版本且 recipeId 非空
   const isRecipe = !!activeVersion?.recipeId;
 
-  // ★ handleGenerate — 生成成功后自动保存 + 切换到 chat 阶段
-  // 接收来自 <AiGenerateForm onGenerate> 的表单值(mode/prompt/designMd)
+  // ★ 启动/停止渐进式阶段轮播
+  const startStageTimer = useCallback(() => {
+    setGenStage(0);
+    if (stageTimerRef.current) clearInterval(stageTimerRef.current);
+    stageTimerRef.current = setInterval(() => {
+      setGenStage((prev) => (prev + 1) % GEN_STAGES.length);
+    }, 8000); // 每8秒轮换
+  }, []);
+
+  const stopStageTimer = useCallback(() => {
+    if (stageTimerRef.current) {
+      clearInterval(stageTimerRef.current);
+      stageTimerRef.current = null;
+    }
+  }, []);
+
+  // ★ 取消生成
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setGenerating(false);
+    setIsThinking(false);
+    stopStageTimer();
+  }, [stopStageTimer]);
+
+  // ★ handleGenerate — SSE 流式生成
   const handleGenerate = useCallback(
     async (vals: { mode: 'ai' | 'recipe'; prompt: string; designMd: string }) => {
+      lastGenParams.current = vals;
       setGenerating(true);
       setError('');
       setGeneratedHtml('');
       setSaved(false);
+      setReasoning('');
+      setIsThinking(false);
+      setTruncated(false);
       void updateAiHtmlStatus('generating');
-      try {
-        const html = await htmlTemplatesApi.generate({
-          mode: vals.mode,
-          prompt: vals.mode === 'ai' ? vals.prompt : undefined,
-          campaignId,
-          designMd: vals.mode === 'ai' && vals.designMd.trim() ? vals.designMd.trim() : undefined,
-          reportPeriod,
-        });
-        setGeneratedHtml(html);
 
-        // ★ 即生即存：生成成功后自动保存到 project.htmlContent
-        if (id) {
-          try {
-            await htmlTemplatesApi.autoSave(id, html);
-            setSaved(true);
-          } catch {
-            // 自动保存失败不阻塞流程
+      // 启动阶段轮播
+      startStageTimer();
+
+      // AI 模式使用流式；recipe 模式走老接口
+      if (vals.mode === 'recipe') {
+        try {
+          const html = await htmlTemplatesApi.generate({
+            mode: 'recipe',
+            campaignId,
+            reportPeriod,
+          });
+          setGeneratedHtml(html);
+          if (id) {
+            try {
+              await htmlTemplatesApi.autoSave(id, html);
+              setSaved(true);
+            } catch {}
+          }
+          void updateAiHtmlStatus('generated');
+          setPhase('chat');
+          setAgentHistory([
+            {
+              role: 'assistant',
+              content: '✨ 报告已生成并自动保存！你可以用自然语言修改。',
+              action: 'generate',
+              ts: new Date().toISOString(),
+            },
+          ]);
+        } catch (e: unknown) {
+          const err = e as { message?: string };
+          setError(err.message || '生成失败，请重试');
+          void updateAiHtmlStatus('pending');
+        } finally {
+          setGenerating(false);
+          stopStageTimer();
+        }
+        return;
+      }
+
+      // AI 模式 — SSE 流式
+      const abortCtrl = new AbortController();
+      abortRef.current = abortCtrl;
+      let streamingHtml = '';
+
+      try {
+        await htmlTemplatesApi.generateStream(
+          {
+            prompt: vals.prompt,
+            campaignId,
+            designMd: vals.designMd.trim() || undefined,
+            reportPeriod,
+          },
+          (chunk) => {
+            if (chunk.type === 'reasoning') {
+              setIsThinking(true);
+              setReasoning((prev) => prev + chunk.text);
+            } else if (chunk.type === 'content') {
+              setIsThinking(false);
+              streamingHtml += chunk.text;
+              setGeneratedHtml(streamingHtml);
+            } else if (chunk.type === 'done') {
+              setGeneratedHtml(chunk.html);
+              setTruncated(chunk.truncated);
+              streamingHtml = chunk.html;
+            } else if (chunk.type === 'error') {
+              setError(chunk.message);
+            }
+          },
+          abortCtrl.signal,
+        );
+
+        // 成功
+        if (streamingHtml && streamingHtml.startsWith('<')) {
+          void updateAiHtmlStatus('generated');
+          setPhase('chat');
+          const genMsg: AgentChatMessage = {
+            role: 'assistant',
+            content: truncated
+              ? '⚠️ 报告已生成（部分内容被截断）。建议简化需求或重试。你也可以用自然语言继续编辑。'
+              : '✨ 报告已生成并自动保存！你可以用自然语言修改，比如：「把标题改成 XXX」「KPI 卡片用品牌色渐变」',
+            action: 'generate',
+            ts: new Date().toISOString(),
+          };
+          setAgentHistory([genMsg]);
+
+          // 自动保存
+          if (id) {
+            try {
+              await htmlTemplatesApi.autoSave(id, streamingHtml);
+              setSaved(true);
+            } catch {}
           }
         }
-
-        void updateAiHtmlStatus('generated');
-
-        // ★ 切换到 Chat 阶段
-        setPhase('chat');
-        const genMsg: AgentChatMessage = {
-          role: 'assistant',
-          content:
-            '✨ 报告已生成并自动保存！你可以用自然语言修改，比如：「把标题改成 XXX」「KPI 卡片用品牌色渐变」',
-          action: 'generate',
-          ts: new Date().toISOString(),
-        };
-        setAgentHistory([genMsg]);
       } catch (e: unknown) {
-        const err = e as {
-          response?: { data?: { error?: { message?: string }; message?: string } };
-          message?: string;
-        };
-        setError(
-          err.response?.data?.error?.message ||
-            err.response?.data?.message ||
-            err.message ||
-            '生成失败，请重试',
-        );
+        const err = e as { message?: string; name?: string };
+        if (err.name !== 'AbortError') {
+          setError(err.message || '生成失败，请重试');
+        }
         void updateAiHtmlStatus('pending');
       } finally {
         setGenerating(false);
+        setIsThinking(false);
+        stopStageTimer();
+        abortRef.current = null;
       }
     },
-    [campaignId, reportPeriod, updateAiHtmlStatus, id],
+    [campaignId, reportPeriod, updateAiHtmlStatus, id, startStageTimer, stopStageTimer, truncated],
   );
+
+  // ★ 重试上一次生成
+  const handleRetry = useCallback(() => {
+    if (lastGenParams.current) {
+      void handleGenerate(lastGenParams.current);
+    }
+  }, [handleGenerate]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(generatedHtml);
@@ -222,8 +331,13 @@ export function HtmlStudio() {
     URL.revokeObjectURL(url);
   }, [generatedHtml, project]);
 
-  const campaignName = project?.meta?.campaignInfo?.campaignName;
-  void campaignName;
+  // 清理
+  useEffect(() => {
+    return () => {
+      stopStageTimer();
+      abortRef.current?.abort();
+    };
+  }, [stopStageTimer]);
 
   if (loadingProject) {
     return (
@@ -244,6 +358,272 @@ export function HtmlStudio() {
       </div>
     );
   }
+
+  // ── 左栏内容 ──
+  const leftPanel = (
+    <aside className="flex h-full flex-col overflow-hidden bg-surface-primary">
+      {/* ★ 思考过程面板（生成时显示在顶部） */}
+      {(isThinking || reasoning) && (
+        <ThinkingPanel reasoning={reasoning} isThinking={isThinking} />
+      )}
+      {phase === 'config' ? (
+        <div className="flex flex-1 flex-col overflow-y-auto p-5">
+          {/* ★ 错误 + 重试 */}
+          {error && (
+            <div className="mb-3 rounded-lg bg-red/10 px-3 py-2 text-xs text-red">
+              <p>{error}</p>
+              <button
+                onClick={handleRetry}
+                className="mt-1.5 rounded bg-red/20 px-2 py-1 text-[11px] font-medium text-red hover:bg-red/30"
+              >
+                🔄 重试
+              </button>
+            </div>
+          )}
+          {/* ★ 截断警告 */}
+          {truncated && !generating && (
+            <div className="mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+              ⚠️ AI 输出被截断（token 上限），报告可能不完整。建议简化需求后重试。
+            </div>
+          )}
+          <AiGenerateForm
+            campaignId={campaignId}
+            onGenerate={handleGenerate}
+            generating={generating}
+            error=""
+          />
+          {/* ★ 取消按钮 */}
+          {generating && (
+            <Button
+              variant="ghost"
+              onClick={handleCancel}
+              className="mt-3 w-full border border-red/30 text-red hover:bg-red/5"
+            >
+              ⏹ 取消生成
+            </Button>
+          )}
+        </div>
+      ) : (
+        <AgentChatPanel
+          projectId={id || ''}
+          currentHtml={generatedHtml}
+          agentHistory={agentHistory}
+          onHtmlChange={(html) => setGeneratedHtml(html)}
+          onHistoryChange={setAgentHistory}
+        />
+      )}
+    </aside>
+  );
+
+  // ── 中栏内容（画布/预览） ──
+  const centerPanel = (
+    <main className="flex h-full flex-col overflow-hidden bg-surface-subtle">
+      {generatedHtml ? (
+        <>
+          {/* Toolbar */}
+          <div className="flex h-10 shrink-0 items-center justify-between border-b border-border-default bg-surface-primary px-4">
+            <div className="flex items-center gap-2">
+              {phase === 'chat' && (
+                <div className="flex rounded-md border border-border-default">
+                  <button
+                    onClick={() => { setViewMode('visual'); setShowSource(false); }}
+                    className={`rounded-l-md px-2.5 py-1 text-xs transition ${
+                      viewMode === 'visual' && !showSource
+                        ? 'bg-accent-primary text-foreground-inverse'
+                        : 'text-foreground-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    ✏️ 编辑
+                  </button>
+                  <button
+                    onClick={() => { setViewMode('preview'); setShowSource(false); }}
+                    className={`border-l border-border-default px-2.5 py-1 text-xs transition ${
+                      viewMode === 'preview' && !showSource
+                        ? 'bg-accent-primary text-foreground-inverse'
+                        : 'text-foreground-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    👁️ 预览
+                  </button>
+                  <button
+                    onClick={() => setShowSource(!showSource)}
+                    className={`rounded-r-md border-l border-border-default px-2.5 py-1 text-xs transition ${
+                      showSource
+                        ? 'bg-accent-primary text-foreground-inverse'
+                        : 'text-foreground-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    {'</>'} 源码
+                  </button>
+                </div>
+              )}
+              {phase === 'config' && (
+                <div className="flex rounded-md border border-border-default">
+                  <button
+                    onClick={() => setPreviewDevice('desktop')}
+                    className={`rounded-l-md px-2.5 py-1 text-xs transition ${
+                      previewDevice === 'desktop'
+                        ? 'bg-accent-primary text-foreground-inverse'
+                        : 'text-foreground-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    🖥️ 桌面
+                  </button>
+                  <button
+                    onClick={() => setPreviewDevice('mobile')}
+                    className={`rounded-r-md border-l border-border-default px-2.5 py-1 text-xs transition ${
+                      previewDevice === 'mobile'
+                        ? 'bg-accent-primary text-foreground-inverse'
+                        : 'text-foreground-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    📱 移动
+                  </button>
+                </div>
+              )}
+              {/* ★ 流式生成时显示阶段提示 */}
+              {generating && (
+                <span className="text-[11px] text-accent-primary">
+                  {GEN_STAGES[genStage]}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={handleCopy} className="px-2 py-1 text-xs">
+                {copied ? '✓ 已复制' : '📋 复制源码'}
+              </Button>
+              <Button variant="ghost" onClick={handleDownload} className="px-2 py-1 text-xs">
+                💾 下载
+              </Button>
+            </div>
+          </div>
+
+          {/* 源码面板 */}
+          {showSource && phase === 'chat' ? (
+            <div className="flex flex-1 overflow-hidden">
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex h-8 shrink-0 items-center justify-between border-b border-border-default px-3 bg-surface-primary">
+                  <span className="text-xs font-medium text-foreground-secondary">HTML 源码（手动编辑 → 保存生效）</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        if (id && generatedHtml) {
+                          htmlTemplatesApi
+                            .autoSave(id, generatedHtml, agentHistory)
+                            .then(() => {
+                              setSaved(true);
+                              const manualMsg: AgentChatMessage = {
+                                role: 'assistant',
+                                content: '📝 源码已手动编辑并保存',
+                                action: 'manual',
+                                ts: new Date().toISOString(),
+                              };
+                              setAgentHistory([...agentHistory, manualMsg]);
+                            })
+                            .catch(() => {});
+                        }
+                      }}
+                      className="rounded bg-accent-primary px-2 py-1 text-[11px] text-foreground-inverse hover:bg-accent-secondary"
+                    >
+                      💾 保存
+                    </button>
+                    <button
+                      onClick={() => setShowSource(false)}
+                      className="rounded px-1.5 py-1 text-xs text-foreground-muted hover:bg-surface-hover"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  value={generatedHtml}
+                  onChange={(e) => setGeneratedHtml(e.target.value)}
+                  className="flex-1 resize-none bg-surface-secondary p-3 font-mono text-[11px] leading-relaxed text-foreground-primary focus:outline-none"
+                  spellCheck={false}
+                />
+              </div>
+            </div>
+          ) : phase === 'chat' && viewMode === 'visual' ? (
+            <VisualEditor
+              key="visual-editor"
+              html={generatedHtml}
+              onHtmlChange={(newHtml) => {
+                setGeneratedHtml(newHtml);
+                if (id) {
+                  htmlTemplatesApi
+                    .autoSave(id, newHtml, agentHistory)
+                    .then(() => setSaved(true))
+                    .catch(() => {});
+                }
+              }}
+            />
+          ) : (
+          /* 普通预览（iframe）— 流式生成时也实时显示 */
+          <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 items-start justify-center overflow-auto p-4">
+              <iframe
+                ref={iframeRef}
+                srcDoc={generatedHtml}
+                title="HTML Report Preview"
+                className={`h-full bg-white shadow-lg transition-all ${
+                  previewDevice === 'desktop' ? 'w-full' : 'w-[375px]'
+                }`}
+                style={{
+                  borderRadius: 8,
+                  border: '1px solid var(--border-default, #e5e7eb)',
+                  height: previewDevice === 'mobile' ? '812px' : '100%',
+                }}
+                sandbox="allow-same-origin allow-scripts"
+              />
+            </div>
+          </div>
+          )}
+        </>
+      ) : (
+        <div className="flex flex-1 items-center justify-center">
+          {generating ? (
+            <div className="text-center">
+              {/* ★ 思考过程也在中间区域显示（如果没有左侧面板时） */}
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-accent-primary/20 border-t-accent-primary" />
+              <p className="text-sm font-medium text-foreground-secondary">{GEN_STAGES[genStage]}</p>
+              <p className="mt-1 text-xs text-foreground-muted">
+                {isThinking ? 'AI 正在思考…' : '正在生成报告…'}
+              </p>
+              <button
+                onClick={handleCancel}
+                className="mt-4 rounded-md border border-red/30 px-3 py-1.5 text-xs text-red hover:bg-red/5"
+              >
+                ⏹ 取消生成
+              </button>
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="mb-3 text-6xl opacity-20">📄</div>
+              <p className="text-sm text-foreground-muted">
+                配置左侧参数，点击「✨ 生成报告」开始
+              </p>
+              {!campaignId && (
+                <p className="mt-2 text-xs text-amber-500">
+                  ⚠️ 此报告未绑定 Campaign，AI 将生成通用模板
+                </p>
+              )}
+              {error && (
+                <div className="mt-3">
+                  <p className="text-xs text-red">{error}</p>
+                  <button
+                    onClick={handleRetry}
+                    className="mt-1.5 rounded bg-red/20 px-2 py-1 text-[11px] font-medium text-red hover:bg-red/30"
+                  >
+                    🔄 重试
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </main>
+  );
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-surface-subtle">
@@ -267,6 +647,12 @@ export function HtmlStudio() {
               Chat 模式
             </span>
           )}
+          {generating && (
+            <span className="flex items-center gap-1 text-[10px] text-accent-primary">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-primary" />
+              {isThinking ? '思考中' : '生成中'}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {saved && !generating && (
@@ -282,6 +668,8 @@ export function HtmlStudio() {
                   setGeneratedHtml('');
                   setSaved(false);
                   setShowSource(false);
+                  setReasoning('');
+                  setTruncated(false);
                 }
               }}
               className="rounded-md px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
@@ -300,242 +688,31 @@ export function HtmlStudio() {
       </header>
 
       {/* ────── Main Area ────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* ── Recipe 模式:四层编辑器替代 AI/Agent UI ── */}
-        {isRecipe && activeVersion ? (
-          <RecipeEditor
-            versionId={activeVersion.id}
-            recipeId={activeVersion.recipeId!}
-            campaignId={campaignId}
-            reportPeriod={reportPeriod}
-            reportContent={activeVersion.reportContent ?? {}}
-            tokenOverrides={(activeVersion.tokenOverrides as Record<string, unknown>) ?? {}}
-            manifestOverrides={
-              (activeVersion.manifestOverrides as { order?: string[]; hidden?: string[] }) ?? {}
-            }
-            onSaved={reloadVersion}
-          />
-        ) : (
-        <>
-        {/* ── Left Panel: Config (phase=config) or Chat (phase=chat) ── */}
-        {!panelCollapsed && (
-          <aside className="flex w-[380px] shrink-0 flex-col overflow-hidden border-r border-border-default bg-surface-primary">
-            {phase === 'config' ? (
-              <div className="flex flex-1 flex-col overflow-y-auto p-5">
-                <AiGenerateForm
-                  campaignId={campaignId}
-                  onGenerate={handleGenerate}
-                  generating={generating}
-                  error={error}
-                />
-              </div>
-            ) : (
-              <AgentChatPanel
-                projectId={id || ''}
-                currentHtml={generatedHtml}
-                agentHistory={agentHistory}
-                onHtmlChange={(html) => setGeneratedHtml(html)}
-                onHistoryChange={setAgentHistory}
-              />
-            )}
-          </aside>
-        )}
-
-        {/* ── Right: Preview + Source Panel ── */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface-subtle">
-          {generatedHtml ? (
-            <>
-              {/* Toolbar */}
-              <div className="flex h-10 shrink-0 items-center justify-between border-b border-border-default bg-surface-primary px-4">
-                <div className="flex items-center gap-2">
-                  {/* 视图模式切换：visual / preview / source */}
-                  {phase === 'chat' && (
-                    <div className="flex rounded-md border border-border-default">
-                      <button
-                        onClick={() => { setViewMode('visual'); setShowSource(false); }}
-                        className={`rounded-l-md px-2.5 py-1 text-xs transition ${
-                          viewMode === 'visual' && !showSource
-                            ? 'bg-accent-primary text-foreground-inverse'
-                            : 'text-foreground-secondary hover:bg-surface-hover'
-                        }`}
-                      >
-                        ✏️ 编辑
-                      </button>
-                      <button
-                        onClick={() => { setViewMode('preview'); setShowSource(false); }}
-                        className={`border-l border-border-default px-2.5 py-1 text-xs transition ${
-                          viewMode === 'preview' && !showSource
-                            ? 'bg-accent-primary text-foreground-inverse'
-                            : 'text-foreground-secondary hover:bg-surface-hover'
-                        }`}
-                      >
-                        👁️ 预览
-                      </button>
-                      <button
-                        onClick={() => setShowSource(!showSource)}
-                        className={`rounded-r-md border-l border-border-default px-2.5 py-1 text-xs transition ${
-                          showSource
-                            ? 'bg-accent-primary text-foreground-inverse'
-                            : 'text-foreground-secondary hover:bg-surface-hover'
-                        }`}
-                      >
-                        {'</>'} 源码
-                      </button>
-                    </div>
-                  )}
-                  {/* 配置阶段只显示设备切换 */}
-                  {phase === 'config' && (
-                    <div className="flex rounded-md border border-border-default">
-                      <button
-                        onClick={() => setPreviewDevice('desktop')}
-                        className={`rounded-l-md px-2.5 py-1 text-xs transition ${
-                          previewDevice === 'desktop'
-                            ? 'bg-accent-primary text-foreground-inverse'
-                            : 'text-foreground-secondary hover:bg-surface-hover'
-                        }`}
-                      >
-                        🖥️ 桌面
-                      </button>
-                      <button
-                        onClick={() => setPreviewDevice('mobile')}
-                        className={`rounded-r-md border-l border-border-default px-2.5 py-1 text-xs transition ${
-                          previewDevice === 'mobile'
-                            ? 'bg-accent-primary text-foreground-inverse'
-                            : 'text-foreground-secondary hover:bg-surface-hover'
-                        }`}
-                      >
-                        📱 移动
-                      </button>
-                    </div>
-                  )}
-                  {phase === 'config' && (
-                    <span className="text-[11px] text-foreground-muted">
-                      {previewDevice === 'desktop' ? '1280px' : '375px'} 预览
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" onClick={handleCopy} className="px-2 py-1 text-xs">
-                    {copied ? '✓ 已复制' : '📋 复制源码'}
-                  </Button>
-                  <Button variant="ghost" onClick={handleDownload} className="px-2 py-1 text-xs">
-                    💾 下载
-                  </Button>
-                </div>
-              </div>
-
-              {/* ── 源码面板（全宽） ── */}
-              {showSource && phase === 'chat' ? (
-                <div className="flex flex-1 overflow-hidden">
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <div className="flex h-8 shrink-0 items-center justify-between border-b border-border-default px-3 bg-surface-primary">
-                      <span className="text-xs font-medium text-foreground-secondary">HTML 源码（手动编辑 → 保存生效）</span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => {
-                            if (id && generatedHtml) {
-                              htmlTemplatesApi
-                                .autoSave(id, generatedHtml, agentHistory)
-                                .then(() => {
-                                  setSaved(true);
-                                  const manualMsg: AgentChatMessage = {
-                                    role: 'assistant',
-                                    content: '📝 源码已手动编辑并保存',
-                                    action: 'manual',
-                                    ts: new Date().toISOString(),
-                                  };
-                                  setAgentHistory([...agentHistory, manualMsg]);
-                                })
-                                .catch(() => {});
-                            }
-                          }}
-                          className="rounded bg-accent-primary px-2 py-1 text-[11px] text-foreground-inverse hover:bg-accent-secondary"
-                        >
-                          💾 保存
-                        </button>
-                        <button
-                          onClick={() => setShowSource(false)}
-                          className="rounded px-1.5 py-1 text-xs text-foreground-muted hover:bg-surface-hover"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                    <textarea
-                      value={generatedHtml}
-                      onChange={(e) => setGeneratedHtml(e.target.value)}
-                      className="flex-1 resize-none bg-surface-secondary p-3 font-mono text-[11px] leading-relaxed text-foreground-primary focus:outline-none"
-                      spellCheck={false}
-                    />
-                  </div>
-                </div>
-              ) : phase === 'chat' && viewMode === 'visual' ? (
-                /* ── GrapesJS 可视化编辑器 ── */
-                <VisualEditor
-                  key="visual-editor"
-                  html={generatedHtml}
-                  onHtmlChange={(newHtml) => {
-                    setGeneratedHtml(newHtml);
-                    // 自动保存
-                    if (id) {
-                      htmlTemplatesApi
-                        .autoSave(id, newHtml, agentHistory)
-                        .then(() => setSaved(true))
-                        .catch(() => {});
-                    }
-                  }}
-                />
-              ) : (
-              /* ── 普通预览（iframe）── */
-              <div className="flex flex-1 overflow-hidden">
-                <div className="flex flex-1 items-start justify-center overflow-auto p-4">
-                  <iframe
-                    ref={iframeRef}
-                    srcDoc={generatedHtml}
-                    title="HTML Report Preview"
-                    className={`h-full bg-white shadow-lg transition-all ${
-                      previewDevice === 'desktop' ? 'w-full' : 'w-[375px]'
-                    }`}
-                    style={{
-                      borderRadius: 8,
-                      border: '1px solid var(--border-default, #e5e7eb)',
-                      height: previewDevice === 'mobile' ? '812px' : '100%',
-                    }}
-                    sandbox="allow-same-origin allow-scripts"
-                  />
-                </div>
-              </div>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-1 items-center justify-center">
-              {generating ? (
-                <div className="text-center">
-                  <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-accent-primary/20 border-t-accent-primary" />
-                  <p className="text-sm font-medium text-foreground-secondary">AI 正在生成报告…</p>
-                  <p className="mt-1 text-xs text-foreground-muted">
-                    DeepSeek V4 Pro 推理模型，通常需要 2-3 分钟
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="mb-3 text-6xl opacity-20">📄</div>
-                  <p className="text-sm text-foreground-muted">
-                    配置左侧参数，点击「✨ 生成报告」开始
-                  </p>
-                  {!campaignId && (
-                    <p className="mt-2 text-xs text-amber-500">
-                      ⚠️ 此报告未绑定 Campaign，AI 将生成通用模板
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </main>
-        </>
-        )}
-      </div>
+      {/* Recipe 模式:四层编辑器 */}
+      {isRecipe && activeVersion ? (
+        <RecipeEditor
+          versionId={activeVersion.id}
+          recipeId={activeVersion.recipeId!}
+          campaignId={campaignId}
+          reportPeriod={reportPeriod}
+          reportContent={activeVersion.reportContent ?? {}}
+          tokenOverrides={(activeVersion.tokenOverrides as Record<string, unknown>) ?? {}}
+          manifestOverrides={
+            (activeVersion.manifestOverrides as { order?: string[]; hidden?: string[] }) ?? {}
+          }
+          onSaved={reloadVersion}
+        />
+      ) : (
+        /* 三栏可拉伸布局 */
+        <ResizablePanels
+          left={leftPanel}
+          center={centerPanel}
+          leftCollapsed={panelCollapsed}
+          leftWidth={380}
+          minLeft={280}
+          maxLeft={600}
+        />
+      )}
     </div>
   );
 }

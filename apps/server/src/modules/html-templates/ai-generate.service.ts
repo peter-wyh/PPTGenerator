@@ -438,6 +438,173 @@ User edit instruction: {{EDIT_INSTRUCTION}}
 
 Return the COMPLETE updated HTML. Output ONLY the HTML code.`;
 
+/**
+ * SSE 流式 chunk 类型
+ * - reasoning: AI 推理过程（chain-of-thought），前端展示为"思考中"面板
+ * - content: HTML 内容片段，前端实时拼接到 iframe 预览
+ * - done: 流结束，携带完整 HTML + 元数据
+ * - error: 错误
+ */
+export type StreamChunk =
+  | { type: 'reasoning'; text: string }
+  | { type: 'content'; text: string }
+  | { type: 'done'; html: string; truncated: boolean }
+  | { type: 'error'; message: string };
+
+/**
+ * 解析 OpenAI 兼容 SSE 流的通用读取器。
+ * 从 response.body 逐行解析 `data: {...}` 事件，提取 reasoning_content / content 增量。
+ */
+async function* readSSEStream(
+  response: Response,
+  signal?: AbortSignal,
+): AsyncGenerator<{ reasoning?: string; content?: string }> {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        reader.cancel().catch(() => {});
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') return;
+        try {
+          const chunk = JSON.parse(data);
+          const delta = chunk.choices?.[0]?.delta;
+          if (delta?.reasoning_content) {
+            yield { reasoning: delta.reasoning_content };
+          }
+          if (delta?.content) {
+            yield { content: delta.content };
+          }
+        } catch {
+          // 跳过无法解析的行（SSE 注释行等）
+        }
+      }
+    }
+    // flush remaining buffer
+    if (buffer.trim().startsWith('data: ') && buffer.trim().slice(6) !== '[DONE]') {
+      try {
+        const chunk = JSON.parse(buffer.trim().slice(6));
+        const delta = chunk.choices?.[0]?.delta;
+        if (delta?.reasoning_content) yield { reasoning: delta.reasoning_content };
+        if (delta?.content) yield { content: delta.content };
+      } catch { /* ignore */ }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/**
+ * 后处理 HTML（从 generateHtml 提取，供流式复用）。
+ * 包括：去 markdown fences、截取 HTML 范围、补全标签、Chart.js 修复、CDN 重写。
+ */
+function postProcessHtml(html: string): string {
+  let result = html;
+
+  // 1) 去 markdown fences
+  result = result.replace(/```(?:html|HTML|markdown|md|xml|text)?\s*\n?/gi, '');
+  result = result.replace(/```\s*$/g, '').trim();
+
+  // 2) 找到 HTML 起始
+  if (result && !result.startsWith('<')) {
+    const doctypeIdx = result.search(/<!DOCTYPE/i);
+    const htmlTagIdx = result.search(/<html/i);
+    const indices = [doctypeIdx, htmlTagIdx].filter((i) => i >= 0);
+    if (indices.length > 0) {
+      result = result.substring(Math.min(...indices));
+    }
+  }
+
+  // 3) 截取到最后一个 </html>
+  const endIdx = result.lastIndexOf('</html>');
+  if (endIdx >= 0) {
+    result = result.substring(0, endIdx + '</html>'.length);
+  }
+
+  // 4) 补全截断
+  if (result && result.startsWith('<') && !result.includes('</html>')) {
+    const openBody = (result.match(/<body/gi) || []).length;
+    const closeBody = (result.match(/<\/body/gi) || []).length;
+    const openHtml = (result.match(/<html/gi) || []).length;
+    const closeHtml = (result.match(/<\/html/gi) || []).length;
+    if (openBody > closeBody) result += '\n</body>';
+    if (openHtml > closeHtml) result += '\n</html>';
+  }
+
+  // 5) DOMContentLoaded → window load
+  if (result.includes('DOMContentLoaded')) {
+    result = result.replace(
+      /document\.addEventListener\(\s*['"]DOMContentLoaded['"]\s*,\s*(function\s*\([^)]*\)\s*\{)/g,
+      "window.addEventListener('load', $1",
+    );
+    result = result.replace(
+      /document\.addEventListener\(\s*['"]DOMContentLoaded['"]\s*,\(\)\s*=>\s*\{/g,
+      "window.addEventListener('load', () => {",
+    );
+  }
+
+  // 6) Chart.js animation: false
+  if (result.includes('new Chart')) {
+    result = result.replace(
+      /options\s*:\s*\{(?!.*animation)/g,
+      'options: { animation: false,',
+    );
+  }
+
+  // 7) Script 标签截断修复
+  const openScripts = (result.match(/<script/gi) || []).length;
+  const closeScripts = (result.match(/<\/script>/gi) || []).length;
+  if (openScripts > closeScripts) {
+    result = result.replace(/<\/body>\s*<\/html>\s*$/i, '');
+    const lastValidPos = Math.max(
+      result.lastIndexOf(';'),
+      result.lastIndexOf('}'),
+      result.lastIndexOf(']'),
+      result.lastIndexOf(')'),
+    );
+    if (lastValidPos > 0 && lastValidPos > result.length - 200) {
+      result = result.substring(0, lastValidPos + 1);
+    }
+    const braces = (result.match(/{/g) || []).length - (result.match(/}/g) || []).length;
+    const parens = (result.match(/\(/g) || []).length - (result.match(/\)/g) || []).length;
+    const brackets = (result.match(/\[/g) || []).length - (result.match(/\]/g) || []).length;
+    result += ']'.repeat(Math.max(0, brackets));
+    result += ')'.repeat(Math.max(0, parens));
+    result += '}'.repeat(Math.max(0, braces));
+    result += ';\n    </script>\n</body>\n</html>';
+  }
+
+  // 8) Logo display:none 修复
+  result = result.replace(
+    /<img\s+([^>]*?style="[^"]*?display:\s*none[^"]*?")[^>]*?onerror="this\.style\.display='none';this\.nextElementSibling\.style\.display='flex';?"([^>]*)>(\s*<span[^>]*style="[^"]*?display:\s*(?:none|flex)[^"]*?"[^>]*?>[A-Z]{1,4}<\/span>)/gi,
+    (match, beforeStyle, afterAttrs, fallbackSpan) => {
+      void match; void fallbackSpan;
+      const fixedStyle = beforeStyle.replace(/display:\s*none;?/gi, '').trim();
+      const cleanAttrs = afterAttrs.replace(/\sonerror="[^"]*"/gi, '');
+      return `<img ${fixedStyle}${cleanAttrs}>`;
+    },
+  );
+
+  // 9) CDN 重写
+  result = rewriteExternalAssets(result, SELF_HOST_BASE);
+
+  return result;
+}
+
 export const aiGenerateService = {
   /**
    * Build the campaign context JSON from the database.
@@ -599,6 +766,7 @@ export const aiGenerateService = {
     const DEEPSEEK_TIMEOUT_MS = 290_000;
     const abortController = new AbortController();
     const timeoutHandle = setTimeout(() => abortController.abort(), DEEPSEEK_TIMEOUT_MS);
+    const startedAt = Date.now();
 
     let response: Response;
     try {
@@ -622,6 +790,15 @@ export const aiGenerateService = {
       });
     } catch (err: any) {
       clearTimeout(timeoutHandle);
+      // 诊断：记录中断类型 + 耗时，区分网关 ~180s 关连接 / 本地 290s AbortError / 其它网络层
+      console.error('[AI Generate] 网络中断', {
+        elapsedMs: Date.now() - startedAt,
+        name: err?.name,
+        code: err?.code,
+        message: String(err?.message || ''),
+        model: DEEPSEEK_MODEL,
+        promptChars: userPrompt.length,
+      });
       // 覆盖 DeepSeek 各类连接中断：
       //  - AbortError/abort：本地 290s 超时主动中断
       //  - terminated/other side closed：DeepSeek 服务端 ~180s 主动关 socket（实测偶发，复杂报告易触发）
@@ -638,6 +815,11 @@ export const aiGenerateService = {
       throw err;
     }
     clearTimeout(timeoutHandle);
+    console.log('[AI Generate] 成功', {
+      elapsedMs: Date.now() - startedAt,
+      httpStatus: response.status,
+      model: DEEPSEEK_MODEL,
+    });
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
@@ -824,6 +1006,7 @@ export const aiGenerateService = {
     const DEEPSEEK_TIMEOUT_MS = 290_000;
     const abortController = new AbortController();
     const timeoutHandle = setTimeout(() => abortController.abort(), DEEPSEEK_TIMEOUT_MS);
+    const startedAt = Date.now();
 
     let response: Response;
     try {
@@ -847,6 +1030,15 @@ export const aiGenerateService = {
       });
     } catch (err: any) {
       clearTimeout(timeoutHandle);
+      // 诊断：记录中断类型 + 耗时
+      console.error('[AI Edit] 网络中断', {
+        elapsedMs: Date.now() - startedAt,
+        name: err?.name,
+        code: err?.code,
+        message: String(err?.message || ''),
+        model: DEEPSEEK_MODEL,
+        promptChars: userPrompt.length,
+      });
       const msg = String(err?.message || '');
       const isNetworkAbort =
         err?.name === 'AbortError' ||
@@ -859,6 +1051,11 @@ export const aiGenerateService = {
       throw err;
     }
     clearTimeout(timeoutHandle);
+    console.log('[AI Edit] 成功', {
+      elapsedMs: Date.now() - startedAt,
+      httpStatus: response.status,
+      model: DEEPSEEK_MODEL,
+    });
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
@@ -911,5 +1108,223 @@ export const aiGenerateService = {
     content = rewriteExternalAssets(content, SELF_HOST_BASE);
 
     return content;
+  },
+
+  /**
+   * 流式生成 HTML — SSE generator。
+   * 逐 chunk yield reasoning_content（AI 思考过程）+ content（HTML 片段）。
+   * 前端通过 SSE 实时展示思考过程 + 流式渲染 iframe 预览。
+   */
+  async *generateHtmlStream(params: {
+    campaignId?: string;
+    prompt: string;
+    designMd?: string;
+    reportPeriod?: { startDate?: string; endDate?: string };
+    signal?: AbortSignal;
+  }): AsyncGenerator<StreamChunk> {
+    if (!DEEPSEEK_API_KEY) {
+      yield { type: 'error', message: 'AI API key 未配置（DEEPSEEK_API_KEY）' };
+      return;
+    }
+
+    // 构建 prompt（复用 generateHtml 的逻辑）
+    const campaignData = params.campaignId
+      ? await this.buildCampaignContext(params.campaignId, params.reportPeriod)
+      : 'No campaign data provided.';
+
+    let designGuide = params.designMd ?? '';
+    if (!designGuide.trim() && params.campaignId) {
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: params.campaignId },
+        include: { businessLine: true },
+      });
+      designGuide = campaign?.businessLine?.designMd ?? '';
+    }
+
+    let userPrompt = USER_PROMPT_TEMPLATE
+      .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')
+      .replace('{{CAMPAIGN_DATA}}', campaignData);
+    if (designGuide && designGuide.trim()) {
+      userPrompt += DESIGN_GUIDE_SUFFIX.replace('{{DESIGN_GUIDE}}', designGuide.trim());
+    }
+
+    const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
+    const maxTokens = isReasoningModel ? 16000 : 8192;
+
+    const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
+      signal: params.signal,
+    }).catch((err: any) => {
+      const msg = String(err?.message || '');
+      const isAbort = err?.name === 'AbortError' ||
+        /abort|terminated|other side closed|fetch failed|socket|ECONNRESET/i.test(msg);
+      if (isAbort) {
+        throw new Error('AI 生成超时或连接中断，请稍后重试');
+      }
+      throw err;
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'Unknown error');
+      yield { type: 'error', message: `DeepSeek API 调用失败 (${response.status}): ${errText}` };
+      return;
+    }
+
+    let fullContent = '';
+    let hasReasoning = false;
+    let finishReason = '';
+
+    try {
+      for await (const chunk of readSSEStream(response, params.signal)) {
+        if (chunk.reasoning) {
+          hasReasoning = true;
+          yield { type: 'reasoning', text: chunk.reasoning };
+        }
+        if (chunk.content) {
+          fullContent += chunk.content;
+          yield { type: 'content', text: chunk.content };
+        }
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        yield { type: 'error', message: '生成已取消' };
+        return;
+      }
+      throw err;
+    }
+
+    // 检测截断
+    const truncated = finishReason === 'length' || (!fullContent.includes('</html>') && fullContent.length > 1000);
+
+    if (!fullContent.trim()) {
+      const msg = hasReasoning
+        ? 'AI 推理过程消耗过多 token，content 为空，请减少 prompt 复杂度或重试'
+        : 'AI 返回内容为空，请重试';
+      yield { type: 'error', message: msg };
+      return;
+    }
+
+    // 后处理
+    const processedHtml = postProcessHtml(fullContent);
+
+    if (!processedHtml || !processedHtml.startsWith('<')) {
+      yield { type: 'error', message: `AI 生成的 HTML 格式异常${truncated ? '（输出被截断，请减少内容复杂度后重试）' : ''}` };
+      return;
+    }
+
+    yield { type: 'done', html: processedHtml, truncated };
+  },
+
+  /**
+   * 流式编辑 HTML — SSE generator（复用 generateHtmlStream 的流式基础设施）。
+   */
+  async *editHtmlStream(params: {
+    currentHtml: string;
+    instruction: string;
+    images?: string[];
+    signal?: AbortSignal;
+  }): AsyncGenerator<StreamChunk> {
+    if (!DEEPSEEK_API_KEY) {
+      yield { type: 'error', message: 'AI API key 未配置（DEEPSEEK_API_KEY）' };
+      return;
+    }
+
+    const userPrompt = EDIT_USER_PROMPT_TEMPLATE
+      .replace('{{EDIT_INSTRUCTION}}', params.instruction)
+      .replace('{{CURRENT_HTML}}', params.currentHtml);
+
+    const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
+    const maxTokens = isReasoningModel ? 16000 : 8192;
+
+    const userMessage: any = params.images && params.images.length > 0
+      ? {
+          role: 'user',
+          content: [
+            { type: 'text', text: userPrompt },
+            ...params.images.map((img) => ({ type: 'image_url', image_url: { url: img } })),
+          ],
+        }
+      : { role: 'user', content: userPrompt };
+
+    const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: EDIT_SYSTEM_PROMPT },
+          userMessage,
+        ],
+        temperature: 0.3,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
+      signal: params.signal,
+    }).catch((err: any) => {
+      const msg = String(err?.message || '');
+      const isAbort = err?.name === 'AbortError' ||
+        /abort|terminated|other side closed|fetch failed|socket|ECONNRESET/i.test(msg);
+      if (isAbort) throw new Error('AI 编辑超时或连接中断，请稍后重试');
+      throw err;
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'Unknown error');
+      yield { type: 'error', message: `DeepSeek API 调用失败 (${response.status}): ${errText}` };
+      return;
+    }
+
+    let fullContent = '';
+
+    try {
+      for await (const chunk of readSSEStream(response, params.signal)) {
+        if (chunk.reasoning) {
+          yield { type: 'reasoning', text: chunk.reasoning };
+        }
+        if (chunk.content) {
+          fullContent += chunk.content;
+          yield { type: 'content', text: chunk.content };
+        }
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        yield { type: 'error', message: '编辑已取消' };
+        return;
+      }
+      throw err;
+    }
+
+    const truncated = !fullContent.includes('</html>') && fullContent.length > 1000;
+
+    if (!fullContent.trim()) {
+      yield { type: 'error', message: 'AI 返回内容为空，请重试' };
+      return;
+    }
+
+    const processedHtml = postProcessHtml(fullContent);
+
+    if (!processedHtml || !processedHtml.startsWith('<')) {
+      yield { type: 'error', message: `AI 编辑后的 HTML 格式异常${truncated ? '（输出被截断）' : ''}` };
+      return;
+    }
+
+    yield { type: 'done', html: processedHtml, truncated };
   },
 };

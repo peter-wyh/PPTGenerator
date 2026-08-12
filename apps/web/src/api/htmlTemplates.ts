@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, getAccessToken } from './client';
 
 export interface HtmlTemplateSummary {
   id: string;
@@ -55,6 +55,63 @@ export interface AgentChatMessage {
   images?: string[];
 }
 
+// ─── SSE 流式类型 ───────────────────────────────────────────
+
+/** SSE 事件类型 */
+export type SSEChunk =
+  | { type: 'reasoning'; text: string }
+  | { type: 'content'; text: string }
+  | { type: 'done'; html: string; truncated: boolean }
+  | { type: 'error'; message: string };
+
+/** 通用 SSE 流式消费者（fetch + ReadableStream，绕过 axios 不支持 SSE） */
+async function consumeSSEStream(
+  url: string,
+  body: Record<string, unknown>,
+  onChunk: (chunk: SSEChunk) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const token = getAccessToken();
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+    credentials: 'include',
+    signal,
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => 'Unknown error');
+    throw new Error(`HTTP ${response.status}: ${text}`);
+  }
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split('\n\n'); // SSE events separated by double newline
+    buffer = events.pop() || '';
+    for (const event of events) {
+      const dataLine = event.trim();
+      if (!dataLine.startsWith('data: ')) continue;
+      try {
+        const chunk = JSON.parse(dataLine.slice(6)) as SSEChunk;
+        onChunk(chunk);
+        if (chunk.type === 'done' || chunk.type === 'error') return;
+      } catch {
+        // skip unparseable
+      }
+    }
+  }
+}
+
 export const htmlTemplatesApi = {
   list: (params?: { status?: string; category?: string }) =>
     api
@@ -108,6 +165,24 @@ export const htmlTemplatesApi = {
         timeout: 300000, // 5 分钟超时（V4 Pro 推理模型需要更长时间）
       })
       .then((r) => r.data.html),
+
+  /** SSE 流式生成 HTML（reasoning + content 实时转发） */
+  generateStream: (
+    input: {
+      prompt?: string;
+      campaignId?: string;
+      designMd?: string;
+      reportPeriod?: { startDate?: string; endDate?: string };
+    },
+    onChunk: (chunk: SSEChunk) => void,
+    signal?: AbortSignal,
+  ) =>
+    consumeSSEStream(
+      '/api/v1/html-templates/generate-stream',
+      input,
+      onChunk,
+      signal,
+    ),
 
   /** Recipe 实时重渲染（不保存,编辑器预览用）。 */
   reRender: (input: {
@@ -199,13 +274,26 @@ export const htmlTemplatesApi = {
       .post<{ ok: boolean; projectId: string }>('/html-templates/projects/html', input)
       .then((r) => r.data),
 
-  /** Agent 增量编辑：当前 HTML + 指令（可选附带图片）→ 修改后的 HTML */
+  /** Agent 增量编辑：当前 HTML + 指令（可选附带图片）→ 修改后的完整 HTML */
   agentEdit: (input: { currentHtml: string; instruction: string; images?: string[] }) =>
     api
       .post<{ html: string }>('/html-templates/agent-edit', input, {
         timeout: 300000,
       })
       .then((r) => r.data.html),
+
+  /** SSE 流式 Agent 编辑（reasoning + content 实时转发） */
+  agentEditStream: (
+    input: { currentHtml: string; instruction: string; images?: string[] },
+    onChunk: (chunk: SSEChunk) => void,
+    signal?: AbortSignal,
+  ) =>
+    consumeSSEStream(
+      '/api/v1/html-templates/agent-edit-stream',
+      input,
+      onChunk,
+      signal,
+    ),
 
   /** Agent 模式自动保存（直接覆盖 htmlContent） */
   autoSave: (

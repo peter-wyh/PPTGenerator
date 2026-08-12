@@ -2,11 +2,14 @@
  * AgentChatPanel — Report Agent 对话面板。
  * 用户输入编辑指令 → 调用 AI 增量编辑 → 返回修改后 HTML → 自动保存。
  * 支持图片上传（vision 多模态）和 HTML 文件导入。
+ *
+ * ★ SSE 流式：思考过程实时展示 + HTML 流式预览 + 取消按钮
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/Button';
-import { htmlTemplatesApi } from '@/api/htmlTemplates';
+import { htmlTemplatesApi, type SSEChunk } from '@/api/htmlTemplates';
 import type { AgentChatMessage } from '@/api/htmlTemplates';
+import { ThinkingPanel } from '@/components/ThinkingPanel';
 
 interface AgentChatPanelProps {
   projectId: string;
@@ -23,7 +26,7 @@ const QUICK_ACTIONS = [
   { label: '改图表', prompt: '把图表类型改为：' },
 ];
 
-// 图片大小限制（base data URL，~4MB）
+// 图片大小限制（base64 data URL，~4MB）
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
 
 export function AgentChatPanel({
@@ -40,7 +43,12 @@ export function AgentChatPanel({
   const imgInputRef = useRef<HTMLInputElement>(null);
   const htmlInputRef = useRef<HTMLInputElement>(null);
 
-  // ★ 已选择的图片（base64 data URL 数组），随消息一起发送
+  // ★ SSE 流式状态
+  const [reasoning, setReasoning] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // 已选择的图片（base64 data URL 数组），随消息一起发送
   const [pendingImages, setPendingImages] = useState<string[]>([]);
 
   // 自动滚动到底部
@@ -48,7 +56,7 @@ export function AgentChatPanel({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [agentHistory, loading, pendingImages]);
+  }, [agentHistory, loading, pendingImages, reasoning]);
 
   // ── 图片上传处理 ──
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,7 +77,6 @@ export function AgentChatPanel({
       };
       reader.readAsDataURL(file);
     });
-    // reset input value 以便可以重复选择同一文件
     e.target.value = '';
   }, []);
 
@@ -97,13 +104,21 @@ export function AgentChatPanel({
       };
       const newHistory = [...agentHistory, userMsg, aiMsg];
       onHistoryChange(newHistory);
-      // 自动保存
       void htmlTemplatesApi.autoSave(projectId, html, newHistory);
     };
     reader.readAsText(file);
     e.target.value = '';
   }, [agentHistory, onHtmlChange, onHistoryChange, projectId]);
 
+  // ★ 取消编辑
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
+    setIsThinking(false);
+  }, []);
+
+  // ★ handleSend — SSE 流式编辑
   const handleSend = useCallback(
     async (instruction?: string) => {
       const text = (instruction ?? input).trim();
@@ -127,46 +142,89 @@ export function AgentChatPanel({
       setPendingImages([]);
       setLoading(true);
       setError('');
+      setReasoning('');
+      setIsThinking(false);
+
+      const abortCtrl = new AbortController();
+      abortRef.current = abortCtrl;
+      let finalHtml = '';
 
       try {
-        const html = await htmlTemplatesApi.agentEdit({
-          currentHtml,
-          instruction: text || '请参考上传的图片修改报告',
-          images: hasImages ? sentImages : undefined,
-        });
-        onHtmlChange(html);
+        await htmlTemplatesApi.agentEditStream(
+          {
+            currentHtml,
+            instruction: text || '请参考上传的图片修改报告',
+            images: hasImages ? sentImages : undefined,
+          },
+          (chunk: SSEChunk) => {
+            if (chunk.type === 'reasoning') {
+              setIsThinking(true);
+              setReasoning((prev) => prev + chunk.text);
+            } else if (chunk.type === 'content') {
+              setIsThinking(false);
+              finalHtml += chunk.text;
+              onHtmlChange(finalHtml);
+            } else if (chunk.type === 'done') {
+              finalHtml = chunk.html;
+              onHtmlChange(finalHtml);
+            } else if (chunk.type === 'error') {
+              setError(chunk.message);
+            }
+          },
+          abortCtrl.signal,
+        );
 
-        const aiMsg: AgentChatMessage = {
-          role: 'assistant',
-          content: '已更新 ✅',
-          action: 'edit',
-          ts: new Date().toISOString(),
-        };
-        const finalHistory = [...newHistory, aiMsg];
-        onHistoryChange(finalHistory);
-
-        // 自动保存
-        await htmlTemplatesApi.autoSave(projectId, html, finalHistory);
+        if (finalHtml && finalHtml.startsWith('<')) {
+          const aiMsg: AgentChatMessage = {
+            role: 'assistant',
+            content: '已更新 ✅',
+            action: 'edit',
+            ts: new Date().toISOString(),
+          };
+          const finalHistory = [...newHistory, aiMsg];
+          onHistoryChange(finalHistory);
+          await htmlTemplatesApi.autoSave(projectId, finalHtml, finalHistory);
+        }
       } catch (e: unknown) {
         const err = e as {
           response?: { data?: { error?: { message?: string }; message?: string } };
+          name?: string;
           message?: string;
         };
-        setError(
-          err.response?.data?.error?.message ||
-            err.response?.data?.message ||
-            err.message ||
-            '编辑失败，请重试',
-        );
+        if (err.name !== 'AbortError') {
+          setError(
+            err.response?.data?.error?.message ||
+              err.response?.data?.message ||
+              err.message ||
+              '编辑失败，请重试',
+          );
+        }
       } finally {
         setLoading(false);
+        setIsThinking(false);
+        abortRef.current = null;
       }
     },
     [input, loading, currentHtml, agentHistory, onHtmlChange, onHistoryChange, projectId, pendingImages],
   );
 
+  // ★ 重试上一次编辑
+  const handleRetry = useCallback(() => {
+    const lastUserMsg = [...agentHistory].reverse().find((m) => m.role === 'user');
+    if (lastUserMsg) {
+      // 提取纯文本指令（去掉图片描述后缀）
+      const instruction = lastUserMsg.content.split('\n📎')[0];
+      void handleSend(instruction);
+    }
+  }, [agentHistory, handleSend]);
+
   return (
     <div className="flex h-full flex-col">
+      {/* ★ 思考过程面板 */}
+      {(isThinking || reasoning) && (
+        <ThinkingPanel reasoning={reasoning} isThinking={isThinking} />
+      )}
+
       {/* 消息列表 */}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {agentHistory.length === 0 && (
@@ -198,7 +256,6 @@ export function AgentChatPanel({
                   : 'bg-surface-hover text-foreground-primary'
               }`}
             >
-              {/* 显示消息中的图片缩略图 */}
               {msg.images && msg.images.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap gap-1">
                   {msg.images.map((img, i) => (
@@ -220,13 +277,27 @@ export function AgentChatPanel({
             <div className="rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
               <span className="inline-flex items-center gap-1">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-primary" />
-                AI 正在编辑… (~1-2min)
+                {isThinking ? 'AI 思考中…' : 'AI 正在编辑…'}
               </span>
+              <button
+                onClick={handleCancel}
+                className="ml-2 text-[10px] text-red hover:underline"
+              >
+                取消
+              </button>
             </div>
           </div>
         )}
         {error && (
-          <div className="rounded-lg bg-red/10 px-3 py-2 text-xs text-red">{error}</div>
+          <div className="rounded-lg bg-red/10 px-3 py-2 text-xs text-red">
+            <p>{error}</p>
+            <button
+              onClick={handleRetry}
+              className="mt-1 rounded bg-red/20 px-2 py-0.5 text-[10px] font-medium hover:bg-red/30"
+            >
+              🔄 重试
+            </button>
+          </div>
         )}
       </div>
 
@@ -255,7 +326,6 @@ export function AgentChatPanel({
       {/* 输入框 */}
       <div className="shrink-0 border-t border-border-default p-3">
         <div className="flex items-center gap-1.5">
-          {/* 图片上传按钮 */}
           <button
             onClick={() => imgInputRef.current?.click()}
             disabled={loading}
@@ -275,7 +345,6 @@ export function AgentChatPanel({
             onChange={handleImageUpload}
           />
 
-          {/* HTML 导入按钮 */}
           <button
             onClick={() => htmlInputRef.current?.click()}
             disabled={loading}
@@ -294,7 +363,6 @@ export function AgentChatPanel({
             onChange={handleHtmlImport}
           />
 
-          {/* 文本输入 */}
           <input
             type="text"
             value={input}

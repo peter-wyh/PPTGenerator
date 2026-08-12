@@ -12,6 +12,7 @@ import {
   saveRecipeConfigSchema,
   reRenderSchema,
   createRecipeVersionSchema,
+  recomputeSchema,
 } from './html-templates.schema';
 
 const router = Router();
@@ -55,11 +56,23 @@ router.post(
   htmlTemplateController.generate,
 );
 
+// POST /api/v1/html-templates/generate-stream — SSE 流式 AI 生成（reasoning + content 实时转发）
+router.post(
+  '/generate-stream',
+  htmlTemplateController.generateStream,
+);
+
 // POST /api/v1/html-templates/agent-edit — Agent 增量编辑现有 HTML
 router.post(
   '/agent-edit',
   validate({ body: agentEditSchema }),
   htmlTemplateController.agentEdit,
+);
+
+// POST /api/v1/html-templates/agent-edit-stream — SSE 流式 Agent 编辑
+router.post(
+  '/agent-edit-stream',
+  htmlTemplateController.agentEditStream,
 );
 
 // PATCH /api/v1/html-templates/projects/:projectId/html — 保存生成的 HTML（覆盖/新增版本）
@@ -118,6 +131,13 @@ router.patch(
   '/html-versions/:versionId/recipe-config',
   validate({ body: saveRecipeConfigSchema }),
   htmlTemplateController.saveRecipeConfig,
+);
+
+// POST /api/v1/html-templates/html-versions/:versionId/recompute — 换时间段重算(G2)
+router.post(
+  '/html-versions/:versionId/recompute',
+  validate({ body: recomputeSchema }),
+  htmlTemplateController.recompute,
 );
 
 // POST /api/v1/html-templates/projects/html — 从 Campaign 创建新报告并保存 HTML
