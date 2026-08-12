@@ -151,12 +151,39 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
 
   const m = (campaign.metrics ?? {}) as Any;
   const analytics = (campaign.analytics ?? {}) as Any;
-  const trendSrc = analytics.trend ?? {};
+  const summary = ((analytics.summary as Any | undefined) ?? {}) as Any;
 
-  const totalRevenue = metric(m, 'totalRevenue');
-  const clicks = metric(m, 'clicks');
-  const orders = metric(m, 'orders');
-  const newCustomers = metric(m, 'newCustomers');
+  // trend 兼容两种存储形状:
+  //   生产:每日数组 [{date,clicks,orders,revenue,impressions}, …](camp-wander-summer 等)
+  //   旧合成/测试:预透视对象 {labels,revenue,clicks,orders}
+  const trendSrc = analytics.trend;
+  let trendLabels: string[] = [];
+  let trendRevenue: number[] = [];
+  let trendClicks: number[] = [];
+  let trendOrders: number[] = [];
+  if (Array.isArray(trendSrc)) {
+    const rows = trendSrc as Any[];
+    const sorted = [...rows].sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')));
+    trendLabels = sorted.map((r) => String(r.date ?? ''));
+    trendRevenue = sorted.map((r) => Number(r.revenue) || 0);
+    trendClicks = sorted.map((r) => Number(r.clicks) || 0);
+    trendOrders = sorted.map((r) => Number(r.orders) || 0);
+  } else if (trendSrc && typeof trendSrc === 'object') {
+    const o = trendSrc as Any;
+    trendLabels = o.labels ?? [];
+    trendRevenue = o.revenue ?? [];
+    trendClicks = o.clicks ?? [];
+    trendOrders = o.orders ?? [];
+  }
+  const trend = { labels: trendLabels, revenue: trendRevenue, clicks: trendClicks, orders: trendOrders };
+
+  // KPI 总量:优先 analytics.summary(total* 前缀),其次 campaign.metrics。
+  // 注:KPI 与 trend 是独立数据源——trend 只是图表序列,不反推 KPI 总量(保持 "metrics 缺字段→兜底 0" 契约)。
+  // 注:summary 里 aov/newCustomerRate 是预格式化字符串("$81.86"/"42%"),这里统一从原始数值重算,避免解析。
+  const totalRevenue = metric(summary, 'totalRevenue') || metric(m, 'totalRevenue');
+  const clicks = metric(summary, 'totalClicks') || metric(m, 'clicks');
+  const orders = metric(summary, 'totalOrders') || metric(m, 'orders');
+  const newCustomers = metric(summary, 'newCustomers') || metric(m, 'newCustomers');
   const aov = metric(m, 'aov') || (orders ? totalRevenue / orders : 0);
 
   const publishers = campaign.campaignCreators.map((cc) => {
@@ -179,7 +206,8 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
     };
   });
 
-  const newCustomerRate = metric(m, 'newCustomerRate');
+  // newCustomerRate:metrics 优先(数值),否则从已读到的 newCustomers/orders 重算(summary 里是 "42%" 字符串,不解析)。
+  const newCustomerRate = metric(m, 'newCustomerRate') || (newCustomers && orders ? (newCustomers / orders) * 100 : 0);
   const insights = newCustomerRate
     ? {
         newCustomerRate: {
@@ -204,12 +232,7 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
       { label: 'New Customer Acquisition', value: formatNum(newCustomers), highlight: true },
       { label: 'AOV', value: formatMoney(aov) },
     ],
-    trend: {
-      labels: trendSrc.labels ?? [],
-      revenue: trendSrc.revenue ?? [],
-      clicks: trendSrc.clicks ?? [],
-      orders: trendSrc.orders ?? [],
-    },
+    trend,
     publishers,
     insights: Object.keys(insights).length ? insights : undefined,
     actionable: [], // 由 narrative 填
