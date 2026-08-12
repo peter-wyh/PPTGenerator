@@ -22,7 +22,7 @@ export function DataTable({ loading, headers, rows, onRowClick }: DataTableProps
         <thead>
           <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
             {headers.map((h, i) => (
-              <th key={i} className={`px-3 py-2 font-medium ${i === 0 ? '' : 'whitespace-nowrap'}`}>
+              <th key={i} className="whitespace-nowrap px-3 py-2 font-medium">
                 {h}
               </th>
             ))}
