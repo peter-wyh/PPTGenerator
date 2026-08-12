@@ -41,6 +41,7 @@ export const templatesApi = {
       meta?: ProjectMeta;
       note?: string | null;
       status?: TemplateStatus;
+      htmlContent?: string;
     },
   ) => api.patch<{ template: TemplateDetail }>(`/templates/${id}`, patch).then((r) => r.data.template),
 

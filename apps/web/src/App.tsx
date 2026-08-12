@@ -18,6 +18,7 @@ const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m)
 const CampaignCollabPage = lazy(() => import('./routes/CampaignCollabPage').then((m) => ({ default: m.CampaignCollabPage })));
 const SchemesPage = lazy(() => import('./routes/SchemesPage').then((m) => ({ default: m.SchemesPage })));
 const HtmlStudio = lazy(() => import('./routes/HtmlStudio').then((m) => ({ default: m.HtmlStudio })));
+const TemplateHtmlStudio = lazy(() => import('./routes/TemplateHtmlStudio').then((m) => ({ default: m.TemplateHtmlStudio })));
 
 function RouteFallback() {
   return (
@@ -54,6 +55,7 @@ export function App() {
             <Route path="/projects/:id" element={<ProjectShell />} />
             <Route path="/projects/:id/html-studio" element={<HtmlStudio />} />
             <Route path="/templates/:id" element={<TemplateShell />} />
+            <Route path="/templates/:id/html-studio" element={<TemplateHtmlStudio />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>

@@ -21,6 +21,7 @@ export const updateTemplateSchema = z
     meta: templateMetaSchema,
     note: z.string().max(1000).nullable().optional(),
     status: templateStatusSchema.optional(),
+    htmlContent: z.string().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 

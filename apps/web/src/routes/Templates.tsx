@@ -335,7 +335,7 @@ export function Templates() {
                     <td className="px-3 py-2">
                       <button
                         className="font-medium text-foreground-primary hover:text-accent-primary"
-                        onClick={() => navigate(`/templates/${t.id}`)}
+                        onClick={() => navigate(renderTypeOf(t) === 'html-report' ? `/templates/${t.id}/html-studio` : `/templates/${t.id}`)}
                       >
                         {t.name}
                       </button>
@@ -381,11 +381,11 @@ export function Templates() {
                     <td className="px-3 py-2 text-foreground-muted">{new Date(t.updatedAt).toLocaleDateString()}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       <button
-                        onClick={() => navigate(`/templates/${t.id}`)}
+                        onClick={() => navigate(renderTypeOf(t) === 'html-report' ? `/templates/${t.id}/html-studio` : `/templates/${t.id}`)}
                         className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
-                        title="进入可视化编辑器"
+                        title="进入编辑器"
                       >
-                        可视化编辑
+                        {renderTypeOf(t) === 'html-report' ? '⚡ HTML编辑' : '可视化编辑'}
                       </button>
                       <button
                         onClick={() => { setEditError(null); setEditing(t); }}

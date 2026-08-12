@@ -99,6 +99,8 @@ model Template {
   status     TemplateStatus   @default(DRAFT)
   /// 设计师备注（可选），仅管理后台可见。
   note       String?
+  /// HTML 报告模板内容（renderType='html-report' 时使用）。
+  htmlContent String?         @db.LongText
   ownerId    String
   owner      User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt  DateTime         @default(now())

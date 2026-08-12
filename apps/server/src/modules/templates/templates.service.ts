@@ -54,6 +54,7 @@ export function toSummary(t: Template): TemplateSummary {
     status: t.status,
     note: t.note,
     ownerId: t.ownerId,
+    hasHtml: !!t.htmlContent,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
   };
@@ -71,6 +72,7 @@ export function toDetail(t: Template): TemplateDetail {
     status: t.status,
     note: t.note,
     ownerId: t.ownerId,
+    htmlContent: t.htmlContent ?? undefined,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
   };
@@ -173,6 +175,7 @@ export const templatesService = {
       meta?: ProjectMeta;
       note?: string | null;
       status?: TemplateStatus;
+      htmlContent?: string;
     },
   ): Promise<TemplateDetail> {
     await this.getOwnedOrThrow(ownerId, id);
@@ -199,6 +202,7 @@ export const templatesService = {
     if (input.meta !== undefined) data.meta = input.meta as unknown as Prisma.InputJsonValue;
     if (input.note !== undefined) data.note = input.note;
     if (input.status !== undefined) data.status = input.status;
+    if (input.htmlContent !== undefined) data.htmlContent = input.htmlContent;
     const template = await prisma.template.update({ where: { id }, data });
     return toDetail(template);
   },
@@ -229,6 +233,7 @@ export const templatesService = {
       height: src.height,
       pages: JSON.parse(JSON.stringify(src.pages)) as unknown as Prisma.InputJsonValue,
       ...(src.meta ? { meta: src.meta as unknown as Prisma.InputJsonValue } : {}),
+      ...(src.htmlContent ? { htmlContent: src.htmlContent } : {}),
       status: 'DRAFT',
     };
     const template = await prisma.template.create({ data });
@@ -459,6 +464,7 @@ export const templatesService = {
       pages: pagesJson,
       ...(metaJson ? { meta: metaJson } : {}),
       ...(input.note ? { note: input.note } : {}),
+      ...(project.htmlContent ? { htmlContent: project.htmlContent } : {}),
       status: 'DRAFT',
     };
     const template = await prisma.template.create({ data });

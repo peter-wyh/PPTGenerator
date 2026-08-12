@@ -25,6 +25,8 @@ export interface TemplateSummary {
   /** 设计师备注（仅管理后台可见）。 */
   note?: string | null;
   ownerId: string;
+  /** 是否有 HTML 内容（html-report 模板）。 */
+  hasHtml?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +41,8 @@ export interface TemplateDetail {
   status: TemplateStatus;
   note?: string | null;
   ownerId: string;
+  /** HTML 报告模板内容（renderType='html-report' 时使用）。 */
+  htmlContent?: string;
   createdAt: string;
   updatedAt: string;
 }

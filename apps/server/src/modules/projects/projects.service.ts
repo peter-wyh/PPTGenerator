@@ -45,6 +45,82 @@ function toDetail(p: Project): ProjectDetail {
   };
 }
 
+/**
+ * 替换 HTML 中的旧周期日期为新周期。
+ * 处理多种格式：2024-01、2024-01-15、2024.01.15、2024年01月、Jan 2024 等。
+ */
+function replacePeriodInHtml(
+  html: string,
+  srcMeta: unknown,
+  newPeriod: { month?: string; startDate?: string; endDate?: string },
+): string {
+  // 从源 meta 提取旧周期信息
+  const meta = srcMeta as {
+    reportPeriod?: { month?: string; startDate?: string; endDate?: string };
+  } | null;
+  const oldPeriod = meta?.reportPeriod;
+  if (!oldPeriod) return html; // 无旧周期信息，无法替换
+
+  let result = html;
+
+  // 格式化辅助
+  const formatDateCN = (d: string) => {
+    const date = new Date(d);
+    return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, '0')}月`;
+  };
+  const formatDateShort = (d: string) => {
+    const date = new Date(d);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const formatDateFull = (d: string) => {
+    const date = new Date(d);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+  const formatMonthCN = (month: string) => {
+    const [y, m] = month.split('-');
+    return `${y}年${m}月`;
+  };
+
+  // 构建替换映射 (旧值 → 新值)
+  const replacements: [string, string][] = [];
+
+  // 月份模式 (2024-01)
+  if (oldPeriod.month && newPeriod.month) {
+    replacements.push([oldPeriod.month, newPeriod.month]);
+    replacements.push([formatMonthCN(oldPeriod.month), formatMonthCN(newPeriod.month)]);
+    // 2024.01 格式
+    const [, oldM] = oldPeriod.month.split('-');
+    const [, newM] = newPeriod.month.split('-');
+    const oldY = oldPeriod.month.split('-')[0];
+    const newY = newPeriod.month.split('-')[0];
+    replacements.push([`${oldY}.${oldM}`, `${newY}.${newM}`]);
+  }
+
+  // 日期范围模式
+  if (oldPeriod.startDate && newPeriod.startDate) {
+    replacements.push([oldPeriod.startDate, newPeriod.startDate]);
+    replacements.push([formatDateCN(oldPeriod.startDate), formatDateCN(newPeriod.startDate)]);
+    replacements.push([formatDateShort(oldPeriod.startDate), formatDateShort(newPeriod.startDate)]);
+    replacements.push([formatDateFull(oldPeriod.startDate), formatDateFull(newPeriod.startDate)]);
+  }
+  if (oldPeriod.endDate && newPeriod.endDate) {
+    replacements.push([oldPeriod.endDate, newPeriod.endDate]);
+    replacements.push([formatDateCN(oldPeriod.endDate), formatDateCN(newPeriod.endDate)]);
+    replacements.push([formatDateShort(oldPeriod.endDate), formatDateShort(newPeriod.endDate)]);
+    replacements.push([formatDateFull(oldPeriod.endDate), formatDateFull(newPeriod.endDate)]);
+  }
+
+  // 执行所有替换（长字符串优先，避免部分匹配问题）
+  replacements.sort((a, b) => b[0].length - a[0].length);
+  for (const [oldVal, newVal] of replacements) {
+    if (oldVal && newVal && oldVal !== newVal) {
+      result = result.split(oldVal).join(newVal);
+    }
+  }
+
+  return result;
+}
+
 export const projectsService = {
   async list(ownerId: string): Promise<ProjectSummary[]> {
     const projects = await prisma.project.findMany({
@@ -233,7 +309,11 @@ export const projectsService = {
     return toDetail(project);
   },
 
-  async duplicate(ownerId: string, id: string): Promise<ProjectDetail> {
+  async duplicate(
+    ownerId: string,
+    id: string,
+    newPeriod?: { month?: string; startDate?: string; endDate?: string },
+  ): Promise<ProjectDetail> {
     // 直接查 Prisma 获取完整原始记录（toDetail 会剥离 htmlContent 等字段）
     const src = await prisma.project.findUnique({ where: { id } });
     if (!src || src.ownerId !== ownerId) {
@@ -251,6 +331,26 @@ export const projectsService = {
       if (!clash) break;
       copyName = `${baseName} ${suffix++}`;
     }
+
+    // 深拷贝 meta，若有新周期则覆盖 reportPeriod + reportData.campaign 日期
+    let meta = src.meta ? (JSON.parse(JSON.stringify(src.meta)) as Record<string, unknown>) : undefined;
+    if (newPeriod && meta) {
+      meta.reportPeriod = newPeriod;
+      // 同步更新 reportData.campaign 的 startDate/endDate（驱动页眉 dateLabel / 封面标题周期文案）
+      const rd = meta.reportData as { campaign?: { startDate?: string; endDate?: string } } | undefined;
+      if (rd?.campaign) {
+        if (newPeriod.startDate) rd.campaign.startDate = newPeriod.startDate;
+        if (newPeriod.endDate) rd.campaign.endDate = newPeriod.endDate;
+      }
+    }
+
+    // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
+    // 若指定了新周期，需要替换 HTML 中的旧日期/周期文案为新周期
+    let htmlContent = src.htmlContent;
+    if (htmlContent && newPeriod) {
+      htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
+    }
+
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
       name: copyName,
@@ -258,10 +358,9 @@ export const projectsService = {
       height: src.height,
       // 深拷贝并给每个页面/组件分配新 id，避免引用同一对象。
       pages: JSON.parse(JSON.stringify(src.pages)) as unknown as Prisma.InputJsonValue,
-      // ★ 完整复制 meta（scenario / businessLine / advertiser / campaignId / campaignInfo / reportPeriod / styleType / templateType 等）
-      ...(src.meta ? { meta: JSON.parse(JSON.stringify(src.meta)) as unknown as Prisma.InputJsonValue } : {}),
-      // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
-      ...(src.htmlContent ? { htmlContent: src.htmlContent } : {}),
+      ...(meta ? { meta: meta as unknown as Prisma.InputJsonValue } : {}),
+      // ★ 复制 AI HTML 内容（若有，已按新周期替换日期）
+      ...(htmlContent ? { htmlContent } : {}),
       // ★ 复制 reportSchemeVersion（若有）
       ...(src.reportSchemeVersion ? { reportSchemeVersion: src.reportSchemeVersion } : {}),
     };
