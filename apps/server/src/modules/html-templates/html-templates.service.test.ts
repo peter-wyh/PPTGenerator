@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prismaMock = vi.hoisted(() => ({
-  project: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn() },
+  project: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
   campaign: { findUnique: vi.fn() },
-  htmlVersion: { findUnique: vi.fn(), update: vi.fn() },
+  htmlVersion: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
+
+// mapCampaign stub: createRecipeVersion depends on it; avoid real campaign lookup
+const mapCampaignMock = vi.hoisted(() => vi.fn());
+vi.mock('./recipe/campaign-report/mapper', () => ({ mapCampaign: mapCampaignMock }));
 
 // Mock getRecipe().render to return a fixed HTML containing the override value,
 // so saveRecipeConfig tests don't depend on real DeepSeek / campaign lookup.
@@ -20,6 +24,7 @@ import { htmlTemplateService } from './html-templates.service';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mapCampaignMock.mockReset();
   // re-stub default render result after clearAllMocks
   fakeRender.mockResolvedValue(
     '<html><body style="color:#3b82f6">rendered</body></html>',
@@ -151,5 +156,61 @@ describe('html-templates.service · saveRecipeConfig', () => {
         manifestOverrides: { hidden: ['insights'] },
       }),
     );
+  });
+});
+
+describe('html-templates.service · createRecipeVersion', () => {
+  it('无 campaignId → 400,不建版本', async () => {
+    prismaMock.project.findUnique.mockResolvedValue({ meta: {} });
+    await expect(
+      htmlTemplateService.createRecipeVersion('prj1', 'u1', {
+        reportPeriod: { startDate: '2026-08-01', endDate: '2026-08-11' },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(mapCampaignMock).not.toHaveBeenCalled();
+    expect(prismaMock.htmlVersion.create).not.toHaveBeenCalled();
+  });
+
+  it('有 campaignId → 停用旧 active + 建 recipe 版本 + 同步 meta.reportPeriod', async () => {
+    prismaMock.project.findUnique.mockResolvedValue({ meta: { campaignId: 'camp-x' } });
+    mapCampaignMock.mockResolvedValue({ header: { period: { start: '2026-08-01', end: '2026-08-11' } } });
+    prismaMock.project.update.mockResolvedValue({});
+    prismaMock.htmlVersion.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.htmlVersion.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'ver_new', ...(data as object) }),
+    );
+
+    const res = await htmlTemplateService.createRecipeVersion('prj1', 'u1', {
+      reportPeriod: { startDate: '2026-08-01', endDate: '2026-08-11' },
+    });
+
+    expect(res).toEqual({ versionId: 'ver_new' });
+    expect(mapCampaignMock).toHaveBeenCalledWith('camp-x', { startDate: '2026-08-01', endDate: '2026-08-11' });
+    expect(prismaMock.htmlVersion.updateMany).toHaveBeenCalledWith({
+      where: { projectId: 'prj1', isActive: true },
+      data: { isActive: false },
+    });
+    expect(prismaMock.htmlVersion.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        projectId: 'prj1', ownerId: 'u1', recipeId: 'campaign-report', isActive: true,
+      }),
+    });
+    expect(prismaMock.project.update).toHaveBeenCalledWith({
+      where: { id: 'prj1' },
+      data: { meta: expect.objectContaining({ campaignId: 'camp-x', reportPeriod: { startDate: '2026-08-01', endDate: '2026-08-11' } }) },
+    });
+  });
+
+  it('未传 reportPeriod → 沿用 meta.reportPeriod 兜底', async () => {
+    prismaMock.project.findUnique.mockResolvedValue({
+      meta: { campaignId: 'camp-x', reportPeriod: { startDate: '2026-07-01', endDate: '2026-07-31' } },
+    });
+    mapCampaignMock.mockResolvedValue({});
+    prismaMock.project.update.mockResolvedValue({});
+    prismaMock.htmlVersion.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.htmlVersion.create.mockResolvedValue({ id: 'ver2' });
+
+    await htmlTemplateService.createRecipeVersion('prj1', 'u1', {});
+    expect(mapCampaignMock).toHaveBeenCalledWith('camp-x', { startDate: '2026-07-01', endDate: '2026-07-31' });
   });
 });

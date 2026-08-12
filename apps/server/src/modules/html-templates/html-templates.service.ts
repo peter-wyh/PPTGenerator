@@ -2,6 +2,7 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { TemplateStatus } from '@prisma/client';
 import { getRecipe } from './recipe';
+import { mapCampaign } from './recipe/campaign-report/mapper';
 
 export interface HtmlTemplateSummary {
   id: string;
@@ -471,5 +472,43 @@ export const htmlTemplateService = {
       where: { id: versionId },
       data: data as any,
     });
+  },
+
+  /**
+   * 创建一个 recipe 版本并设为 active:跑 mapCampaign → reportContent,
+   * render → html,停用同 project 其它 active 版本后建版本,同步 meta.reportPeriod。
+   */
+  async createRecipeVersion(
+    projectId: string,
+    ownerId: string,
+    opts: { recipeId?: string; reportPeriod?: { startDate?: string; endDate?: string } },
+  ): Promise<{ versionId: string }> {
+    const recipeId = opts.recipeId ?? 'campaign-report';
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { meta: true },
+    });
+    if (!project) throw ApiError.notFound('报告不存在');
+    const meta = (project.meta as Record<string, unknown> | null) ?? {};
+    const campaignId = meta.campaignId as string | undefined;
+    if (!campaignId) {
+      throw ApiError.badRequest('报告未绑定 Campaign,无法生成 recipe 报告');
+    }
+    const reportPeriod =
+      opts.reportPeriod ?? (meta.reportPeriod as { startDate?: string; endDate?: string } | undefined);
+
+    const reportContent = await mapCampaign(campaignId, reportPeriod);
+    const html = await getRecipe(recipeId).render({ campaignId, reportContent });
+
+    await prisma.htmlVersion.updateMany({
+      where: { projectId, isActive: true },
+      data: { isActive: false },
+    });
+    const version = await prisma.htmlVersion.create({
+      data: { projectId, ownerId, name: 'Recipe 版本', recipeId, reportContent, html, isActive: true },
+    });
+    const newMeta = reportPeriod ? { ...meta, reportPeriod } : meta;
+    await prisma.project.update({ where: { id: projectId }, data: { meta: newMeta as any } });
+    return { versionId: version.id };
   },
 };
