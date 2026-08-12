@@ -84,3 +84,12 @@ export const reRenderSchema = z.object({
     })
     .optional(),
 });
+
+export const createRecipeVersionSchema = z.object({
+  recipeId: z.string().optional(),
+  reportPeriod: z.object({ startDate: z.string(), endDate: z.string() }).optional(),
+});
+
+export const recomputeSchema = z.object({
+  reportPeriod: z.object({ startDate: z.string(), endDate: z.string() }),
+});

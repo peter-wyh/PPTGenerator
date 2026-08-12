@@ -11,6 +11,7 @@ import {
   agentEditSchema,
   saveRecipeConfigSchema,
   reRenderSchema,
+  createRecipeVersionSchema,
 } from './html-templates.schema';
 
 const router = Router();
@@ -71,6 +72,14 @@ router.patch(
 router.patch(
   '/projects/:projectId/auto-save',
   htmlTemplateController.autoSave,
+);
+
+// POST /api/v1/html-templates/projects/:projectId/recipe-version — 创建 recipe 版本(G1)
+router.post(
+  '/projects/:projectId/recipe-version',
+  requireRole('ADMIN'),
+  validate({ body: createRecipeVersionSchema }),
+  htmlTemplateController.createRecipeVersion,
 );
 
 // GET /api/v1/html-templates/projects/:projectId/html-versions — 列出所有版本

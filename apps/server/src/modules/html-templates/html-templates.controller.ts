@@ -157,6 +157,18 @@ export const htmlTemplateController = {
     res.json(result);
   }),
 
+  /** 创建 recipe 版本并设为 active(G1) */
+  createRecipeVersion: asyncHandler(async (req: Request, res: Response) => {
+    const auth = req.user as AuthPayload;
+    const { projectId } = req.params;
+    const { recipeId, reportPeriod } = req.body;
+    const result = await htmlTemplateService.createRecipeVersion(projectId, auth.id, {
+      recipeId,
+      reportPeriod,
+    });
+    res.status(201).json(result);
+  }),
+
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
   getDesignGuide: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId } = req.params;
