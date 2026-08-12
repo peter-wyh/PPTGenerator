@@ -9,6 +9,7 @@ import { applyManifest } from './manifest';
 import { mergeTokens } from '../overrides';
 import type { RenderInput } from '../types';
 import { ApiError } from '../../../../utils/ApiError';
+import { config } from '../../../../config';
 
 // 注册 helpers
 Handlebars.registerHelper('json', (v) => new Handlebars.SafeString(JSON.stringify(v)));
@@ -25,6 +26,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const templateSrc = readFileSync(join(here, 'template.hbs'), 'utf8');
 const compiled = Handlebars.compile(templateSrc, { noEscape: false });
 
+// recipe 报告自托管资源基础 URL(与 ai-generate.service.ts 的 SELF_HOST_BASE 同源);
+// 模板里 {{vendorBase}}/vendor/... 引用。空则回退相对路径(srcdoc 同源可用,export 断)。
+const vendorBase = (process.env.PUBLIC_BASE_URL || config.webUrl || '').replace(/\/+$/, '');
+
 export async function render(input: RenderInput): Promise<string> {
   if (!input.campaignId && !input.reportContent) {
     throw ApiError.badRequest('recipe 需要 campaignId 或 reportContent');
@@ -37,5 +42,5 @@ export async function render(input: RenderInput): Promise<string> {
   // 模板根字段(header/kpis/trend/publishers/insights/actionable)与 tokens.* 并列,故展开 content。
   // components 由 manifest 决定顺序/可见性;每个 element 携带 partial 名 + 全量数据。
   const components = applyManifest(input.manifestOverrides).map((c) => ({ ...c, ...content, tokens }));
-  return compiled({ ...content, tokens, components });
+  return compiled({ ...content, tokens, components, vendorBase });
 }

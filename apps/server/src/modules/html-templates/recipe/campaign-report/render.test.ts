@@ -116,4 +116,16 @@ describe('render', () => {
     expect(html).not.toContain('$1,000');
     expect(html).not.toContain('$4,000');
   });
+
+  it('资源走自托管 /vendor/ + Google Fonts 国内镜像(无海外 CDN)', async () => {
+    const html = await render({ campaignId: 'c1' });
+    expect(html).toContain('/vendor/tailwind/play.min.js');
+    expect(html).toContain('/vendor/chartjs/chart.umd.min.js');
+    expect(html).toContain('/vendor/fontawesome/css/all.min.css');
+    expect(html).toContain('fonts.loli.net');
+    expect(html).not.toContain('cdn.tailwindcss.com');
+    expect(html).not.toContain('cdn.jsdelivr.net/npm/chart.js');
+    expect(html).not.toContain('cdnjs.cloudflare.com');
+    expect(html).not.toContain('fonts.googleapis.com');
+  });
 });
