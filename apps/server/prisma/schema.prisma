@@ -120,12 +120,16 @@ model DataRecord {
   kind      DataRecordKind
   ownerId   String
   data      Json
+  /// COLLABORATION 记录的 campaignId(便于按 campaign 查);其余 kind 为 null。
+  /// 由 data.service 写入时同步(SP1),非 DB 生成列。
+  scopeCampaignId String?
   owner     User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
   @@index([kind])
   @@index([ownerId])
+  @@index([kind, scopeCampaignId], map: "idx_data_kind_scope")
 }
 
 /// 数据记录类型。
