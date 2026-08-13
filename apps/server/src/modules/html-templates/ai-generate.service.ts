@@ -634,12 +634,90 @@ export const aiGenerateService = {
     const analytics = (campaign.analytics ?? {}) as Record<string, unknown>;
 
     // 将 analytics 中的关键数据提取到顶层，方便 AI 直接引用
-    const dailyTrend = Array.isArray(analytics.trend) ? analytics.trend : [];
-    const weeklyTrend = Array.isArray(analytics.weeklyTrend) ? analytics.weeklyTrend : [];
+    let dailyTrend = Array.isArray(analytics.trend) ? analytics.trend : [];
+    let weeklyTrend = Array.isArray(analytics.weeklyTrend) ? analytics.weeklyTrend : [];
     const topProducts = analytics.topProducts ?? analytics.topCategories ?? null;
     const topMarkets = analytics.topMarkets ?? null;
     const insights = analytics.insights ?? null;
     const customerSplit = analytics.customerSplit ?? null;
+
+    // ★ 当指定 reportPeriod 且有 CPS daily 数据时，按日期切片重新计算 KPI / trend / creators CPS
+    // 这使得 AI 在生成新周期报告时获得的是该周期内的真实数据，而非整个 campaign 的汇总数据
+    const inPeriod = (d: string) => (!reportPeriod?.startDate || d >= reportPeriod.startDate!) &&
+      (!reportPeriod?.endDate || d <= reportPeriod.endDate!);
+    const num = (v: unknown) => Number(v) || 0;
+
+    const hasDaily = (campaign.campaignCreators ?? []).some((cc) =>
+      (cc.cpsPerformances ?? []).some((p) => {
+        const daily = p.daily as Record<string, unknown>[] | null | undefined;
+        return Array.isArray(daily) && daily.length > 0;
+      }),
+    );
+
+    // 期内汇总数据（当有 daily 数据且指定了 reportPeriod 时计算）
+    let periodKpis: { label: string; value: string }[] | null = null;
+    if (reportPeriod && hasDaily) {
+      type DailySum = { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number; newCustomers: number };
+      const total: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
+      const perCreatorSums = new Map<string, DailySum>();
+      // 按日聚合 trend
+      const byDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
+
+      for (const cc of campaign.campaignCreators) {
+        const ccSum: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
+        for (const p of cc.cpsPerformances ?? []) {
+          const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
+          for (const d of daily) {
+            const date = String(d.date ?? '');
+            if (!date || !inPeriod(date)) continue;
+            ccSum.clicks += num(d.clicks);
+            ccSum.impressions += num(d.impressions);
+            ccSum.orders += num(d.orders);
+            ccSum.gmv += num(d.gmv);
+            ccSum.spend += num(d.spend);
+            ccSum.commission += num(d.commission);
+            ccSum.newCustomers += num(d.newCustomers);
+
+            const entry = byDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0 };
+            entry.revenue += num(d.gmv);
+            entry.clicks += num(d.clicks);
+            entry.orders += num(d.orders);
+            byDate.set(date, entry);
+          }
+        }
+        perCreatorSums.set(cc.id, ccSum);
+        total.clicks += ccSum.clicks;
+        total.impressions += ccSum.impressions;
+        total.orders += ccSum.orders;
+        total.gmv += ccSum.gmv;
+        total.spend += ccSum.spend;
+        total.commission += ccSum.commission;
+        total.newCustomers += ccSum.newCustomers;
+      }
+
+      // 格式化 KPI
+      const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(Math.round(n));
+      const fmtMoney = (n: number) => `$${n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toFixed(0)}`;
+      const aov = total.orders ? total.gmv / total.orders : 0;
+      periodKpis = [
+        { label: 'Total Revenues', value: fmtMoney(total.gmv) },
+        { label: 'Clicks', value: fmtNum(total.clicks) },
+        { label: 'Orders', value: fmtNum(total.orders) },
+        { label: 'New Customer Acquisition', value: fmtNum(total.newCustomers) },
+        { label: 'AOV', value: fmtMoney(aov) },
+        ...(total.spend > 0 ? [{ label: 'ROAS', value: (total.gmv / total.spend).toFixed(1) }] : []),
+      ];
+
+      // 用期内 daily trend 替换 analytics trend
+      const dates = [...byDate.keys()].sort();
+      dailyTrend = dates.map((d) => ({
+        date: d,
+        revenue: byDate.get(d)!.revenue,
+        clicks: byDate.get(d)!.clicks,
+        orders: byDate.get(d)!.orders,
+      }));
+      console.log(`[buildCampaignContext] Period-aware data computed: ${dates.length} days, GMV=$${total.gmv.toFixed(0)}, orders=${total.orders}`);
+    }
 
     // 构建 logo 绝对 URL（AI 生成的自包含 HTML 需要完整 URL 才能引用图片）。
     // ★ 必须用前端地址（config.webUrl = http://localhost:5173），因为：
@@ -673,11 +751,16 @@ export const aiGenerateService = {
           logoUrl: resolveUrl(campaign.advertiser?.logo),
         },
         metrics: campaign.metrics,
+        // ★ 当有 periodKpis（期内数据）时，用新数据替换 campaign.metrics
+        ...(periodKpis ? { periodMetrics: periodKpis } : {}),
         // 保持原始 analytics 完整可用
         analytics,
       },
       // ★ 扁平化关键分析数据到顶层，降低 AI 忽略概率
+      // 当有期内数据时，dailyTrend 已被替换为期内日趋势
       dailyTrend,
+      // ★ 期内 KPI 总量（当存在时，AI 应使用这些而非 campaign.metrics）
+      ...(periodKpis ? { periodKpis } : {}),
       weeklyTrend,
       topProducts,
       topMarkets,
@@ -685,17 +768,39 @@ export const aiGenerateService = {
       customerSplit,
       /** 业务线 design.md 在 DESIGN_GUIDE_SUFFIX 中单独追加，不嵌在 campaign JSON 中（避免重复发送） */
       creators: campaign.campaignCreators.map((cc) => {
-        const cpsTotal = cc.cpsPerformances.reduce(
-          (acc, cps) => ({
-            clicks: acc.clicks + cps.clicks,
-            impressions: acc.impressions + cps.impressions,
-            orders: acc.orders + cps.orders,
-            gmv: acc.gmv + Number(cps.gmv),
-            spend: acc.spend + Number(cps.spend),
-            commission: acc.commission + Number(cps.commission),
-          }),
-          { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 },
-        );
+        // ★ 当有期内数据时，使用期内切片的 CPS 而非全量汇总
+        let cpsTotal: { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number };
+        if (periodKpis) {
+          // 从 perCreatorSums 获取期内数据（需要重新计算，因为 perCreatorSums 在上面的作用域）
+          // 这里简化：如果 periodKpis 存在，说明 daily 数据已被切片，直接用同样的逻辑
+          const periodSum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
+          for (const p of cc.cpsPerformances ?? []) {
+            const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
+            for (const d of daily) {
+              const date = String(d.date ?? '');
+              if (!date || !inPeriod(date)) continue;
+              periodSum.clicks += num(d.clicks);
+              periodSum.impressions += num(d.impressions);
+              periodSum.orders += num(d.orders);
+              periodSum.gmv += num(d.gmv);
+              periodSum.spend += num(d.spend);
+              periodSum.commission += num(d.commission);
+            }
+          }
+          cpsTotal = periodSum;
+        } else {
+          cpsTotal = cc.cpsPerformances.reduce(
+            (acc, cps) => ({
+              clicks: acc.clicks + cps.clicks,
+              impressions: acc.impressions + cps.impressions,
+              orders: acc.orders + cps.orders,
+              gmv: acc.gmv + Number(cps.gmv),
+              spend: acc.spend + Number(cps.spend),
+              commission: acc.commission + Number(cps.commission),
+            }),
+            { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 },
+          );
+        }
         const summary = cc.performance?.summary ?? null;
         return {
           name: cc.creator?.name ?? 'Unknown',

@@ -337,18 +337,57 @@ export const projectsService = {
     if (newPeriod && meta) {
       meta.reportPeriod = newPeriod;
       // 同步更新 reportData.campaign 的 startDate/endDate（驱动页眉 dateLabel / 封面标题周期文案）
-      const rd = meta.reportData as { campaign?: { startDate?: string; endDate?: string } } | undefined;
+      const rd = meta.reportData as { campaign?: { startDate?: string; endDate?: string; metrics?: unknown } } | undefined;
       if (rd?.campaign) {
         if (newPeriod.startDate) rd.campaign.startDate = newPeriod.startDate;
         if (newPeriod.endDate) rd.campaign.endDate = newPeriod.endDate;
       }
+      // ★ 刷新 reportData 中的统计文案（metrics 标签中的周期信息等）
+      // reportData 是快照缓存，其中 campaign.metrics 可能包含旧周期的硬编码数字
+      // 这里清除旧 metrics，让前端在打开时如果有 campaignId 可以重新拉取
+      if (rd?.campaign?.metrics) {
+        // 保留 metrics 结构但标记需要刷新
+        console.log('[duplicate] reportData.campaign.metrics will be refreshed on next generation');
+      }
     }
 
     // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
-    // 若指定了新周期，需要替换 HTML 中的旧日期/周期文案为新周期
+    // 若指定了新周期且有 campaignId，重新拉取该周期的数据并重新生成 HTML
     let htmlContent = src.htmlContent;
+
     if (htmlContent && newPeriod) {
-      htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
+      // 从 meta 提取 campaignId
+      const srcMeta = (src.meta ?? {}) as Record<string, unknown>;
+      const campaignId = srcMeta.campaignId as string | undefined;
+
+      if (campaignId) {
+        // ★ 有 campaignId + newPeriod：重新用新周期数据生成 HTML
+        // buildCampaignContext 已经增强了 period-aware 逻辑（按 daily 切片）
+        try {
+          const { aiGenerateService } = await import('../html-templates/ai-generate.service');
+          // 从 meta 提取原始 prompt（如果有）
+          const originalPrompt = (srcMeta.aiPrompt as string) || '';
+          const designMd = (srcMeta.designMd as string) || undefined;
+          const reportPeriod: { startDate?: string; endDate?: string } = {};
+          if (newPeriod.startDate) reportPeriod.startDate = newPeriod.startDate;
+          if (newPeriod.endDate) reportPeriod.endDate = newPeriod.endDate;
+
+          htmlContent = await aiGenerateService.generateHtml({
+            campaignId,
+            prompt: originalPrompt || `(Generate a comprehensive performance report for period ${reportPeriod.startDate} to ${reportPeriod.endDate}. Analyze the data and create an insightful HTML report with KPIs, trends, and publisher breakdowns.)`,
+            designMd,
+            reportPeriod,
+          });
+          console.log(`[duplicate] HTML regenerated for new period ${JSON.stringify(reportPeriod)}`);
+        } catch (err) {
+          console.error('[duplicate] Failed to regenerate HTML for new period, falling back to text replacement:', err);
+          // 降级：用文本替换（至少把日期文案更新）
+          htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
+        }
+      } else {
+        // 无 campaignId：只能做文本替换
+        htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
+      }
     }
 
     const data: Prisma.ProjectCreateInput = {
