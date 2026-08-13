@@ -233,3 +233,41 @@ describe('projects.service · createFromTemplate 重名自动找号', () => {
     ).toBe('周报模板 副本');
   });
 });
+
+describe('projects.service · createFromTemplate reportPeriod 覆盖', () => {
+  it('传 reportPeriod → 新 project meta.reportPeriod 被覆盖,其余 meta 保留', async () => {
+    prismaMock.template.findUnique.mockResolvedValue({
+      id: 'tpl1', name: 'TPL', status: 'PUBLISHED', width: 1280, height: 720,
+      pages: [] as any, htmlContent: '<html/>',
+      meta: { styleType: 'ai-html', campaignId: 'c1', reportPeriod: { startDate: '2026-07-01', endDate: '2026-07-31' } },
+    });
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'prj_new', ownerId: 'u1', createdAt: new Date(), updatedAt: new Date(), ...(data as object) }),
+    );
+
+    await projectsService.createFromTemplate('u1', 'tpl1', undefined, {
+      startDate: '2026-08-01', endDate: '2026-08-11',
+    });
+
+    const createData = (prismaMock.project.create.mock.calls[0][0] as any).data;
+    expect(createData.meta.reportPeriod).toEqual({ startDate: '2026-08-01', endDate: '2026-08-11' });
+    expect(createData.meta.styleType).toBe('ai-html');
+    expect(createData.meta.campaignId).toBe('c1');
+    expect(createData.meta.isDefault).toBeUndefined();
+  });
+
+  it('不传 reportPeriod → 沿用模版 reportPeriod', async () => {
+    prismaMock.template.findUnique.mockResolvedValue({
+      id: 'tpl1', name: 'TPL', status: 'PUBLISHED', width: 1280, height: 720, pages: [] as any,
+      meta: { reportPeriod: { startDate: '2026-07-01', endDate: '2026-07-31' } },
+    });
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.create.mockResolvedValue({ id: 'prj2', ownerId: 'u1', createdAt: new Date(), updatedAt: new Date() });
+
+    await projectsService.createFromTemplate('u1', 'tpl1');
+
+    const createData = (prismaMock.project.create.mock.calls[0][0] as any).data;
+    expect(createData.meta.reportPeriod).toEqual({ startDate: '2026-07-01', endDate: '2026-07-31' });
+  });
+});

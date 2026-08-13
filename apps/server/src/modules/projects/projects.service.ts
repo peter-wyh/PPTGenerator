@@ -331,6 +331,7 @@ export const projectsService = {
     ownerId: string,
     templateId: string,
     name?: string,
+    reportPeriod?: { startDate?: string; endDate?: string },
   ): Promise<ProjectDetail> {
     const tpl = await prisma.template.findUnique({ where: { id: templateId } });
     if (!tpl || tpl.status !== 'PUBLISHED') {
@@ -349,19 +350,21 @@ export const projectsService = {
       copyNumber++;
       projectName = copyNumber === 1 ? `${desiredName} 副本` : `${desiredName} 副本 ${copyNumber}`;
     }
+    // 构建 meta(剥 isDefault);reportPeriod 传入则覆盖
+    let meta: Record<string, unknown> | undefined;
+    if (tpl.meta) {
+      const { isDefault: _omit, ...rest } = tpl.meta as Record<string, unknown>;
+      void _omit;
+      meta = rest;
+    }
+    if (reportPeriod) meta = { ...(meta ?? {}), reportPeriod };
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
       name: projectName,
       width: tpl.width,
       height: tpl.height,
       pages: JSON.parse(JSON.stringify(tpl.pages)) as unknown as Prisma.InputJsonValue,
-      ...(tpl.meta
-        ? {
-            meta: (({ isDefault: _omit, ...rest }) => rest)(
-              tpl.meta as Record<string, unknown>,
-            ) as unknown as Prisma.InputJsonValue,
-          }
-        : {}),
+      ...(meta ? { meta: meta as unknown as Prisma.InputJsonValue } : {}),
       // ★ 复制 HTML 报告内容（若有）
       ...(tpl.htmlContent ? { htmlContent: tpl.htmlContent } : {}),
     };
