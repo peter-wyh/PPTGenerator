@@ -47,7 +47,8 @@ function toDetail(p: Project): ProjectDetail {
 
 /**
  * 替换 HTML 中的旧周期日期为新周期。
- * 处理多种格式：2024-01、2024-01-15、2024.01.15、2024年01月、Jan 2024 等。
+ * 如果有 oldPeriod（meta.reportPeriod），用它构建替换映射；
+ * 如果没有 oldPeriod，直接从 HTML 中用正则扫描日期/月份模式进行替换。
  */
 function replacePeriodInHtml(
   html: string,
@@ -59,62 +60,119 @@ function replacePeriodInHtml(
     reportPeriod?: { month?: string; startDate?: string; endDate?: string };
   } | null;
   const oldPeriod = meta?.reportPeriod;
-  if (!oldPeriod) return html; // 无旧周期信息，无法替换
-
-  let result = html;
 
   // 格式化辅助
   const formatDateCN = (d: string) => {
     const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
     return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, '0')}月`;
   };
   const formatDateShort = (d: string) => {
     const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
   const formatDateFull = (d: string) => {
     const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+  const formatDateEN = (d: string) => {
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
+    return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
   };
   const formatMonthCN = (month: string) => {
     const [y, m] = month.split('-');
     return `${y}年${m}月`;
   };
+  const formatDateRangeEN = (start: string, end: string) => {
+    const s = new Date(start), e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return `${start} - ${end}`;
+    const sStr = s.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+    const eStr = e.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+    return `${sStr} - ${eStr}, ${e.getFullYear()}`;
+  };
 
-  // 构建替换映射 (旧值 → 新值)
+  let result = html;
+
+  // ===== 策略 1: 从 oldPeriod 构建精确替换映射 =====
   const replacements: [string, string][] = [];
 
-  // 月份模式 (2024-01)
-  if (oldPeriod.month && newPeriod.month) {
-    replacements.push([oldPeriod.month, newPeriod.month]);
-    replacements.push([formatMonthCN(oldPeriod.month), formatMonthCN(newPeriod.month)]);
-    // 2024.01 格式
-    const [, oldM] = oldPeriod.month.split('-');
-    const [, newM] = newPeriod.month.split('-');
-    const oldY = oldPeriod.month.split('-')[0];
-    const newY = newPeriod.month.split('-')[0];
-    replacements.push([`${oldY}.${oldM}`, `${newY}.${newM}`]);
+  if (oldPeriod) {
+    // 月份模式 (2024-01)
+    if (oldPeriod.month && newPeriod.month) {
+      replacements.push([oldPeriod.month, newPeriod.month]);
+      replacements.push([formatMonthCN(oldPeriod.month), formatMonthCN(newPeriod.month)]);
+      const [, oldM] = oldPeriod.month.split('-');
+      const [, newM] = newPeriod.month.split('-');
+      const oldY = oldPeriod.month.split('-')[0];
+      const newY = newPeriod.month.split('-')[0];
+      replacements.push([`${oldY}.${oldM}`, `${newY}.${newM}`]);
+    }
+
+    // 日期范围模式
+    if (oldPeriod.startDate && newPeriod.startDate) {
+      replacements.push([oldPeriod.startDate, newPeriod.startDate]);
+      replacements.push([formatDateCN(oldPeriod.startDate), formatDateCN(newPeriod.startDate)]);
+      replacements.push([formatDateShort(oldPeriod.startDate), formatDateShort(newPeriod.startDate)]);
+      replacements.push([formatDateFull(oldPeriod.startDate), formatDateFull(newPeriod.startDate)]);
+      replacements.push([formatDateEN(oldPeriod.startDate), formatDateEN(newPeriod.startDate)]);
+    }
+    if (oldPeriod.endDate && newPeriod.endDate) {
+      replacements.push([oldPeriod.endDate, newPeriod.endDate]);
+      replacements.push([formatDateCN(oldPeriod.endDate), formatDateCN(newPeriod.endDate)]);
+      replacements.push([formatDateShort(oldPeriod.endDate), formatDateShort(newPeriod.endDate)]);
+      replacements.push([formatDateFull(oldPeriod.endDate), formatDateFull(newPeriod.endDate)]);
+      replacements.push([formatDateEN(oldPeriod.endDate), formatDateEN(newPeriod.endDate)]);
+    }
+
+    // 日期范围显示文本
+    if (oldPeriod.startDate && oldPeriod.endDate && newPeriod.startDate && newPeriod.endDate) {
+      replacements.push([formatDateRangeEN(oldPeriod.startDate, oldPeriod.endDate), formatDateRangeEN(newPeriod.startDate, newPeriod.endDate)]);
+    }
   }
 
-  // 日期范围模式
-  if (oldPeriod.startDate && newPeriod.startDate) {
-    replacements.push([oldPeriod.startDate, newPeriod.startDate]);
-    replacements.push([formatDateCN(oldPeriod.startDate), formatDateCN(newPeriod.startDate)]);
-    replacements.push([formatDateShort(oldPeriod.startDate), formatDateShort(newPeriod.startDate)]);
-    replacements.push([formatDateFull(oldPeriod.startDate), formatDateFull(newPeriod.startDate)]);
-  }
-  if (oldPeriod.endDate && newPeriod.endDate) {
-    replacements.push([oldPeriod.endDate, newPeriod.endDate]);
-    replacements.push([formatDateCN(oldPeriod.endDate), formatDateCN(newPeriod.endDate)]);
-    replacements.push([formatDateShort(oldPeriod.endDate), formatDateShort(newPeriod.endDate)]);
-    replacements.push([formatDateFull(oldPeriod.endDate), formatDateFull(newPeriod.endDate)]);
-  }
-
-  // 执行所有替换（长字符串优先，避免部分匹配问题）
+  // 执行精确替换（长字符串优先，避免短串吃掉长串）
   replacements.sort((a, b) => b[0].length - a[0].length);
-  for (const [oldVal, newVal] of replacements) {
-    if (oldVal && newVal && oldVal !== newVal) {
-      result = result.split(oldVal).join(newVal);
+  for (const [old, newText] of replacements) {
+    if (old && newText && old !== newText) {
+      result = result.split(old).join(newText);
+    }
+  }
+
+  // ===== 策略 2: 正则扫描 — 用新周期日期替换 HTML 中所有 YYYY-MM 或 YYYY-MM-DD 模式 =====
+  // 当 oldPeriod 缺失或精确替换不够时，直接用正则找日期并替换为对应新日期
+  if (newPeriod.month || newPeriod.startDate) {
+    // 确定新周期的目标值
+    const targetMonth = newPeriod.month || (newPeriod.startDate ? newPeriod.startDate.slice(0, 7) : '');
+    const targetStart = newPeriod.startDate || (newPeriod.month ? `${newPeriod.month}-01` : '');
+    const targetEnd = newPeriod.endDate || (newPeriod.month ? `${newPeriod.month}-28` : '');
+
+    if (targetMonth) {
+      const [newY, newM] = targetMonth.split('-');
+      const newMonthCN = `${newY}年${newM}月`;
+
+      // 替换 YYYY-MM-DD 格式
+      if (targetStart && targetEnd) {
+        result = result.replace(/(\d{4})-(\d{2})-(\d{2})/g, (match) => {
+          // 如果在旧周期范围内，替换为对应新日期
+          if (oldPeriod) {
+            if (match === (oldPeriod.startDate || '')) return targetStart;
+            if (match === (oldPeriod.endDate || '')) return targetEnd;
+          }
+          // 否则：同月替换为新月（保持日不变）
+          const [, , dd] = match.split('-');
+          return `${targetMonth}-${dd}`;
+        });
+      }
+
+      // 替换 YYYY-MM 格式（但不匹配 YYYY-MM-DD 中已处理的部分）
+      result = result.replace(/(?<!\d)(\d{4})-(\d{2})(?!\d)/g, () => targetMonth);
+      // 替换 YYYY年MM月 格式
+      result = result.replace(/\d{4}年\d{1,2}月/g, newMonthCN);
+      // 替换 YYYY.MM 格式
+      result = result.replace(/(\d{4})\.(\d{2})/g, `${newY}.${newM}`);
     }
   }
 
