@@ -1,0 +1,6 @@
+ALTER TABLE `CpsPerformance`
+  ADD COLUMN `productName` VARCHAR(191) NULL,
+  ADD COLUMN `category`    VARCHAR(191) NULL,
+  ADD COLUMN `market`      VARCHAR(191) NULL,
+  ADD COLUMN `promoName`   VARCHAR(191) NULL,
+  ADD COLUMN `promoType`   VARCHAR(191) NULL;

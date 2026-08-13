@@ -418,6 +418,13 @@ model CpsPerformance {
   commission        Decimal         @default(0) @db.Decimal(14, 2)
   spend             Decimal         @default(0) @db.Decimal(14, 2)
 
+  /// 维度标签(链接级,一条 CPS 链接一组维度;recipe Insight & Analysis 聚合用)。
+  productName String?
+  category    String?
+  market      String?
+  promoName   String?
+  promoType   String?
+
   /// 每日明细（CpsDaily[] JSON）。
   daily             Json?
 
