@@ -6,8 +6,10 @@
  *    调 htmlTemplatesApi.reRender(不保存)刷新右侧 iframe 预览。
  *  - 「保存」按钮 → 调 htmlTemplatesApi.saveRecipeConfig(versionId, cfg) 把当前三层
  *    配置落到 HtmlVersion,后端会重渲染并写回 html。
- *  - DataPanel「重新生成」走 generate({mode:'recipe'}) 全量重跑 mapCampaign,返回新 HTML
- *    时不改 content state(下一轮 saveRecipeConfig 时再固化,这里 v1 简化为只刷新预览)。
+ *  - DataPanel「重新生成」:有 versionId 时走 recomputeRecipe(period) 持久化(后端按新
+ *    时间段重跑 mapCampaign 并落库),onRecomputed→onSaved 让父组件 reloadVersion,
+ *    配合父组件传入的 key(含 updatedAt)让本编辑器重挂载注入新 reportContent。
+ *    无 versionId 时降级走 generate({mode:'recipe'}) 仅刷新预览。
  *
  * 四层 default 值由父组件从 HtmlVersionDetail 注入(reportContent/tokenOverrides/manifestOverrides)。
  */
@@ -86,6 +88,8 @@ export function RecipeEditor(props: Props) {
         <DataPanel
           campaignId={props.campaignId}
           reportPeriod={props.reportPeriod}
+          versionId={props.versionId}
+          onRecomputed={() => props.onSaved?.()}
           onRegenerated={handleRegenerated}
         />
         <ContentPanel content={content} onChange={setContent} />

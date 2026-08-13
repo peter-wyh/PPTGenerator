@@ -213,6 +213,27 @@ export const htmlTemplatesApi = {
       )
       .then((r) => r.data),
 
+  /** 创建 recipe 版本并设为 active(G1)。成功后需重载版本列表。 */
+  createRecipeVersion: (
+    projectId: string,
+    input: { recipeId?: string; reportPeriod?: { startDate?: string; endDate?: string } },
+  ) =>
+    api
+      .post<{ ok: boolean; versionId: string }>(
+        `/html-templates/projects/${projectId}/recipe-version`,
+        input,
+      )
+      .then((r) => r.data),
+
+  /** 按新时间段重算 recipe 版本并落库(G2)。成功后需重载版本。 */
+  recomputeRecipe: (versionId: string, reportPeriod: { startDate?: string; endDate?: string }) =>
+    api
+      .post<{ ok: boolean; versionId: string }>(
+        `/html-templates/html-versions/${versionId}/recompute`,
+        { reportPeriod },
+      )
+      .then((r) => r.data),
+
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
   getDesignGuide: (campaignId: string) =>
     api

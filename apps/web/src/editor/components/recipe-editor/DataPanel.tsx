@@ -1,12 +1,16 @@
 /**
  * DataPanel — Recipe 数据层(v1)。
- * v1 不做实时数据刷新(无 map 端点),只提供:
+ * v1 提供:
  *  - campaignId 输入(默认回显当前绑定值)
  *  - reportPeriod 起止日期
- *  - 「重新生成」按钮 → 调 htmlTemplatesApi.generate({mode:'recipe', campaignId, reportPeriod})
- *    返回全量 HTML,onRegenerated 回调让父组件刷新预览。
+ *  - 「重新生成」按钮:
+ *    - 有 versionId(G2 已接线):调 recomputeRecipe(versionId, period) → 后端按新时间段
+ *      重跑 mapCampaign 并落库(覆盖 reportContent/html/meta.reportPeriod),onRecomputed
+ *      回调让父组件重载版本,配合 RecipeEditor key 重挂载注入新数据。
+ *    - 无 versionId(降级):走 generate({mode:'recipe'}) 全量重跑,返回 HTML,不落库,
+ *      onRegenerated 只刷新预览。
  *
- * 重新生成会重新跑 mapCampaign,把 campaign 最新数据拉进 reportContent。
+ * 有 versionId 时重新生成会持久化;否则只刷新预览。
  */
 import { useState } from 'react';
 import { htmlTemplatesApi } from '@/api/htmlTemplates';
@@ -14,12 +18,15 @@ import { htmlTemplatesApi } from '@/api/htmlTemplates';
 interface Props {
   campaignId?: string;
   reportPeriod?: { startDate?: string; endDate?: string };
-  /** 重新生成完成后的回调,父组件收到新 HTML 后刷新预览。 */
+  /** 当前 recipe 版本 id(G2 接线后传入,有值则走 recomputeRecipe 持久化路径)。 */
+  versionId?: string;
+  /** 有 versionId 时,recompute 成功后回调(父组件重载版本,新 reportContent 注入)。 */
+  onRecomputed?: () => void;
+  /** 无 versionId 时的降级回调,父组件收到新 HTML 后刷新预览。 */
   onRegenerated?: (html: string) => void;
-  /** 生成失败/进行中状态外抛(可选,父组件可用来禁用其他操作)。 */
 }
 
-export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initialPeriod, onRegenerated }: Props) {
+export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initialPeriod, versionId, onRecomputed, onRegenerated }: Props) {
   const [campaignId, setCampaignId] = useState(initialCampaignId ?? '');
   const [startDate, setStartDate] = useState(initialPeriod?.startDate ?? '');
   const [endDate, setEndDate] = useState(initialPeriod?.endDate ?? '');
@@ -34,12 +41,20 @@ export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initial
     setLoading(true);
     setError('');
     try {
-      const html = await htmlTemplatesApi.generate({
-        mode: 'recipe',
-        campaignId: campaignId.trim(),
-        reportPeriod: { startDate: startDate || undefined, endDate: endDate || undefined },
-      });
-      onRegenerated?.(html);
+      if (versionId) {
+        await htmlTemplatesApi.recomputeRecipe(versionId, {
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        });
+        onRecomputed?.(); // 父组件重载版本(新 reportContent 注入)
+      } else {
+        const html = await htmlTemplatesApi.generate({
+          mode: 'recipe',
+          campaignId: campaignId.trim(),
+          reportPeriod: { startDate: startDate || undefined, endDate: endDate || undefined },
+        });
+        onRegenerated?.(html);
+      }
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: { message?: string }; message?: string } }; message?: string };
       setError(

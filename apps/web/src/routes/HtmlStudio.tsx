@@ -205,31 +205,35 @@ export function HtmlStudio() {
       // AI 模式使用流式；recipe 模式走老接口
       if (vals.mode === 'recipe') {
         try {
-          const html = await htmlTemplatesApi.generate({
-            mode: 'recipe',
-            campaignId,
-            reportPeriod,
-          });
-          setGeneratedHtml(html);
-          if (id) {
-            try {
-              await htmlTemplatesApi.autoSave(id, html);
-              setSaved(true);
-            } catch {}
-          }
+          // ★ recipe 模式:直接建 recipe 版本(后端 mapCampaign+render),不走 AI/流式
+          const { versionId } = await htmlTemplatesApi.createRecipeVersion(id!, { reportPeriod });
+          const vs = await htmlTemplatesApi.listHtmlVersions(id!);
+          const activeId = vs.find((v) => v.isActive)?.id ?? versionId;
+          const v = await htmlTemplatesApi.getHtmlVersion(activeId);
+          setActiveVersion(v);
+          setGeneratedHtml(v.html);
+          setSaved(true);
           void updateAiHtmlStatus('generated');
           setPhase('chat');
           setAgentHistory([
             {
               role: 'assistant',
-              content: '✨ 报告已生成并自动保存！你可以用自然语言修改。',
+              content: '✨ recipe 报告已生成(数据驱动)。改时间段/样式可秒级重算。',
               action: 'generate',
               ts: new Date().toISOString(),
             },
           ]);
         } catch (e: unknown) {
-          const err = e as { message?: string };
-          setError(err.message || '生成失败，请重试');
+          const err = e as {
+            response?: { data?: { error?: { message?: string }; message?: string } };
+            message?: string;
+          };
+          setError(
+            err.response?.data?.error?.message ||
+              err.response?.data?.message ||
+              err.message ||
+              '生成失败,请重试',
+          );
           void updateAiHtmlStatus('pending');
         } finally {
           setGenerating(false);
@@ -691,6 +695,7 @@ export function HtmlStudio() {
       {/* Recipe 模式:四层编辑器 */}
       {isRecipe && activeVersion ? (
         <RecipeEditor
+          key={`${activeVersion.id}-${activeVersion.updatedAt ?? ''}`}
           versionId={activeVersion.id}
           recipeId={activeVersion.recipeId!}
           campaignId={campaignId}
