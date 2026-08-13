@@ -38,6 +38,11 @@ export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initial
       setError('请填写 Campaign ID');
       return;
     }
+    // recompute 路径后端 recomputeSchema 要求起止日期都填(generate 降级路径不要求)
+    if (versionId && (!startDate || !endDate)) {
+      setError('重新生成(落库)需要起止日期都填写');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -106,7 +111,7 @@ export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initial
       <button
         type="button"
         onClick={handleRegenerate}
-        disabled={loading || !campaignId.trim()}
+        disabled={loading || !campaignId.trim() || (!!versionId && (!startDate || !endDate))}
         className="w-full rounded bg-accent-primary px-2 py-1.5 text-[11px] text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50"
       >
         {loading ? '生成中…' : '🔄 重新生成'}
