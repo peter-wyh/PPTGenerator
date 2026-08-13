@@ -222,8 +222,8 @@ export const htmlTemplateController = {
   /** Agent 模式自动保存（直接覆盖 htmlContent，无版本管理） */
   autoSave: asyncHandler(async (req: Request, res: Response) => {
     const { projectId } = req.params;
-    const { html, agentHistory } = req.body;
-    const result = await htmlTemplateService.autoSaveHtml(projectId, html, agentHistory);
+    const { html, agentHistory, aiPrompt, designMd } = req.body;
+    const result = await htmlTemplateService.autoSaveHtml(projectId, html, agentHistory, aiPrompt, designMd);
     res.json(result);
   }),
 

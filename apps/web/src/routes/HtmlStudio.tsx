@@ -291,7 +291,10 @@ export function HtmlStudio() {
           // 自动保存
           if (id) {
             try {
-              await htmlTemplatesApi.autoSave(id, streamingHtml);
+              await htmlTemplatesApi.autoSave(id, streamingHtml, undefined, {
+                prompt: vals.prompt,
+                designMd: vals.designMd,
+              });
               setSaved(true);
             } catch {}
           }

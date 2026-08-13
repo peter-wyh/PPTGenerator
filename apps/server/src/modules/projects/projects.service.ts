@@ -410,38 +410,40 @@ export const projectsService = {
     }
 
     // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
-    // 若指定了新周期，用快照替换策略更新 HTML 中的日期和 KPI 数据
+    // 若指定了新周期且有 campaignId，AI 重新生成（达人列表、KPI 全部按新周期刷新）
+    // 若 AI 重新生成失败，降级为快照值替换 + 日期替换
     let htmlContent = src.htmlContent;
 
     if (htmlContent && newPeriod) {
-      // 从 meta 提取 campaignId
       const srcMeta = (src.meta ?? {}) as Record<string, unknown>;
       const campaignId = srcMeta.campaignId as string | undefined;
 
       // 1) 先替换日期文案（始终执行）
       htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
 
-      // 2) 若有 campaignId，尝试用快照替换 KPI 数据
-      if (campaignId) {
+      // 2) 若有 campaignId + aiPrompt，AI 重新生成（达人列表按周期过滤）
+      if (campaignId && (srcMeta.aiPrompt || srcMeta.designMd)) {
         try {
-          const { getPeriodSnapshot, buildValueReplacementPairs, replaceMetricsBySnapshot } =
-            await import('../html-templates/period-snapshot');
+          const { aiGenerateService } = await import('../html-templates/ai-generate.service');
+          const reportPeriod: { startDate?: string; endDate?: string } = {};
+          if (newPeriod.startDate) reportPeriod.startDate = newPeriod.startDate;
+          if (newPeriod.endDate) reportPeriod.endDate = newPeriod.endDate;
 
-          // 计算旧周期快照（从旧 meta.reportPeriod 或无 period → 全量）
-          const oldPeriod = (srcMeta.reportPeriod as { startDate?: string; endDate?: string; month?: string } | undefined);
-          const oldSnapshot = await getPeriodSnapshot(campaignId, oldPeriod);
-          // 计算新周期快照
-          const newSnapshot = await getPeriodSnapshot(campaignId, newPeriod);
-
-          // 构建 old→new 值替换对
-          const pairs = buildValueReplacementPairs(oldSnapshot.rawValues, newSnapshot.rawValues);
-          if (pairs.length > 0) {
-            htmlContent = replaceMetricsBySnapshot(htmlContent, pairs);
-            console.log(`[duplicate] Metrics replaced: ${pairs.length} value pairs for campaign ${campaignId}`);
-          }
+          htmlContent = await aiGenerateService.generateHtml({
+            campaignId,
+            prompt: (srcMeta.aiPrompt as string) || '(Analyze the campaign data and create an insightful HTML report.)',
+            designMd: (srcMeta.designMd as string) || undefined,
+            reportPeriod,
+          });
+          console.log(`[duplicate] AI regenerated HTML for period ${JSON.stringify(reportPeriod)}`);
         } catch (err) {
-          console.error('[duplicate] Failed to compute period snapshots, keeping date-only replacement:', err);
+          console.error('[duplicate] AI re-generation failed, falling back to snapshot replacement:', err);
+          // 降级到快照替换
+          htmlContent = await this._applySnapshotReplacement(htmlContent, campaignId, src.meta, newPeriod);
         }
+      } else if (campaignId) {
+        // 有 campaignId 但无 aiPrompt/designMd → 快照值替换
+        htmlContent = await this._applySnapshotReplacement(htmlContent, campaignId, src.meta, newPeriod);
       }
     }
 
@@ -461,6 +463,34 @@ export const projectsService = {
     const project = await prisma.project.create({ data });
 
     return toDetail(project);
+  },
+
+  /**
+   * ★ 快照值替换降级方法：用旧→新周期的 KPI 数据快照替换 HTML 中的硬编码数字。
+   * 当 AI 重新生成失败或缺少 aiPrompt 时使用。
+   */
+  async _applySnapshotReplacement(
+    html: string,
+    campaignId: string,
+    srcMeta: unknown,
+    newPeriod: { month?: string; startDate?: string; endDate?: string },
+  ): Promise<string> {
+    try {
+      const { getPeriodSnapshot, buildValueReplacementPairs, replaceMetricsBySnapshot } =
+        await import('../html-templates/period-snapshot');
+      const meta = (srcMeta ?? {}) as Record<string, unknown>;
+      const oldPeriod = (meta.reportPeriod as { startDate?: string; endDate?: string; month?: string } | undefined);
+      const oldSnapshot = await getPeriodSnapshot(campaignId, oldPeriod);
+      const newSnapshot = await getPeriodSnapshot(campaignId, newPeriod);
+      const pairs = buildValueReplacementPairs(oldSnapshot.rawValues, newSnapshot.rawValues);
+      if (pairs.length > 0) {
+        html = replaceMetricsBySnapshot(html, pairs);
+        console.log(`[duplicate] Snapshot fallback: ${pairs.length} value pairs replaced`);
+      }
+    } catch (err) {
+      console.error('[duplicate] Snapshot replacement also failed, keeping date-only replacement:', err);
+    }
+    return html;
   },
 
   /** Owner 生成（或刷新）公开分享 token。 */

@@ -767,57 +767,64 @@ export const aiGenerateService = {
       insights,
       customerSplit,
       /** 业务线 design.md 在 DESIGN_GUIDE_SUFFIX 中单独追加，不嵌在 campaign JSON 中（避免重复发送） */
-      creators: campaign.campaignCreators.map((cc) => {
-        // ★ 当有期内数据时，使用期内切片的 CPS 而非全量汇总
-        let cpsTotal: { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number };
-        if (periodKpis) {
-          // 从 perCreatorSums 获取期内数据（需要重新计算，因为 perCreatorSums 在上面的作用域）
-          // 这里简化：如果 periodKpis 存在，说明 daily 数据已被切片，直接用同样的逻辑
-          const periodSum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
-          for (const p of cc.cpsPerformances ?? []) {
-            const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-            for (const d of daily) {
-              const date = String(d.date ?? '');
-              if (!date || !inPeriod(date)) continue;
-              periodSum.clicks += num(d.clicks);
-              periodSum.impressions += num(d.impressions);
-              periodSum.orders += num(d.orders);
-              periodSum.gmv += num(d.gmv);
-              periodSum.spend += num(d.spend);
-              periodSum.commission += num(d.commission);
+      creators: campaign.campaignCreators
+        .map((cc) => {
+          // ★ 当有期内数据时，使用期内切片的 CPS 而非全量汇总
+          let cpsTotal: { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number };
+          if (periodKpis) {
+            // 从 perCreatorSums 获取期内数据（需要重新计算，因为 perCreatorSums 在上面的作用域）
+            // 这里简化：如果 periodKpis 存在，说明 daily 数据已被切片，直接用同样的逻辑
+            const periodSum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
+            for (const p of cc.cpsPerformances ?? []) {
+              const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
+              for (const d of daily) {
+                const date = String(d.date ?? '');
+                if (!date || !inPeriod(date)) continue;
+                periodSum.clicks += num(d.clicks);
+                periodSum.impressions += num(d.impressions);
+                periodSum.orders += num(d.orders);
+                periodSum.gmv += num(d.gmv);
+                periodSum.spend += num(d.spend);
+                periodSum.commission += num(d.commission);
+              }
             }
+            cpsTotal = periodSum;
+          } else {
+            cpsTotal = cc.cpsPerformances.reduce(
+              (acc, cps) => ({
+                clicks: acc.clicks + cps.clicks,
+                impressions: acc.impressions + cps.impressions,
+                orders: acc.orders + cps.orders,
+                gmv: acc.gmv + Number(cps.gmv),
+                spend: acc.spend + Number(cps.spend),
+                commission: acc.commission + Number(cps.commission),
+              }),
+              { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 },
+            );
           }
-          cpsTotal = periodSum;
-        } else {
-          cpsTotal = cc.cpsPerformances.reduce(
-            (acc, cps) => ({
-              clicks: acc.clicks + cps.clicks,
-              impressions: acc.impressions + cps.impressions,
-              orders: acc.orders + cps.orders,
-              gmv: acc.gmv + Number(cps.gmv),
-              spend: acc.spend + Number(cps.spend),
-              commission: acc.commission + Number(cps.commission),
-            }),
-            { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 },
-          );
-        }
-        const summary = cc.performance?.summary ?? null;
-        return {
-          name: cc.creator?.name ?? 'Unknown',
-          // ★ avatarUrl may be null — use initials circle fallback
-          avatarUrl: cc.creator?.avatar ?? null,
-          platform: cc.creator?.platform ?? null,
-          tier: cc.creator?.tier ?? '',
-          contentType: cc.contentType,
-          collabType: cc.collabType,
-          totalPrice: cc.totalPrice,
-          currency: cc.currency,
-          // ★ performance may be null for non-creator partners (community, content site)
-          //   Display "—" for their metrics — do NOT omit them from the table
-          performance: summary,
-          cps: Object.keys(cpsTotal).length > 0 ? cpsTotal : null,
-        };
-      }),
+          const summary = cc.performance?.summary ?? null;
+          return {
+            name: cc.creator?.name ?? 'Unknown',
+            // ★ avatarUrl may be null — use initials circle fallback
+            avatarUrl: cc.creator?.avatar ?? null,
+            platform: cc.creator?.platform ?? null,
+            tier: cc.creator?.tier ?? '',
+            contentType: cc.contentType,
+            collabType: cc.collabType,
+            totalPrice: cc.totalPrice,
+            currency: cc.currency,
+            // ★ performance may be null for non-creator partners (community, content site)
+            //   Display "—" for their metrics — do NOT omit them from the table
+            performance: summary,
+            cps: Object.keys(cpsTotal).length > 0 ? cpsTotal : null,
+            // ★ 期内数据标记（非零说明该达人在此周期有活动）
+            _periodActive: periodKpis
+              ? (cpsTotal.clicks > 0 || cpsTotal.orders > 0 || cpsTotal.gmv > 0)
+              : true,
+          };
+        })
+        // ★ 按周期过滤：periodKpis 存在时，只保留周期内有活动的达人
+        .filter((cc) => cc._periodActive !== false),
     };
 
     return JSON.stringify(context, null, 2);

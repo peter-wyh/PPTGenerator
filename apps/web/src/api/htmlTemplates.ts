@@ -321,11 +321,12 @@ export const htmlTemplatesApi = {
     projectId: string,
     html: string,
     agentHistory?: AgentChatMessage[],
+    genParams?: { prompt: string; designMd: string },
   ) =>
     api
       .patch<{ ok: boolean; updatedAt: string }>(
         `/html-templates/projects/${projectId}/auto-save`,
-        { html, agentHistory },
+        { html, agentHistory, aiPrompt: genParams?.prompt, designMd: genParams?.designMd },
       )
       .then((r) => r.data),
 

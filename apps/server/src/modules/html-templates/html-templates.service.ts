@@ -160,6 +160,8 @@ export const htmlTemplateService = {
     projectId: string,
     html: string,
     agentHistory?: unknown[],
+    aiPrompt?: string,
+    designMd?: string,
   ): Promise<{ ok: true; updatedAt: string }> {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw ApiError.notFound('报告不存在');
@@ -172,6 +174,13 @@ export const htmlTemplateService = {
     };
     if (agentHistory !== undefined) {
       newMeta.agentHistory = agentHistory;
+    }
+    // ★ 存储 AI 生成参数，供 duplicate 时重新生成用
+    if (aiPrompt !== undefined) {
+      newMeta.aiPrompt = aiPrompt;
+    }
+    if (designMd !== undefined) {
+      newMeta.designMd = designMd;
     }
 
     await prisma.project.update({
