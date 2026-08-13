@@ -50,6 +50,11 @@ exports[`render > HTML 快照(DG 保真基线) 1`] = `
         .tag-fb { background: #eef2ff; color: #4f46e5; }
         .tag-tg { background: #f0fdf4; color: #16a34a; }
         .tag-site { background: #fffbeb; color: #d97706; }
+        .tag-discount { background: rgba(255,9,158,0.1); color: #ff099e; }
+        .tag-coupon { background: #f0fdf4; color: #16a34a; }
+        .tag-bundle { background: #eef2ff; color: #4f46e5; }
+        .tag-flash { background: #fffbeb; color: #d97706; }
+        .tag-gift { background: #f5f3ff; color: #7c3aed; }
         .insight-ol { padding-left: 16px; margin-bottom: 16px; }
         .insight-ol li { margin-bottom: 8px; font-size: 13px; color: #1e1c24; padding-left: 4px; }
         .insight-ol li span.highlight { color: #ff099e; font-weight: 500; }
