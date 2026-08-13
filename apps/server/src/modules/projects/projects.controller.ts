@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { projectsService } from './projects.service';
+import { htmlTemplateService } from '../html-templates/html-templates.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
 
@@ -35,18 +36,27 @@ export const projectsController = {
   }),
 
   duplicate: asyncHandler(async (req: Request, res: Response) => {
-    res.status(201).json({ project: await projectsService.duplicate(owner(req), req.params.id) });
+    const { reportPeriod } = req.body as { reportPeriod?: { month?: string; startDate?: string; endDate?: string } };
+    res.status(201).json({ project: await projectsService.duplicate(owner(req), req.params.id, reportPeriod) });
   }),
 
   createFromTemplate: asyncHandler(async (req: Request, res: Response) => {
-    const { templateId, name } = req.body as { templateId?: string; name?: string };
+    const { templateId, name, reportPeriod } = req.body as {
+      templateId?: string;
+      name?: string;
+      reportPeriod?: { startDate?: string; endDate?: string };
+    };
     if (!templateId) {
       res.status(400).json({ message: 'templateId is required' });
       return;
     }
-    res
-      .status(201)
-      .json({ project: await projectsService.createFromTemplate(owner(req), templateId, name) });
+    const project = await projectsService.createFromTemplate(owner(req), templateId, name, reportPeriod);
+    // HTML 模版且绑了 campaign → 建活 recipe 版本(数据实时,只能改周期);否则保留静态 htmlContent 兜底
+    const meta = (project.meta ?? {}) as Record<string, unknown>;
+    if (meta.styleType === 'ai-html' && meta.campaignId) {
+      await htmlTemplateService.createRecipeVersion(project.id, owner(req), { reportPeriod });
+    }
+    res.status(201).json({ project });
   }),
 
   createShare: asyncHandler(async (req: Request, res: Response) => {
