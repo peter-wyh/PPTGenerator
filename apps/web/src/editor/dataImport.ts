@@ -77,6 +77,7 @@ export const CPS_FIELDS = [
   'campaignId', 'creatorId', 'collabId', 'contentType',
   'linkUrl', 'clicks', 'impressions', 'orders',
   'gmv', 'commission', 'spend',
+  'productName', 'category', 'market', 'promoName', 'promoType',
 ] as const;
 export const CPS_REQUIRED = ['campaignId', 'creatorId', 'contentType'];
 
@@ -130,7 +131,7 @@ export const PREVIEW_COLUMNS: Record<ImportKind, string[]> = {
   creatorAudience: ['creatorId', 'genderMale', 'genderFemale', 'age18_24', 'age25_34', 'topCity1'],
   creatorWorks: ['creatorId', 'workId', 'title', 'platform', 'publishedAt', 'impressions', 'likes', 'engagementRate'],
   collaborationDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'dailyDate', 'dailyImpressions'],
-  cps: ['campaignId', 'creatorId', 'collabId', 'contentType', 'linkUrl', 'clicks', 'orders', 'gmv', 'commission'],
+  cps: ['campaignId', 'creatorId', 'collabId', 'contentType', 'linkUrl', 'clicks', 'orders', 'gmv', 'commission', 'productName', 'category', 'market', 'promoName', 'promoType'],
   cpsDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'date', 'dailyClicks', 'dailyOrders', 'dailyGmv', 'dailySpend', 'dailyNewCustomers'],
 };
 
