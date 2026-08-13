@@ -202,7 +202,7 @@ export function HtmlStudio() {
       // 启动阶段轮播
       startStageTimer();
 
-      // AI 模式使用流式；recipe 模式走老接口
+      // AI 模式使用流式；recipe 模式直接建 recipe 版本（createRecipeVersion，数据驱动）
       if (vals.mode === 'recipe') {
         try {
           // ★ recipe 模式:直接建 recipe 版本(后端 mapCampaign+render),不走 AI/流式
