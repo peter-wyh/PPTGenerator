@@ -362,6 +362,8 @@ export const projectsService = {
             ) as unknown as Prisma.InputJsonValue,
           }
         : {}),
+      // ★ 复制 HTML 报告内容（若有）
+      ...(tpl.htmlContent ? { htmlContent: tpl.htmlContent } : {}),
     };
     const project = await prisma.project.create({ data });
     return toDetail(project);
@@ -410,40 +412,34 @@ export const projectsService = {
     }
 
     // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
-    // 若指定了新周期且有 campaignId，AI 重新生成（达人列表、KPI 全部按新周期刷新）
-    // 若 AI 重新生成失败，降级为快照值替换 + 日期替换
+    // 优先级：data-field 模板渲染 → AI 重新生成 → 快照值替换 → 日期替换
     let htmlContent = src.htmlContent;
 
     if (htmlContent && newPeriod) {
       const srcMeta = (src.meta ?? {}) as Record<string, unknown>;
       const campaignId = srcMeta.campaignId as string | undefined;
+      const reportPeriod: { startDate?: string; endDate?: string } = {};
+      if (newPeriod.startDate) reportPeriod.startDate = newPeriod.startDate;
+      if (newPeriod.endDate) reportPeriod.endDate = newPeriod.endDate;
 
-      // 1) 先替换日期文案（始终执行）
-      htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
-
-      // 2) 若有 campaignId + aiPrompt，AI 重新生成（达人列表按周期过滤）
-      if (campaignId && (srcMeta.aiPrompt || srcMeta.designMd)) {
-        try {
-          const { aiGenerateService } = await import('../html-templates/ai-generate.service');
-          const reportPeriod: { startDate?: string; endDate?: string } = {};
-          if (newPeriod.startDate) reportPeriod.startDate = newPeriod.startDate;
-          if (newPeriod.endDate) reportPeriod.endDate = newPeriod.endDate;
-
-          htmlContent = await aiGenerateService.generateHtml({
-            campaignId,
-            prompt: (srcMeta.aiPrompt as string) || '(Analyze the campaign data and create an insightful HTML report.)',
-            designMd: (srcMeta.designMd as string) || undefined,
-            reportPeriod,
-          });
-          console.log(`[duplicate] AI regenerated HTML for period ${JSON.stringify(reportPeriod)}`);
-        } catch (err) {
-          console.error('[duplicate] AI re-generation failed, falling back to snapshot replacement:', err);
-          // 降级到快照替换
-          htmlContent = await this._applySnapshotReplacement(htmlContent, campaignId, src.meta, newPeriod);
+      if (campaignId) {
+        // 1) 最高优先：data-field 模板渲染（< 100ms，零 AI 调用）
+        const { isTemplatedHtml, renderTemplate } = await import('../html-templates/template-renderer');
+        if (isTemplatedHtml(htmlContent)) {
+          try {
+            htmlContent = await renderTemplate(htmlContent, campaignId, reportPeriod);
+            console.log('[duplicate] Template rendered (data-field) for period', JSON.stringify(reportPeriod));
+          } catch (err) {
+            console.error('[duplicate] Template render failed, falling back to AI/snapshot:', err);
+            htmlContent = await this._fallbackPeriodUpdate(htmlContent, srcMeta, campaignId, reportPeriod);
+          }
+        } else {
+          // 2) 非 data-field 模板 → AI 重新生成 or 快照替换
+          htmlContent = await this._fallbackPeriodUpdate(htmlContent, srcMeta, campaignId, reportPeriod);
         }
-      } else if (campaignId) {
-        // 有 campaignId 但无 aiPrompt/designMd → 快照值替换
-        htmlContent = await this._applySnapshotReplacement(htmlContent, campaignId, src.meta, newPeriod);
+      } else {
+        // 无 campaignId → 仅日期替换
+        htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
       }
     }
 
@@ -466,22 +462,41 @@ export const projectsService = {
   },
 
   /**
-   * ★ 快照值替换降级方法：用旧→新周期的 KPI 数据快照替换 HTML 中的硬编码数字。
-   * 当 AI 重新生成失败或缺少 aiPrompt 时使用。
+   * ★ 非 data-field 模板的降级策略：AI 重新生成 → 快照值替换 → 日期替换。
    */
-  async _applySnapshotReplacement(
+  async _fallbackPeriodUpdate(
     html: string,
+    srcMeta: Record<string, unknown>,
     campaignId: string,
-    srcMeta: unknown,
-    newPeriod: { month?: string; startDate?: string; endDate?: string },
+    reportPeriod: { startDate?: string; endDate?: string },
   ): Promise<string> {
+    // 先替换日期文案
+    html = replacePeriodInHtml(html, srcMeta, reportPeriod);
+
+    // 若有 aiPrompt/designMd，AI 重新生成（达人列表按周期过滤）
+    if (srcMeta.aiPrompt || srcMeta.designMd) {
+      try {
+        const { aiGenerateService } = await import('../html-templates/ai-generate.service');
+        html = await aiGenerateService.generateHtml({
+          campaignId,
+          prompt: (srcMeta.aiPrompt as string) || '(Analyze the campaign data and create an insightful HTML report.)',
+          designMd: (srcMeta.designMd as string) || undefined,
+          reportPeriod,
+        });
+        console.log('[duplicate] AI regenerated HTML for period', JSON.stringify(reportPeriod));
+        return html;
+      } catch (err) {
+        console.error('[duplicate] AI re-generation failed, trying snapshot:', err);
+      }
+    }
+
+    // 降级到快照值替换
     try {
       const { getPeriodSnapshot, buildValueReplacementPairs, replaceMetricsBySnapshot } =
         await import('../html-templates/period-snapshot');
-      const meta = (srcMeta ?? {}) as Record<string, unknown>;
-      const oldPeriod = (meta.reportPeriod as { startDate?: string; endDate?: string; month?: string } | undefined);
+      const oldPeriod = (srcMeta.reportPeriod as { startDate?: string; endDate?: string; month?: string } | undefined);
       const oldSnapshot = await getPeriodSnapshot(campaignId, oldPeriod);
-      const newSnapshot = await getPeriodSnapshot(campaignId, newPeriod);
+      const newSnapshot = await getPeriodSnapshot(campaignId, reportPeriod);
       const pairs = buildValueReplacementPairs(oldSnapshot.rawValues, newSnapshot.rawValues);
       if (pairs.length > 0) {
         html = replaceMetricsBySnapshot(html, pairs);

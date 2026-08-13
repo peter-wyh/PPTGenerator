@@ -218,6 +218,48 @@ EXCEPTION — Data values keep their original language from campaign JSON AS-IS:
 - Brand names, advertiser names, campaign names
 - Numbers, dates, currency symbols
 
+═══ DATA ANCHOR ATTRIBUTES (CRITICAL — ZERO TOLERANCE) ═══
+You MUST annotate every dynamic data value in the HTML with a \`data-field\` attribute. This enables instant period-switching without re-calling AI (the system parses these anchors to swap values).
+
+1. KPI VALUES — annotate the element displaying the value (not the label):
+   <span data-field="revenue">$12,543</span>
+   <span data-field="orders">1,736</span>
+   <span data-field="clicks">52,108</span>
+   <span data-field="aov">$7.22</span>
+   <span data-field="newCustomers">892</span>
+   <span data-field="spend">$3,200</span>
+   <span data-field="roas">3.92</span>
+   <span data-field="period.start">Oct 01, 2024</span>
+   <span data-field="period.end">Oct 31, 2024</span>
+   <span data-field="period.display">Oct 01 - Oct 31, 2024</span>
+
+2. CREATOR TABLE — the <tbody> must have data-field="creators", each <tr> must have data-creator="<creator name>":
+   <tbody data-field="creators">
+     <tr data-creator="Leo Sato">
+       <td data-field="creator.name">Leo Sato</td>
+       <td data-field="creator.cps.clicks">1,234</td>
+       <td data-field="creator.cps.orders">56</td>
+       <td data-field="creator.cps.gmv">$3,456</td>
+       <td data-field="creator.cps.commission">$345.60</td>
+     </tr>
+   </tbody>
+
+3. TREND CHART DATA — annotate the <canvas> and wrap the Chart.js data array in a comment-anchored block:
+   <canvas data-field="dailyTrend"></canvas>
+   // In the script: use a variable named exactly "dailyTrend" for the data array.
+   const dailyTrend = [
+     { date: "2024-10-01", revenue: 4200, clicks: 800, orders: 12 },
+     { date: "2024-10-02", revenue: 5100, clicks: 950, orders: 15 },
+   ];
+
+   The system will replace the entire \`dailyTrend\` array. Use this exact variable name.
+
+RULES:
+- data-field values are CASE SENSITIVE — use the exact field names from the campaign JSON.
+- Every numeric/text value that comes from campaign data MUST have a data-field attribute.
+- Static text (section titles, labels, descriptions) does NOT need data-field.
+- The data-field attribute must be on the ELEMENT that directly contains the displayable text value.
+
 ═══ OUTPUT CONSTRAINT ═══
 Keep HTML concise but complete. Do not exceed 14000 tokens of output.`;
 
