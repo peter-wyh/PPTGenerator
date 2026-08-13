@@ -410,7 +410,7 @@ export const projectsService = {
     }
 
     // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
-    // 若指定了新周期且有 campaignId，重新拉取该周期的数据并重新生成 HTML
+    // 若指定了新周期，用快照替换策略更新 HTML 中的日期和 KPI 数据
     let htmlContent = src.htmlContent;
 
     if (htmlContent && newPeriod) {
@@ -418,33 +418,30 @@ export const projectsService = {
       const srcMeta = (src.meta ?? {}) as Record<string, unknown>;
       const campaignId = srcMeta.campaignId as string | undefined;
 
-      if (campaignId) {
-        // ★ 有 campaignId + newPeriod：重新用新周期数据生成 HTML
-        // buildCampaignContext 已经增强了 period-aware 逻辑（按 daily 切片）
-        try {
-          const { aiGenerateService } = await import('../html-templates/ai-generate.service');
-          // 从 meta 提取原始 prompt（如果有）
-          const originalPrompt = (srcMeta.aiPrompt as string) || '';
-          const designMd = (srcMeta.designMd as string) || undefined;
-          const reportPeriod: { startDate?: string; endDate?: string } = {};
-          if (newPeriod.startDate) reportPeriod.startDate = newPeriod.startDate;
-          if (newPeriod.endDate) reportPeriod.endDate = newPeriod.endDate;
+      // 1) 先替换日期文案（始终执行）
+      htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
 
-          htmlContent = await aiGenerateService.generateHtml({
-            campaignId,
-            prompt: originalPrompt || `(Generate a comprehensive performance report for period ${reportPeriod.startDate} to ${reportPeriod.endDate}. Analyze the data and create an insightful HTML report with KPIs, trends, and publisher breakdowns.)`,
-            designMd,
-            reportPeriod,
-          });
-          console.log(`[duplicate] HTML regenerated for new period ${JSON.stringify(reportPeriod)}`);
+      // 2) 若有 campaignId，尝试用快照替换 KPI 数据
+      if (campaignId) {
+        try {
+          const { getPeriodSnapshot, buildValueReplacementPairs, replaceMetricsBySnapshot } =
+            await import('../html-templates/period-snapshot');
+
+          // 计算旧周期快照（从旧 meta.reportPeriod 或无 period → 全量）
+          const oldPeriod = (srcMeta.reportPeriod as { startDate?: string; endDate?: string; month?: string } | undefined);
+          const oldSnapshot = await getPeriodSnapshot(campaignId, oldPeriod);
+          // 计算新周期快照
+          const newSnapshot = await getPeriodSnapshot(campaignId, newPeriod);
+
+          // 构建 old→new 值替换对
+          const pairs = buildValueReplacementPairs(oldSnapshot.rawValues, newSnapshot.rawValues);
+          if (pairs.length > 0) {
+            htmlContent = replaceMetricsBySnapshot(htmlContent, pairs);
+            console.log(`[duplicate] Metrics replaced: ${pairs.length} value pairs for campaign ${campaignId}`);
+          }
         } catch (err) {
-          console.error('[duplicate] Failed to regenerate HTML for new period, falling back to text replacement:', err);
-          // 降级：用文本替换（至少把日期文案更新）
-          htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
+          console.error('[duplicate] Failed to compute period snapshots, keeping date-only replacement:', err);
         }
-      } else {
-        // 无 campaignId：只能做文本替换
-        htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
       }
     }
 
