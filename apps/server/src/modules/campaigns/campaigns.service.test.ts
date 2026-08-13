@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // campaigns.service 顶层 import prisma,这里 mock 掉避免碰 DB。
 const prismaMock = vi.hoisted(() => ({
   campaignCreator: { findFirst: vi.fn() },
-  cpsPerformance: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
+  cpsPerformance: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), upsert: vi.fn() },
 }));
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
@@ -16,6 +16,7 @@ beforeEach(() => {
   prismaMock.cpsPerformance.findUnique.mockResolvedValue(null); // 默认走 create 路径
   prismaMock.cpsPerformance.create.mockResolvedValue({});
   prismaMock.cpsPerformance.update.mockResolvedValue({});
+  prismaMock.cpsPerformance.upsert.mockResolvedValue({});
 });
 
 describe('importService.importCpsDaily — spend + newCustomers 每日字段', () => {
@@ -63,5 +64,47 @@ describe('importService.importCpsDaily — spend + newCustomers 每日字段', (
     const daily = prismaMock.cpsPerformance.update.mock.calls[0][0].data.daily as Array<Record<string, unknown>>;
     expect(daily[0].spend).toBe('30');
     expect(daily[0].newCustomers).toBe('5');
+  });
+});
+
+describe('importService.importCpsPerformance — 维度字段落库', () => {
+  it('带 5 个维度字段 → upsert 的 create + update 都含维度', async () => {
+    prismaMock.campaignCreator.findFirst.mockResolvedValue({ id: 'cc1' });
+
+    await importService.importCpsPerformance('u', [
+      {
+        campaignId: 'c1', creatorId: 'cr1', contentType: 'post',
+        clicks: 100, orders: 10, gmv: 1000, commission: 100, spend: 200,
+        productName: 'Vitamin C Serum', category: 'Skincare',
+        market: 'US', promoName: 'Summer Sale', promoType: 'discount',
+      },
+    ]);
+
+    expect(prismaMock.cpsPerformance.upsert).toHaveBeenCalledTimes(1);
+    const arg = prismaMock.cpsPerformance.upsert.mock.calls[0][0];
+    for (const side of ['create', 'update'] as const) {
+      expect(arg[side].productName).toBe('Vitamin C Serum');
+      expect(arg[side].category).toBe('Skincare');
+      expect(arg[side].market).toBe('US');
+      expect(arg[side].promoName).toBe('Summer Sale');
+      expect(arg[side].promoType).toBe('discount');
+    }
+  });
+
+  it('未传维度字段 → upsert create/update 落库为 null', async () => {
+    prismaMock.campaignCreator.findFirst.mockResolvedValue({ id: 'cc1' });
+
+    await importService.importCpsPerformance('u', [
+      { campaignId: 'c1', creatorId: 'cr1', contentType: 'post', clicks: 1, orders: 1, gmv: 1 },
+    ]);
+
+    const arg = prismaMock.cpsPerformance.upsert.mock.calls[0][0];
+    for (const side of ['create', 'update'] as const) {
+      expect(arg[side].productName).toBeNull();
+      expect(arg[side].category).toBeNull();
+      expect(arg[side].market).toBeNull();
+      expect(arg[side].promoName).toBeNull();
+      expect(arg[side].promoType).toBeNull();
+    }
   });
 });

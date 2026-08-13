@@ -498,6 +498,13 @@ export const importService = {
         const commission = new Prisma.Decimal(parseFloat(String(item.commission ?? '0').replace(/[$,]/g, '')) || 0);
         const spend = new Prisma.Decimal(parseFloat(String(item.spend ?? '0').replace(/[$,]/g, '')) || 0);
 
+        // 维度标签(链接级,空 → null)
+        const productName = String(item.productName ?? '').trim() || null;
+        const category = String(item.category ?? '').trim() || null;
+        const market = String(item.market ?? '').trim() || null;
+        const promoName = String(item.promoName ?? '').trim() || null;
+        const promoType = String(item.promoType ?? '').trim() || null;
+
         await prisma.cpsPerformance.upsert({
           where: { campaignCreatorId_contentType: { campaignCreatorId: link.id, contentType } },
           create: {
@@ -506,11 +513,13 @@ export const importService = {
             linkUrl: String(item.linkUrl ?? '') || null,
             clicks, impressions, orders,
             gmv, commission, spend,
+            productName, category, market, promoName, promoType,
           },
           update: {
             linkUrl: String(item.linkUrl ?? '') || null,
             clicks, impressions, orders,
             gmv, commission, spend,
+            productName, category, market, promoName, promoType,
           },
         });
         updated++;
