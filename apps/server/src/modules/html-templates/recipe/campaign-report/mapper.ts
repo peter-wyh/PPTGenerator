@@ -2,6 +2,7 @@
 import { prisma } from '../../../../prisma';
 import { ApiError } from '../../../../utils/ApiError';
 import { formatMoney, formatNum, formatPct, formatRatio } from '../format';
+import { aggregateDimensions, type DimLink } from './dimensions';
 import type { CampaignReportContent } from './schema';
 
 type Any = Record<string, any>;
@@ -112,9 +113,30 @@ function mapFromDaily(
   const end = reportPeriod.endDate ?? campaign.endDate;
   const period = { start, end, display: `${shortDate(start)} - ${shortDate(end)}, ${String(start).slice(0, 4)}` };
 
-  // 7) insights(newCustomerRate 从 daily 重算)
+  // 7) insights(4 维度从 cpsPerformances 链接级标签聚合 + newCustomerRate 从 daily 重算)
+  const dimLinks: DimLink[] = [];
+  for (const cc of campaign.campaignCreators ?? []) {
+    for (const p of cc.cpsPerformances ?? []) {
+      let gmv = 0, orders = 0;
+      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
+        const date = String(d.date ?? '');
+        if (!date || !inPeriod(date)) continue;
+        gmv += num(d.gmv);
+        orders += num(d.orders);
+      }
+      if (gmv > 0 || orders > 0) {
+        dimLinks.push({
+          productName: p.productName, category: p.category, market: p.market,
+          promoName: p.promoName, promoType: p.promoType, gmv, orders,
+        });
+      }
+    }
+  }
   const rate = total.orders ? (total.newCustomers / total.orders) * 100 : 0;
-  const insights = { newCustomerRate: { rate: formatPct(Math.round(rate * 10) / 10), newCount: total.newCustomers, totalOrders: total.orders } };
+  const insights = {
+    ...aggregateDimensions(dimLinks),
+    newCustomerRate: { rate: formatPct(Math.round(rate * 10) / 10), newCount: total.newCustomers, totalOrders: total.orders },
+  };
 
   return { kpis, publishers, trend, period, insights };
 }

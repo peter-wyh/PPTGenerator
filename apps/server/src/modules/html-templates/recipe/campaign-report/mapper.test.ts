@@ -57,6 +57,19 @@ const campaignRowWithDaily = {
   }],
 };
 
+// 带 CPS daily + 维度标签的 fixture(验证 mapFromDaily 聚合 4 维度)
+const campaignRowWithDailyAndDims = {
+  ...campaignRowWithDaily,
+  campaignCreators: [{
+    ...campaignRowWithDaily.campaignCreators[0],
+    cpsPerformances: [{
+      ...(campaignRowWithDaily.campaignCreators[0].cpsPerformances[0] as any),
+      productName: 'Vitamin C Serum', category: 'Skincare',
+      market: 'US', promoName: 'Summer Sale', promoType: 'discount',
+    }],
+  }],
+};
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('mapCampaign', () => {
@@ -135,6 +148,18 @@ describe('mapCampaign', () => {
     expect(c.trend.orders).toEqual([20, 30]);
     expect(c.header.period.start).toBe('2026-10-15');
     expect(c.header.period.end).toBe('2026-10-17');
+  });
+
+  it('有 daily + 维度标签 + period → insights 聚合 4 维度(期内切片)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDailyAndDims);
+    // period 2026-10-15 ~ 2026-10-17:期内 daily = 2000(10-15) + 3000(10-16),orders = 20 + 30 = 50
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-17' });
+    expect(c.insights?.topCategories).toEqual([{ label: 'Skincare', pct: 100, color: '#ff099e' }]);
+    expect(c.insights?.topProducts).toEqual([{ name: 'Vitamin C Serum', revenue: '$5,000' }]);
+    expect(c.insights?.topMarket).toEqual([{ country: 'US', revenue: '$5,000', pct: 100, color: '#ff099e' }]);
+    expect(c.insights?.topPromotion).toEqual([{ name: 'Summer Sale', type: 'discount', revenue: '$5,000', usage: '50', tagKind: 'discount' }]);
+    // newCustomerRate 仍保留
+    expect(c.insights?.newCustomerRate).toBeDefined();
   });
 
   it('无 daily 数据 + period → 降级为汇总(不报错,KPI 来自 metrics)', async () => {
