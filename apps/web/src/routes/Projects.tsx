@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
+import { DuplicateProjectDialog } from '@/components/DuplicateProjectDialog';
 import { SaveAsTemplateDialog } from '@/components/SaveAsTemplateDialog';
 import { GenerateHtmlReportOverlay } from '@/editor/components/GenerateHtmlReportOverlay';
 import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
@@ -43,6 +44,9 @@ export function Projects() {
 
   // 存为模版
   const [saveTplFor, setSaveTplFor] = useState<ProjectSummary | null>(null);
+
+  // 复制报告（带周期）
+  const [dupFor, setDupFor] = useState<ProjectSummary | null>(null);
 
   // ai-html 行的 HTML 操作:下拉开合 + 按行缓存 + busy
   const [htmlMenuFor, setHtmlMenuFor] = useState<string | null>(null);
@@ -164,11 +168,15 @@ export function Projects() {
     }
   }
 
-  async function handleCreateFromTemplate(values: { templateId: string; name: string }) {
+  async function handleCreateFromTemplate(values: {
+    templateId: string;
+    name: string;
+    reportPeriod?: { startDate?: string; endDate?: string };
+  }) {
     setFromTplLoading(true);
     setFromTplError(null);
     try {
-      const p = await createProjectFromTemplate(values.templateId, values.name);
+      const p = await createProjectFromTemplate(values.templateId, values.name, values.reportPeriod);
       setShowFromTemplate(false);
       navigate(`/projects/${p.id}`);
     } catch {
@@ -197,15 +205,6 @@ export function Projects() {
       setEditError(e.response?.data?.error?.message ?? '保存失败，请重试');
     } finally {
       setEditSubmitting(false);
-    }
-  }
-
-  async function handleDuplicate(p: ProjectSummary) {
-    try {
-      await projectsApi.duplicate(p.id);
-      await refresh();
-    } catch {
-      toast.error('复制失败');
     }
   }
 
@@ -457,7 +456,7 @@ export function Projects() {
                         编辑
                       </button>
                       <button
-                        onClick={() => void handleDuplicate(p)}
+                        onClick={() => setDupFor(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
                         title="复制报告"
                       >
@@ -543,6 +542,18 @@ export function Projects() {
         <SaveAsTemplateDialog
           project={saveTplFor}
           onClose={() => setSaveTplFor(null)}
+        />
+      )}
+
+      {/* 复制报告对话框 */}
+      {dupFor && (
+        <DuplicateProjectDialog
+          project={dupFor}
+          onClose={() => setDupFor(null)}
+          onDone={() => {
+            setDupFor(null);
+            void refresh();
+          }}
         />
       )}
     </div>

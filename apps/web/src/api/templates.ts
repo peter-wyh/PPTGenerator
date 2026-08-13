@@ -85,8 +85,12 @@ export const templatesApi = {
 };
 
 /** 从模板创建项目（任意登录用户）。返回新项目详情。 */
-export function createProjectFromTemplate(templateId: string, name?: string): Promise<ProjectDetail> {
+export function createProjectFromTemplate(
+  templateId: string,
+  name?: string,
+  reportPeriod?: { startDate?: string; endDate?: string },
+): Promise<ProjectDetail> {
   return api
-    .post<{ project: ProjectDetail }>('/projects/from-template', { templateId, name })
+    .post<{ project: ProjectDetail }>('/projects/from-template', { templateId, name, reportPeriod })
     .then((r) => r.data.project);
 }

@@ -11,7 +11,11 @@ interface Props {
   loading?: boolean;
   error?: string | null;
   onCancel: () => void;
-  onSubmit: (values: { templateId: string; name: string }) => void;
+  onSubmit: (values: {
+    templateId: string;
+    name: string;
+    reportPeriod?: { startDate?: string; endDate?: string };
+  }) => void;
 }
 
 /**
@@ -23,6 +27,8 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
   const [fetching, setFetching] = useState(false);
   const [selectedId, setSelectedId] = useState<string>('');
   const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [filterBL, setFilterBL] = useState<string>('');
   const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
   const [filterTemplateType, setFilterTemplateType] = useState<string>('');
@@ -57,6 +63,14 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
     };
   }, [open, filterBL, filterScenario, filterTemplateType]);
 
+  // 选中模版变化时，若为 ai-html 报告模版，用其 meta.reportPeriod 回填起止日期。
+  useEffect(() => {
+    const t = templates.find((x) => x.id === selectedId);
+    const rp = (t?.meta as { reportPeriod?: { startDate?: string; endDate?: string } } | undefined)?.reportPeriod;
+    setStartDate(rp?.startDate ?? '');
+    setEndDate(rp?.endDate ?? '');
+  }, [selectedId, templates]);
+
   if (!open) return null;
 
   const selected = templates.find((t) => t.id === selectedId) ?? null;
@@ -64,7 +78,12 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
 
   const submit = () => {
     if (!selected) return;
-    onSubmit({ templateId: selected.id, name: name.trim() || selected.name });
+    const isAiHtml = selected.meta?.styleType === 'ai-html';
+    onSubmit({
+      templateId: selected.id,
+      name: name.trim() || selected.name,
+      ...(isAiHtml ? { reportPeriod: { startDate, endDate } } : {}),
+    });
   };
 
   return (
@@ -202,6 +221,32 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
               onChange={(e) => setName(e.target.value)}
               placeholder={selected.name}
             />
+          </div>
+        )}
+
+        {selected?.meta?.styleType === 'ai-html' && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="block text-xs text-foreground-secondary">
+              起始日期
+              <input
+                aria-label="起始日期"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+              />
+            </label>
+            <label className="block text-xs text-foreground-secondary">
+              结束日期
+              <input
+                aria-label="结束日期"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
+              />
+            </label>
+            <p className="col-span-2 text-[10px] text-foreground-muted">HTML 报告会按此时间段生成实时数据；创建后可在编辑器里改周期重算。</p>
           </div>
         )}
 
