@@ -53,7 +53,7 @@ export const projectsController = {
     const project = await projectsService.createFromTemplate(owner(req), templateId, name, reportPeriod);
     // HTML 模版且绑了 campaign → 建活 recipe 版本(数据实时,只能改周期);否则保留静态 htmlContent 兜底
     const meta = (project.meta ?? {}) as Record<string, unknown>;
-    if (meta.styleType === 'ai-html' && meta.campaignId) {
+    if ((meta.styleType === 'ai-html' || meta.renderType === 'html-report') && meta.campaignId) {
       await htmlTemplateService.createRecipeVersion(project.id, owner(req), { reportPeriod });
     }
     res.status(201).json({ project });

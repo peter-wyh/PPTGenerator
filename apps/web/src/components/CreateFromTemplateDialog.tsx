@@ -78,11 +78,13 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
 
   const submit = () => {
     if (!selected) return;
-    const isAiHtml = selected.meta?.styleType === 'ai-html';
+    const isLiveReport =
+      (selected.meta?.styleType === 'ai-html' || selected.meta?.renderType === 'html-report') &&
+      !!selected.meta?.campaignId;
     onSubmit({
       templateId: selected.id,
       name: name.trim() || selected.name,
-      ...(isAiHtml ? { reportPeriod: { startDate, endDate } } : {}),
+      ...(isLiveReport ? { reportPeriod: { startDate, endDate } } : {}),
     });
   };
 
@@ -224,7 +226,8 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
           </div>
         )}
 
-        {selected?.meta?.styleType === 'ai-html' && (
+        {((selected?.meta?.styleType === 'ai-html' || selected?.meta?.renderType === 'html-report') &&
+          !!selected?.meta?.campaignId) && (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <label className="block text-xs text-foreground-secondary">
               起始日期
