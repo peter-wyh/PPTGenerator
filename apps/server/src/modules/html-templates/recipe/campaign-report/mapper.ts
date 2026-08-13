@@ -228,18 +228,31 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
     };
   });
 
+  // 维度聚合(汇总路径:用 cpsPerformance 链接顶层 gmv/orders,不切日期)
+  const dimLinks: DimLink[] = (campaign.campaignCreators ?? []).flatMap((cc: Any) =>
+    (cc.cpsPerformances ?? []).map((p: Any) => ({
+      productName: p.productName, category: p.category, market: p.market,
+      promoName: p.promoName, promoType: p.promoType,
+      gmv: Number(p.gmv) || 0, orders: Number(p.orders) || 0,
+    })),
+  );
+  const dimInsights = aggregateDimensions(dimLinks);
+
   // newCustomerRate:metrics 优先(数值),否则从已读到的 newCustomers/orders 重算(summary 里是 "42%" 字符串,不解析)。
   const newCustomerRate = metric(m, 'newCustomerRate') || (newCustomers && orders ? (newCustomers / orders) * 100 : 0);
-  const insights = newCustomerRate
-    ? {
-        newCustomerRate: {
-          rate: formatPct(Math.round(newCustomerRate * 10) / 10),
-          newCount: newCustomers,
-          totalOrders: orders,
-          deltaPct: m.newCustomerDelta ? formatPct(Math.round(Number(m.newCustomerDelta) * 10) / 10) : undefined,
-        },
-      }
-    : {};
+  const insights = {
+    ...dimInsights,
+    ...(newCustomerRate
+      ? {
+          newCustomerRate: {
+            rate: formatPct(Math.round(newCustomerRate * 10) / 10),
+            newCount: newCustomers,
+            totalOrders: orders,
+            deltaPct: m.newCustomerDelta ? formatPct(Math.round(Number(m.newCustomerDelta) * 10) / 10) : undefined,
+          },
+        }
+      : {}),
+  };
 
   const totalSpend = campaign.campaignCreators.reduce(
     (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + Number(p.spend), 0),

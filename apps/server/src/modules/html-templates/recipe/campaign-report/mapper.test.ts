@@ -210,4 +210,25 @@ describe('mapCampaign', () => {
     expect(c.kpis.find((k) => k.label === 'ROAS')).toBeUndefined();
     expect(c.kpis).toHaveLength(5);
   });
+
+  it('汇总路径(无 daily)+ 维度标签 → insights 聚合 4 维度(用链接 gmv)', async () => {
+    const row = {
+      ...campaignRow,
+      campaignCreators: [{
+        ...campaignRow.campaignCreators[0],
+        cpsPerformances: [{
+          ...campaignRow.campaignCreators[0].cpsPerformances[0],
+          productName: 'Serum', category: 'Skincare', market: 'US',
+          promoName: 'Sale', promoType: 'discount',
+        }],
+      }],
+    };
+    prismaMock.campaign.findUnique.mockResolvedValue(row);
+    const c = await mapCampaign('c1'); // 无 reportPeriod → 汇总分支
+    // campaignRow cps.gmv = 192000, orders = 1016
+    expect(c.insights?.topCategories).toEqual([{ label: 'Skincare', pct: 100, color: '#ff099e' }]);
+    expect(c.insights?.topProducts).toEqual([{ name: 'Serum', revenue: '$192,000' }]);
+    expect(c.insights?.topMarket).toEqual([{ country: 'US', revenue: '$192,000', pct: 100, color: '#ff099e' }]);
+    expect(c.insights?.topPromotion?.[0]).toMatchObject({ name: 'Sale', usage: '1,016', tagKind: 'discount' });
+  });
 });
