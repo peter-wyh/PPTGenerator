@@ -44,3 +44,6 @@ uploads/
 .superpowers/
 test-output.html
 apps/server/scripts/
+
+# db 同步产物（覆盖/备份 dump，见 scripts/db-overwrite-to-test.sh）
+scripts/.db-sync/
