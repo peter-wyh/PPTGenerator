@@ -53,7 +53,7 @@
 
 无 DOM，vitest 单测。导出：
 - `PRESETS`：本月 / 上月 / 最近 7 天 / 最近 30 天 / 全部
-- `resolvePreset(preset, min, max)`：算目标区间 → 与 `[min,max]` 求交；空交集返回 `null`（→ 该预设禁用）
+- `resolvePreset(preset, min, max)`：按**今天**算出预设目标区间（`本月`=本月历月、`上月`=上月历月、`最近7天`=`[今天-6,今天]`、`最近30天`=`[今天-29,今天]`、`全部`=`[min,max]`）→ 再与 `[min,max]` 求交；空交集返回 `null`（→ 该预设禁用）。预设一律相对今天，不相对 Campaign.max。
 - `computeDefaultPeriod(min, max)`：`[max-29, max] ∩ 窗口`；窗口 <30 天退化为全窗口
 - `validatePeriod(v, {min,max,required}) → {ok, error}`：空+required / 起>止 / 越下界 / 越上界(含未来) / 合法
 - `clampPeriod(v, min, max)`
