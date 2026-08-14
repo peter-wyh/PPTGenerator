@@ -58,6 +58,9 @@ const SYSTEM_PROMPT = `You are a senior front-end engineer. You produce beautifu
 
 CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do NOT wrap in markdown code fences. No thinking text, explanations, or commentary before or after the HTML.
 
+═══ REASONING LANGUAGE (思考语言) ═══
+Conduct your internal reasoning / chain-of-thought ENTIRELY in Simplified Chinese (简体中文). The user reads your thinking process in real time, so it must be natural, readable Chinese. This applies ONLY to your thinking — the final HTML output must STILL follow all the English label and data-fidelity rules below (keep English UI labels, do NOT translate data values).
+
 ═══ BRAND TONE & PROHIBITED PHRASES (CRITICAL) ═══
 This is a CLIENT-FACING report shown to paying advertisers and brand partners.
 1. NEVER use phrases that expose internal tooling or AI involvement, such as:
@@ -408,6 +411,11 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 
 *以上为系统提示词全文，由后端自动注入到每次 AI 生成请求的 system role。*`;
 
+/** 思考语言指令 — 追加在 user prompt 最末（推理语言主要跟随最近的 user 消息，recency 位置最有效） */
+const THINKING_LANGUAGE_SUFFIX = `
+
+【思考语言要求（最高优先级）】你的内部思考过程（chain-of-thought）必须全程使用简体中文撰写——用户会实时阅读你的思考内容，英文思考用户看不懂。注意：这条只约束你的思考过程；最终输出的 HTML 报告仍完全遵循前述所有英文规则（英文标签、原始数据不变）。`;
+
 const USER_PROMPT_TEMPLATE = `Generate a complete HTML marketing report.
 
 ═══ USER INSTRUCTIONS ═══
@@ -452,6 +460,9 @@ BRAND DESIGN GUIDE:
 const EDIT_SYSTEM_PROMPT = `You are an HTML editor agent for B2B marketing reports.
 
 You receive the CURRENT HTML report and a user's EDIT INSTRUCTION. You must return the COMPLETE updated HTML file.
+
+═══ REASONING LANGUAGE (思考语言) ═══
+Conduct your internal reasoning / chain-of-thought ENTIRELY in Simplified Chinese (简体中文) — the user reads it in real time. This applies ONLY to your thinking; the final HTML output keeps its existing language and data unchanged.
 
 ═══ CRITICAL RULES ═══
 1. Return the COMPLETE HTML file from <!DOCTYPE html> to </html>. NOT a diff, NOT a fragment.
@@ -909,6 +920,9 @@ export const aiGenerateService = {
       userPrompt += DESIGN_GUIDE_SUFFIX.replace('{{DESIGN_GUIDE}}', designGuide.trim());
     }
 
+    // ★ 思考语言指令保持在 user prompt 最末（recency 位置对推理语言影响最强）
+    userPrompt += THINKING_LANGUAGE_SUFFIX;
+
     // 推理模型（deepseek-v4-pro / glm-5.2 等）支持更大的输出；非推理模型上限较低
     // glm-5.2 推理过程消耗大量 token，需要更大 max_tokens 确保 content 有足够空间
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
@@ -1135,9 +1149,11 @@ export const aiGenerateService = {
       throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
     }
 
-    const userPrompt = EDIT_USER_PROMPT_TEMPLATE
+    let userPrompt = EDIT_USER_PROMPT_TEMPLATE
       .replace('{{EDIT_INSTRUCTION}}', params.instruction)
       .replace('{{CURRENT_HTML}}', params.currentHtml);
+    // ★ 思考语言指令保持在 user prompt 最末（recency 位置对推理语言影响最强）
+    userPrompt += THINKING_LANGUAGE_SUFFIX;
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     const maxTokens = isReasoningModel ? 16000 : 8192;
@@ -1397,9 +1413,11 @@ export const aiGenerateService = {
       return;
     }
 
-    const userPrompt = EDIT_USER_PROMPT_TEMPLATE
+    let userPrompt = EDIT_USER_PROMPT_TEMPLATE
       .replace('{{EDIT_INSTRUCTION}}', params.instruction)
       .replace('{{CURRENT_HTML}}', params.currentHtml);
+    // ★ 思考语言指令保持在 user prompt 最末（recency 位置对推理语言影响最强）
+    userPrompt += THINKING_LANGUAGE_SUFFIX;
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     const maxTokens = isReasoningModel ? 16000 : 8192;
