@@ -58,12 +58,14 @@ function mapFromDaily(
     { clicks: 0, orders: 0, gmv: 0, newCustomers: 0 },
   );
   const aov = total.orders ? total.gmv / total.orders : 0;
+  const cvr = total.clicks ? (total.orders / total.clicks) * 100 : 0;
 
   // 3) KPI(结构同 mapCampaign 现有)
   const kpis = [
     { label: 'Total Revenues', value: formatMoney(total.gmv) },
     { label: 'Clicks', value: formatNum(total.clicks) },
     { label: 'Orders', value: formatNum(total.orders) },
+    { label: 'Conversion Rate', value: formatPct(Math.round(cvr * 10) / 10) },
     { label: 'New Customer Acquisition', value: formatNum(total.newCustomers), highlight: true },
     { label: 'AOV', value: formatMoney(aov) },
   ];
@@ -258,10 +260,12 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
     (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + Number(p.spend), 0),
     0,
   );
+  const cvr = clicks ? (orders / clicks) * 100 : 0;
   const kpis = [
     { label: 'Total Revenues', value: formatMoney(totalRevenue) },
     { label: 'Clicks', value: formatNum(clicks) },
     { label: 'Orders', value: formatNum(orders) },
+    { label: 'Conversion Rate', value: formatPct(Math.round(cvr * 10) / 10) },
     { label: 'New Customer Acquisition', value: formatNum(newCustomers), highlight: true },
     { label: 'AOV', value: formatMoney(aov) },
     ...(totalSpend > 0 ? [{ label: 'ROAS', value: formatRatio(totalRevenue / totalSpend) }] : []),

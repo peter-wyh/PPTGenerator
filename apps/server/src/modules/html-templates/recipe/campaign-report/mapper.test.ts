@@ -204,11 +204,34 @@ describe('mapCampaign', () => {
     expect(roas!.value).toBe('4.00x'); // 192000 / 48000 = 4
   });
 
-  it('汇总路径 spend=0 → 无 ROAS 卡(仍 5 个 KPI)', async () => {
+  it('汇总路径 spend=0 → 无 ROAS 卡(仍 6 个 KPI,含 CVR)', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); // campaignRow 的 cps spend=0
     const c = await mapCampaign('c1');
     expect(c.kpis.find((k) => k.label === 'ROAS')).toBeUndefined();
-    expect(c.kpis).toHaveLength(5);
+    expect(c.kpis).toHaveLength(6);
+  });
+
+  it('汇总 KPI 含 CVR(= orders/clicks × 100,格式化)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow);
+    const c = await mapCampaign('c1');
+    const cvr = c.kpis.find((k) => k.label === 'Conversion Rate');
+    expect(cvr).toBeDefined();
+    // 汇总分支读 metrics: clicks 348619, orders 4636 → 1.33% → 1.3%
+    expect(cvr!.value).toBe('1.3%');
+  });
+
+  it('汇总 clicks=0 → CVR 兜底 0%(除零安全)', async () => {
+    const row = { ...campaignRow, metrics: { ...campaignRow.metrics, clicks: 0 } };
+    prismaMock.campaign.findUnique.mockResolvedValue(row);
+    const c = await mapCampaign('c1');
+    expect(c.kpis.find((k) => k.label === 'Conversion Rate')!.value).toBe('0%');
+  });
+
+  it('mapFromDaily(reportPeriod)KPI 含 CVR(期内 orders/clicks)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-17' });
+    // 期内: clicks 200+300=500, orders 20+30=50 → 10%
+    expect(c.kpis.find((k) => k.label === 'Conversion Rate')!.value).toBe('10%');
   });
 
   it('汇总路径(无 daily)+ 维度标签 → insights 聚合 4 维度(用链接 gmv)', async () => {
