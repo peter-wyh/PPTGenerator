@@ -263,6 +263,12 @@ describe('mapCampaign', () => {
     expect(c.insights?.mom).toBeUndefined();
   });
 
+  it('半开 reportPeriod(只 startDate)→ MoM undefined(不回退 campaign.endDate 算错)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    const c = await mapCampaign('c1', { startDate: '2026-10-16' }); // 只 start,无 end
+    expect(c.insights?.mom).toBeUndefined();
+  });
+
   it('mapFromDaily + 前等长有数据 → mom 正确(ordersMoM/salesMoM 带 +)', async () => {
     const row = {
       ...campaignRowWithDaily,
