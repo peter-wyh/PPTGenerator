@@ -68,4 +68,23 @@ describe('aggregateDimensions', () => {
     const r = aggregateDimensions([{ promoName: 'Mystery', promoType: 'unknown', gmv: 1, orders: 1 }]);
     expect(r.topPromotion![0].tagKind).toBe('gift');
   });
+
+  it('一条 link 含全部维度 → 4 维度同时产出(无串扰)', () => {
+    const r = aggregateDimensions([{
+      productName: 'Serum', category: 'Skincare', market: 'US',
+      promoName: 'Sale', promoType: 'discount', gmv: 1000, orders: 10,
+    }]);
+    expect(r.topCategories).toEqual([{ label: 'Skincare', pct: 100, color: '#ff099e' }]);
+    expect(r.topProducts).toEqual([{ name: 'Serum', revenue: '$1,000' }]);
+    expect(r.topMarket).toEqual([{ country: 'US', revenue: '$1,000', pct: 100, color: '#ff099e' }]);
+    expect(r.topPromotion).toEqual([{ name: 'Sale', type: 'discount', revenue: '$1,000', usage: '10', tagKind: 'discount' }]);
+  });
+
+  it('topProducts 降序取前 5(slice 上限)', () => {
+    const links = Array.from({ length: 8 }, (_, i) => ({ productName: `P${i}`, gmv: 8 - i, orders: 1 }));
+    const r = aggregateDimensions(links)!;
+    expect(r.topProducts).toHaveLength(5);
+    expect(r.topProducts![0].name).toBe('P0'); // gmv=8 最高
+    expect(r.topProducts![4].name).toBe('P4'); // gmv=4,第 5
+  });
 });

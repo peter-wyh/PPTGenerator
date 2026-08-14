@@ -107,4 +107,24 @@ describe('importService.importCpsPerformance — 维度字段落库', () => {
       expect(arg[side].promoType).toBeNull();
     }
   });
+
+  it('维度字段为空字符串/whitespace → 落库 null(trim 生效)', async () => {
+    prismaMock.campaignCreator.findFirst.mockResolvedValue({ id: 'cc1' });
+
+    await importService.importCpsPerformance('u', [
+      {
+        campaignId: 'c1', creatorId: 'cr1', contentType: 'post', clicks: 1, orders: 1, gmv: 1,
+        productName: '  ', category: '', market: '\t', promoName: ' ', promoType: '',
+      },
+    ]);
+
+    const arg = prismaMock.cpsPerformance.upsert.mock.calls[0][0];
+    for (const side of ['create', 'update'] as const) {
+      expect(arg[side].productName).toBeNull();
+      expect(arg[side].category).toBeNull();
+      expect(arg[side].market).toBeNull();
+      expect(arg[side].promoName).toBeNull();
+      expect(arg[side].promoType).toBeNull();
+    }
+  });
 });
