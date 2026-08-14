@@ -43,6 +43,8 @@ uploads/
 .claude/
 .superpowers/
 test-output.html
+# AI/recipe 报告导出产物(根目录散落的报告 HTML)
+duomai_review_report_en_visual.html
 apps/server/scripts/
 
 # db 同步产物（覆盖/备份 dump，见 scripts/db-overwrite-to-test.sh）
