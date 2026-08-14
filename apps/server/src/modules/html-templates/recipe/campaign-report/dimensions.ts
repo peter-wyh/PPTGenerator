@@ -35,10 +35,10 @@ function mapTagKind(promoType?: string | null): string {
 }
 
 /** 按某维度键 group,累加 gmv/orders,保留组内第一个非空 promoType;按 gmv 降序。 */
-function groupBy(links: DimLink[], key: keyof DimLink) {
+function groupBy<K extends 'category' | 'productName' | 'market' | 'promoName'>(links: DimLink[], key: K) {
   const m = new Map<string, { gmv: number; orders: number; promoType?: string }>();
   for (const l of links) {
-    const v = String((l as Record<string, unknown>)[key as string] ?? '').trim();
+    const v = String(l[key] ?? '').trim();
     if (!v) continue;
     const cur = m.get(v) ?? { gmv: 0, orders: 0 };
     cur.gmv += l.gmv;
