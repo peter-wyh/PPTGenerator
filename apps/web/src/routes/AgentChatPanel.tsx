@@ -9,7 +9,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/Button';
 import { htmlTemplatesApi, type SSEChunk } from '@/api/htmlTemplates';
 import type { AgentChatMessage } from '@/api/htmlTemplates';
-import { ThinkingPanel } from '@/components/ThinkingPanel';
 
 interface AgentChatPanelProps {
   projectId: string;
@@ -17,6 +16,12 @@ interface AgentChatPanelProps {
   agentHistory: AgentChatMessage[];
   onHtmlChange: (html: string) => void;
   onHistoryChange: (history: AgentChatMessage[]) => void;
+  /**
+   * 编辑繁忙状态变化，并附带「如何取消」的能力。
+   * busy=true 时 cancel 为当前编辑的取消函数；busy=false 时 cancel 为 undefined。
+   * 供父组件（HtmlStudio）驱动中栏画布遮罩 + 兜底取消（左栏收起时）。
+   */
+  onBusyChange?: (busy: boolean, cancel?: () => void) => void;
 }
 
 const QUICK_ACTIONS = [
@@ -35,6 +40,7 @@ export function AgentChatPanel({
   agentHistory,
   onHtmlChange,
   onHistoryChange,
+  onBusyChange,
 }: AgentChatPanelProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,6 +53,9 @@ export function AgentChatPanel({
   const [reasoning, setReasoning] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // 思考气泡正文折叠（思考完成后可收起）+ 自动滚底
+  const [thinkingCollapsed, setThinkingCollapsed] = useState(false);
+  const thinkingScrollRef = useRef<HTMLDivElement>(null);
 
   // 已选择的图片（base64 data URL 数组），随消息一起发送
   const [pendingImages, setPendingImages] = useState<string[]>([]);
@@ -57,6 +66,13 @@ export function AgentChatPanel({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [agentHistory, loading, pendingImages, reasoning]);
+
+  // 思考气泡正文自动滚底（reasoning 流式追加时）
+  useEffect(() => {
+    if (thinkingScrollRef.current && !thinkingCollapsed) {
+      thinkingScrollRef.current.scrollTop = thinkingScrollRef.current.scrollHeight;
+    }
+  }, [reasoning, thinkingCollapsed]);
 
   // ── 图片上传处理 ──
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,6 +132,8 @@ export function AgentChatPanel({
     abortRef.current = null;
     setLoading(false);
     setIsThinking(false);
+    setReasoning('');
+    setThinkingCollapsed(false);
   }, []);
 
   // ★ handleSend — SSE 流式编辑
@@ -150,6 +168,7 @@ export function AgentChatPanel({
       let finalHtml = '';
 
       try {
+        onBusyChange?.(true, handleCancel);
         await htmlTemplatesApi.agentEditStream(
           {
             currentHtml,
@@ -163,7 +182,7 @@ export function AgentChatPanel({
             } else if (chunk.type === 'content') {
               setIsThinking(false);
               finalHtml += chunk.text;
-              onHtmlChange(finalHtml);
+              // 取消渐进式渲染：content 阶段不更新画布，等 done 一次性展示
             } else if (chunk.type === 'done') {
               finalHtml = chunk.html;
               onHtmlChange(finalHtml);
@@ -202,10 +221,13 @@ export function AgentChatPanel({
       } finally {
         setLoading(false);
         setIsThinking(false);
+        setReasoning('');
+        setThinkingCollapsed(false);
         abortRef.current = null;
+        onBusyChange?.(false);
       }
     },
-    [input, loading, currentHtml, agentHistory, onHtmlChange, onHistoryChange, projectId, pendingImages],
+    [input, loading, currentHtml, agentHistory, onHtmlChange, onHistoryChange, projectId, pendingImages, onBusyChange, handleCancel],
   );
 
   // ★ 重试上一次编辑
@@ -220,11 +242,6 @@ export function AgentChatPanel({
 
   return (
     <div className="flex h-full flex-col">
-      {/* ★ 思考过程面板 */}
-      {(isThinking || reasoning) && (
-        <ThinkingPanel reasoning={reasoning} isThinking={isThinking} />
-      )}
-
       {/* 消息列表 */}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {agentHistory.length === 0 && (
@@ -274,17 +291,41 @@ export function AgentChatPanel({
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
-              <span className="inline-flex items-center gap-1">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-primary" />
-                {isThinking ? 'AI 思考中…' : 'AI 正在编辑…'}
-              </span>
-              <button
-                onClick={handleCancel}
-                className="ml-2 text-[10px] text-red hover:underline"
-              >
-                取消
-              </button>
+            <div className="max-w-[85%] rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
+              {/* 头部：状态文案 + 取消 */}
+              <div className="flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-1 font-medium text-foreground-secondary">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-primary" />
+                  {isThinking || reasoning ? 'AI 思考中…' : 'AI 正在编辑…'}
+                </span>
+                <button
+                  onClick={handleCancel}
+                  className="text-[10px] text-red hover:underline"
+                >
+                  取消
+                </button>
+              </div>
+              {/* 正文：思考流（reasoning 非空时显示；思考完成后可折叠） */}
+              {reasoning && (
+                <div className="mt-1.5">
+                  {!isThinking && (
+                    <button
+                      onClick={() => setThinkingCollapsed(!thinkingCollapsed)}
+                      className="mb-1 text-[10px] text-foreground-muted hover:text-foreground-secondary"
+                    >
+                      {thinkingCollapsed ? '▸ 展开思考' : '▾ 收起思考'}
+                    </button>
+                  )}
+                  {!thinkingCollapsed && (
+                    <div
+                      ref={thinkingScrollRef}
+                      className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[11px] leading-relaxed text-foreground-muted"
+                    >
+                      {reasoning}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

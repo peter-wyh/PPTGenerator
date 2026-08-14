@@ -24,7 +24,6 @@ import { AgentChatPanel } from './AgentChatPanel';
 import { AiGenerateForm } from '@/editor/components/AiGenerateForm';
 import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
 import { VisualEditor } from '@/components/VisualEditor';
-import { ThinkingPanel } from '@/components/ThinkingPanel';
 import { ResizablePanels } from '@/components/ResizablePanels';
 
 // 渐进式阶段提示
@@ -66,6 +65,14 @@ export function HtmlStudio() {
   const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastGenParams = useRef<{ mode: 'ai' | 'recipe'; prompt: string; designMd: string } | null>(null);
+
+  // ★ Chat 模式编辑繁忙状态（驱动中栏画布遮罩）+ 兜底取消（左栏收起时）
+  const [chatBusy, setChatBusy] = useState(false);
+  const cancelEditRef = useRef<(() => void) | null>(null);
+  const handleBusyChange = useCallback((busy: boolean, cancel?: () => void) => {
+    setChatBusy(busy);
+    cancelEditRef.current = busy && cancel ? cancel : null;
+  }, []);
 
   // 左侧面板折叠（沉浸模式）
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -183,6 +190,7 @@ export function HtmlStudio() {
     abortRef.current = null;
     setGenerating(false);
     setIsThinking(false);
+    setReasoning('');
     stopStageTimer();
   }, [stopStageTimer]);
 
@@ -262,7 +270,7 @@ export function HtmlStudio() {
             } else if (chunk.type === 'content') {
               setIsThinking(false);
               streamingHtml += chunk.text;
-              setGeneratedHtml(streamingHtml);
+              // 取消渐进式渲染：content 阶段不更新画布，等 done 一次性展示
             } else if (chunk.type === 'done') {
               setGeneratedHtml(chunk.html);
               setTruncated(chunk.truncated);
@@ -277,6 +285,7 @@ export function HtmlStudio() {
         // 成功
         if (streamingHtml && streamingHtml.startsWith('<')) {
           void updateAiHtmlStatus('generated');
+          setReasoning('');
           setPhase('chat');
           const genMsg: AgentChatMessage = {
             role: 'assistant',
@@ -308,6 +317,7 @@ export function HtmlStudio() {
       } finally {
         setGenerating(false);
         setIsThinking(false);
+        setReasoning('');
         stopStageTimer();
         abortRef.current = null;
       }
@@ -369,10 +379,6 @@ export function HtmlStudio() {
   // ── 左栏内容 ──
   const leftPanel = (
     <aside className="flex h-full flex-col overflow-hidden bg-surface-primary">
-      {/* ★ 思考过程面板（生成时显示在顶部） */}
-      {(isThinking || reasoning) && (
-        <ThinkingPanel reasoning={reasoning} isThinking={isThinking} />
-      )}
       {phase === 'config' ? (
         <div className="flex flex-1 flex-col overflow-y-auto p-5">
           {/* ★ 错误 + 重试 */}
@@ -417,6 +423,7 @@ export function HtmlStudio() {
           agentHistory={agentHistory}
           onHtmlChange={(html) => setGeneratedHtml(html)}
           onHistoryChange={setAgentHistory}
+          onBusyChange={handleBusyChange}
         />
       )}
     </aside>
@@ -565,8 +572,8 @@ export function HtmlStudio() {
               }}
             />
           ) : (
-          /* 普通预览（iframe）— 流式生成时也实时显示 */
-          <div className="flex flex-1 overflow-hidden">
+          /* 普通预览（iframe）— 生成完成后一次性展示 */
+          <div className="relative flex flex-1 overflow-hidden">
             <div className="flex flex-1 items-start justify-center overflow-auto p-4">
               <iframe
                 ref={iframeRef}
@@ -583,19 +590,41 @@ export function HtmlStudio() {
                 sandbox="allow-same-origin allow-scripts"
               />
             </div>
+            {/* ★ Chat 模式 AI 编辑遮罩：保留旧报告半透明底层，完成后一次性替换 */}
+            {phase === 'chat' && chatBusy && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-subtle/80 backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-accent-primary/20 border-t-accent-primary" />
+                  <p className="text-sm font-medium text-foreground-secondary">正在编辑…</p>
+                  {panelCollapsed && (
+                    <button
+                      onClick={() => cancelEditRef.current?.()}
+                      className="mt-3 rounded-md border border-red/30 px-3 py-1.5 text-xs text-red hover:bg-red/5"
+                    >
+                      ⏹ 取消
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           )}
         </>
       ) : (
         <div className="flex flex-1 items-center justify-center">
           {generating ? (
-            <div className="text-center">
-              {/* ★ 思考过程也在中间区域显示（如果没有左侧面板时） */}
+            <div className="w-full max-w-2xl px-6 text-center">
               <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-accent-primary/20 border-t-accent-primary" />
               <p className="text-sm font-medium text-foreground-secondary">{GEN_STAGES[genStage]}</p>
               <p className="mt-1 text-xs text-foreground-muted">
                 {isThinking ? 'AI 正在思考…' : '正在生成报告…'}
               </p>
+              {/* ★ 思考流（首次生成在中栏 loading 区展示，完成后丢弃） */}
+              {reasoning && (
+                <div className="mt-4 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-surface-secondary px-4 py-3 text-left text-[11px] leading-relaxed text-foreground-muted">
+                  {reasoning}
+                </div>
+              )}
               <button
                 onClick={handleCancel}
                 className="mt-4 rounded-md border border-red/30 px-3 py-1.5 text-xs text-red hover:bg-red/5"
