@@ -19,7 +19,7 @@ import {
 } from '@/api/htmlTemplates';
 import { projectsApi } from '@/api/projects';
 import { Button } from '@/components/Button';
-import type { ProjectDetail, ProjectMeta } from '@mediaket/shared';
+import { type ProjectDetail, type ProjectMeta, formatReportPeriod } from '@mediakit/shared';
 import { AgentChatPanel } from './AgentChatPanel';
 import { AiGenerateForm } from '@/editor/components/AiGenerateForm';
 import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
@@ -139,6 +139,15 @@ export function HtmlStudio() {
   const reportPeriod = project?.meta?.reportPeriod as
     | { startDate?: string; endDate?: string }
     | undefined;
+
+  // ★ 报告基础信息透出标签（业务线/广告主/周期）；空值不进标签。
+  const basicInfoTags: string[] = [];
+  if (project?.meta?.businessLine) basicInfoTags.push(project.meta.businessLine);
+  if (project?.meta?.advertiser) basicInfoTags.push(project.meta.advertiser);
+  const periodText = project?.meta?.reportPeriod
+    ? formatReportPeriod(project.meta.reportPeriod, project.meta.scenarioSub)
+    : '';
+  if (periodText) basicInfoTags.push(periodText);
 
   const updateAiHtmlStatus = useCallback(
     async (status: 'generated' | 'generating' | 'pending') => {
@@ -689,6 +698,17 @@ export function HtmlStudio() {
               {isThinking ? '思考中' : '生成中'}
             </span>
           )}
+          {/* ★ 报告基础信息透出标签 */}
+          <div className="flex items-center gap-1">
+            {basicInfoTags.map((t, i) => (
+              <span
+                key={i}
+                className="hidden rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary md:inline"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {saved && !generating && (
