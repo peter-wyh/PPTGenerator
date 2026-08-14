@@ -266,7 +266,7 @@ RULES:
 ═══ CREATOR CONTRIBUTION NARRATIVE ═══
 For each creator in the campaign, include a "Creator Contribution" analysis (in the creators table area or a dedicated section):
 - **Allocated orders**: use \`creators[].cps.orders\` (or \`creator.cps.orders\`) verbatim — do NOT fabricate.
-- **Content role**: 1 sentence on their positioning + content form, grounded in \`creator.category\`, \`creator.metrics.followers\`, and \`collaboration.deliverables\` (content type: Story / Post / Article / Video).
+- **Content role**: 1 sentence on their positioning + content form, grounded in the creator's \`tier\` (mega/macro/micro), \`contentType\` (post/reels/video/story/article), and \`platform\` from the campaign JSON.
 - **Why it converted**: 1-2 sentences connecting their positioning/content to the allocated orders. Base it on the data provided (e.g. "pain-point → product → CTA structure matches strong multi-pack performance"), not generic claims.
 Every number MUST come from the campaign JSON. If a creator has no \`cps.orders\`, write "no attributed orders" — never invent a number.
 
