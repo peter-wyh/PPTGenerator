@@ -201,7 +201,7 @@ export async function extractPeriodData(
       handle: cc.creator?.handle || undefined,
       platform: cc.creator?.platform ?? campaign.platform,
       partnerType: cc.creator?.partnerType,
-      avatarUrl: cc.creator?.avatarUrl || undefined,
+      avatarUrl: cc.creator?.avatar || undefined,
       clicks: sum.clicks,
       orders: sum.orders,
       gmv: sum.gmv,
