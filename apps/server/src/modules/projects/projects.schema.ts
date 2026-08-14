@@ -523,6 +523,15 @@ export const updateProjectSchema = z
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 
+/** 复制项目时的可选 body（新周期）。 */
+export const duplicateSchema = z.object({
+  reportPeriod: z.object({
+    month: z.string().max(20).optional(),
+    startDate: z.string().max(40).optional(),
+    endDate: z.string().max(40).optional(),
+  }).optional(),
+}).optional();
+
 export const idParamSchema = z.object({
   id: z.string().min(1),
 });

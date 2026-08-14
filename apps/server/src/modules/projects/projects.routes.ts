@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { projectsController } from './projects.controller';
 import { validate } from '../../middleware/validate';
-import { createProjectSchema, idParamSchema, updateProjectSchema } from './projects.schema';
+import { createProjectSchema, duplicateSchema, idParamSchema, updateProjectSchema } from './projects.schema';
 import { authenticate } from '../../middleware/auth';
 import { exportRoutes } from '../export/export.routes';
 
@@ -15,7 +15,7 @@ router.get('/:id', validate({ params: idParamSchema }), projectsController.get);
 router.get('/:id/html', validate({ params: idParamSchema }), projectsController.getHtml);
 router.patch('/:id', validate({ params: idParamSchema, body: updateProjectSchema }), projectsController.update);
 router.delete('/:id', validate({ params: idParamSchema }), projectsController.remove);
-router.post('/:id/duplicate', validate({ params: idParamSchema }), projectsController.duplicate);
+router.post('/:id/duplicate', validate({ params: idParamSchema, body: duplicateSchema }), projectsController.duplicate);
 // 从模版创建项目：body { templateId, name? }
 router.post('/from-template', projectsController.createFromTemplate);
 router.post('/:id/share', validate({ params: idParamSchema }), projectsController.createShare);

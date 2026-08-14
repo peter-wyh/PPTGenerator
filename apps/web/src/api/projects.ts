@@ -17,9 +17,9 @@ export const projectsApi = {
     patch: { name?: string; width?: number; height?: number; pages?: unknown; meta?: ProjectMeta },
   ) => api.patch<{ project: ProjectDetail }>(`/projects/${id}`, patch).then((r) => r.data.project),
   remove: (id: string) => api.delete(`/projects/${id}`),
-  /** 复制项目（后端深拷贝页面/尺寸/meta，生成新 id）。返回新项目详情。 */
-  duplicate: (id: string) =>
-    api.post<{ project: ProjectDetail }>(`/projects/${id}/duplicate`).then((r) => r.data.project),
+  /** 复制项目（后端深拷贝页面/尺寸/meta，生成新 id）。可选 reportPeriod 覆盖周期。返回新项目详情。 */
+  duplicate: (id: string, reportPeriod?: { month?: string; startDate?: string; endDate?: string }) =>
+    api.post<{ project: ProjectDetail }>(`/projects/${id}/duplicate`, reportPeriod ? { reportPeriod } : undefined).then((r) => r.data.project),
 
   /** 取某报告的 HTML 源码(仅供列表预览/下载/复制,按需 fetch)。 */
   getHtml: (id: string) =>
