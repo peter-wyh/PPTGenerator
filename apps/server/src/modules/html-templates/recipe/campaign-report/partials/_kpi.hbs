@@ -7,3 +7,18 @@
             </div>
             {{/each}}
         </div>
+        {{!-- MoM 月环比 --}}
+        {{#if insights.mom}}
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Orders MoM</p>
+                <h3 class="font-number font-semibold text-[28px] leading-tight text-brand-primary">{{insights.mom.ordersMoM}}</h3>
+                <p class="text-[12px] text-grey-secondary mt-1">{{insights.mom.currentOrders}} vs {{insights.mom.previousOrders}}</p>
+            </div>
+            <div class="card relative overflow-hidden">
+                <p class="font-semibold text-[13px] text-grey-secondary mb-1">Sales MoM</p>
+                <h3 class="font-number font-semibold text-[28px] leading-tight text-brand-primary">{{insights.mom.salesMoM}}</h3>
+                <p class="text-[12px] text-grey-secondary mt-1">{{insights.mom.currentSales}} vs {{insights.mom.previousSales}}</p>
+            </div>
+        </div>
+        {{/if}}

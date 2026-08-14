@@ -33,6 +33,11 @@ export const CampaignReportContent = z.object({
     newCustomerRate: z.object({
       rate: z.string(), newCount: z.number(), totalOrders: z.number(), deltaPct: z.string().optional(),
     }).optional(),
+    mom: z.object({
+      ordersMoM: z.string(), salesMoM: z.string(),
+      currentOrders: z.number(), previousOrders: z.number(),
+      currentSales: z.number(), previousSales: z.number(),
+    }).optional(),
   }).optional(),
   actionable: z.array(z.object({
     icon: z.string(),

@@ -134,9 +134,43 @@ function mapFromDaily(
       }
     }
   }
+  // 7b) MoM:reportPeriod vs 前等长期间(紧邻 reportPeriod 之前,同天数)
+  const startD = new Date(start);
+  const endD = new Date(end);
+  const lenDays = Math.round((endD.getTime() - startD.getTime()) / 86_400_000) + 1; // 含,天数
+  const preEndD = new Date(startD); preEndD.setDate(preEndD.getDate() - 1);
+  const preStartD = new Date(preEndD); preStartD.setDate(preStartD.getDate() - (lenDays - 1));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const preStart = iso(preStartD);
+  const preEnd = iso(preEndD);
+  const inPre = (d: string) => d >= preStart && d <= preEnd;
+  let preOrders = 0, preGmv = 0;
+  for (const cc of campaign.campaignCreators ?? []) {
+    for (const p of cc.cpsPerformances ?? []) {
+      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
+        const date = String(d.date ?? '');
+        if (!date || !inPre(date)) continue;
+        preOrders += num(d.orders);
+        preGmv += num(d.gmv);
+      }
+    }
+  }
+  const signedPct = (cur: number, prev: number) => {
+    const v = Math.round(((cur - prev) / prev) * 1000) / 10;
+    return `${v > 0 ? '+' : ''}${formatPct(v)}`;
+  };
+  const mom = preOrders > 0 ? {
+    ordersMoM: signedPct(total.orders, preOrders),
+    salesMoM: signedPct(total.gmv, preGmv),
+    currentOrders: total.orders, previousOrders: preOrders,
+    currentSales: total.gmv, previousSales: preGmv,
+  } : undefined;
+
   const rate = total.orders ? (total.newCustomers / total.orders) * 100 : 0;
   const insights = {
     ...aggregateDimensions(dimLinks),
+    ...(mom ? { mom } : {}),
     newCustomerRate: { rate: formatPct(Math.round(rate * 10) / 10), newCount: total.newCustomers, totalOrders: total.orders },
   };
 

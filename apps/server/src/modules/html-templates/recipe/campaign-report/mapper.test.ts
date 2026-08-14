@@ -254,4 +254,37 @@ describe('mapCampaign', () => {
     expect(c.insights?.topMarket).toEqual([{ country: 'US', revenue: '$192,000', pct: 100, color: '#ff099e' }]);
     expect(c.insights?.topPromotion?.[0]).toMatchObject({ name: 'Sale', usage: '1,016', tagKind: 'discount' });
   });
+
+  it('mapFromDaily + reportPeriod → insights.mom 前等长无数据 → undefined 降级', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    // reportPeriod 2026-10-15~16(2 天)。前等长 2026-10-13~14。fixture daily 里无 10-13/14
+    // → previousOrders=0 → mom undefined
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-16' });
+    expect(c.insights?.mom).toBeUndefined();
+  });
+
+  it('mapFromDaily + 前等长有数据 → mom 正确(ordersMoM/salesMoM 带 +)', async () => {
+    const row = {
+      ...campaignRowWithDaily,
+      campaignCreators: [{
+        ...campaignRowWithDaily.campaignCreators[0],
+        cpsPerformances: [{
+          ...(campaignRowWithDaily.campaignCreators[0].cpsPerformances[0] as any),
+          daily: [
+            ...(campaignRowWithDaily.campaignCreators[0].cpsPerformances[0] as any).daily,
+            { date: '2026-10-13', clicks: '50', orders: '10', gmv: '1000', spend: '50', newCustomers: '3' },
+          ],
+        }],
+      }],
+    };
+    prismaMock.campaign.findUnique.mockResolvedValue(row);
+    // reportPeriod 10-15~17: orders 50, gmv 5000。前等长 10-12~14: 10-12(orders 10)+10-13(orders 10) = orders 20, gmv 2000
+    // ordersMoM = (50-20)/20*100 = +150%, salesMoM = (5000-2000)/2000*100 = +150%
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-17' });
+    expect(c.insights?.mom).toMatchObject({
+      ordersMoM: '+150%', salesMoM: '+150%',
+      currentOrders: 50, previousOrders: 20,
+      currentSales: 5000, previousSales: 2000,
+    });
+  });
 });
