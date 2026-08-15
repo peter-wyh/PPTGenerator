@@ -86,6 +86,22 @@ describe('resolvePreset', () => {
   it('目标区间在窗口外 → null(禁用)', () => {
     expect(resolvePreset('thisMonth', '2020-01-01', '2020-12-31', today)).toBeNull();
   });
+  it('1月的上月 → 回滚到上年12月', () => {
+    expect(resolvePreset('lastMonth', '2025-01-01', '2026-01-31', '2026-01-15'))
+      .toEqual({ startDate: '2025-12-01', endDate: '2025-12-31' });
+  });
+  it('降级模式(无窗口): 全部→null, 相对预设仍可用', () => {
+    expect(resolvePreset('all', '', '', '2026-08-14')).toBeNull();
+    expect(resolvePreset('last30', '', '', '2026-08-14')).toEqual({ startDate: '2026-07-16', endDate: '2026-08-14' });
+  });
+  it('窗口全在过去 → 相对预设禁用', () => {
+    expect(resolvePreset('last7', '2020-01-01', '2020-12-31', '2026-08-14')).toBeNull();
+    expect(resolvePreset('thisMonth', '2020-01-01', '2020-12-31', '2026-08-14')).toBeNull();
+  });
+  it('最近7天 → [today-6, today] 与窗口求交', () => {
+    expect(resolvePreset('last7', '2026-01-01', '2026-08-14', '2026-08-14'))
+      .toEqual({ startDate: '2026-08-08', endDate: '2026-08-14' });
+  });
 });
 
 describe('computeDefaultPeriod', () => {
