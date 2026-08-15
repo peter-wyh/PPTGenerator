@@ -45,7 +45,10 @@ uploads/
 test-output.html
 # AI/recipe 报告导出产物(根目录散落的报告 HTML)
 duomai_review_report_en_visual.html
-apps/server/scripts/
+apps/server/scripts/*
 
 # db 同步产物（覆盖/备份 dump，见 scripts/db-overwrite-to-test.sh）
 scripts/.db-sync/
+# 工具脚本入库例外（drift 补列/测试库重建）
+!apps/server/scripts/*.mjs
+!apps/server/scripts/*.cjs
