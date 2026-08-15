@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 // ── mock 路由 hooks（避免 MemoryRouter 包裹） ──
 vi.mock('react-router-dom', async () => {
@@ -48,6 +48,15 @@ vi.mock('@/editor/components/AiGenerateForm', () => ({
 // ── mock toast ──
 vi.mock('@/components/Toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+// ── mock CreateProjectDialog 打开时会调用的 lookup/campaigns 接口 ──
+vi.mock('@/api/lookup', () => ({
+  lookupApi: {
+    listBusinessLines: vi.fn().mockResolvedValue([]),
+    listAdvertisers: vi.fn().mockResolvedValue([]),
+  },
+}));
+vi.mock('@/api/campaigns', () => ({ listCampaigns: vi.fn().mockResolvedValue([]) }));
+
 import { projectsApi } from '@/api/projects';
 import { HtmlStudio } from './HtmlStudio';
 
@@ -76,5 +85,16 @@ describe('HtmlStudio 表头基础信息', () => {
     expect(screen.queryByText('DG')).toBeNull();
     expect(screen.queryByText('花西子')).toBeNull();
     expect(screen.queryByText('2026年8月')).toBeNull();
+  });
+
+  it('点「编辑」以编辑模式打开 CreateProjectDialog(标题=编辑报告,名称预填)', async () => {
+    render(<HtmlStudio />);
+    await waitFor(() => expect(projectsApi.get).toHaveBeenCalledWith('p1'));
+
+    fireEvent.click(screen.getByRole('button', { name: /编辑/ }));
+
+    await waitFor(() => expect(screen.getByText('编辑报告')).toBeTruthy());
+    // 名称输入框预填为项目名
+    expect((screen.getByDisplayValue('季度复盘') as HTMLInputElement)).toBeTruthy();
   });
 });

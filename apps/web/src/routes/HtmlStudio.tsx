@@ -18,6 +18,8 @@ import {
   type AgentChatMessage,
 } from '@/api/htmlTemplates';
 import { projectsApi } from '@/api/projects';
+import { toast } from '@/components/Toast';
+import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { Button } from '@/components/Button';
 import { type ProjectDetail, type ProjectMeta, formatReportPeriod } from '@mediakit/shared';
 import { AgentChatPanel } from './AgentChatPanel';
@@ -54,6 +56,11 @@ export function HtmlStudio() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // ★ 报告基础信息编辑对话框
+  const [showEdit, setShowEdit] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
@@ -162,6 +169,39 @@ export function HtmlStudio() {
     },
     [id, project],
   );
+
+  // ★ 编辑报告基础信息:复用 CreateProjectDialog → PATCH /projects/:id → 刷新 project
+  // 仅持久化 + 刷新;不自动重算/重生成(recipe 模式下用户在 DataPanel 手动重新生成)。
+  const handleEditBasicInfo = async (values: {
+    name: string;
+    width: number;
+    height: number;
+    meta: ProjectMeta;
+    templateId?: string;
+  }) => {
+    if (!id) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      const updated = await projectsApi.update(id, values);
+      setProject(updated);
+      setShowEdit(false);
+      toast.success('报告信息已更新');
+    } catch (err: unknown) {
+      const e = err as {
+        response?: { data?: { message?: string; error?: { message?: string } } };
+        message?: string;
+      };
+      const msg =
+        e?.response?.data?.message ??
+        e?.response?.data?.error?.message ??
+        e?.message ??
+        '保存失败，请重试';
+      setEditError(typeof msg === 'string' ? msg : '保存失败，请重试');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
 
   const reloadVersion = useCallback(async () => {
     if (!id || !activeVersion) return;
@@ -698,7 +738,7 @@ export function HtmlStudio() {
               {isThinking ? '思考中' : '生成中'}
             </span>
           )}
-          {/* ★ 报告基础信息透出标签 */}
+          {/* ★ 报告基础信息透出标签 + 编辑入口 */}
           <div className="flex items-center gap-1">
             {basicInfoTags.map((t, i) => (
               <span
@@ -708,6 +748,14 @@ export function HtmlStudio() {
                 {t}
               </span>
             ))}
+            <button
+              onClick={() => setShowEdit(true)}
+              disabled={generating}
+              className="rounded px-1.5 py-0.5 text-[10px] text-foreground-secondary hover:bg-surface-hover disabled:opacity-40"
+              title="编辑报告基础信息"
+            >
+              ✏️ 编辑
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -770,6 +818,28 @@ export function HtmlStudio() {
           maxLeft={600}
         />
       )}
+
+      {/* ★ 报告基础信息编辑对话框(复用 CreateProjectDialog) */}
+      <CreateProjectDialog
+        open={showEdit}
+        loading={editSubmitting}
+        error={editError}
+        title="编辑报告"
+        submitLabel="保存"
+        lockScenario
+        initial={
+          project
+            ? {
+                name: project.name,
+                width: project.width,
+                height: project.height,
+                meta: project.meta,
+              }
+            : null
+        }
+        onCancel={() => !editSubmitting && setShowEdit(false)}
+        onSubmit={handleEditBasicInfo}
+      />
     </div>
   );
 }
