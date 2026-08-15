@@ -11,9 +11,10 @@ import {
   toUpdateInput,
   type SchemeFormValues,
 } from '@/components/SchemeFormDialog';
-import { BUSINESS_LINES } from '@/projectsMeta';
+
 import { STYLE_PRESETS, type ReportScheme } from '@mediakit/shared';
 import { toast } from '../components/Toast';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 
 /** 风格预设 key → 名称查找表。 */
 const PRESET_LABEL: Record<string, string> = Object.fromEntries(
@@ -23,6 +24,8 @@ const PRESET_LABEL: Record<string, string> = Object.fromEntries(
 /** 方案管理页面（管理后台）：仅 ADMIN 可见。列表 / 筛选 / 新建 / 编辑 / 启停 / 删除。 */
 export function SchemesPage() {
   const user = useAuthStore((s) => s.user);
+
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
 
   const [schemes, setSchemes] = useState<ReportScheme[]>([]);
   const [loading, setLoading] = useState(true);

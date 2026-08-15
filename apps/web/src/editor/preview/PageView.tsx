@@ -2,7 +2,7 @@ import type { Page } from '@mediakit/shared';
 import { ComponentRenderer } from '../components/ComponentRenderer';
 import { resolvePageBackground } from '../background';
 import { useEditorStore } from '../store';
-import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { useBusinessLineInfo } from '@/editor/useBusinessLineLogo';
 import { useBusinessLineLogo } from '../useBusinessLineLogo';
 
 /**
@@ -28,6 +28,7 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
 
   // 业务线 Logo（与编辑器 Canvas 同步渲染，右上角）— 位置/尺寸由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+  const blName = useBusinessLineInfo(businessLine)?.name;
   const blBadge = useEditorStore((s) => s.projectMeta?.theme?.branding?.blBadge);
   const blLogoFromDb = useBusinessLineLogo(businessLine);
   const blLogoSrc = blBadge?.logo || blLogoFromDb;
@@ -66,7 +67,7 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
         {blLogoVisible && blLogoSrc && !page.suppressLogo && (
           <img
             src={blLogoSrc}
-            alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}
+            alt={blName ?? ''}
             style={{
               position: 'absolute',
               right: blBadge?.right ?? 24,

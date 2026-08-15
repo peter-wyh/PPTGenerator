@@ -10,7 +10,7 @@ import { DEFAULT_THEME } from '@mediakit/shared';
 import { themeToCssVars } from './theme';
 import { DEFAULT_GRID_SIZE } from './defaults';
 import { snapMove, clampRect, safeRectFrom } from './snap';
-import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { useBusinessLineInfo } from '@/editor/useBusinessLineLogo';
 import { useBusinessLineLogo } from './useBusinessLineLogo';
 
 type DragState =
@@ -56,6 +56,7 @@ export function Canvas() {
 
   // 业务线 Logo（右上角渲染）— 位置/尺寸可由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
+  const blName = useBusinessLineInfo(businessLine)?.name;
   const blBadge = theme.branding?.blBadge;
   const blLogoFromDb = useBusinessLineLogo(businessLine);
   const blLogoSrc = blBadge?.logo || blLogoFromDb;
@@ -386,7 +387,7 @@ export function Canvas() {
           {blLogoVisible && blLogoSrc && !currentPage?.suppressLogo && (
             <img
               src={blLogoSrc}
-              alt={BUSINESS_LINE_META[businessLine!]?.name ?? ''}
+              alt={blName ?? ''}
               className="pointer-events-none absolute z-50 object-contain"
               style={{
                 right: blBadge?.right ?? 24,

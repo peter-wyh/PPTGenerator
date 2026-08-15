@@ -9,7 +9,14 @@ import {
   type TemplateFormInitial,
   type TemplateFormValues,
 } from '@/components/TemplateFormDialog';
-import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS, TEMPLATE_TYPES, TEMPLATE_TYPE_LABELS } from '@/projectsMeta';
+import {
+  SCENARIOS,
+  SCENARIO_LABELS,
+  SCENARIO_SUB_LABELS,
+  TEMPLATE_TYPES,
+  TEMPLATE_TYPE_LABELS,
+} from '@/projectsMeta';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 import type { ProjectMeta, TemplateSummary, Scenario, TemplateStatus } from '@mediakit/shared';
 import { toast } from '../components/Toast';
 
@@ -49,6 +56,8 @@ const TEMPLATE_TYPE_BADGES: Record<string, string> = {
 export function Templates() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
 
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [loading, setLoading] = useState(true);

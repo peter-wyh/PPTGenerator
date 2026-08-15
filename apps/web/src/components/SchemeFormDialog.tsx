@@ -6,8 +6,9 @@ import type {
 } from '@mediakit/shared';
 import { Button } from './Button';
 import { Input } from './Input';
-import { BUSINESS_LINES } from '@/projectsMeta';
+
 import { STYLE_PRESETS } from '@mediakit/shared';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 
 const selectCls =
   'w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary';
@@ -68,6 +69,7 @@ export function SchemeFormDialog({
   onCancel,
   onSubmit,
 }: Props) {
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
   const [form, setForm] = useState<SchemeFormInitial>(EMPTY);
 
   useEffect(() => {

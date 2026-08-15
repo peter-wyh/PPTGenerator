@@ -3,7 +3,23 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ReportSettingsOverlay } from '@/editor/components/ReportSettingsOverlay';
 import { useEditorStore } from '@/editor/store';
 import { DEFAULT_THEME } from '@mediakit/shared';
-import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { lookupApi as _lookupApi } from '@/api/lookup';
+void _lookupApi;
+
+// 业务线查找表(数据库唯一来源;测试中 mock lookupApi 返回 DB 快照)
+const BUSINESS_LINE_META: Record<string, { code: string; name: string; logo?: string; color?: string }> = {
+  FT: { code: 'FT', name: 'Fanstoshop', logo: '/uploads/ft-logo.png', color: '#2563eb' },
+};
+
+vi.mock('@/api/lookup', () => ({
+  lookupApi: {
+    listBusinessLines: vi.fn().mockResolvedValue([
+      { code: 'FT', name: 'Fanstoshop', logo: '/uploads/ft-logo.png', color: '#2563eb', id: 'bl-ft' },
+    ]),
+    listAdvertisers: vi.fn().mockResolvedValue([]),
+    listMerchants: vi.fn().mockResolvedValue([]),
+  },
+}));
 
 vi.mock('@/components/ImageInput', () => ({
   ImageInput: ({ value }: { value?: string }) => (value ? <img alt="img" src={value} /> : null),

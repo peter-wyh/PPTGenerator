@@ -571,9 +571,9 @@ export interface CreatorCampaignPerformance {
   cps: CreatorCps;
 }
 
-/** 业务线（mock 查找表 BUSINESS_LINE_META 的条目）。 */
+/** 业务线（查找表 BusinessLine 表的条目）。 */
 export interface BusinessLine {
-  /** 简称，与 BUSINESS_LINES 中的条目一致，例如 'FT'。 */
+  /** 简称（唯一短码），例如 'FT'。 */
   code: string;
   /** 全称，例如 'FineTech 芯科'。 */
   name: string;
@@ -587,7 +587,7 @@ export interface BusinessLine {
   designMdUrl?: string;
 }
 
-/** 商家（独立列表 MERCHANTS 的条目；广告主通过 merchantId 引用）。 */
+/** 商家（查找表 Merchant 表的条目；广告主通过 merchantId 引用）。 */
 export interface Merchant {
   /** 例如 'm1'。 */
   id: string;
@@ -597,11 +597,11 @@ export interface Merchant {
   logo?: string;
 }
 
-/** 广告主（mock 查找表 ADVERTISER_META 的条目）。 */
+/** 广告主（查找表 Advertiser 表的条目）。 */
 export interface Advertiser {
-  /** 广告主名称，与 ADVERTISERS 中的条目一致，例如 'GlowLab'。 */
+  /** 广告主名称，例如 'GlowLab'。 */
   name: string;
-  /** 关联的商家 id（指向 MERCHANTS）。 */
+  /** 关联的商家 id（指向 Merchant 表）。 */
   merchantId?: string;
   /** Logo URL。 */
   logo?: string;

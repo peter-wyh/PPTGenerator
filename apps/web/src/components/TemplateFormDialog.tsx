@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import type { ProjectMeta, Scenario, TemplateStatus } from '@mediakit/shared';
 import { Button } from './Button';
 import { Input } from './Input';
-import { BUSINESS_LINES, SCENARIOS, TEMPLATE_TYPES } from '@/projectsMeta';
+import {
+  SCENARIOS,
+  TEMPLATE_TYPES,
+} from '@/projectsMeta';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 
 /** P1-15: 渲染类型 — 第一步先选这个，再展示对应配置 */
 type RenderType = 'multi-page' | 'long-poster' | 'html-report';
@@ -96,6 +100,7 @@ export function TemplateFormDialog({
   onSubmit,
 }: Props) {
   const editMode = !!initial;
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
   const [name, setName] = useState('');
   const [renderType, setRenderType] = useState<RenderType | ''>(''); // P1-15
   const [presetId, setPresetId] = useState(PRESETS[0].id);

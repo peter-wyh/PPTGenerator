@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { templatesApi } from '@/api/templates';
 import { useAuthStore } from '@/stores/auth';
 import {
-  BUSINESS_LINES,
   SCENARIOS,
   SCENARIO_SUB_LABELS,
   TEMPLATE_TYPES,
 } from '@/projectsMeta';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 import type { Scenario, ScenarioSub, ProjectMeta } from '@mediakit/shared';
 
 interface SaveAsTemplateOverlayProps {
@@ -38,6 +38,7 @@ export function SaveAsTemplateOverlay({
   const isAdmin = user?.role === 'ADMIN';
 
   // 回显项目 meta
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
   const [name, setName] = useState(`${pageName} 模板`);
   const [businessLine, setBusinessLine] = useState(projectMeta?.businessLine ?? '');
   const [scenario, setScenario] = useState<Scenario | ''>(projectMeta?.scenario ?? '');

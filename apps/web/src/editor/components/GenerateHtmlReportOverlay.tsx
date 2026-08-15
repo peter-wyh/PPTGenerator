@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { htmlTemplatesApi, type HtmlVersionSummary } from '@/api/htmlTemplates';
 import { Button } from '@/components/Button';
-import { BUSINESS_LINES } from '@/projectsMeta';
+
 import { AiGenerateForm } from './AiGenerateForm';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 
 interface Props {
   /** 已有报告 ID（从报告列表入口时传入）。 */
@@ -28,6 +29,7 @@ const selectCls = 'w-full rounded-lg border border-border-default bg-surface-pri
  *  - 业务线 design.md 回显与二次编辑
  */
 export function GenerateHtmlReportOverlay({ projectId, campaignId, campaignName, reportPeriod, onClose, onSaved }: Props) {
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
   const [generatedHtml, setGeneratedHtml] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

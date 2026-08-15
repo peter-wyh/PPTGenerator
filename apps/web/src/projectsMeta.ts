@@ -1,43 +1,4 @@
-import type { Advertiser, BusinessLine, CampaignInfo, Merchant, Scenario, ScenarioSub } from '@mediakit/shared';
-
-/** Business lines. */
-export const BUSINESS_LINES = ['FT', 'SM', 'CX', 'DG', 'KN', 'DM'];
-
-/** Project owners. */
-export const CREATORS = ['alex', 'stella', 'reese', 'stacey'];
-
-/** Advertisers (mock). */
-export const ADVERTISERS = ['GlowLab', 'LUMIÈRE', 'NOVA Home', 'MOTION', 'EVERYDAY', 'WANDER'];
-
-/** Business line structured data (key corresponds 1:1 with BUSINESS_LINES). */
-export const BUSINESS_LINE_META: Record<string, BusinessLine> = {
-  FT: { code: 'FT', name: 'FineTech',    logo: 'https://placehold.co/120x120/2563eb/ffffff?text=FT', color: '#2563eb' },
-  SM: { code: 'SM', name: 'SocialMove',  logo: 'https://placehold.co/120x120/16a34a/ffffff?text=SM', color: '#16a34a' },
-  CX: { code: 'CX', name: 'CosmeX',      logo: 'https://placehold.co/120x120/db2777/ffffff?text=CX', color: '#db2777' },
-  DG: { code: 'DG', name: 'DigitalGo',   logo: 'https://placehold.co/120x120/ea580c/ffffff?text=DG', color: '#ea580c' },
-  KN: { code: 'KN', name: 'KitchenNest', logo: 'https://placehold.co/120x120/9333ea/ffffff?text=KN', color: '#9333ea' },
-  DM: { code: 'DM', name: 'DreamMart',   logo: 'https://placehold.co/120x120/0891b2/ffffff?text=DM', color: '#0891b2' },
-};
-
-/** Merchant list (advertisers reference via merchantId). */
-export const MERCHANTS: Merchant[] = [
-  { id: 'm1', name: 'GlowLab Flagship Store',       logo: 'https://placehold.co/120x120/2563eb/ffffff?text=M1' },
-  { id: 'm2', name: 'LUMIÈRE Global Store',          logo: 'https://placehold.co/120x120/1e293b/ffffff?text=M2' },
-  { id: 'm3', name: 'NOVA Home Living Store',        logo: 'https://placehold.co/120x120/475569/ffffff?text=M3' },
-  { id: 'm4', name: 'MOTION Sports Gear',             logo: 'https://placehold.co/120x120/dc2626/ffffff?text=M4' },
-  { id: 'm5', name: 'EVERYDAY Essentials Store',     logo: 'https://placehold.co/120x120/65a30d/ffffff?text=M5' },
-  { id: 'm6', name: 'WANDER Outdoor Store',           logo: 'https://placehold.co/120x120/0d9488/ffffff?text=M6' },
-];
-
-/** Advertiser structured data (key corresponds 1:1 with ADVERTISERS). */
-export const ADVERTISER_META: Record<string, Advertiser> = {
-  GlowLab:     { name: 'GlowLab',    merchantId: 'm1', logo: 'https://placehold.co/120x120/2563eb/ffffff?text=GL' },
-  'LUMIÈRE':   { name: 'LUMIÈRE',    merchantId: 'm2', logo: 'https://placehold.co/120x120/1e293b/ffffff?text=LU' },
-  'NOVA Home': { name: 'NOVA Home',  merchantId: 'm3', logo: 'https://placehold.co/120x120/475569/ffffff?text=NV' },
-  MOTION:      { name: 'MOTION',     merchantId: 'm4', logo: 'https://placehold.co/120x120/dc2626/ffffff?text=MO' },
-  EVERYDAY:    { name: 'EVERYDAY',   merchantId: 'm5', logo: 'https://placehold.co/120x120/65a30d/ffffff?text=EV' },
-  WANDER:      { name: 'WANDER',     merchantId: 'm6', logo: 'https://placehold.co/120x120/0d9488/ffffff?text=WA' },
-};
+import type { Scenario, ScenarioSub } from '@mediakit/shared';
 
 /** Campaign platforms. */
 export const PLATFORMS = ['TikTok', 'Douyin', 'Xiaohongshu', 'WeChat', 'Bilibili', 'YouTube', 'Instagram'];
@@ -67,17 +28,6 @@ export const SCENARIOS: ScenarioOption[] = [
 /** Whether a scenario is campaign-type (requires campaign info). */
 export function isCampaignScenario(s?: Scenario): boolean {
   return s === 'campaign-report' || s === 'campaign-proposal';
-}
-
-/** Pre-filled mock campaign info for campaign-type scenarios. */
-export function mockCampaignInfo(): CampaignInfo {
-  return {
-    campaignName: 'GlowLab Q4 Launch',
-    platform: 'TikTok',
-    startDate: '2026-10-12',
-    endDate: '2026-11-10',
-    budget: '$300K',
-  };
 }
 
 export const SCENARIO_LABELS: Record<Scenario, string> = {

@@ -14,7 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useEditorStore } from '../store';
-import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { useBusinessLineInfo } from '@/editor/useBusinessLineLogo';
 import type {
   BarChartData,
   IconWeight,
@@ -828,8 +828,8 @@ export function PageHeader({ data }: { data: PageHeaderData }) {
   const blCode = useEditorStore((s) => s.projectMeta?.businessLine);
   const advertiserName = useEditorStore((s) => s.projectMeta?.advertiser);
 
-  // 业务线 code → 中文名 + 颜色（统一从 BUSINESS_LINE_META 获取）
-  const blInfo = blCode ? BUSINESS_LINE_META[blCode] : undefined;
+  // 业务线 code → 中文名 + 颜色（数据库唯一来源）
+  const blInfo = useBusinessLineInfo(blCode);
 
   // 左侧 logo = 广告主；右侧 logo = 业务线（仅在用户手动上传图片时显示）
   const leftLogo: PageHeaderLogo = {

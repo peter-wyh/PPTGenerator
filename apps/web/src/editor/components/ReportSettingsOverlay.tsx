@@ -14,7 +14,7 @@ import type { PageGradient } from '@mediakit/shared';
 import { useEditorStore } from '../store';
 import type { ThemePatch } from '../store';
 import { ImageInput } from '@/components/ImageInput';
-import { BUSINESS_LINE_META } from '@/projectsMeta';
+import { useBusinessLineInfo } from '@/editor/useBusinessLineLogo';
 import { lookupApi } from '@/api/lookup';
 import {
   registerCustomFonts,
@@ -133,11 +133,11 @@ export function ReportSettingsOverlay({ onClose }: Props) {
   );
   const [hfSyncing, setHfSyncing] = useState(false);
 
-  // 业务线 Logo（标题栏右上角，只读；取自 mock BUSINESS_LINE_META）
+  // 业务线 Logo（标题栏右上角，只读；数据库唯一来源）
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
   const meta = useEditorStore((s) => s.projectMeta);
   const updateProjectMeta = useEditorStore((s) => s.updateProjectMeta);
-  const bl = businessLine ? BUSINESS_LINE_META[businessLine] : undefined;
+  const bl = useBusinessLineInfo(businessLine);
 
   // 左导航分类
   type Cat = 'basic' | 'layout' | 'component' | 'header-footer';

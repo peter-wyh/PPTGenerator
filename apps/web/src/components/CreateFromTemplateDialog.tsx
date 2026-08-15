@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { templatesApi } from '@/api/templates';
 import { Button } from './Button';
 import { Input } from './Input';
-import { BUSINESS_LINES, SCENARIOS, TEMPLATE_TYPES, SCENARIO_LABELS } from '@/projectsMeta';
+import {
+  SCENARIOS,
+  TEMPLATE_TYPES,
+  SCENARIO_LABELS,
+} from '@/projectsMeta';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 import type { Scenario } from '@mediakit/shared';
 import type { TemplateSummary } from '@mediakit/shared';
 
@@ -23,6 +28,7 @@ interface Props {
  * 调用方拿 templateId 走 createProjectFromTemplate。
  */
 export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSubmit }: Props) {
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [fetching, setFetching] = useState(false);
   const [selectedId, setSelectedId] = useState<string>('');

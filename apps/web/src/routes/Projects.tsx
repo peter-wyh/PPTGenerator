@@ -9,12 +9,18 @@ import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog'
 import { DuplicateProjectDialog } from '@/components/DuplicateProjectDialog';
 import { SaveAsTemplateDialog } from '@/components/SaveAsTemplateDialog';
 import { GenerateHtmlReportOverlay } from '@/editor/components/GenerateHtmlReportOverlay';
-import { BUSINESS_LINES, SCENARIOS, SCENARIO_LABELS, SCENARIO_SUB_LABELS } from '@/projectsMeta';
+import {
+  SCENARIOS,
+  SCENARIO_LABELS,
+  SCENARIO_SUB_LABELS,
+} from '@/projectsMeta';
+import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 import type { ProjectMeta, ProjectSummary, Scenario } from '@mediakit/shared';
 import { toast } from '../components/Toast';
 
 export function Projects() {
   const navigate = useNavigate();
+  const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
 

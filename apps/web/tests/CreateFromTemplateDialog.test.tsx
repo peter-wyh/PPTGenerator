@@ -10,6 +10,18 @@ vi.mock('@/api/templates', () => ({
   },
 }));
 
+// 业务线查找表(数据库唯一来源)——mock 返回 DB 快照
+vi.mock('@/api/lookup', () => ({
+  lookupApi: {
+    listBusinessLines: vi.fn().mockResolvedValue([
+      { id: 'bl-ft', code: 'FT', name: 'Fanstoshop' },
+      { id: 'bl-sm', code: 'SM', name: 'SmileKOLs' },
+    ]),
+    listAdvertisers: vi.fn().mockResolvedValue([]),
+    listMerchants: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 describe('CreateFromTemplateDialog', () => {
   it('默认模板行显示「默认」徽标', async () => {
     listMock.mockResolvedValue([

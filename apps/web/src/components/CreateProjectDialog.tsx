@@ -3,8 +3,6 @@ import type { Campaign, ProjectMeta, ReportPeriod, Scenario, ScenarioSub, Templa
 import { Button } from './Button';
 import { Input } from './Input';
 import {
-  ADVERTISERS,
-  BUSINESS_LINES,
   isCampaignScenario,
   SCENARIO_LABELS,
   SCENARIOS,
@@ -146,9 +144,9 @@ export function CreateProjectDialog({
   const [templateType, setTemplateType] = useState<string>('');
   const [mkAdvertiser, setMkAdvertiser] = useState('');
 
-  // 查找表数据（从 API 拉取，失败时回退 mock 常量）
-  const [blOptions, setBlOptions] = useState<{ code: string; name: string }[]>(BUSINESS_LINES.map((b) => ({ code: b, name: b })));
-  const [advOptions, setAdvOptions] = useState<{ name: string }[]>(ADVERTISERS.map((a) => ({ name: a })));
+  // 查找表数据（从 API 拉取，数据库唯一来源）
+  const [blOptions, setBlOptions] = useState<{ code: string; name: string }[]>([]);
+  const [advOptions, setAdvOptions] = useState<{ name: string }[]>([]);
 
   // 单页面尺寸
   const [singlePresetId, setSinglePresetId] = useState(SINGLE_PRESETS[1].id); // 默认小红书竖图
@@ -242,7 +240,7 @@ export function CreateProjectDialog({
     }
   }, [open, isCampaign, campaigns.length, campaignsLoading]);
 
-  // 拉取查找表数据（业务线/广告主），失败时保留 mock 回退。
+  // 拉取查找表数据（业务线/广告主），数据库唯一来源。
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
