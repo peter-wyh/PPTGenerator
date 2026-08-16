@@ -424,6 +424,7 @@ export function Projects() {
                             <>
                               {/* 点击外部关闭 */}
                               <button
+                                aria-label="关闭菜单"
                                 className="fixed inset-0 z-10 cursor-default"
                                 tabIndex={-1}
                                 onClick={() => setHtmlMenuFor(null)}

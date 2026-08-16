@@ -104,6 +104,15 @@ export function HtmlStudio() {
               setGeneratedHtml(data.html);
               setSaved(true);
               setPhase('chat');
+              // ★ 自愈：加载到内容但状态卡在 generating（上次会话崩溃/中断）→ 修正为 generated。
+              // 否则项目列表徽标永远显示「生成中」。
+              if ((p.meta as Record<string, unknown>)?.aiHtmlStatus === 'generating') {
+                const healed: ProjectMeta = { ...p.meta, aiHtmlStatus: 'generated' };
+                projectsApi
+                  .update(id, { meta: healed })
+                  .then(() => setProject((prev) => (prev ? { ...prev, meta: healed } : prev)))
+                  .catch(() => {});
+              }
               const history = (p.meta as Record<string, unknown>)?.agentHistory as
                 | AgentChatMessage[]
                 | undefined;
@@ -310,6 +319,11 @@ export function HtmlStudio() {
               setSaved(true);
             } catch {}
           }
+        } else if (error) {
+          // SSE error chunk 路径：流正常结束但未产出 HTML。
+          // 不走下方 catch（generateStream 不抛错），须在此回退状态，
+          // 否则 aiHtmlStatus 永久卡在 generating，列表徽标一直显示「生成中」。
+          void updateAiHtmlStatus('pending');
         }
       } catch (e: unknown) {
         const err = e as { message?: string; name?: string };
