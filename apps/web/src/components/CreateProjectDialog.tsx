@@ -226,6 +226,12 @@ export function CreateProjectDialog({
       setSinglePresetId(matchedPpt?.id ?? 'custom-ppt');
       setSingleW(initW || PPT_SIZE.w);
       setSingleH(initH || PPT_SIZE.h);
+    } else if (!m) {
+      // 新建(无 initial)：PPT 多页默认 16:9(1920×1080)。
+      // 修复:singleW/H 初始为单页面预设(小红书 1242×1656),不重置会以竖图尺寸提交。
+      setSinglePresetId('16-9');
+      setSingleW(PPT_SIZE.w);
+      setSingleH(PPT_SIZE.h);
     }
   }, [open, initial]);
 

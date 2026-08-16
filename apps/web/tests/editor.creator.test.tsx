@@ -248,6 +248,7 @@ describe('creator-page template', () => {
     expect(types).toContain('creator-avatar-card');
     expect(types).toContain('creator-stats-strip');
     expect(types).toContain('creator-works-list');
-    expect(types.filter((t) => t === 'text').length).toBeGreaterThanOrEqual(1);
+    // 页内标题现用专用 title-block(原 text)
+    expect(types.filter((t) => t === 'title-block' || t === 'text').length).toBeGreaterThanOrEqual(1);
   });
 });

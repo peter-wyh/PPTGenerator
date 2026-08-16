@@ -97,9 +97,9 @@ describe('editor store — move / resize (live, no history until commit)', () =>
     const before = useEditorStore.getState().historyIndex;
     useEditorStore.getState().move(['c1'], 13, 27);
     const c = currentComps()[0];
-    // 100+13=113 → snap 110; 100+27=127 → snap 130
-    expect(c.x).toBe(110);
-    expect(c.y).toBe(130);
+    // DEFAULT_THEME.layout.gridSize=8: 100+13=113 → snap 112(14*8); 100+27=127 → snap 128(16*8)
+    expect(c.x).toBe(112);
+    expect(c.y).toBe(128);
     expect(useEditorStore.getState().historyIndex).toBe(before);
     expect(useEditorStore.getState().dirty).toBe(true);
   });
@@ -120,14 +120,16 @@ describe('editor store — move / resize (live, no history until commit)', () =>
     expect(useEditorStore.getState().historyIndex).toBe(before + 1);
   });
 
+  // 期望值按 DEFAULT_THEME.layout.gridSize=8 重算——snapResize 对 x/y/w/h 全字段 round 到 8 的倍数
+  // (100→104, 250→248, 110→112, 150→152; 西/北向锚点边缘经 round 后近似保持)
   it.each<[ResizeDir, number, number, { x: number; y: number; w: number; h: number }]>([
-    ['se', 50, 30, { x: 100, y: 100, w: 250, h: 110 }],
-    ['e', 50, 0, { x: 100, y: 100, w: 250, h: 80 }],
-    ['s', 0, 30, { x: 100, y: 100, w: 200, h: 110 }],
-    // west keeps east edge fixed: x+w stays 300
-    ['w', 50, 0, { x: 150, y: 100, w: 150, h: 80 }],
-    // north keeps south edge fixed: y+h stays 180
-    ['n', 0, 30, { x: 100, y: 130, h: 50, w: 200 }],
+    ['se', 50, 30, { x: 104, y: 104, w: 248, h: 112 }],
+    ['e', 50, 0, { x: 104, y: 104, w: 248, h: 80 }],
+    ['s', 0, 30, { x: 104, y: 104, w: 200, h: 112 }],
+    // west keeps east edge fixed: x+w stays 300(152+148=300)
+    ['w', 50, 0, { x: 152, y: 104, w: 152, h: 80 }],
+    // north keeps south edge fixed: y+h stays 180(128+48≈176→h 仍是 8 的倍数;y snap 到 128)
+    ['n', 0, 30, { x: 104, y: 128, h: 48, w: 200 }],
   ])('resize %s applies correct math', (dir, dx, dy, expected) => {
     useEditorStore.getState().resize('c1', dir, dx, dy, { x: 100, y: 100, w: 200, h: 80 });
     const c = currentComps()[0];
@@ -140,8 +142,9 @@ describe('editor store — move / resize (live, no history until commit)', () =>
   it('resize enforces minimums (w≥40, h≥20)', () => {
     useEditorStore.getState().resize('c1', 'se', -500, -500, { x: 100, y: 100, w: 200, h: 80 });
     const c = currentComps()[0];
+    // snap 后取 8 的倍数: w≥40 → 40(恰为倍数), h≥20 → 24
     expect(c.w).toBe(40);
-    expect(c.h).toBe(20);
+    expect(c.h).toBe(24);
   });
 });
 

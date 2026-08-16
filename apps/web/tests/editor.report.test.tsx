@@ -189,7 +189,8 @@ describe('campaign report page templates', () => {
   it('report-product = title + product-performance', () => {
     const t = types('report-product');
     expect(t).toContain('product-performance');
-    expect(t).toContain('text');
+    // 页内标题现用专用 title-block(原 text)
+    expect(t).toContain('title-block');
   });
 
   it('report-creator-collab composes creator trio + note', () => {
@@ -212,7 +213,8 @@ describe('campaign report page templates', () => {
   it('report-posts = title + post-list', () => {
     const t = types('report-posts');
     expect(t).toContain('post-list');
-    expect(t).toContain('text');
+    // 页内标题现用专用 title-block(原 text)
+    expect(t).toContain('title-block');
   });
 });
 

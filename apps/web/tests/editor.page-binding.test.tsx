@@ -29,12 +29,25 @@ describe('addComponent on bound page', () => {
 });
 
 describe('applyPageBinding action', () => {
-  it('手动改某组件 source=manual 后，applyPageBinding 不覆盖它', () => {
+  it('手动改某组件 source=manual 后，applyPageBinding(用户主动触发)强制重填（manual 保护仅限自动路径）', () => {
     useEditorStore.getState().addComponent('creator-stats-strip');
     const id = useEditorStore.getState().pages[0].components[0].id;
     useEditorStore.getState().setComponentData(id, { _dataSource: 'manual', stats: [{ label: 'X', value: '9', compare: '' }] } as any);
     useEditorStore.getState().applyPageBinding('p1');
     const c = useEditorStore.getState().pages[0].components[0];
+    // 用户主动触发绑定 → forceIds 含全部组件 → 强制跟随项目数据（'1M' 来自 cr-1.stats）
+    expect((c.data as any).stats[0].value).toBe('1M');
+    expect((c.data as any)._dataSource).toBe('project');
+  });
+
+  it('manual 组件在自动路径(如 addPageWithComponents)不被覆盖', () => {
+    // 自动路径 newCompIds 只含新组件,已存在的 manual 组件不在 forceIds 内 → 不覆盖
+    useEditorStore.getState().addComponent('creator-stats-strip');
+    const id = useEditorStore.getState().pages[0].components[0].id;
+    useEditorStore.getState().setComponentData(id, { _dataSource: 'manual', stats: [{ label: 'X', value: '9', compare: '' }] } as any);
+    // 触发一次自动路径:再 add 一个组件(applyPageBinding 只对 newCompIds 生效)
+    useEditorStore.getState().addComponent('creator-stats-strip');
+    const c = useEditorStore.getState().pages[0].components.find((x) => x.id === id)!;
     expect((c.data as any).stats[0].value).toBe('9'); // 保留手动值
   });
 });

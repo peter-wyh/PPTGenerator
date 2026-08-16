@@ -30,27 +30,27 @@ describe('Layout 顶栏导航', () => {
     useAuthStore.setState({ status: 'authed', user: userBase });
   });
 
-  it('渲染「我的报告」菜单项', () => {
+  it('渲染「报告管理」菜单项', () => {
     renderLayoutAt('/projects');
     expect(
-      screen.getByRole('button', { name: '我的报告' }),
+      screen.getByRole('button', { name: '报告管理' }),
     ).toBeInTheDocument();
   });
 
-  it('当前页在 /projects 时「我的报告」高亮', () => {
+  it('当前页在 /projects 时「报告管理」高亮', () => {
     renderLayoutAt('/projects');
     expect(
-      screen.getByRole('button', { name: '我的报告' }),
+      screen.getByRole('button', { name: '报告管理' }),
     ).toHaveClass('bg-surface-hover');
   });
 
-  it('当前页在 /data 时「数据管理」高亮、「我的报告」不高亮', () => {
+  it('当前页在 /data 时「数据管理」高亮、「报告管理」不高亮', () => {
     renderLayoutAt('/data');
     expect(
       screen.getByRole('button', { name: '数据管理' }),
     ).toHaveClass('bg-surface-hover');
     expect(
-      screen.getByRole('button', { name: '我的报告' }),
+      screen.getByRole('button', { name: '报告管理' }),
     ).not.toHaveClass('bg-surface-hover');
   });
 });

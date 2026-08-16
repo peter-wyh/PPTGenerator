@@ -8,8 +8,8 @@ import {
 describe('ProjectTheme.layout defaults', () => {
   it('DEFAULT_THEME.layout has expected defaults', () => {
     expect(DEFAULT_THEME.layout).toBeDefined();
-    expect(DEFAULT_THEME.layout!.safeMargin).toBe(24);
-    expect(DEFAULT_THEME.layout!.gridSize).toBe(10);
+    expect(DEFAULT_THEME.layout!.safeMargin).toBe(48);
+    expect(DEFAULT_THEME.layout!.gridSize).toBe(8);
     expect(DEFAULT_THEME.layout!.showGrid).toBe(true);
     expect(DEFAULT_THEME.layout!.showSafeArea).toBe(true);
   });
@@ -40,26 +40,26 @@ describe('normalizeTheme layout tolerance', () => {
   it('fills layout defaults when missing (new-shape theme without layout)', () => {
     const t = normalizeTheme({ color: { primary: '#FF5C00' }, font: { text: 'inter', number: 'inter' } });
     expect(t.layout).toBeDefined();
-    expect(t.layout!.safeMargin).toBe(24);
-    expect(t.layout!.gridSize).toBe(10);
+    expect(t.layout!.safeMargin).toBe(48);
+    expect(t.layout!.gridSize).toBe(8);
   });
 
   it('fills layout defaults for legacy flat theme', () => {
     const t = normalizeTheme({ primary: '#FF5C00', secondary: '#FF8533', fontFamily: "'Inter', sans-serif" });
     expect(t.layout).toBeDefined();
-    expect(t.layout!.gridSize).toBe(10);
+    expect(t.layout!.gridSize).toBe(8);
   });
 
   it('keeps provided layout fields and fills the rest', () => {
     const t = normalizeTheme({ layout: { safeMargin: 100 } });
     expect(t.layout!.safeMargin).toBe(100);
-    expect(t.layout!.gridSize).toBe(10);
+    expect(t.layout!.gridSize).toBe(8);
     expect(t.layout!.showGrid).toBe(true);
   });
 
   it('replaces non-positive gridSize with default', () => {
     const t = normalizeTheme({ layout: { safeMargin: 40, gridSize: 0 } });
-    expect(t.layout!.gridSize).toBe(10);
+    expect(t.layout!.gridSize).toBe(8);
   });
 
   it('returns layout for empty input', () => {

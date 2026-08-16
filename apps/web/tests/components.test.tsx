@@ -163,9 +163,9 @@ describe('TitleBlock underline variant (色块下划线)', () => {
     expect(underlineBar(container).style.backgroundColor).toBe('var(--color-primary)');
   });
 
-  it('underlineColor=black 渲染为纯黑', () => {
+  it('underlineColor=black 渲染为前景色（CSS 变量，随主题明暗切换）', () => {
     const { container } = render(<TitleBlock data={{ ...base, underlineColor: 'black' }} />);
-    expect(underlineBar(container).style.backgroundColor).toBe('rgb(0, 0, 0)');
+    expect(underlineBar(container).style.backgroundColor).toBe('var(--foreground-primary)');
   });
 });
 
@@ -199,17 +199,17 @@ describe('title-block block-underline variant', () => {
     expect(bar.parentElement?.className).toContain('leading-none');
   });
 
-  it('underlineColor=black 时色块为黑色（下划线颜色生效）', () => {
+  it('underlineColor=black 时色块为前景色（下划线颜色生效）', () => {
     const { container } = render(
       <TitleBlock data={{ variant: 'block-underline', text: '区域销售', underlineColor: 'black' } as any} />,
     );
     const bars = Array.from(container.querySelectorAll('div')).filter(
-      (d) => (d as HTMLElement).style.backgroundColor === 'rgb(0, 0, 0)',
+      (d) => (d as HTMLElement).style.backgroundColor === 'var(--foreground-primary)',
     );
     expect(bars).toHaveLength(1);
   });
 
-  it('色块与标题文字色解耦：titleColor=brand + underlineColor=black → 文字品牌、色块黑色', () => {
+  it('色块与标题文字色解耦：titleColor=brand + underlineColor=black → 文字品牌、色块前景色', () => {
     const { container } = render(
       <TitleBlock
         data={{ variant: 'block-underline', text: '区域销售', titleColor: 'brand', underlineColor: 'black' } as any}
@@ -217,7 +217,7 @@ describe('title-block block-underline variant', () => {
     );
     expect((screen.getByText('区域销售') as HTMLElement).style.color).toBe('var(--color-primary)'); // 文字品牌色
     const bars = Array.from(container.querySelectorAll('div')).filter(
-      (d) => (d as HTMLElement).style.backgroundColor === 'rgb(0, 0, 0)', // 色块黑色(独立于文字)
+      (d) => (d as HTMLElement).style.backgroundColor === 'var(--foreground-primary)', // 色块前景色(独立于文字)
     );
     expect(bars).toHaveLength(1);
   });

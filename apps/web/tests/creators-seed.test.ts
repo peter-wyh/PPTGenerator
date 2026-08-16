@@ -67,11 +67,14 @@ describe('dtoToCreator maps rich fields', () => {
     const dto: CreatorDTO = {
       id: 'cre-x', name: 'X', handle: '@x', platform: 'TikTok', tier: 'macro',
       followers: '100K', engagement: '7%', category: 'Beauty', region: 'US', avatar: null,
-      profileUrl: null, contact: null, rate: null,
+      profileUrl: null,
       metrics: [], audience: { genderSplit: [{ label: 'Female', value: 55 }] },
       works: [{ id: 'w1', title: 'T' }],
       stats: [{ label: 'Followers', value: '100K', color: '#000' }],
-      profile: { bio: '简介', tags: ['美妆'], contact: { mcn: 'M' }, rate: { post: '$1K' } },
+      // bio/tags 在 profile;contact/rate 已提升为 DTO 顶层字段
+      profile: { bio: '简介', tags: ['美妆'] },
+      contact: { mcn: 'M' },
+      rate: { post: '$1K' },
     };
     const c = dtoToCreator(dto);
     expect(c.audience?.genderSplit?.[0].value).toBe(55);

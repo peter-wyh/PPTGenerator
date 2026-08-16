@@ -81,9 +81,12 @@ describe('creatorPatch', () => {
     expect(p).toMatchObject({ name: 'Ada', handle: '@ada', followers: '1M', avatar: 'http://x/a.png' });
     expect(p.intro).toContain('Beauty');
   });
-  it('creator-stats-strip 镜像 stats（无 stats → null）', () => {
+  it('creator-stats-strip 镜像 stats（无 stats → 派生默认 4 项）', () => {
     expect(creatorPatch('creator-stats-strip', cr, 'camp-1')).toHaveProperty('stats');
-    expect(creatorPatch('creator-stats-strip', { ...cr, stats: [] } as any, 'camp-1')).toBeNull();
+    // stats 为空时不再返回 null，而是从 followers/engagement/platform/tier 派生默认指标
+    const p = creatorPatch('creator-stats-strip', { ...cr, stats: [] } as any, 'camp-1') as { stats: { key: string }[] };
+    expect(p).not.toBeNull();
+    expect(p.stats.map((s) => s.key)).toEqual(['followers', 'engagement', 'platform', 'tier']);
   });
   it('creator-fan-gender / fan-age 从 audience 取', () => {
     expect(creatorPatch('creator-fan-gender', cr, 'camp-1')).toHaveProperty('slices');

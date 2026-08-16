@@ -4,10 +4,20 @@ import userEvent from '@testing-library/user-event';
 import type { Campaign } from '@mediakit/shared';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 
-const { listCampaignsMock } = vi.hoisted(() => ({
+const { listCampaignsMock, lookupApiMock } = vi.hoisted(() => ({
   listCampaignsMock: vi.fn<() => Promise<Campaign[]>>(async () => []),
+  lookupApiMock: {
+    listBusinessLines: vi.fn().mockResolvedValue([
+      { id: 'bl-ft', code: 'FT', name: 'Fanstoshop' },
+      { id: 'bl-sm', code: 'SM', name: 'SmileKOLs' },
+      { id: 'bl-dg', code: 'DG', name: 'Digchic' },
+    ]),
+    listAdvertisers: vi.fn().mockResolvedValue([]),
+    listMerchants: vi.fn().mockResolvedValue([]),
+  },
 }));
 vi.mock('@/api/campaigns', () => ({ listCampaigns: listCampaignsMock }));
+vi.mock('@/api/lookup', () => ({ lookupApi: lookupApiMock }));
 
 beforeEach(() => {
   listCampaignsMock.mockResolvedValue([]);
@@ -52,7 +62,7 @@ describe('CreateProjectDialog — 业务线必填 + 模版类型', () => {
     const onSubmit = vi.fn();
     render(<CreateProjectDialog open onSubmit={onSubmit} onCancel={() => {}} />);
 
-    await user.type(screen.getByLabelText('项目名称'), 'P');
+    await user.type(screen.getByLabelText('报告名称'), 'P');
     await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
     // 业务线决定 campaign 过滤(c1 属 FT);不碰报告类型
     await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
@@ -85,6 +95,8 @@ describe('CreateProjectDialog — campaign 按业务线过滤', () => {
   it('选业务线 FT 后,campaign 下拉只显示 FT 的 campaign', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    // 业务线选项异步加载(数据库唯一来源),先等加载完成
+    await screen.findByText(/FT · Fanstoshop/);
     await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
     await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
     await screen.findByText(/GlowLab Q4/);
@@ -95,6 +107,7 @@ describe('CreateProjectDialog — campaign 按业务线过滤', () => {
   it('切业务线后已选 campaign 被清空', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await screen.findByText(/FT · Fanstoshop/);
     await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
     await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
     await screen.findByText(/GlowLab Q4/);
@@ -110,6 +123,7 @@ describe('CreateProjectDialog — campaign 按业务线过滤', () => {
   it('该业务线无 campaign 时下拉显示空态文案（可选）', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await screen.findByText(/DG · Digchic/);
     await user.selectOptions(screen.getByLabelText('业务线'), 'DG'); // fixture 中无 DG
     await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
     await screen.findByText(/该业务线暂无可选 Campaign/);
@@ -119,7 +133,7 @@ describe('CreateProjectDialog — campaign 按业务线过滤', () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<CreateProjectDialog open onSubmit={onSubmit} onCancel={() => {}} />);
-    await user.type(screen.getByLabelText('项目名称'), 'P');
+    await user.type(screen.getByLabelText('报告名称'), 'P');
     await user.selectOptions(screen.getByLabelText('业务线'), 'FT');
     await user.selectOptions(screen.getByLabelText('场景'), 'campaign-report');
     // 不选 Campaign，直接提交

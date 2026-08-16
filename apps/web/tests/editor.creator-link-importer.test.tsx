@@ -42,10 +42,11 @@ describe('CreatorLinkImporter', () => {
   it('解析 TikTok 链接后写入字段，并保留 variant/tier', async () => {
     addAndSelectCard();
     panel();
-    expect(screen.getByPlaceholderText(/粘贴达人主页\/视频链接/)).toBeInTheDocument();
-
-    await userEvent.type(screen.getByPlaceholderText(/粘贴达人主页\/视频链接/), 'https://www.tiktok.com/@miaglowup');
-    await userEvent.click(screen.getByRole('button', { name: '解析' }));
+    // 现行 UI:数据来源切换器,先切到 URL 模式才出现解析输入框
+    await userEvent.click(screen.getByRole('button', { name: '🔗 URL' }));
+    const input = screen.getByPlaceholderText('粘贴链接…');
+    await userEvent.type(input, 'https://www.tiktok.com/@miaglowup');
+    await userEvent.click(screen.getByRole('button', { name: '🔍 解析' }));
 
     await waitFor(() => {
       const comp = useEditorStore.getState().currentComponents()[0];
@@ -65,9 +66,10 @@ describe('CreatorLinkImporter', () => {
   it('不支持的平台显示错误且不动数据', async () => {
     addAndSelectCard();
     panel();
-    await userEvent.type(screen.getByPlaceholderText(/粘贴达人主页\/视频链接/), 'https://www.xiaohongshu.com/u/a');
-    await userEvent.click(screen.getByRole('button', { name: '解析' }));
-    expect(await screen.findByText(/暂仅支持/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '🔗 URL' }));
+    await userEvent.type(screen.getByPlaceholderText('粘贴链接…'), 'https://www.xiaohongshu.com/u/a');
+    await userEvent.click(screen.getByRole('button', { name: '🔍 解析' }));
+    expect(await screen.findByText(/解析失败/)).toBeInTheDocument();
     const data = useEditorStore.getState().currentComponents()[0].data as unknown as Record<string, unknown>;
     expect(data.followers).toBeUndefined();
   });
@@ -75,7 +77,8 @@ describe('CreatorLinkImporter', () => {
   it('空输入提示错误', async () => {
     addAndSelectCard();
     panel();
-    await userEvent.click(screen.getByRole('button', { name: '解析' }));
-    expect(await screen.findByText('请粘贴达人链接')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '🔗 URL' }));
+    await userEvent.click(screen.getByRole('button', { name: '🔍 解析' }));
+    expect(await screen.findByText('请输入 URL')).toBeInTheDocument();
   });
 });

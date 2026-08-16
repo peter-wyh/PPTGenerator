@@ -32,6 +32,18 @@ vi.mock('@/api/campaigns', () => ({
   getCampaign: vi.fn(),
 }));
 
+// 业务线/查找表数据来自数据库(lookupApi),测试环境 mock
+vi.mock('@/api/lookup', () => ({
+  lookupApi: {
+    listBusinessLines: vi.fn().mockResolvedValue([
+      { id: 'bl-ft', code: 'FT', name: 'Fanstoshop' },
+      { id: 'bl-sm', code: 'SM', name: 'SmileKOLs' },
+    ]),
+    listAdvertisers: vi.fn().mockResolvedValue([]),
+    listMerchants: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 const summary = (id: string, name: string, pageCount = 1, meta?: Record<string, unknown>) => ({
   id,
   name,
@@ -116,10 +128,11 @@ describe('Projects page', () => {
     await user.click(screen.getByRole('button', { name: /新建报告/ }));
     // 填名称
     await user.type(screen.getByPlaceholderText(/例如/), 'My Report');
-    // 选业务线(顶层必填)
+    // 选业务线(顶层必填;选项异步加载自数据库)
+    await screen.findByText(/FT · Fanstoshop/);
     await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
-    // 选 1920×1080 预设并提交
-    await user.click(screen.getByText('1920 × 1080 px'));
+    // PPT 多页模式默认 16:9(1920×1080):显式选「PPT 多页」再提交
+    await user.click(screen.getByText('PPT 多页'));
     await user.click(screen.getByRole('button', { name: '创建' }));
 
     await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
@@ -149,7 +162,8 @@ describe('Projects page', () => {
 
     // 1) 先选场景 Campaign 报告 → campaign 列表懒加载
     await user.selectOptions(screen.getByRole('combobox', { name: '场景' }), 'campaign-report');
-    // 业务线决定 campaign 过滤(camp-x 属 FT)
+    // 业务线决定 campaign 过滤(camp-x 属 FT;选项异步加载自数据库)
+    await screen.findByText(/FT · Fanstoshop/);
     await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
     await screen.findByText('Campaign X · AdX');
 
@@ -210,6 +224,10 @@ describe('Projects page', () => {
 
     await screen.findByText('报告 A');
     await user.click(screen.getByRole('button', { name: '复制' }));
+    // 复制按钮现打开 DuplicateProjectDialog(源无周期 → 直接「复制」确认)
+    await screen.findByText('复制报告');
+    const copyBtns = screen.getAllByRole('button', { name: '复制' });
+    await user.click(copyBtns[copyBtns.length - 1]);
     await waitFor(() => expect(duplicateMock).toHaveBeenCalledWith('p1'));
     // 复制后刷新列表，副本出现。
     await waitFor(() => expect(screen.getByText('报告 A 副本')).toBeInTheDocument());
@@ -268,8 +286,9 @@ describe('Projects page', () => {
 
     await user.click(screen.getByRole('button', { name: /新建报告/ }));
     await user.type(screen.getByPlaceholderText(/例如/), 'X');
+    await screen.findByText(/FT · Fanstoshop/);
     await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
-    await user.click(screen.getByText('1920 × 1080 px'));
+    // PPT 多页默认 16:9(1920×1080),直接提交
     await user.click(screen.getByRole('button', { name: '创建' }));
 
     await waitFor(() =>

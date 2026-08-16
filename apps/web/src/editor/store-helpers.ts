@@ -32,7 +32,8 @@ export function centered(w: number, h: number, cw: number, ch: number): { x: num
   return { x: Math.max(0, Math.floor((cw - w) / 2)), y: Math.max(0, Math.floor((ch - h) / 2)) };
 }
 
-/** 把拖放落点 (鼠标位置) 转为组件左上角坐标：以落点为中心、网格吸附、钳制在画布内。 */
+/** 把拖放落点 (鼠标位置) 转为组件左上角坐标：以落点为中心、网格吸附、钳制在画布内。
+ *  吸附后再钳制（floor 到画布内侧）：round 可能落在 cw-w 之外（最多超出 grid-1 px）。 */
 export function placed(
   w: number,
   h: number,
@@ -43,8 +44,10 @@ export function placed(
   grid: number,
 ): { x: number; y: number } {
   const g = grid > 0 ? grid : DEFAULT_GRID_SIZE;
-  const x = Math.round(Math.max(0, Math.min(cx - w / 2, cw - w)) / g) * g;
-  const y = Math.round(Math.max(0, Math.min(cy - h / 2, ch - h)) / g) * g;
+  const snap = (v: number, lo: number, hi: number) =>
+    Math.min(Math.max(Math.round(v / g) * g, Math.ceil(lo / g) * g), Math.floor(hi / g) * g);
+  const x = snap(Math.max(0, Math.min(cx - w / 2, cw - w)), 0, cw - w);
+  const y = snap(Math.max(0, Math.min(cy - h / 2, ch - h)), 0, ch - h);
   return { x, y };
 }
 

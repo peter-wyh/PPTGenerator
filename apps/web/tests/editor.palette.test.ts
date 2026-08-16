@@ -31,17 +31,21 @@ describe('store.addComponentAt / addBusinessBlockAt', () => {
     const comps = useEditorStore.getState().currentComponents();
     expect(comps).toHaveLength(1);
     expect(comps[0].type).toBe('text');
-    // 落点 (300,200) 作为中心 → 左上角约 (150,170)，吸附到 10。
-    expect(comps[0].x % 10).toBe(0);
-    expect(comps[0].y % 10).toBe(0);
+    // 落点 (300,200) 作为中心 → 左上角约 (150,170)，吸附到 DEFAULT_THEME.gridSize=8。
+    expect(comps[0].x % 8).toBe(0);
+    expect(comps[0].y % 8).toBe(0);
     expect(comps[0].x).toBeLessThanOrEqual(300);
     expect(comps[0].y).toBeLessThanOrEqual(200);
+    // 随后 clampSafeFrom 硬夹进安全区(safeMargin=48)
+    expect(comps[0].x).toBeGreaterThanOrEqual(48);
+    expect(comps[0].y).toBeGreaterThanOrEqual(48);
     expect(useEditorStore.getState().selectedIds).toEqual([comps[0].id]);
   });
 
-  it('addComponentAt clamps to canvas bounds', () => {
+  it('addComponentAt clamps to canvas bounds (no meta → no safe-area clamp)', () => {
     useEditorStore.getState().addComponentAt('bar-chart', 5000, 5000);
     const c = useEditorStore.getState().currentComponents()[0];
+    // 该 project 无 meta → 无安全区；placed 吸附后 floor 进画布内侧(8 的倍数)
     expect(c.x + c.w).toBeLessThanOrEqual(1280);
     expect(c.y + c.h).toBeLessThanOrEqual(720);
   });

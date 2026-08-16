@@ -104,15 +104,16 @@ describe('decomposed page templates', () => {
     expect(comps.length).toBe(2);
   });
 
-  it('agenda-page composes title text + table', () => {
+  it('agenda-page composes title-block + table', () => {
     const types = find('agenda-page').components().map((c) => c.type);
-    expect(types).toContain('text');
+    // 页内标题现用专用 title-block(原 text)
+    expect(types).toContain('title-block');
     expect(types).toContain('table');
   });
 
   it('company-page composes title + intro + brand-wall', () => {
     const types = find('company-page').components().map((c) => c.type);
-    expect(types.filter((t) => t === 'text').length).toBeGreaterThanOrEqual(2);
+    expect(types.filter((t) => t === 'title-block' || t === 'text').length).toBeGreaterThanOrEqual(2);
     expect(types).toContain('brand-wall');
   });
 
@@ -120,7 +121,7 @@ describe('decomposed page templates', () => {
     const comps = find('package-page').components();
     const types = comps.map((c) => c.type);
     expect(types.filter((t) => t === 'package-card').length).toBe(3);
-    expect(types).toContain('text');
+    expect(types).toContain('title-block');
     // 中间卡为推荐（highlighted）。
     const cards = comps.filter((c) => c.type === 'package-card');
     expect((cards[1].data as { highlighted: boolean }).highlighted).toBe(true);

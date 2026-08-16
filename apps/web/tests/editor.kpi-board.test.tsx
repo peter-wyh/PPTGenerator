@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PropertyPanel } from '@/editor/property-panel';
+import { KpiRowStyleField } from '@/editor/property-panel/custom-fields';
 import { useEditorStore } from '@/editor/store';
 import { KpiBoard } from '@/editor/components/report';
 import { REGISTRY } from '@/editor/registry';
@@ -261,13 +262,15 @@ describe('KpiRowStyleField', () => {
     store.select(id);
     render(
       <MemoryRouter>
-        <PropertyPanel />
+        <KpiRowStyleField comp={store.currentComponents()[0]} />
       </MemoryRouter>,
     );
-    // 默认 9 行，第一行 label 是 'GMV'
+    // 默认 9 行，第一行 label 是 'GMV'(span 直接渲染 r[0])
     expect(screen.getByText('GMV')).toBeInTheDocument();
-    // 每行 3 个色块，title='品牌色' 每行一个 → 9 行共 9 个
-    expect(screen.getAllByTitle('品牌色').length).toBe(9);
+    // 每行 3 个色块（强调/高亮/品牌）→ 9 行共 9 个「品牌」色块
+    expect(screen.getAllByTitle('品牌').length).toBe(9);
+    // 默认 icons 全有值 → 每行显示「清除」按钮（iconKey 为空时才显示「选图标」）
+    expect(screen.getAllByText('清除').length).toBe(9);
   });
 
   it('点色块写入 valueColors[i]', () => {
@@ -277,10 +280,10 @@ describe('KpiRowStyleField', () => {
     store.select(id);
     render(
       <MemoryRouter>
-        <PropertyPanel />
+        <KpiRowStyleField comp={store.currentComponents()[0]} />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getAllByTitle('品牌色')[0]);
+    fireEvent.click(screen.getAllByTitle('品牌')[0]);
     const data = useEditorStore.getState().currentComponents()[0].data as KpiBoardData;
     expect(data.valueColors?.[0]).toBe('brand');
   });
@@ -290,9 +293,14 @@ describe('KpiRowStyleField', () => {
     store.addComponent('kpi-board');
     const id = store.currentComponents()[0].id;
     store.select(id);
+    // comp prop 是 render 快照;须从 store 订阅才能在点击后重渲染
+    const Reactive = () => {
+      const comp = useEditorStore((s) => s.currentComponents()[0]);
+      return comp ? <KpiRowStyleField comp={comp} /> : null;
+    };
     render(
       <MemoryRouter>
-        <PropertyPanel />
+        <Reactive />
       </MemoryRouter>,
     );
     // 默认显示图标（showIcons 缺省 true）

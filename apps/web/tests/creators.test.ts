@@ -1,34 +1,49 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { getCampaignMock, getMock } = vi.hoisted(() => ({
-  getCampaignMock: vi.fn(),
-  getMock: vi.fn(),
+const { listLinksMock } = vi.hoisted(() => ({
+  listLinksMock: vi.fn(),
 }));
 
-vi.mock('@/api/campaigns', () => ({ getCampaign: (id: string) => getCampaignMock(id) }));
-vi.mock('@/api/dataLibrary', () => ({ dataApi: { get: (id: string) => getMock(id), list: vi.fn() } }));
+vi.mock('@/api/campaignsApi', async () => {
+  const actual = await vi.importActual<typeof import('@/api/campaignsApi')>('@/api/campaignsApi');
+  return {
+    campaignsApi: {
+      ...actual.campaignsApi,
+      listLinks: (id: string) => listLinksMock(id),
+    },
+    dtoToCreator: actual.dtoToCreator,
+  };
+});
 
 import { listCampaignCollaborators } from '@/api/creators';
-
-const mia = { id: 'cre-mia', kind: 'CREATOR', ownerId: 'u', data: { id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US', metrics: [] }, createdAt: '', updatedAt: '' };
 
 beforeEach(() => vi.clearAllMocks());
 
 describe('listCampaignCollaborators', () => {
-  it('按 campaign.creatorIds 从达人库解析;孤儿 id(404)跳过', async () => {
-    getCampaignMock.mockResolvedValue({ id: 'camp-x', creatorIds: ['cre-mia', 'cre-gone'] });
-    getMock.mockImplementation((id: string) =>
-      id === 'cre-mia' ? Promise.resolve(mia) : Promise.reject(new Error('404')),
-    );
+  it('从 CampaignCreator 中间表解析达人;无 creator 的 link 跳过', async () => {
+    listLinksMock.mockResolvedValue([
+      {
+        id: 'l1', campaignId: 'camp-x', creatorId: 'cre-mia', collabType: null, status: null,
+        creator: {
+          id: 'cre-mia', name: 'Mia', handle: '@mia', platform: 'TikTok', partnerType: null,
+          tier: 'mega', followers: '1M', engagement: '8%', category: 'Beauty', region: 'US',
+          avatar: null, profileUrl: null, contact: null, rate: null,
+          metrics: [], audience: null, works: null, stats: null, profile: null,
+        },
+      },
+      // 孤儿 link(creator 已删,null)跳过
+      { id: 'l2', campaignId: 'camp-x', creatorId: 'cre-gone', collabType: null, status: null, creator: null },
+    ]);
     const r = await listCampaignCollaborators('camp-x');
-    expect(getMock).toHaveBeenCalledWith('cre-mia');
-    expect(getMock).toHaveBeenCalledWith('cre-gone');
-    expect(r).toEqual([mia.data]);
+    expect(listLinksMock).toHaveBeenCalledWith('camp-x');
+    expect(r).toHaveLength(1);
+    expect(r[0].name).toBe('Mia');
+    expect(r[0].handle).toBe('@mia');
   });
-  it('campaign 无 creatorIds → 空数组(不调 get)', async () => {
-    getCampaignMock.mockResolvedValue({ id: 'camp-x' });
+
+  it('campaign 无 links → 空数组', async () => {
+    listLinksMock.mockResolvedValue([]);
     const r = await listCampaignCollaborators('camp-x');
     expect(r).toEqual([]);
-    expect(getMock).not.toHaveBeenCalled();
   });
 });

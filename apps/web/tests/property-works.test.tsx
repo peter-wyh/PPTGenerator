@@ -153,7 +153,10 @@ describe('WorkScreenshotFields', () => {
       </MemoryRouter>,
     );
 
-    const importBtn = await screen.findByRole('button', { name: '导入截图' });
+    // 现行 UI:从达人合作导入 → 勾选达人 → 动态文案导入按钮
+    const checkbox = await screen.findByRole('checkbox');
+    fireEvent.click(checkbox);
+    const importBtn = screen.getByRole('button', { name: '导入 1 位达人截图' });
     fireEvent.click(importBtn);
 
     await waitFor(() => {

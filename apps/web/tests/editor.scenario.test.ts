@@ -149,8 +149,11 @@ describe('filterCategoriesByScenario（按场景过滤模版）', () => {
     expect(filterCategoriesByScenario('campaign-proposal').map((c) => c.category)).not.toContain('投放报告');
   });
 
-  it('campaign-report：含投放报告', () => {
-    expect(filterCategoriesByScenario('campaign-report').map((c) => c.category)).toContain('投放报告');
+  it('campaign-report：含多页报告分类（原「投放报告」已并入）', () => {
+    const cats = filterCategoriesByScenario('campaign-report').map((c) => c.category);
+    expect(cats).toContain('多页报告（PPT 逐页）');
+    // 原「投放报告」独立分类已不存在
+    expect(cats).not.toContain('投放报告');
   });
 
   it('无场景（undefined）→ 返回全部分类，不过滤（向后兼容）', () => {

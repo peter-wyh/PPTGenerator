@@ -10,12 +10,12 @@ describe('TEMPLATE_TYPES', () => {
 
   it('campaign-report 取值与 scenarioSub 对齐', () => {
     const ids = TEMPLATE_TYPES['campaign-report'].map(([id]) => id);
-    expect(ids).toEqual(['weekly', 'monthly', 'wrap-up']);
+    expect(ids).toEqual(['weekly', 'biweekly', 'monthly', 'wrap-up']);
   });
 
-  it('TEMPLATE_TYPE_LABELS 含全部 9 个 id', () => {
+  it('TEMPLATE_TYPE_LABELS 含全部 10 个 id', () => {
     const all = Object.values(TEMPLATE_TYPES).flatMap((rows) => rows.map(([id]) => id));
-    expect(all).toHaveLength(9);
+    expect(all).toHaveLength(10);
     for (const id of all) expect(TEMPLATE_TYPE_LABELS[id]).toBeTruthy();
   });
 });
