@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { htmlTemplateController } from './html-templates.controller';
 import { validate } from '../../middleware/validate';
 import { authenticate, requireRole } from '../../middleware/auth';
+import { aiGenerateLimiter } from '../../middleware/rate-limit';
 import {
   createHtmlTemplateSchema,
   updateHtmlTemplateSchema,
@@ -17,8 +18,8 @@ import {
 
 const router = Router();
 
-// GET /system-prompt — 公开端点，无需登录（必须在 authenticate 之前 + /:id 之前注册）
-router.get('/system-prompt', htmlTemplateController.getSystemPrompt);
+// GET /system-prompt — 需登录（业务 know-how，不再公开；仍须在 /:id 之前注册）
+router.get('/system-prompt', authenticate, htmlTemplateController.getSystemPrompt);
 
 // 所有其他操作需登录
 router.use(authenticate);
@@ -49,9 +50,10 @@ router.delete(
 );
 
 // ─── AI 生成 HTML 报告 ───
-// POST /api/v1/html-templates/generate — 模板模式或 AI 模式
+// POST /api/v1/html-templates/generate — 模板模式或 AI 模式（限流：20 次/小时/用户，防滥用烧钱）
 router.post(
   '/generate',
+  aiGenerateLimiter,
   validate({ body: generateHtmlSchema }),
   htmlTemplateController.generate,
 );
@@ -59,12 +61,14 @@ router.post(
 // POST /api/v1/html-templates/generate-stream — SSE 流式 AI 生成（reasoning + content 实时转发）
 router.post(
   '/generate-stream',
+  aiGenerateLimiter,
   htmlTemplateController.generateStream,
 );
 
 // POST /api/v1/html-templates/agent-edit — Agent 增量编辑现有 HTML
 router.post(
   '/agent-edit',
+  aiGenerateLimiter,
   validate({ body: agentEditSchema }),
   htmlTemplateController.agentEdit,
 );
@@ -72,6 +76,7 @@ router.post(
 // POST /api/v1/html-templates/agent-edit-stream — SSE 流式 Agent 编辑
 router.post(
   '/agent-edit-stream',
+  aiGenerateLimiter,
   htmlTemplateController.agentEditStream,
 );
 

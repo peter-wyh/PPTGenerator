@@ -180,6 +180,14 @@ export const htmlTemplateController = {
         reportPeriod,
         signal: abortCtrl.signal,
       })) {
+        if (chunk.type === 'done' && chunk.usage) {
+          // token 用量透传给前端（done chunk 携带 usage 字段），同时落服务端日志供成本审计
+          console.log('[generateStream] token usage', {
+            user: req.user?.id,
+            campaignId,
+            ...chunk.usage,
+          });
+        }
         sseWrite(res, chunk);
       }
     } catch (err: any) {

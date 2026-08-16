@@ -24,7 +24,32 @@ async function launchBrowser(): Promise<Browser> {
   });
 }
 
+/**
+ * 导出并发信号量：同时最多 2 个 puppeteer 实例。
+ * 每次导出独立 launch（隔离），但 Chromium 单实例 ~200-400MB 内存，
+ * 无限制并发会 OOM。超出的请求排队等待。
+ */
+const MAX_CONCURRENT_EXPORTS = 2;
+let activeExports = 0;
+const waitQueue: Array<() => void> = [];
+
+async function acquireExportSlot(): Promise<void> {
+  if (activeExports < MAX_CONCURRENT_EXPORTS) {
+    activeExports++;
+    return;
+  }
+  await new Promise<void>((resolve) => waitQueue.push(resolve));
+  activeExports++;
+}
+
+function releaseExportSlot(): void {
+  activeExports--;
+  const next = waitQueue.shift();
+  if (next) next();
+}
+
 async function renderPdf(shareUrl: string, widthPx: number, heightPx: number): Promise<Buffer> {
+  await acquireExportSlot();
   let browser: Browser | undefined;
   try {
     browser = await launchBrowser();
@@ -43,6 +68,7 @@ async function renderPdf(shareUrl: string, widthPx: number, heightPx: number): P
     return Buffer.from(pdf);
   } finally {
     if (browser) await browser.close();
+    releaseExportSlot();
   }
 }
 
@@ -57,6 +83,7 @@ async function renderImages(
   heightPx: number,
   pageCount: number,
 ): Promise<{ stream: PassThrough; totalSize: Promise<number> }> {
+  await acquireExportSlot();
   let browser: Browser | undefined;
   try {
     browser = await launchBrowser();
@@ -98,6 +125,7 @@ async function renderImages(
     }
   } finally {
     if (browser) await browser.close();
+    releaseExportSlot();
   }
 }
 

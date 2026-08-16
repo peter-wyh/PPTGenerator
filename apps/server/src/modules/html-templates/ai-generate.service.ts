@@ -1,6 +1,7 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import { config } from '../../config';
+import { fetchChatCompletionWithRetry } from './ai-client';
 
 /**
  * AI HTML 报告生成服务。
@@ -508,8 +509,15 @@ Return the COMPLETE updated HTML. Output ONLY the HTML code.`;
 export type StreamChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean }
+  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage }
   | { type: 'error'; message: string };
+
+/** token 用量（网关 last chunk 的 usage 字段，供成本统计）。 */
+export interface StreamUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
 
 /**
  * 解析 OpenAI 兼容 SSE 流的通用读取器。
@@ -518,7 +526,7 @@ export type StreamChunk =
 async function* readSSEStream(
   response: Response,
   signal?: AbortSignal,
-): AsyncGenerator<{ reasoning?: string; content?: string }> {
+): AsyncGenerator<{ reasoning?: string; content?: string; usage?: StreamUsage }> {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -548,6 +556,16 @@ async function* readSSEStream(
           }
           if (delta?.content) {
             yield { content: delta.content };
+          }
+          // usage 通常只在最后一个 chunk 携带（stream_options.include_usage 或网关默认）
+          if (chunk.usage) {
+            yield {
+              usage: {
+                promptTokens: chunk.usage.prompt_tokens,
+                completionTokens: chunk.usage.completion_tokens,
+                totalTokens: chunk.usage.total_tokens,
+              },
+            };
           }
         } catch {
           // 跳过无法解析的行（SSE 注释行等）
@@ -938,35 +956,31 @@ export const aiGenerateService = {
     // 超时保护：AI 生成耗时不稳定（复杂报告 2-5 分钟，偶发更久）。
     // 设 290s 主动中断，略早于 vite proxy 超时（600s）——确保 server 先返回
     // 友好的 JSON 错误，而不是让 proxy 返回裸 500（前端只看到 "Request failed with status code 500"）。
+    // 429/5xx/网络抖动自动指数退避重试（最多 2 次，见 ai-client.ts）。
     const DEEPSEEK_TIMEOUT_MS = 290_000;
-    const abortController = new AbortController();
-    const timeoutHandle = setTimeout(() => abortController.abort(), DEEPSEEK_TIMEOUT_MS);
     const startedAt = Date.now();
 
     let response: Response;
+    let attempts = 1;
     try {
-      response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: DEEPSEEK_MODEL,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-          max_tokens: maxTokens,
-          stream: false,
-        }),
-        signal: abortController.signal,
+      const result = await fetchChatCompletionWithRetry({
+        apiUrl: DEEPSEEK_API_URL,
+        apiKey: DEEPSEEK_API_KEY,
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        maxTokens: maxTokens,
+        timeoutMs: DEEPSEEK_TIMEOUT_MS,
+        logPrefix: '[AI Generate]',
       });
+      response = result.response;
+      attempts = result.attempts;
     } catch (err: any) {
-      clearTimeout(timeoutHandle);
       // 诊断：记录中断类型 + 耗时，区分网关 ~180s 关连接 / 本地 290s AbortError / 其它网络层
-      console.error('[AI Generate] 网络中断', {
+      console.error('[AI Generate] 网络中断（含重试后仍失败）', {
         elapsedMs: Date.now() - startedAt,
         name: err?.name,
         code: err?.code,
@@ -975,7 +989,7 @@ export const aiGenerateService = {
         promptChars: userPrompt.length,
       });
       // 覆盖 DeepSeek 各类连接中断：
-      //  - AbortError/abort：本地 290s 超时主动中断
+      //  - AbortError/abort：本地 290s 超时主动中断（重试不划算，直接报错）
       //  - terminated/other side closed：DeepSeek 服务端 ~180s 主动关 socket（实测偶发，复杂报告易触发）
       //  - fetch failed/socket/ECONNRESET/UND_ERR*：其它网络层中断
       const msg = String(err?.message || '');
@@ -989,9 +1003,9 @@ export const aiGenerateService = {
       }
       throw err;
     }
-    clearTimeout(timeoutHandle);
     console.log('[AI Generate] 成功', {
       elapsedMs: Date.now() - startedAt,
+      attempts,
       httpStatus: response.status,
       model: DEEPSEEK_MODEL,
     });
@@ -1179,36 +1193,31 @@ export const aiGenerateService = {
         }
       : { role: 'user', content: userPrompt };
 
-    // 编辑操作通常比全量生成快，但仍设 290s 超时保护
+    // 编辑操作通常比全量生成快，但仍设 290s 超时保护（429/5xx/网络抖动自动重试，见 ai-client.ts）
     const DEEPSEEK_TIMEOUT_MS = 290_000;
-    const abortController = new AbortController();
-    const timeoutHandle = setTimeout(() => abortController.abort(), DEEPSEEK_TIMEOUT_MS);
     const startedAt = Date.now();
 
     let response: Response;
+    let attempts = 1;
     try {
-      response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: DEEPSEEK_MODEL,
-          messages: [
-            { role: 'system', content: EDIT_SYSTEM_PROMPT },
-            userMessage,
-          ],
-          temperature: 0.3, // 编辑用低 temperature 保持精确性
-          max_tokens: maxTokens,
-          stream: false,
-        }),
-        signal: abortController.signal,
+      const result = await fetchChatCompletionWithRetry({
+        apiUrl: DEEPSEEK_API_URL,
+        apiKey: DEEPSEEK_API_KEY,
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: EDIT_SYSTEM_PROMPT },
+          userMessage,
+        ],
+        temperature: 0.3, // 编辑用低 temperature 保持精确性
+        maxTokens: maxTokens,
+        timeoutMs: DEEPSEEK_TIMEOUT_MS,
+        logPrefix: '[AI Edit]',
       });
+      response = result.response;
+      attempts = result.attempts;
     } catch (err: any) {
-      clearTimeout(timeoutHandle);
       // 诊断：记录中断类型 + 耗时
-      console.error('[AI Edit] 网络中断', {
+      console.error('[AI Edit] 网络中断（含重试后仍失败）', {
         elapsedMs: Date.now() - startedAt,
         name: err?.name,
         code: err?.code,
@@ -1227,9 +1236,9 @@ export const aiGenerateService = {
       }
       throw err;
     }
-    clearTimeout(timeoutHandle);
     console.log('[AI Edit] 成功', {
       elapsedMs: Date.now() - startedAt,
+      attempts,
       httpStatus: response.status,
       model: DEEPSEEK_MODEL,
     });
@@ -1364,8 +1373,11 @@ export const aiGenerateService = {
     let fullContent = '';
     let hasReasoning = false;
     let finishReason = '';
+    let endUsage: StreamUsage | undefined;
+    const startedAt = Date.now();
 
     try {
+      let streamUsage: StreamUsage | undefined;
       for await (const chunk of readSSEStream(response, params.signal)) {
         if (chunk.reasoning) {
           hasReasoning = true;
@@ -1375,7 +1387,9 @@ export const aiGenerateService = {
           fullContent += chunk.content;
           yield { type: 'content', text: chunk.content };
         }
+        if (chunk.usage) streamUsage = chunk.usage;
       }
+      endUsage = streamUsage;
     } catch (err: any) {
       if (err?.name === 'AbortError') {
         yield { type: 'error', message: '生成已取消' };
@@ -1403,7 +1417,15 @@ export const aiGenerateService = {
       return;
     }
 
-    yield { type: 'done', html: processedHtml, truncated };
+    console.log('[AI Generate Stream] 完成', {
+      elapsedMs: Date.now() - startedAt,
+      htmlChars: processedHtml.length,
+      truncated,
+      usage: endUsage,
+      model: DEEPSEEK_MODEL,
+    });
+
+    yield { type: 'done', html: processedHtml, truncated, usage: endUsage };
   },
 
   /**
@@ -1471,6 +1493,8 @@ export const aiGenerateService = {
     }
 
     let fullContent = '';
+    let endUsage: StreamUsage | undefined;
+    const startedAt = Date.now();
 
     try {
       for await (const chunk of readSSEStream(response, params.signal)) {
@@ -1481,6 +1505,7 @@ export const aiGenerateService = {
           fullContent += chunk.content;
           yield { type: 'content', text: chunk.content };
         }
+        if (chunk.usage) endUsage = chunk.usage;
       }
     } catch (err: any) {
       if (err?.name === 'AbortError') {
@@ -1504,6 +1529,14 @@ export const aiGenerateService = {
       return;
     }
 
-    yield { type: 'done', html: processedHtml, truncated };
+    console.log('[AI Edit Stream] 完成', {
+      elapsedMs: Date.now() - startedAt,
+      htmlChars: processedHtml.length,
+      truncated,
+      usage: endUsage,
+      model: DEEPSEEK_MODEL,
+    });
+
+    yield { type: 'done', html: processedHtml, truncated, usage: endUsage };
   },
 };

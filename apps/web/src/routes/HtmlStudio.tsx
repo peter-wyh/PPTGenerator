@@ -10,7 +10,7 @@
  * ★ SSE 流式：思考过程实时展示 + HTML 流式预览 + 取消按钮
  * ★ 三栏可拉伸布局：左对话 / 中画布 / 右配置面板
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   htmlTemplatesApi,
@@ -23,7 +23,10 @@ import type { ProjectDetail, ProjectMeta } from '@mediaket/shared';
 import { AgentChatPanel } from './AgentChatPanel';
 import { AiGenerateForm } from '@/editor/components/AiGenerateForm';
 import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
-import { VisualEditor } from '@/components/VisualEditor';
+// VisualEditor（GrapesJS ~1.1MB）懒加载：仅在用户切换到「可视化」视图时才下载
+const VisualEditor = lazy(() =>
+  import('@/components/VisualEditor').then((m) => ({ default: m.VisualEditor })),
+);
 import { ResizablePanels } from '@/components/ResizablePanels';
 
 // 渐进式阶段提示
@@ -558,6 +561,7 @@ export function HtmlStudio() {
               </div>
             </div>
           ) : phase === 'chat' && viewMode === 'visual' ? (
+            <Suspense fallback={<div className="flex h-full items-center justify-center text-foreground-secondary">可视化编辑器加载中…</div>}>
             <VisualEditor
               key="visual-editor"
               html={generatedHtml}
@@ -571,6 +575,7 @@ export function HtmlStudio() {
                 }
               }}
             />
+            </Suspense>
           ) : (
           /* 普通预览（iframe）— 生成完成后一次性展示 */
           <div className="relative flex flex-1 overflow-hidden">

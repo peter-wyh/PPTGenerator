@@ -7,6 +7,7 @@ import { config } from './config';
 import { logger } from './logger';
 import { apiRouter } from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error';
+import { globalLimiter } from './middleware/rate-limit';
 
 export function createApp(): express.Express {
   const app = express();
@@ -36,7 +37,7 @@ export function createApp(): express.Express {
   // 本地上传文件静态托管（OSS 驱动下不依赖此路径）。
   app.use('/uploads', express.static(config.storage.uploadDir));
 
-  app.use('/api/v1', apiRouter);
+  app.use('/api/v1', globalLimiter, apiRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

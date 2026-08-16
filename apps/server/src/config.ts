@@ -10,6 +10,17 @@ function required(name: string, fallback?: string): string {
   return v;
 }
 
+/**
+ * 生产环境强制要求显式配置：禁止弱回退静默生效。
+ * （安全：JWT 弱密钥 = 任何人可伪造 token）
+ */
+function requiredInProd(name: string, devFallback: string): string {
+  if (process.env.NODE_ENV === 'production' && !process.env[name]) {
+    throw new Error(`[FATAL] ${name} is required in production (weak fallback disabled)`);
+  }
+  return required(name, devFallback);
+}
+
 function int(name: string, fallback: number): number {
   const v = process.env[name];
   if (v === undefined || v === '') return fallback;
@@ -31,8 +42,8 @@ export const config = {
   redisDb: int('REDIS_DB', 0),
 
   jwt: {
-    accessSecret: required('JWT_ACCESS_SECRET', 'dev-access-secret-change-me'),
-    refreshSecret: required('JWT_REFRESH_SECRET', 'dev-refresh-secret-change-me'),
+    accessSecret: requiredInProd('JWT_ACCESS_SECRET', 'dev-access-secret-change-me'),
+    refreshSecret: requiredInProd('JWT_REFRESH_SECRET', 'dev-refresh-secret-change-me'),
     accessTtlSec: int('JWT_ACCESS_TTL', 15 * 60), // 15 min
     refreshTtlSec: int('JWT_REFRESH_TTL', 7 * 24 * 60 * 60), // 7d
   },
