@@ -154,6 +154,9 @@ export function CreateProjectDialog({
   const [singleH, setSingleH] = useState(SINGLE_PRESETS[1].h);
   const isSingle = styleType === 'single';
 
+  // 提交尝试标记：仅在用户点过「创建」后才显示校验错误（避免边填边报错）
+  const [submitted, setSubmitted] = useState(false);
+
   // 拉取已发布模版列表（模版模式下展示）
   useEffect(() => {
     if (!open || createMode !== 'template') return;
@@ -289,8 +292,14 @@ export function CreateProjectDialog({
     ? !!name.trim() && !!selectedTemplateId
     : !!name.trim() && !!businessLine && !dateRangeError;
 
+  // 校验错误文案：提交后逐项显示（name/业务线/模版选择）
+  const nameError = submitted && !name.trim() ? '请输入报告名称' : null;
+  const businessLineError = submitted && createMode === 'blank' && !businessLine ? '请选择业务线' : null;
+  const templateError = submitted && createMode === 'template' && !selectedTemplateId ? '请选择模版' : null;
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitted(true);
     const trimmed = name.trim();
     if (!trimmed || !canSubmit) return;
 
@@ -412,8 +421,8 @@ export function CreateProjectDialog({
               placeholder="输入报告名称"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              error={nameError ?? undefined}
               autoFocus
-              required
             />
             <div>
               <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">选择模版</span>
@@ -464,6 +473,7 @@ export function CreateProjectDialog({
                   })}
                 </div>
               )}
+              {templateError && <span className="block text-xs text-red">{templateError}</span>}
             </div>
           </div>
         ) : (
@@ -475,8 +485,8 @@ export function CreateProjectDialog({
             placeholder="例如：2026 Q4 增长复盘"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            error={nameError ?? undefined}
             autoFocus
-            required
           />
 
           {/* 样式类型（第一步选择，决定后续流程） */}
@@ -532,7 +542,7 @@ export function CreateProjectDialog({
           <label className="block text-sm text-foreground-secondary">
             <span className="mb-1 block font-medium">业务线</span>
             <select
-              className={selectCls}
+              className={`${selectCls} ${businessLineError ? 'border-red' : ''}`}
               value={businessLine}
               onChange={(e) => {
                 setBusinessLine(e.target.value);
@@ -546,6 +556,7 @@ export function CreateProjectDialog({
                 </option>
               ))}
             </select>
+            {businessLineError && <span className="mt-1 block text-xs text-red">{businessLineError}</span>}
           </label>
 
           {/* 模版类型(选了场景且非 campaign-report 才出现;campaign-report 走报告类型) */}
@@ -822,7 +833,7 @@ export function CreateProjectDialog({
           <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
             取消
           </Button>
-          <Button type="submit" loading={loading} disabled={!canSubmit}>
+          <Button type="submit" loading={loading}>
             {submitLabel}
           </Button>
         </div>

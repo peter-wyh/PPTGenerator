@@ -29,10 +29,17 @@ describe('CreateProjectDialog — 业务线必填 + 模版类型', () => {
     expect(screen.getByText('业务线')).toBeInTheDocument();
   });
 
-  it('未填业务线时不能提交', () => {
+  it('未填必填项时提交显示校验错误（不静默禁用）', async () => {
+    const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<CreateProjectDialog open onSubmit={onSubmit} onCancel={() => {}} />);
-    expect(screen.getByRole('button', { name: '创建' })).toBeDisabled();
+    // 按钮可点击，点击后显示逐项错误
+    const btn = screen.getByRole('button', { name: '创建' });
+    expect(btn).not.toBeDisabled();
+    await user.click(btn);
+    expect(await screen.findByText('请输入报告名称')).toBeInTheDocument();
+    expect(screen.getByText('请选择业务线')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('campaign-report:报告类型取值来自模版类型(周报/月报/总结)', async () => {
