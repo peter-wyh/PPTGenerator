@@ -11,7 +11,7 @@ export interface DailyCoverage {
   covered: { start: string; end: string } | null;
   /** 请求区间内无数据的天数(无 daily → 全区间天数) */
   missingDays: number;
-  /** missingDays === 0 */
+  /** missingDays === 0。注意:无请求区间且无 daily 时为 true(「无请求即无缺失」);下游判断数据可用性应以 covered !== null 为准 */
   complete: boolean;
 }
 
@@ -31,7 +31,7 @@ export function computeCoverage(
   /** 半开区间兜底用的 campaign.endDate(与 mapper MoM guard 同口径)。 */
   campaignEndFallback?: string,
 ): DailyCoverage {
-  // 1) 收集全部 daily 日期集合
+  // 1) 收集全部 daily 日期集合(仅匹配 ISO YYYY-MM-DD;非 ISO 日期视为缺失(计入 missingDays))
   const dailyDates = new Set<string>();
   for (const cc of campaign?.campaignCreators ?? []) {
     for (const p of cc?.cpsPerformances ?? []) {
@@ -54,10 +54,17 @@ export function computeCoverage(
   end = end || campaignEndFallback || campaign?.endDate || start;
   if (!start || !end) return { covered: null, missingDays: 0, complete: true };
 
+  // 垃圾/反转日期不伪造覆盖:任一端解析失败或 start>end → 视为不可用
+  const s = new Date(`${start}T00:00:00Z`).getTime();
+  const e = new Date(`${end}T00:00:00Z`).getTime();
+  if (isNaN(s) || isNaN(e) || s > e) return { covered: null, missingDays: 0, complete: false };
+
   // 3) 交集 + 缺失天数
   const days = eachDay(start, end);
-  const inRange = days.filter((d) => dailyDates.has(d)).sort();
-  if (inRange.length === 0) return { covered: null, missingDays: days.length, complete: false };
+  const inRange = days.filter((d) => dailyDates.has(d));
+  if (days.length === 0 || inRange.length === 0) {
+    return { covered: null, missingDays: days.length, complete: false };
+  }
   return {
     covered: { start: inRange[0], end: inRange[inRange.length - 1] },
     missingDays: days.length - inRange.length,

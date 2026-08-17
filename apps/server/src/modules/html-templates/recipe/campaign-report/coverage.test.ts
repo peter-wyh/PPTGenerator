@@ -53,4 +53,21 @@ describe('computeCoverage', () => {
     expect(r.complete).toBe(true);
     expect(r.missingDays).toBe(0);
   });
+
+  it('跨月边界 10-30..11-02 → 4 天全覆盖', () => {
+    const r = computeCoverage(campWithDaily(['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02']), { start: '2026-10-30', end: '2026-11-02' });
+    expect(r.complete).toBe(true);
+    expect(r.missingDays).toBe(0);
+  });
+
+  it('闰日 2028-02-28..03-01 → 3 天全覆盖', () => {
+    const r = computeCoverage(campWithDaily(['2028-02-28', '2028-02-29', '2028-03-01']), { start: '2028-02-28', end: '2028-03-01' });
+    expect(r.complete).toBe(true);
+  });
+
+  it('start>end(区间反转)→ complete=false,不伪造覆盖', () => {
+    const r = computeCoverage(campWithDaily(['2026-10-01']), { start: '2026-10-05', end: '2026-10-01' });
+    expect(r.complete).toBe(false);
+    expect(r.missingDays).toBe(0);
+  });
 });
