@@ -2,7 +2,10 @@ import type { z } from 'zod';
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { Prisma } from '@prisma/client';
+import type { Role } from '@mediakit/shared';
 import { dataSchemaForKind, kindSchema } from './data.schema';
+import type { AuthPayload } from '../../types/express';
+import { assertBusinessLine, assertBusinessLineSoft } from '../../utils/business-line';
 
 type Kind = z.infer<typeof kindSchema>;
 
@@ -42,13 +45,27 @@ async function nextCampaignId(): Promise<string> {
 }
 
 export const dataService = {
-  async list(kind: Kind) {
+  /** viewer 感知列表：CREATOR 共享字典；其余 kind 非 ADMIN 强制 ownerId。 */
+  async list(kind: Kind, viewer: { id: string; role: Role }) {
     // Phase 4: CAMPAIGN/CREATOR/COLLABORATION 已迁移到独立表，
     // 此方法保留供旧路径回退读取；新代码应直接查 Campaign/Creator 表。
+    const where: Prisma.DataRecordWhereInput = { kind: kindToDb(kind) };
+    if (kind !== 'creator' && viewer.role !== 'ADMIN') {
+      where.ownerId = viewer.id;
+    }
     return prisma.dataRecord.findMany({
-      where: { kind: kindToDb(kind) },
+      where,
       orderBy: { createdAt: 'desc' },
     });
+  },
+
+  /** viewer 感知读取：CREATOR 共享；其余 kind 非 ADMIN 校验 owner。 */
+  async get(id: string, viewer: { id: string; role: Role }) {
+    const rec = await this.getOrThrow(id);
+    if (rec.kind !== 'CREATOR' && viewer.role !== 'ADMIN' && rec.ownerId !== viewer.id) {
+      throw ApiError.notFound('Data record not found');
+    }
+    return rec;
   },
 
   async getOrThrow(id: string, ownerId?: string) {
@@ -67,7 +84,8 @@ export const dataService = {
     return res.data;
   },
 
-  async create(ownerId: string, kind: Kind, data: unknown) {
+  async create(viewer: AuthPayload, kind: Kind, data: unknown) {
+    if (kind === 'campaign') assertBusinessLine(viewer, (data as { businessLine?: string })?.businessLine);
     // Phase 4: 新数据不再写入 DataRecord，仅保留 collaboration 的双写兼容。
     // Campaign/Creator 应通过 /api/v1/campaigns 路由写入独立表。
     if (kind !== 'collaboration') {
@@ -79,7 +97,7 @@ export const dataService = {
       data: {
         id: (valid as { id: string }).id,
         kind: kindToDb(kind),
-        ownerId,
+        ownerId: viewer.id,
         data: valid as unknown as Prisma.InputJsonValue,
         scopeCampaignId: scopeFor(kind, valid as Record<string, unknown>),
       },
@@ -87,7 +105,7 @@ export const dataService = {
   },
 
   /** 批量 upsert-by-id(幂等);逐条校验,非法行计入 skipped。 */
-  async importMany(ownerId: string, kind: Kind, items: unknown[]) {
+  async importMany(viewer: AuthPayload, kind: Kind, items: unknown[]) {
     const schema = dataSchemaForKind(kind);
     let created = 0;
     let updated = 0;
@@ -99,6 +117,10 @@ export const dataService = {
         continue;
       }
       const valid = res.data as { id: string };
+      if (kind === 'campaign' && !assertBusinessLineSoft(viewer, (valid as { businessLine?: string })?.businessLine)) {
+        skipped++;
+        continue;
+      }
       if (!valid.id) {
         skipped++;
         continue;
@@ -119,7 +141,7 @@ export const dataService = {
             data: {
               id: valid.id,
               kind: kindToDb(kind),
-              ownerId,
+              ownerId: viewer.id,
               data: valid as unknown as Prisma.InputJsonValue,
               scopeCampaignId: scopeFor(kind, valid as Record<string, unknown>),
             },
@@ -134,8 +156,11 @@ export const dataService = {
     return { created, updated, skipped };
   },
 
-  async update(id: string, ownerId: string, data: unknown) {
-    const rec = await this.getOrThrow(id, ownerId);
+  async update(id: string, viewer: AuthPayload, data: unknown) {
+    const rec = await this.getOrThrow(id);
+    // 写权限维持 owner 制（ADMIN 改他人记录不在本期范围）
+    if (rec.ownerId !== viewer.id) throw ApiError.notFound('Data record not found');
+    if (rec.kind === 'CAMPAIGN') assertBusinessLine(viewer, (data as { businessLine?: string })?.businessLine);
     const kind: Kind =
       rec.kind === 'CAMPAIGN' ? 'campaign' : rec.kind === 'COLLABORATION' ? 'collaboration' : 'creator';
     const parsed = this.validateData(kind, data);
@@ -150,8 +175,9 @@ export const dataService = {
     });
   },
 
-  async remove(id: string, ownerId: string) {
-    await this.getOrThrow(id, ownerId);
+  async remove(id: string, viewer: AuthPayload) {
+    const rec = await this.getOrThrow(id);
+    if (rec.ownerId !== viewer.id) throw ApiError.notFound('Data record not found');
     await prisma.dataRecord.delete({ where: { id } });
   },
 
