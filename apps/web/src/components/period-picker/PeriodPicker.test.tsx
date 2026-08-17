@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PeriodPicker } from './PeriodPicker';
@@ -49,5 +50,32 @@ describe('PeriodPicker', () => {
   it('无 min/max → 不显示投放区间提示(降级)', () => {
     render(<PeriodPicker value={{ startDate: '', endDate: '' }} onChange={() => {}} />);
     expect(screen.queryByText(/投放区间/)).toBeNull();
+  });
+
+  it('onValidityChange 仅在合法性翻转时触发(非每次渲染)', () => {
+    const onValidityChange = vi.fn();
+    const Harness = () => {
+      const [v, setV] = useState({ startDate: '2026-08-01', endDate: '2026-08-14' });
+      return (
+        <PeriodPicker
+          value={v}
+          onChange={setV}
+          minDate="2026-01-01"
+          maxDate="2026-08-14"
+          today="2026-08-14"
+          onValidityChange={onValidityChange}
+        />
+      );
+    };
+    render(<Harness />);
+    expect(onValidityChange).toHaveBeenCalledTimes(1); // mount: null→true
+
+    // 起改为越界 → false
+    fireEvent.change(screen.getByLabelText('起始日期'), { target: { value: '2025-06-01' } });
+    expect(onValidityChange).toHaveBeenLastCalledWith(false);
+    // 改回合法 → true
+    fireEvent.change(screen.getByLabelText('起始日期'), { target: { value: '2026-08-01' } });
+    expect(onValidityChange).toHaveBeenLastCalledWith(true);
+    expect(onValidityChange).toHaveBeenCalledTimes(3); // 恰好 3 次,证明不是每渲染都触发
   });
 });

@@ -5,6 +5,10 @@ import { Input } from './Input';
 import { BUSINESS_LINES, SCENARIOS, TEMPLATE_TYPES, SCENARIO_LABELS } from '@/projectsMeta';
 import type { Scenario } from '@mediakit/shared';
 import type { TemplateSummary } from '@mediakit/shared';
+import { getCampaign } from '@/api/campaigns';
+import { PeriodPicker } from './period-picker/PeriodPicker';
+import { computeDefaultPeriod, earlierDate, validatePeriod, type Period } from './period-picker/periodRange';
+import { todayIso } from './period-picker/today';
 
 interface Props {
   open: boolean;
@@ -27,8 +31,10 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
   const [fetching, setFetching] = useState(false);
   const [selectedId, setSelectedId] = useState<string>('');
   const [name, setName] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [period, setPeriod] = useState<Period>({ startDate: '', endDate: '' });
+  const [range, setRange] = useState<{ min: string; max: string } | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [periodValid, setPeriodValid] = useState(true);
   const [filterBL, setFilterBL] = useState<string>('');
   const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
   const [filterTemplateType, setFilterTemplateType] = useState<string>('');
@@ -63,28 +69,62 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
     };
   }, [open, filterBL, filterScenario, filterTemplateType]);
 
-  // 选中模版变化时，若为 ai-html 报告模版，用其 meta.reportPeriod 回填起止日期。
+  // 选中 ai-html 报告模版时,拉 Campaign 配置区间作有效窗口,并算推荐默认起止日期。
+  // cancelled: deps 变化/卸载时丢弃过期响应,避免竞态覆盖。
   useEffect(() => {
     const t = templates.find((x) => x.id === selectedId);
+    const cid = t?.meta?.campaignId;
+    const live = (t?.meta?.styleType === 'ai-html' || t?.meta?.renderType === 'html-report') && !!cid;
+    if (!live || !cid) {
+      setRange(null);
+      setPeriod({ startDate: '', endDate: '' });
+      return;
+    }
+    let cancelled = false;
+    setRangeLoading(true);
     const rp = (t?.meta as { reportPeriod?: { startDate?: string; endDate?: string } } | undefined)?.reportPeriod;
-    setStartDate(rp?.startDate ?? '');
-    setEndDate(rp?.endDate ?? '');
+    getCampaign(cid)
+      .then((c) => {
+        if (cancelled || !c) return;
+        const min = c.startDate;
+        const max = earlierDate(c.endDate, todayIso()); // 未来日期无数据
+        setRange({ min, max });
+        const candidate = rp ? { startDate: rp.startDate ?? '', endDate: rp.endDate ?? '' } : null;
+        const initial =
+          candidate && validatePeriod(candidate, { min, max }).ok ? candidate : computeDefaultPeriod(min, max);
+        setPeriod(initial);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // 降级:不标区间、不越界校验,但仍保留起≤止+非空校验(PeriodPicker required)。
+        setRange(null);
+        setPeriod({ startDate: rp?.startDate ?? '', endDate: rp?.endDate ?? '' });
+      })
+      .finally(() => {
+        if (!cancelled) setRangeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedId, templates]);
 
   if (!open) return null;
 
   const selected = templates.find((t) => t.id === selectedId) ?? null;
-  const canSubmit = !!selectedId && !loading && !fetching;
+  const isLiveReport =
+    !!selected &&
+    (selected.meta?.styleType === 'ai-html' || selected.meta?.renderType === 'html-report') &&
+    !!selected.meta?.campaignId;
+  const canSubmit = !!selectedId && !loading && !fetching && (isLiveReport ? periodValid : true);
 
   const submit = () => {
     if (!selected) return;
-    const isLiveReport =
-      (selected.meta?.styleType === 'ai-html' || selected.meta?.renderType === 'html-report') &&
-      !!selected.meta?.campaignId;
+    // 复核而非只信 periodValid 镜像(后者经 effect 一帧滞后):以 validatePeriod 实时结果为准。
+    if (isLiveReport && !validatePeriod(period, { min: range?.min, max: range?.max, required: true }).ok) return;
     onSubmit({
       templateId: selected.id,
       name: name.trim() || selected.name,
-      ...(isLiveReport ? { reportPeriod: { startDate, endDate } } : {}),
+      ...(isLiveReport ? { reportPeriod: { startDate: period.startDate, endDate: period.endDate } } : {}),
     });
   };
 
@@ -226,31 +266,21 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
           </div>
         )}
 
-        {((selected?.meta?.styleType === 'ai-html' || selected?.meta?.renderType === 'html-report') &&
-          !!selected?.meta?.campaignId) && (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <label className="block text-xs text-foreground-secondary">
-              起始日期
-              <input
-                aria-label="起始日期"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
-              />
-            </label>
-            <label className="block text-xs text-foreground-secondary">
-              结束日期
-              <input
-                aria-label="结束日期"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary"
-              />
-            </label>
-            <p className="col-span-2 text-[10px] text-foreground-muted">HTML 报告会按此时间段生成实时数据；创建后可在编辑器里改周期重算。</p>
-          </div>
+        {isLiveReport && (
+          <>
+            <PeriodPicker
+              value={period}
+              onChange={setPeriod}
+              minDate={range?.min}
+              maxDate={range?.max}
+              required
+              onValidityChange={setPeriodValid}
+            />
+            {rangeLoading && <p className="text-[10px] text-foreground-muted">加载投放区间…</p>}
+            <p className="text-[10px] text-foreground-muted">
+              HTML 报告会按此时间段生成实时数据；创建后可在编辑器里改周期重算。
+            </p>
+          </>
         )}
 
         {error && <p className="mt-3 text-xs text-red">{error}</p>}
