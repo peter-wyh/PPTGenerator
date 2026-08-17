@@ -466,6 +466,13 @@ const reportPeriodSchema = z.object({
   endDate: z.string().max(40).optional(),
 });
 
+/** 从模版创建项目时的 body（/from-template）。 */
+export const fromTemplateSchema = z.object({
+  templateId: z.string().min(1),
+  name: z.string(),
+  reportPeriod: reportPeriodSchema.optional(),
+});
+
 const projectMetaFields = {
   businessLine: z.string().max(40).optional(),
   creator: z.string().max(80).optional(),
