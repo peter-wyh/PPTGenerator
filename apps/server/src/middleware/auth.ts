@@ -12,7 +12,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     }
     const token = header.slice('Bearer '.length).trim();
     const payload = await verifyAccessToken(token);
-    req.user = { id: payload.sub!, role: payload.role };
+    req.user = { id: payload.sub!, role: payload.role, businessLineCode: payload.bl ?? null };
     next();
   } catch (err) {
     next(

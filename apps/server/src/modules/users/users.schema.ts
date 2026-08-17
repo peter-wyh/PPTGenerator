@@ -5,6 +5,7 @@ export const createUserSchema = z.object({
   password: z.string().min(8),
   name: z.string().optional(),
   role: z.enum(['ADMIN', 'USER']).optional(),
+  businessLineCode: z.string().nullable().optional(),
 });
 
 export const updateUserSchema = z
@@ -13,6 +14,7 @@ export const updateUserSchema = z
     password: z.string().min(8).optional(),
     name: z.string().nullable().optional(),
     role: z.enum(['ADMIN', 'USER']).optional(),
+    businessLineCode: z.string().nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 

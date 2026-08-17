@@ -10,6 +10,7 @@ export function toPublicUser(u: User) {
     email: u.email,
     name: u.name,
     role: u.role,
+    businessLineCode: u.businessLineCode,
     createdAt: u.createdAt.toISOString(),
     updatedAt: u.updatedAt.toISOString(),
   };
@@ -21,12 +22,13 @@ export const usersService = {
     return users.map(toPublicUser);
   },
 
-  async create(input: { email: string; password: string; name?: string; role?: 'ADMIN' | 'USER' }) {
+  async create(input: { email: string; password: string; name?: string; role?: 'ADMIN' | 'USER'; businessLineCode?: string | null }) {
     const data: Prisma.UserCreateInput = {
       email: input.email.toLowerCase(),
       passwordHash: hashPassword(input.password),
       name: input.name ?? null,
       role: input.role ?? 'USER',
+      ...(input.businessLineCode !== undefined ? { businessLineCode: input.businessLineCode } : {}),
     };
     try {
       const user = await prisma.user.create({ data });
@@ -41,13 +43,14 @@ export const usersService = {
 
   async update(
     id: string,
-    input: { email?: string; password?: string; name?: string | null; role?: 'ADMIN' | 'USER' },
+    input: { email?: string; password?: string; name?: string | null; role?: 'ADMIN' | 'USER'; businessLineCode?: string | null },
   ) {
     const data: Prisma.UserUpdateInput = {};
     if (input.email !== undefined) data.email = input.email.toLowerCase();
     if (input.password !== undefined) data.passwordHash = hashPassword(input.password);
     if (input.name !== undefined) data.name = input.name;
     if (input.role !== undefined) data.role = input.role;
+    if (input.businessLineCode !== undefined) data.businessLineCode = input.businessLineCode;
 
     try {
       const user = await prisma.user.update({ where: { id }, data });
