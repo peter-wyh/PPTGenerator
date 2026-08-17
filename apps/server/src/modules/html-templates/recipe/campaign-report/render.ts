@@ -15,6 +15,8 @@ import { config } from '../../../../config';
 Handlebars.registerHelper('json', (v) => new Handlebars.SafeString(JSON.stringify(v)));
 Handlebars.registerHelper('map', (arr: any[], key: string) => (arr ?? []).map((x) => x[key]));
 Handlebars.registerHelper('minus', (a: number, b: number) => a - b);
+// ★ 宁缺勿假:空态指标占位文案识别(KPI 卡降级样式)
+Handlebars.registerHelper('isUnavailable', (v: unknown) => v === 'Metric unavailable' || v === '—');
 Handlebars.registerHelper('initials', (full: string) =>
   (full ?? '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
 );

@@ -41,6 +41,44 @@ const campaignRowWithDaily = {
 
 beforeEach(() => { vi.clearAllMocks(); prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); });
 
+describe('render · 宁缺勿假呈现', () => {
+  // 基线 content 走真实 mapCampaign(fixture 数据),仅覆盖 dataCoverage / kpis
+  const buildBase = async () => await mapCampaign('c1');
+
+  it('dataCoverage 不完整 → header 下方渲染 coverage 提示条(含实际区间与缺失天数)', async () => {
+    const base = await buildBase();
+    const html = await render({ campaignId: 'c1', reportContent: {
+      ...base,
+      dataCoverage: { requested: { start: '2026-10-12', end: '2026-10-20' }, covered: { start: '2026-10-15', end: '2026-10-20' }, missingDays: 6, complete: false },
+    } } as any);
+    expect(html).toContain('Data coverage:');
+    expect(html).toContain('2026-10-15');
+    expect(html).toContain('6 days missing');
+  });
+
+  it('covered=null → 渲染红色无数据提示条(引导导入真实数据)', async () => {
+    const base = await buildBase();
+    const html = await render({ campaignId: 'c1', reportContent: {
+      ...base,
+      dataCoverage: { requested: { start: '2026-10-12', end: '2026-10-20' }, covered: null, missingDays: 9, complete: false },
+    } } as any);
+    expect(html).toContain('No data available for the requested period');
+    expect(html).toContain('import/cps-daily');
+  });
+
+  it('complete=true → 无 coverage 提示条;空态 KPI 渲染占位文案降级样式', async () => {
+    const base = await buildBase();
+    const html = await render({ campaignId: 'c1', reportContent: {
+      ...base,
+      kpis: [{ label: 'No data for this period', value: '—', highlight: false }],
+      dataCoverage: { requested: { start: '2026-10-12', end: '2026-10-20' }, covered: { start: '2026-10-12', end: '2026-10-20' }, missingDays: 0, complete: true },
+    } } as any);
+    expect(html).not.toContain('Data coverage:');
+    expect(html).toContain('No data for this period');
+    expect(html).toContain('kpi-unavailable');
+  });
+});
+
 describe('render', () => {
   it('产出以 <!DOCTYPE html> 开头、</html> 结尾的独立 HTML', async () => {
     const html = await render({ campaignId: 'c1' });

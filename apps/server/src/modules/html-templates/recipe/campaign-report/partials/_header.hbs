@@ -12,3 +12,25 @@
                 {{header.period.display}}
             </div>
         </div>
+        {{!-- ★ 宁缺勿假:数据覆盖提示条(数据层给什么渲染什么) --}}
+        {{#if dataCoverage}}
+          {{#unless dataCoverage.complete}}
+            {{#if dataCoverage.covered}}
+            <div class="card !py-3 border-l-4" style="border-left-color:#f59e0b;background:#fffbeb;">
+                <p class="text-[13px]" style="color:#b45309;">
+                    <i class="fas fa-triangle-exclamation mr-1"></i>
+                    Data coverage: {{dataCoverage.covered.start}} – {{dataCoverage.covered.end}}
+                    ({{dataCoverage.missingDays}} days missing in requested period)
+                </p>
+            </div>
+            {{else}}
+            <div class="card !py-3 border-l-4" style="border-left-color:#ef4444;background:#fef2f2;">
+                <p class="text-[13px]" style="color:#b91c1c;">
+                    <i class="fas fa-circle-exclamation mr-1"></i>
+                    No data available for the requested period. Import real CPS daily data
+                    (POST /api/v1/campaigns/import/cps-daily) before generating.
+                </p>
+            </div>
+            {{/if}}
+          {{/unless}}
+        {{/if}}
