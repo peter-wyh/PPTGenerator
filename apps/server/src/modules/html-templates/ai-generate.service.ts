@@ -2,6 +2,7 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import { config } from '../../config';
 import { fetchChatCompletionWithRetry } from './ai-client';
+import { computeCoverage } from './recipe/campaign-report/coverage';
 
 /**
  * AI HTML 报告生成服务。
@@ -90,6 +91,7 @@ This is a CLIENT-FACING report shown to paying advertisers and brand partners.
     d. DERIVED METRICS: ROAS = GMV / Spend. AOV = GMV / Orders. Engagement Rate = Engagement / Impressions. Recalculate these from the raw values — do NOT copy pre-computed ratios that may be stale.
     e. NO INDEPENDENT SEEDS: Do NOT treat analytics.weeklyTrend, analytics.dailyTrend, and creator CPS as independent datasets. They are different views of the SAME underlying data. If they disagree, trust the creator CPS aggregation (it is the most granular) and adjust the trend data to match.
     f. PEAK/HIGHLIGHT LABELS: If the report shows "Peak Week" or "Best ROAS" callout labels, verify those values against the actual chart data array — do NOT hardcode label values that could drift from the chart.
+11. DATA INTEGRITY (hard rule): If the context JSON provides \`dataGaps\` or a \`dataCoverage\` with \`covered: null\` or \`complete: false\`, you MUST render an explicit "Data Unavailable" placeholder block for the affected dimensions (grey card, dashed border, label "Data Unavailable"). NEVER invent, estimate, or extrapolate any number. If \`dataCoverage.covered\` is narrower than the requested period, display the actual covered date range prominently under the report header.
 
 ═══ DESIGN SYSTEM (CRITICAL — READ THE BRAND DESIGN GUIDE) ═══
 The Brand Design Guide (from business line design.md) is provided at the end of the user message. You MUST follow it strictly for ALL visual decisions:
@@ -316,6 +318,7 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
     - d. **派生指标重算**：ROAS = GMV / Spend，AOV = GMV / Orders，Engagement Rate = Engagement / Impressions——从原始值重新计算，不复用可能过期的预计算比值
     - e. **禁止独立 seed**：analytics.weeklyTrend、dailyTrend 和创作者 CPS 不是独立数据集，而是同一底层数据的不同视图。如有冲突，以创作者 CPS 聚合为准（最细粒度），调整趋势数据使其匹配
     - f. **峰值/高亮标签**：报告中 "Peak Week"、"Best ROAS" 等标注必须与实际图表数据数组交叉验证，不硬编码可能漂移的标签值
+11. **数据完整性（硬规则）**：上下文提供 \`dataGaps\` 或 \`dataCoverage\` 显示 \`covered: null\` / \`complete: false\` 时，受影响维度必须渲染显式的 "Data Unavailable" 占位区块（灰卡虚线边框）；禁止编造、估算或外推任何数字；\`dataCoverage.covered\` 窄于请求周期时，在报告头部显著展示实际数据区间。
 
 ## 🎨 设计系统 (DESIGN SYSTEM)
 
@@ -479,6 +482,7 @@ Conduct your internal reasoning / chain-of-thought ENTIRELY in Simplified Chines
 4. Your response must start directly with <!DOCTYPE html>. No markdown fences, no explanations.
 5. DATA CONSISTENCY: When editing, ensure all numbers remain internally consistent — trend chart sums must equal KPI totals, distribution breakdowns must equal the overall total, and derived metrics (ROAS, AOV) must match their raw components. If you change a value in one place, update ALL dependent values everywhere in the report.
 6. SCRIPT PRESERVATION (CRITICAL): The HTML may contain Chart.js initialization code in a <script> block before </body>. You MUST preserve ALL such scripts EXACTLY as-is — every new Chart(...) call, every data array, every configuration option. Do NOT drop, reorder, or rewrite script blocks. If you are not explicitly asked to change a chart, keep its initialization code byte-for-byte identical.
+7. DATA INTEGRITY: If the context includes dataGaps or incomplete dataCoverage (covered: null / complete: false), never fabricate numbers; keep/render explicit "Data Unavailable" placeholder blocks (grey card, dashed border) for the missing dimensions. If dataCoverage.covered is narrower than the requested period, display the actual covered date range prominently under the report header.
 
 ═══ EDIT GUIDELINES ═══
 - Style changes (colors, fonts, spacing): modify CSS in <style> or inline styles.
@@ -708,16 +712,19 @@ export const aiGenerateService = {
     });
     if (!campaign) throw ApiError.notFound('Campaign 不存在');
 
-    // Build a clean context object with core fields
-    const analytics = (campaign.analytics ?? {}) as Record<string, unknown>;
-
-    // 将 analytics 中的关键数据提取到顶层，方便 AI 直接引用
-    let dailyTrend = Array.isArray(analytics.trend) ? analytics.trend : [];
-    let weeklyTrend = Array.isArray(analytics.weeklyTrend) ? analytics.weeklyTrend : [];
-    const topProducts = analytics.topProducts ?? analytics.topCategories ?? null;
-    const topMarkets = analytics.topMarkets ?? null;
-    const insights = analytics.insights ?? null;
-    const customerSplit = analytics.customerSplit ?? null;
+    // ★ 宁缺勿假：daily 是唯一数字真源；analytics blob 不再进 prompt。
+    // 顶层仅保留有真实数据的维度（dailyTrend 仅在周期切片后非空）；null 维度不再序列化进上下文。
+    const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
+    const cov = computeCoverage(campaign, hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined, campaign.endDate);
+    const dataCoverage = {
+      requested: { start: reportPeriod?.startDate ?? campaign.startDate, end: reportPeriod?.endDate ?? campaign.endDate },
+      ...cov,
+    };
+    // 无 period 汇总口径：metrics 有什么用什么，缺的维度显式列出（dataGaps），AI 应渲染 Data Unavailable
+    const dataGaps = hasPeriod ? undefined : ['dailyTrend', 'weeklyTrend', 'topProducts', 'topMarkets', 'insights', 'customerSplit'];
+    // @deprecated analytics 数字字段（trend/weeklyTrend/topProducts/topMarkets/insights/customerSplit）
+    // 不再作为 AI 上下文——常过期、与周期不符。需要时序/分布，请导入真实 CPS daily。
+    let dailyTrend: any[] | null = null;
 
     // ★ 当指定 reportPeriod 且有 CPS daily 数据时，按日期切片重新计算 KPI / trend / creators CPS
     // 这使得 AI 在生成新周期报告时获得的是该周期内的真实数据，而非整个 campaign 的汇总数据
@@ -725,16 +732,9 @@ export const aiGenerateService = {
       (!reportPeriod?.endDate || d <= reportPeriod.endDate!);
     const num = (v: unknown) => Number(v) || 0;
 
-    const hasDaily = (campaign.campaignCreators ?? []).some((cc) =>
-      (cc.cpsPerformances ?? []).some((p) => {
-        const daily = p.daily as Record<string, unknown>[] | null | undefined;
-        return Array.isArray(daily) && daily.length > 0;
-      }),
-    );
-
-    // 期内汇总数据（当有 daily 数据且指定了 reportPeriod 时计算）
+    // 期内汇总数据（有请求周期且 daily 与之有交集时计算——由 coverage 判定，而非仅"存在 daily"）
     let periodKpis: { label: string; value: string }[] | null = null;
-    if (reportPeriod && hasDaily) {
+    if (hasPeriod && cov.covered) {
       type DailySum = { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number; newCustomers: number };
       const total: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
       const perCreatorSums = new Map<string, DailySum>();
@@ -831,19 +831,16 @@ export const aiGenerateService = {
         metrics: campaign.metrics,
         // ★ 当有 periodKpis（期内数据）时，用新数据替换 campaign.metrics
         ...(periodKpis ? { periodMetrics: periodKpis } : {}),
-        // 保持原始 analytics 完整可用
-        analytics,
+        // ★ analytics blob 不再进上下文（宁缺勿假：常过期、与周期不符）
       },
-      // ★ 扁平化关键分析数据到顶层，降低 AI 忽略概率
-      // 当有期内数据时，dailyTrend 已被替换为期内日趋势
-      dailyTrend,
+      // ★ 数据覆盖声明：daily 与请求区间的交集情况，AI 据此渲染 Data Unavailable
+      dataCoverage,
+      ...(dataGaps ? { dataGaps } : {}),
+      // ★ 扁平化关键分析数据到顶层，降低 AI 忽略概率。
+      // dailyTrend 仅有期内切片时非 null；weeklyTrend 等已废弃维度（analytics blob）完全不序列化。
+      ...(dailyTrend ? { dailyTrend } : {}),
       // ★ 期内 KPI 总量（当存在时，AI 应使用这些而非 campaign.metrics）
       ...(periodKpis ? { periodKpis } : {}),
-      weeklyTrend,
-      topProducts,
-      topMarkets,
-      insights,
-      customerSplit,
       /** 业务线 design.md 在 DESIGN_GUIDE_SUFFIX 中单独追加，不嵌在 campaign JSON 中（避免重复发送） */
       creators: campaign.campaignCreators
         .map((cc) => {
