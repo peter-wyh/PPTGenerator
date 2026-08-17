@@ -149,8 +149,8 @@ export function HtmlStudio() {
 
   // ★ 报告基础信息透出标签（业务线/广告主/周期）；空值不进标签。
   const basicInfoTags: string[] = [];
-  if (project?.meta?.businessLine) basicInfoTags.push(project.meta.businessLine);
-  if (project?.meta?.advertiser) basicInfoTags.push(project.meta.advertiser);
+  if (project?.meta?.businessLine?.trim()) basicInfoTags.push(project.meta.businessLine);
+  if (project?.meta?.advertiser?.trim()) basicInfoTags.push(project.meta.advertiser);
   const periodText = project?.meta?.reportPeriod
     ? formatReportPeriod(project.meta.reportPeriod, project.meta.scenarioSub)
     : '';
