@@ -80,13 +80,22 @@ pnpm install
 
 # 3. 迁移 + 种子
 pnpm --filter @mediakit/server exec prisma migrate deploy
-pnpm --filter @mediakit/server db:seed    # admin@mediakit.local / admin123
+pnpm --filter @mediakit/server db:seed    # admin + 6 业务线账号 + 存量数据划归
 
 # 4. 开发
 pnpm dev                      # 并行起 web(:5173) + server(:4000)
 ```
 
-打开 http://localhost:5173，用 `admin@mediakit.local` / `admin123` 登录。
+打开 http://localhost:5173，用 `admin@mediaket.local` / `admin123` 登录。
+
+### 种子账号一览
+
+| 账号 | 密码 | 业务线 |
+|---|---|---|
+| admin@mediaket.local | admin123 | 全局（bl=NULL） |
+| cx@mediaket.local / dg@ / dm@ / ft@ / kn@ / sm@ | mediaket123 | CX / DG / DM / FT / KN / SM |
+
+seed 幂等可重跑：业务线账号按库中 `BusinessLine` upsert；存量数据划归只动 ADMIN 名下的行。seed 会在控制台 WARN 孤儿账号（businessLineCode 指向已删业务线），**保留不删**——User 删除会级联删其名下 Campaign/Project。
 
 ## 端口说明
 
