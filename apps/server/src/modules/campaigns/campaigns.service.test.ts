@@ -5,11 +5,12 @@ const prismaMock = vi.hoisted(() => ({
   campaignCreator: { findFirst: vi.fn() },
   cpsPerformance: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), upsert: vi.fn() },
   creator: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  businessLine: { findUnique: vi.fn() },
 }));
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
-import { creatorService, importService } from './campaigns.service';
+import { campaignService, creatorService, importService } from './campaigns.service';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -156,5 +157,21 @@ describe('creatorService · 共享字典读 + owner 写', () => {
     prismaMock.creator.delete.mockResolvedValue({});
     await expect(creatorService.remove('cre-1', blViewer)).resolves.toBeUndefined();
     expect(prismaMock.creator.delete).toHaveBeenCalledWith({ where: { id: 'cre-1' } });
+  });
+});
+
+describe('campaignService · resolveBusinessLineCode', () => {
+  it('id → code 解析', async () => {
+    prismaMock.businessLine.findUnique.mockResolvedValue({ code: 'DG' });
+    await expect(campaignService.resolveBusinessLineCode('bl-1')).resolves.toBe('DG');
+    expect(prismaMock.businessLine.findUnique).toHaveBeenCalledWith({
+      where: { id: 'bl-1' },
+      select: { code: true },
+    });
+  });
+
+  it('不存在 → null', async () => {
+    prismaMock.businessLine.findUnique.mockResolvedValue(null);
+    await expect(campaignService.resolveBusinessLineCode('nope')).resolves.toBeNull();
   });
 });

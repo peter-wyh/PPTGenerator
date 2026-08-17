@@ -21,13 +21,20 @@ export const campaignController = {
 
   create: asyncHandler(async (req: Request, res: Response) => {
     const v = req.user as AuthPayload;
-    assertBusinessLine(v, (req.body as { businessLineCode?: string })?.businessLineCode);
+    const body = req.body as { businessLineCode?: string; businessLineId?: string };
+    // 守卫覆盖 code 与 id 两条赋值路径：仅给 id 时解析成 code 再校验。
+    let code = body.businessLineCode;
+    if (!code && body.businessLineId) code = (await campaignService.resolveBusinessLineCode(body.businessLineId)) ?? undefined;
+    assertBusinessLine(v, code);
     res.status(201).json({ campaign: await campaignService.create(v.id, req.body) });
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
     const v = req.user as AuthPayload;
-    assertBusinessLine(v, (req.body as { businessLineCode?: string })?.businessLineCode);
+    const body = req.body as { businessLineCode?: string; businessLineId?: string };
+    let code = body.businessLineCode;
+    if (!code && body.businessLineId) code = (await campaignService.resolveBusinessLineCode(body.businessLineId)) ?? undefined;
+    assertBusinessLine(v, code);
     res.json({ campaign: await campaignService.update(req.params.id, v.id, req.body) });
   }),
 

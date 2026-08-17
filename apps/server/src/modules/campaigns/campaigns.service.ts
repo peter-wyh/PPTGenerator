@@ -47,6 +47,11 @@ export const campaignService = {
     await this.getOrThrow(id, ownerId);
     await prisma.campaign.delete({ where: { id } });
   },
+  /** businessLineId → code 解析（写守卫用）；不存在返回 null。 */
+  async resolveBusinessLineCode(id: string): Promise<string | null> {
+    const bl = await prisma.businessLine.findUnique({ where: { id }, select: { code: true } });
+    return bl?.code ?? null;
+  },
   // ─── Analytics (Campaign 级分析数据) ──────────────────────────────────────
   /** 获取 Campaign 分析数据（analytics JSON）。 */
   async getAnalytics(campaignId: string, ownerId: string) {
