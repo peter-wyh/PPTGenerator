@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { updateProjectSchema, createProjectSchema } from './projects.schema';
+import { updateProjectSchema, createProjectSchema, fromTemplateSchema } from './projects.schema';
 
 /**
  * 全局页眉/页脚配置存于 Project.meta.headerConfig / footerConfig（参见 shared theme.ts）。
@@ -145,3 +145,23 @@ describe('projects.schema · 其它被 strip 的 meta / reportData 字段', () =
   });
 });
 
+
+describe('fromTemplateSchema（/from-template 路由 body 校验）', () => {
+  it('接受 templateId + name + 可选 reportPeriod', () => {
+    const r = fromTemplateSchema.safeParse({
+      templateId: 't1',
+      name: 'n',
+      reportPeriod: { startDate: '2026-01-01', endDate: '2026-01-31' },
+    });
+    expect(r.success).toBe(true);
+  });
+  it('reportPeriod 缺省也可', () => {
+    expect(fromTemplateSchema.safeParse({ templateId: 't1', name: 'n' }).success).toBe(true);
+  });
+  it('缺 templateId → 失败', () => {
+    expect(fromTemplateSchema.safeParse({ name: 'n' }).success).toBe(false);
+  });
+  it('templateId 空串 → 失败', () => {
+    expect(fromTemplateSchema.safeParse({ templateId: '', name: 'n' }).success).toBe(false);
+  });
+});
