@@ -4,6 +4,8 @@ import type { Role } from '@mediakit/shared';
 export interface AuthPayload {
   id: string;
   role: Role;
+  /** 归属业务线 code；ADMIN / 无归属为 null。 */
+  businessLineCode: string | null;
 }
 
 declare module 'express-serve-static-core' {

@@ -16,16 +16,15 @@ import {
 
 const router = Router();
 
-// 读取公开（创建报告时需列出业务线/广告主/商家）；写操作需登录。
+// 全部端点需登录（业务线字典不对匿名暴露；已核实登录页等 pre-auth 表面不调 lookup）。
+router.use(authenticate);
+
 router.get('/merchants', lookupController.listMerchants);
 router.get('/merchants/:id', validate({ params: idParamSchema }), lookupController.getMerchant);
 router.get('/business-lines', validate({ query: listBusinessLinesQuerySchema }), lookupController.listBusinessLines);
 router.get('/business-lines/:id', validate({ params: idParamSchema }), lookupController.getBusinessLine);
 router.get('/advertisers', validate({ query: listAdvertisersQuerySchema }), lookupController.listAdvertisers);
 router.get('/advertisers/:id', validate({ params: idParamSchema }), lookupController.getAdvertiser);
-
-// 写操作需登录。
-router.use(authenticate);
 
 router.post('/merchants', validate({ body: createMerchantSchema }), lookupController.createMerchant);
 router.patch('/merchants/:id', validate({ params: idParamSchema, body: updateMerchantSchema }), lookupController.updateMerchant);

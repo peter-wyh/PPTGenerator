@@ -11,6 +11,7 @@ import {
 import { listCampaigns } from '@/api/campaigns';
 import { lookupApi } from '@/api/lookup';
 import { templatesApi } from '@/api/templates';
+import { useAuthStore } from '@/stores/auth';
 
 /** PPT 多页固定 16:9（1920×1080），不支持自定义。 */
 const PPT_SIZE = { w: 1920, h: 1080 };
@@ -140,6 +141,15 @@ export function CreateProjectDialog({
 
   // 业务线(顶层必填;campaign 场景由 campaign 自动回填,可改)
   const [businessLine, setBusinessLine] = useState('');
+
+  // 业务线账号锁定本业务线（ADMIN / 无归属不受限）
+  const authUser = useAuthStore((s) => s.user);
+  const lockedBusinessLine =
+    authUser && authUser.role !== 'ADMIN' ? authUser.businessLineCode ?? null : null;
+
+  useEffect(() => {
+    if (open && lockedBusinessLine) setBusinessLine(lockedBusinessLine);
+  }, [open, lockedBusinessLine]);
   // 模版类型(场景下细分;campaign-report 与 scenarioSub 同值)
   const [templateType, setTemplateType] = useState<string>('');
   const [mkAdvertiser, setMkAdvertiser] = useState('');
@@ -198,9 +208,9 @@ export function CreateProjectDialog({
     setScenarioSub(m?.scenarioSub ?? 'weekly');
     setCreator(m?.creator ?? '');
     setStyleType((m?.styleType as 'ppt' | 'single' | 'ai-html') ?? 'ppt');
-    setBusinessLine(m?.businessLine ?? '');
+    // 回显业务线:业务线账号锁定优先于历史值(锁定 effect 在前,此处不能清掉锁定的值)
+    setBusinessLine(lockedBusinessLine ?? m?.businessLine ?? '');
     setCampaignId(m?.campaignId ?? '');
-    setBusinessLine(m?.businessLine ?? '');
     setTemplateType(m?.templateType ?? (m?.scenario === 'campaign-report' ? m?.scenarioSub ?? '' : ''));
     setMkAdvertiser(m?.advertiser ?? '');
     // 回显已有的报告时间范围
@@ -544,6 +554,7 @@ export function CreateProjectDialog({
             <select
               className={`${selectCls} ${businessLineError ? 'border-red' : ''}`}
               value={businessLine}
+              disabled={!!lockedBusinessLine}
               onChange={(e) => {
                 setBusinessLine(e.target.value);
                 setCampaignId('');
@@ -592,7 +603,7 @@ export function CreateProjectDialog({
                     const id = e.target.value;
                     setCampaignId(id);
                     const c = campaigns.find((x) => x.id === id);
-                    if (c) setBusinessLine(c.businessLine);
+                    if (c && !lockedBusinessLine) setBusinessLine(c.businessLine);
                   }}
                   disabled={campaignsLoading}
                 >

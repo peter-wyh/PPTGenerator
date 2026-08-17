@@ -66,6 +66,16 @@ describe('auth store', () => {
     expect(setAccessToken).toHaveBeenCalledWith(null);
   });
 
+  it('login 响应的 businessLineCode 透传入 store', async () => {
+    loginMock.mockResolvedValue({
+      user: { ...user, businessLineCode: 'DG' },
+      accessToken: 'tok',
+      expiresIn: 900,
+    });
+    await useAuthStore.getState().login('dg@mediaket.local', 'x');
+    expect(useAuthStore.getState().user?.businessLineCode).toBe('DG');
+  });
+
   it('logout → guest', async () => {
     logoutMock.mockResolvedValue(undefined);
     useAuthStore.setState({ status: 'authed', user });

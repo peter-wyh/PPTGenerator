@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { Campaign } from '@mediakit/shared';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 
-const { listCampaignsMock, lookupApiMock } = vi.hoisted(() => ({
+const { listCampaignsMock, lookupApiMock, authStateMock } = vi.hoisted(() => ({
   listCampaignsMock: vi.fn<() => Promise<Campaign[]>>(async () => []),
   lookupApiMock: {
     listBusinessLines: vi.fn().mockResolvedValue([
@@ -15,12 +15,17 @@ const { listCampaignsMock, lookupApiMock } = vi.hoisted(() => ({
     listAdvertisers: vi.fn().mockResolvedValue([]),
     listMerchants: vi.fn().mockResolvedValue([]),
   },
+  authStateMock: { user: null as null | { role: string; businessLineCode?: string | null } },
 }));
 vi.mock('@/api/campaigns', () => ({ listCampaigns: listCampaignsMock }));
 vi.mock('@/api/lookup', () => ({ lookupApi: lookupApiMock }));
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: (selector: (s: { user: unknown }) => unknown) => selector({ user: authStateMock.user }),
+}));
 
 beforeEach(() => {
   listCampaignsMock.mockResolvedValue([]);
+  authStateMock.user = null;
 });
 
 describe('CreateProjectDialog — 业务线必填 + 模版类型', () => {
@@ -152,5 +157,33 @@ describe('CreateProjectDialog — campaign 按业务线过滤', () => {
     expect(meta.scenario).toBe('campaign-report');
     // 未绑定 Campaign → meta.campaignId 不存在
     expect(meta.campaignId).toBeUndefined();
+  });
+});
+
+describe('CreateProjectDialog — 业务线账号锁定本业务线', () => {
+  function blSelect() {
+    return screen.getByText('业务线').parentElement!.querySelector('select')!;
+  }
+
+  it('USER+DG: 下拉 disabled 且值为 DG', async () => {
+    authStateMock.user = { role: 'USER', businessLineCode: 'DG' };
+    render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await waitFor(() => expect(blSelect().querySelectorAll('option').length).toBeGreaterThan(1));
+    expect(blSelect()).toBeDisabled();
+    expect(blSelect().value).toBe('DG');
+  });
+
+  it('ADMIN: 下拉不受限', async () => {
+    authStateMock.user = { role: 'ADMIN', businessLineCode: null };
+    render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await waitFor(() => expect(blSelect().querySelectorAll('option').length).toBeGreaterThan(1));
+    expect(blSelect()).not.toBeDisabled();
+  });
+
+  it('无登录信息(旧 fixture 路径): 下拉不受限', async () => {
+    authStateMock.user = null;
+    render(<CreateProjectDialog open onSubmit={() => {}} onCancel={() => {}} />);
+    await waitFor(() => expect(blSelect().querySelectorAll('option').length).toBeGreaterThan(1));
+    expect(blSelect()).not.toBeDisabled();
   });
 });

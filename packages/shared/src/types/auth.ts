@@ -12,6 +12,8 @@ export interface User {
   role: Role;
   createdAt: string;
   updatedAt: string;
+  /** 归属业务线 code（如 'DG'）。ADMIN 为 null = 不限；可选以兼容旧 fixture。 */
+  businessLineCode?: string | null;
 }
 
 /** 登录响应：access token 放响应体（前端存内存），refresh 走 httpOnly cookie。 */

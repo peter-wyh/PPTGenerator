@@ -22,6 +22,9 @@ model User {
   passwordHash String
   name         String?
   role         Role       @default(USER)
+  /// 归属业务线 code（如 'DG'）。ADMIN 为 NULL = 不限。存 code 不存 FK，
+  /// 与 Campaign.businessLineCode / ReportScheme.businessLineCode 约定一致。
+  businessLineCode String?
   projects     Project[]
   templates    Template[]
   dataRecords  DataRecord[]
@@ -33,6 +36,7 @@ model User {
   updatedAt    DateTime   @updatedAt
 
   @@index([email])
+  @@index([businessLineCode])
 }
 
 model Project {

@@ -7,37 +7,37 @@ import { kindSchema } from './data.schema';
 
 type Kind = z.infer<typeof kindSchema>;
 
-function owner(req: Request): string {
-  return (req.user as AuthPayload).id;
+function viewer(req: Request): AuthPayload {
+  return req.user as AuthPayload;
 }
 
 export const dataController = {
   list: asyncHandler(async (req: Request, res: Response) => {
     const kind = (req.query as { kind: Kind }).kind;
-    res.json({ records: await dataService.list(kind) });
+    res.json({ records: await dataService.list(kind, viewer(req)) });
   }),
 
   get: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ record: await dataService.getOrThrow(req.params.id) });
+    res.json({ record: await dataService.get(req.params.id, viewer(req)) });
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {
     const { kind, data } = req.body as { kind: Kind; data: unknown };
-    res.status(201).json({ record: await dataService.create(owner(req), kind, data) });
+    res.status(201).json({ record: await dataService.create(viewer(req), kind, data) });
   }),
 
   import: asyncHandler(async (req: Request, res: Response) => {
     const { kind, items } = req.body as { kind: Kind; items: unknown[] };
-    res.json(await dataService.importMany(owner(req), kind, items));
+    res.json(await dataService.importMany(viewer(req), kind, items));
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
     const { data } = req.body as { data: unknown };
-    res.json({ record: await dataService.update(req.params.id, owner(req), data) });
+    res.json({ record: await dataService.update(req.params.id, viewer(req), data) });
   }),
 
   remove: asyncHandler(async (req: Request, res: Response) => {
-    await dataService.remove(req.params.id, owner(req));
+    await dataService.remove(req.params.id, viewer(req));
     res.status(204).end();
   }),
 

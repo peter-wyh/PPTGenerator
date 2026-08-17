@@ -18,6 +18,7 @@ function toPublicUser(u: User) {
     email: u.email,
     name: u.name,
     role: u.role,
+    businessLineCode: u.businessLineCode,
     createdAt: u.createdAt.toISOString(),
     updatedAt: u.updatedAt.toISOString(),
   };
@@ -35,7 +36,7 @@ async function issueSession(user: User): Promise<IssueResult> {
   const jti = newJti();
   await registerRefresh(jti, user.id);
   const [accessToken, refreshToken] = await Promise.all([
-    signAccessToken(user.id, user.role),
+    signAccessToken(user.id, user.role, user.businessLineCode),
     signRefreshToken(user.id, jti),
   ]);
   return {

@@ -9,6 +9,8 @@ const encoder = new TextEncoder();
 export interface AccessTokenPayload extends JWTPayload {
   sub: string;
   role: Role;
+  /** 归属业务线 code；ADMIN / 旧 token 无此约束时为 null 或缺失。 */
+  bl?: string | null;
   type: 'access';
 }
 
@@ -31,8 +33,12 @@ export function newJti(): string {
 
 /* ------------------------------ 签发 ------------------------------ */
 
-export async function signAccessToken(userId: string, role: Role): Promise<string> {
-  return new SignJWT({ role, type: 'access' })
+export async function signAccessToken(
+  userId: string,
+  role: Role,
+  businessLineCode?: string | null,
+): Promise<string> {
+  return new SignJWT({ role, bl: businessLineCode ?? null, type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(userId)
     .setIssuedAt()

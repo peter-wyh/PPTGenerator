@@ -47,7 +47,7 @@ model User {
 - 遍历库中 `BusinessLine`，按 email upsert：`{code小写}@mediaket.local`
   （如 `dg@mediaket.local`），role `USER`，`businessLineCode: bl.code`，name 取业务线名
 - 统一初始密码 `mediakit123`（scrypt 哈希，复用 `utils/hash.ts`）
-- 业务线被删时同步清理孤儿账号；幂等可重跑
+- 业务线被删时仅告警不删账号——User 删除会级联删除其名下 Campaign/Project 等数据，自动清理有毁数据风险；幂等可重跑
 
 ### JWT 与鉴权链路
 
