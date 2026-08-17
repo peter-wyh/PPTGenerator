@@ -322,4 +322,24 @@ describe('mapCampaign', () => {
       currentSales: 5000, previousSales: 2000,
     });
   });
+
+  it('无 period → dataCoverage.requested 回退 campaign 起止', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow);
+    const r = await mapCampaign('c1');
+    expect(r.dataCoverage?.requested).toEqual({ start: '2026-10-12', end: '2026-11-10' });
+  });
+
+  it('有 period → dataCoverage.requested = 所选周期', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    const r = await mapCampaign('c1', { startDate: '2026-10-12', endDate: '2026-10-20' });
+    expect(r.dataCoverage?.requested).toEqual({ start: '2026-10-12', end: '2026-10-20' });
+  });
+
+  it('汇总 clicks=100 + orders=0 → CVR 为真实 0%(非 Metric unavailable)', async () => {
+    const real = { ...campaignRow, metrics: { totalRevenue: 876360, clicks: 100, orders: 0, newCustomers: 5, aov: 0 } };
+    prismaMock.campaign.findUnique.mockResolvedValue(real);
+    const r = await mapCampaign('c1');
+    expect(r.kpis.find((k) => k.label === 'Conversion Rate')?.value).toBe('0%');
+    expect(r.kpis.find((k) => k.label === 'Orders')?.value).toBe('0');
+  });
 });

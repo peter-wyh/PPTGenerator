@@ -230,8 +230,8 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   const clicks = hasVal(m.clicks) ? Number(m.clicks) : null;
   const orders = hasVal(m.orders) ? Number(m.orders) : null;
   const newCustomers = hasVal(m.newCustomers) ? Number(m.newCustomers) : null;
-  const aov = hasVal(m.aov) ? Number(m.aov) : (orders && totalRevenue !== null ? totalRevenue / orders : null);
-  const cvr = clicks && orders ? (orders / clicks) * 100 : null;
+  const aov = hasVal(m.aov) ? Number(m.aov) : (orders !== null && orders > 0 && totalRevenue !== null ? totalRevenue / orders : null);
+  const cvr = clicks !== null && orders !== null && clicks > 0 ? (orders / clicks) * 100 : null;
 
   const kpi = (label: string, v: number | null) => {
     if (v === null) return { label, value: 'Metric unavailable', highlight: false };
@@ -253,7 +253,7 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   // publishers + ROAS + 维度聚合:CPS 表顶层真实列(非 analytics)
   const publishers = campaign.campaignCreators.map((cc) => {
     const cps = cc.cpsPerformances.reduce(
-      (a, p) => ({ clicks: a.clicks + p.clicks, orders: a.orders + p.orders, gmv: a.gmv + Number(p.gmv) }),
+      (a, p) => ({ clicks: a.clicks + (Number(p.clicks) || 0), orders: a.orders + (Number(p.orders) || 0), gmv: a.gmv + (Number(p.gmv) || 0) }),
       { clicks: 0, orders: 0, gmv: 0 },
     );
     const partner = cc.creator?.partnerType ?? 'creator';
@@ -272,7 +272,7 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   });
 
   const totalSpend = campaign.campaignCreators.reduce(
-    (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + Number(p.spend), 0), 0);
+    (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + (Number(p.spend) || 0), 0), 0);
   if (totalSpend > 0 && totalRevenue !== null) {
     kpis.push({ label: 'ROAS', value: formatRatio(totalRevenue / totalSpend), highlight: false });
   }
