@@ -68,6 +68,11 @@ export function Layout({ children }: LayoutProps) {
                   ADMIN
                 </span>
               )}
+              {user.businessLineCode && (
+                <span className="ml-1 rounded-full bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent-primary">
+                  {user.businessLineCode}
+                </span>
+              )}
             </span>
           )}
           <Button variant="ghost" onClick={handleLogout}>
