@@ -52,7 +52,8 @@ describe('render', () => {
     const html = await render({ campaignId: 'c1' });
     expect(html).toContain('$876,360');      // KPI
     expect(html).toContain('124,678');        // publisher clicks
-    expect(html).toContain('data: [50000,166360]'); // Chart.js trend.revenue 注入(template: data: {{{json trend.revenue}}})
+    // 宁缺勿假:汇总口径 trend 不再读 analytics.trend → 空序列注入
+    expect(html).toContain('data: []');
   });
 
   it('DG token 注入', async () => {

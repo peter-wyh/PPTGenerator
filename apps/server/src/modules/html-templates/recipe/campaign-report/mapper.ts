@@ -3,13 +3,10 @@ import { prisma } from '../../../../prisma';
 import { ApiError } from '../../../../utils/ApiError';
 import { formatMoney, formatNum, formatPct, formatRatio } from '../format';
 import { aggregateDimensions, type DimLink } from './dimensions';
+import { computeCoverage } from './coverage';
 import type { CampaignReportContent } from './schema';
 
 type Any = Record<string, any>;
-
-function metric(m: Any | null, key: string): number {
-  return Number((m as Any)?.[key] ?? 0);
-}
 
 /** "2026-10-12" → "Oct 12"。 */
 function shortDate(iso: string): string {
@@ -193,63 +190,67 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   });
   if (!campaign) throw ApiError.notFound('Campaign 不存在');
 
-  // ★ reportPeriod + 有 CPS daily → 从 daily 派生;否则走下方现有汇总逻辑
-  const hasDaily = (campaign.campaignCreators ?? []).some((cc: Any) =>
-    (cc.cpsPerformances ?? []).some((p: Any) => Array.isArray(p.daily) && p.daily.length > 0));
-  if (reportPeriod && hasDaily) {
-    const { kpis, publishers, trend, period, insights } = mapFromDaily(campaign, reportPeriod);
+  const header = {
+    brand: { name: campaign.businessLine?.name ?? campaign.businessLineCode ?? 'Brand', logoText: (campaign.businessLine?.name ?? campaign.businessLineCode ?? 'brand').toLowerCase() },
+    merchant: { name: campaign.advertiser?.name ?? campaign.advertiserName ?? 'Merchant', logoText: (campaign.advertiser?.name ?? campaign.advertiserName ?? 'M').slice(0, 2).toUpperCase() },
+  };
+
+  // ★ 宁缺勿假:daily 是唯一数字真源。coverage 决定呈现形态。
+  const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
+  const cov = computeCoverage(campaign, hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined, campaign.endDate);
+  const requested = {
+    start: reportPeriod?.startDate ?? campaign.startDate,
+    end: reportPeriod?.endDate ?? campaign.endDate,
+  };
+  const dataCoverage = { requested, ...cov };
+
+  const emptyKpis = [{ label: 'No data for this period', value: '\u2014', highlight: false }];
+  const emptyTrend = { labels: [] as string[], revenue: [] as number[], clicks: [] as number[], orders: [] as number[] };
+
+  // 有 reportPeriod → 一律 daily 切片(有交集出真数,零交集空态;不再读 analytics 兜底)
+  if (hasPeriod) {
+    if (!cov.covered) {
+      return {
+        header: { ...header, period: { start: requested.start, end: requested.end, display: `${shortDate(requested.start)} - ${shortDate(requested.end)}, ${String(requested.start).slice(0, 4)}` } },
+        kpis: emptyKpis, trend: emptyTrend, publishers: [], insights: undefined, actionable: [],
+        dataCoverage,
+      };
+    }
+    const { kpis, publishers, trend, period, insights } = mapFromDaily(campaign, reportPeriod!);
     return {
-      header: {
-        brand: { name: campaign.businessLine?.name ?? campaign.businessLineCode ?? 'Brand', logoText: (campaign.businessLine?.name ?? campaign.businessLineCode ?? 'brand').toLowerCase() },
-        merchant: { name: campaign.advertiser?.name ?? campaign.advertiserName ?? 'Merchant', logoText: (campaign.advertiser?.name ?? campaign.advertiserName ?? 'M').slice(0, 2).toUpperCase() },
-        period,
-      },
-      kpis, trend, publishers,
-      insights,
-      actionable: [], // 由 narrative 填(与现有路径一致)
+      header: { ...header, period }, kpis, trend, publishers,
+      insights, actionable: [], dataCoverage,
     };
   }
-  if (reportPeriod && !hasDaily) {
-    console.warn('[mapCampaign] reportPeriod given but no CPS daily data; falling back to aggregate');
-  }
 
+  // 无 reportPeriod(汇总口径)→ metrics 有值才渲染(缺 → Metric unavailable);CPS 顶层真实汇总列保留。
   const m = (campaign.metrics ?? {}) as Any;
-  const analytics = (campaign.analytics ?? {}) as Any;
-  const summary = ((analytics.summary as Any | undefined) ?? {}) as Any;
+  const hasVal = (v: unknown) => v !== undefined && v !== null && v !== '' && !Number.isNaN(Number(v));
+  const totalRevenue = hasVal(m.totalRevenue) ? Number(m.totalRevenue) : null;
+  const clicks = hasVal(m.clicks) ? Number(m.clicks) : null;
+  const orders = hasVal(m.orders) ? Number(m.orders) : null;
+  const newCustomers = hasVal(m.newCustomers) ? Number(m.newCustomers) : null;
+  const aov = hasVal(m.aov) ? Number(m.aov) : (orders && totalRevenue !== null ? totalRevenue / orders : null);
+  const cvr = clicks && orders ? (orders / clicks) * 100 : null;
 
-  // trend 兼容两种存储形状:
-  //   生产:每日数组 [{date,clicks,orders,revenue,impressions}, …](camp-wander-summer 等)
-  //   旧合成/测试:预透视对象 {labels,revenue,clicks,orders}
-  const trendSrc = analytics.trend;
-  let trendLabels: string[] = [];
-  let trendRevenue: number[] = [];
-  let trendClicks: number[] = [];
-  let trendOrders: number[] = [];
-  if (Array.isArray(trendSrc)) {
-    const rows = trendSrc as Any[];
-    const sorted = [...rows].sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')));
-    trendLabels = sorted.map((r) => String(r.date ?? ''));
-    trendRevenue = sorted.map((r) => Number(r.revenue) || 0);
-    trendClicks = sorted.map((r) => Number(r.clicks) || 0);
-    trendOrders = sorted.map((r) => Number(r.orders) || 0);
-  } else if (trendSrc && typeof trendSrc === 'object') {
-    const o = trendSrc as Any;
-    trendLabels = o.labels ?? [];
-    trendRevenue = o.revenue ?? [];
-    trendClicks = o.clicks ?? [];
-    trendOrders = o.orders ?? [];
-  }
-  const trend = { labels: trendLabels, revenue: trendRevenue, clicks: trendClicks, orders: trendOrders };
+  const kpi = (label: string, v: number | null) => {
+    if (v === null) return { label, value: 'Metric unavailable', highlight: false };
+    const value =
+      label === 'Total Revenues' || label === 'AOV' ? formatMoney(v) :
+      label === 'Conversion Rate' ? formatPct(Math.round(v * 10) / 10) :
+      formatNum(v);
+    return { label, value, highlight: label === 'New Customer Acquisition' };
+  };
+  const kpis = [
+    kpi('Total Revenues', totalRevenue),
+    kpi('Clicks', clicks),
+    kpi('Orders', orders),
+    kpi('Conversion Rate', cvr),
+    kpi('New Customer Acquisition', newCustomers),
+    kpi('AOV', aov),
+  ];
 
-  // KPI 总量:优先 analytics.summary(total* 前缀),其次 campaign.metrics。
-  // 注:KPI 与 trend 是独立数据源——trend 只是图表序列,不反推 KPI 总量(保持 "metrics 缺字段→兜底 0" 契约)。
-  // 注:summary 里 aov/newCustomerRate 是预格式化字符串("$81.86"/"42%"),这里统一从原始数值重算,避免解析。
-  const totalRevenue = metric(summary, 'totalRevenue') || metric(m, 'totalRevenue');
-  const clicks = metric(summary, 'totalClicks') || metric(m, 'clicks');
-  const orders = metric(summary, 'totalOrders') || metric(m, 'orders');
-  const newCustomers = metric(summary, 'newCustomers') || metric(m, 'newCustomers');
-  const aov = metric(m, 'aov') || (orders ? totalRevenue / orders : 0);
-
+  // publishers + ROAS + 维度聚合:CPS 表顶层真实列(非 analytics)
   const publishers = campaign.campaignCreators.map((cc) => {
     const cps = cc.cpsPerformances.reduce(
       (a, p) => ({ clicks: a.clicks + p.clicks, orders: a.orders + p.orders, gmv: a.gmv + Number(p.gmv) }),
@@ -270,7 +271,12 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
     };
   });
 
-  // 维度聚合(汇总路径:用 cpsPerformance 链接顶层 gmv/orders,不切日期)
+  const totalSpend = campaign.campaignCreators.reduce(
+    (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + Number(p.spend), 0), 0);
+  if (totalSpend > 0 && totalRevenue !== null) {
+    kpis.push({ label: 'ROAS', value: formatRatio(totalRevenue / totalSpend), highlight: false });
+  }
+
   const dimLinks: DimLink[] = (campaign.campaignCreators ?? []).flatMap((cc: Any) =>
     (cc.cpsPerformances ?? []).map((p: Any) => ({
       productName: p.productName, category: p.category, market: p.market,
@@ -278,49 +284,21 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
       gmv: Number(p.gmv) || 0, orders: Number(p.orders) || 0,
     })),
   );
-  const dimInsights = aggregateDimensions(dimLinks);
-
-  // newCustomerRate:metrics 优先(数值),否则从已读到的 newCustomers/orders 重算(summary 里是 "42%" 字符串,不解析)。
-  const newCustomerRate = metric(m, 'newCustomerRate') || (newCustomers && orders ? (newCustomers / orders) * 100 : 0);
+  const dimInsights = dimLinks.length ? aggregateDimensions(dimLinks) : undefined;
+  // newCustomerRate:metrics 有真实数值才算(不解析 analytics 字符串)
+  const ncrRaw = hasVal(m.newCustomerRate) ? Number(m.newCustomerRate) : null;
   const insights = {
-    ...dimInsights,
-    ...(newCustomerRate
-      ? {
-          newCustomerRate: {
-            rate: formatPct(Math.round(newCustomerRate * 10) / 10),
-            newCount: newCustomers,
-            totalOrders: orders,
-            deltaPct: m.newCustomerDelta ? formatPct(Math.round(Number(m.newCustomerDelta) * 10) / 10) : undefined,
-          },
-        }
+    ...(dimInsights ?? {}),
+    ...(ncrRaw !== null && orders
+      ? { newCustomerRate: { rate: formatPct(Math.round(ncrRaw * 10) / 10), newCount: newCustomers ?? 0, totalOrders: orders,
+          ...(hasVal(m.newCustomerDelta) ? { deltaPct: formatPct(Math.round(Number(m.newCustomerDelta) * 10) / 10) } : {}) } }
       : {}),
   };
 
-  const totalSpend = campaign.campaignCreators.reduce(
-    (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + Number(p.spend), 0),
-    0,
-  );
-  const cvr = clicks ? (orders / clicks) * 100 : 0;
-  const kpis = [
-    { label: 'Total Revenues', value: formatMoney(totalRevenue) },
-    { label: 'Clicks', value: formatNum(clicks) },
-    { label: 'Orders', value: formatNum(orders) },
-    { label: 'Conversion Rate', value: formatPct(Math.round(cvr * 10) / 10) },
-    { label: 'New Customer Acquisition', value: formatNum(newCustomers), highlight: true },
-    { label: 'AOV', value: formatMoney(aov) },
-    ...(totalSpend > 0 ? [{ label: 'ROAS', value: formatRatio(totalRevenue / totalSpend) }] : []),
-  ];
-
   return {
-    header: {
-      brand: { name: campaign.businessLine?.name ?? campaign.businessLineCode ?? 'Brand', logoText: (campaign.businessLine?.name ?? campaign.businessLineCode ?? 'brand').toLowerCase() },
-      merchant: { name: campaign.advertiser?.name ?? campaign.advertiserName ?? 'Merchant', logoText: (campaign.advertiser?.name ?? campaign.advertiserName ?? 'M').slice(0, 2).toUpperCase() },
-      period: { start: campaign.startDate, end: campaign.endDate, display: `${shortDate(campaign.startDate)} - ${shortDate(campaign.endDate)}, ${campaign.startDate.slice(0, 4)}` },
-    },
-    kpis,
-    trend,
-    publishers,
+    header: { ...header, period: { start: campaign.startDate, end: campaign.endDate, display: `${shortDate(campaign.startDate)} - ${shortDate(campaign.endDate)}, ${String(campaign.startDate).slice(0, 4)}` } },
+    kpis, trend: emptyTrend, publishers,
     insights: Object.keys(insights).length ? insights : undefined,
-    actionable: [], // 由 narrative 填
+    actionable: [], dataCoverage,
   };
 }
