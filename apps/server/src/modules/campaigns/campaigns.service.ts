@@ -68,8 +68,9 @@ export const campaignService = {
 // ─── Creator ─────────────────────────────────────────────────────────────────
 
 export const creatorService = {
-  async list(opts: { ownerId: string; platform?: string; tier?: string; category?: string; partnerType?: string; search?: string }) {
-    const where: Prisma.CreatorWhereInput = { ownerId: opts.ownerId };
+  /** 共享字典：所有登录用户可读（无 ownerId 过滤）。写操作仍校验 owner。 */
+  async list(opts: { platform?: string; tier?: string; category?: string; partnerType?: string; search?: string }) {
+    const where: Prisma.CreatorWhereInput = {};
     if (opts.platform) where.platform = opts.platform;
     if (opts.tier) where.tier = opts.tier;
     if (opts.category) where.category = opts.category;
@@ -86,9 +87,19 @@ export const creatorService = {
     });
   },
 
-  async getOrThrow(id: string, ownerId: string) {
-    const rec = await prisma.creator.findFirst({ where: { id, ownerId } });
+  /** 存在性校验（共享读语义，不查 owner）。 */
+  async getOrThrow(id: string) {
+    const rec = await prisma.creator.findFirst({ where: { id } });
     if (!rec) throw ApiError.notFound('Creator not found');
+    return rec;
+  },
+
+  /** 写权限：owner 或 ADMIN。 */
+  async getOwnedOrThrow(id: string, viewer: { id: string; role: string }) {
+    const rec = await this.getOrThrow(id);
+    if (viewer.role !== 'ADMIN' && rec.ownerId !== viewer.id) {
+      throw ApiError.notFound('Creator not found');
+    }
     return rec;
   },
 
@@ -96,13 +107,13 @@ export const creatorService = {
     return prisma.creator.create({ data: { ...data, ownerId } });
   },
 
-  async update(id: string, ownerId: string, data: Prisma.CreatorUncheckedUpdateInput) {
-    await this.getOrThrow(id, ownerId);
+  async update(id: string, viewer: { id: string; role: string }, data: Prisma.CreatorUncheckedUpdateInput) {
+    await this.getOwnedOrThrow(id, viewer);
     return prisma.creator.update({ where: { id }, data });
   },
 
-  async remove(id: string, ownerId: string) {
-    await this.getOrThrow(id, ownerId);
+  async remove(id: string, viewer: { id: string; role: string }) {
+    await this.getOwnedOrThrow(id, viewer);
     await prisma.creator.delete({ where: { id } });
   },
 };
@@ -134,7 +145,7 @@ export const campaignCreatorService = {
   }, ownerId: string) {
     // Verify ownership
     await campaignService.getOrThrow(data.campaignId, ownerId);
-    await creatorService.getOrThrow(data.creatorId, ownerId);
+    await creatorService.getOrThrow(data.creatorId);
     return prisma.campaignCreator.upsert({
       where: { campaignId_creatorId: { campaignId: data.campaignId, creatorId: data.creatorId } },
       create: data,

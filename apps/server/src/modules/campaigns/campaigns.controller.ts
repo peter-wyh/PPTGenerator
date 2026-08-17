@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService, importService } from './campaigns.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
+import { assertBusinessLine } from '../../utils/business-line';
 
 function userId(req: Request): string {
   return (req.user as AuthPayload).id;
@@ -19,11 +20,15 @@ export const campaignController = {
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {
-    res.status(201).json({ campaign: await campaignService.create(userId(req), req.body) });
+    const v = req.user as AuthPayload;
+    assertBusinessLine(v, (req.body as { businessLineCode?: string })?.businessLineCode);
+    res.status(201).json({ campaign: await campaignService.create(v.id, req.body) });
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ campaign: await campaignService.update(req.params.id, userId(req), req.body) });
+    const v = req.user as AuthPayload;
+    assertBusinessLine(v, (req.body as { businessLineCode?: string })?.businessLineCode);
+    res.json({ campaign: await campaignService.update(req.params.id, v.id, req.body) });
   }),
 
   remove: asyncHandler(async (req: Request, res: Response) => {
@@ -44,11 +49,11 @@ export const campaignController = {
   // ─── Creator ───────────────────────────────────────────────────────────────
   listCreators: asyncHandler(async (req: Request, res: Response) => {
     const q = req.query as { platform?: string; tier?: string; category?: string; partnerType?: string; search?: string };
-    res.json({ creators: await creatorService.list({ ownerId: userId(req), ...q }) });
+    res.json({ creators: await creatorService.list(q) });
   }),
 
   getCreator: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ creator: await creatorService.getOrThrow(req.params.id, userId(req)) });
+    res.json({ creator: await creatorService.getOrThrow(req.params.id) });
   }),
 
   createCreator: asyncHandler(async (req: Request, res: Response) => {
@@ -56,11 +61,11 @@ export const campaignController = {
   }),
 
   updateCreator: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ creator: await creatorService.update(req.params.id, userId(req), req.body) });
+    res.json({ creator: await creatorService.update(req.params.id, req.user as AuthPayload, req.body) });
   }),
 
   removeCreator: asyncHandler(async (req: Request, res: Response) => {
-    await creatorService.remove(req.params.id, userId(req));
+    await creatorService.remove(req.params.id, req.user as AuthPayload);
     res.status(204).end();
   }),
 
