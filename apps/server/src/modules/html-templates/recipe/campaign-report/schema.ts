@@ -39,6 +39,13 @@ export const CampaignReportContent = z.object({
       currentSales: z.number(), previousSales: z.number(),
     }).optional(),
   }).optional(),
+  /** 「宁缺勿假」覆盖元信息:无 daily→covered=null;missingDays>0→报告需明示区间。 */
+  dataCoverage: z.object({
+    requested: z.object({ start: z.string(), end: z.string() }),
+    covered: z.object({ start: z.string(), end: z.string() }).nullable(),
+    missingDays: z.number(),
+    complete: z.boolean(),
+  }).optional(),
   actionable: z.array(z.object({
     icon: z.string(),
     color: z.string(),

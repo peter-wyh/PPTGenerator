@@ -111,17 +111,11 @@ describe('mapCampaign', () => {
     expect(p.linkUrl).toBe('https://tiktok.com/@miaglowup');
   });
 
-  it('trend 从 analytics.trend 映射', async () => {
-    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow);
-    const c = await mapCampaign('c1');
-    expect(c.trend.labels).toEqual(['Oct 12','Nov 10']);
-    expect(c.trend.revenue).toEqual([50000,166360]);
-  });
-
-  it('metrics 缺字段 → 兜底 0,不抛', async () => {
+  it('metrics 缺字段 → Metric unavailable(不兜 0)', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue({ ...campaignRow, metrics: {} });
     const c = await mapCampaign('c1');
-    expect(c.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('$0');
+    expect(c.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('Metric unavailable');
+    expect(c.kpis.find((k) => k.label === 'Clicks')?.value).toBe('Metric unavailable');
   });
 
   it('actionable 留空(由 narrative 填)', async () => {
@@ -162,11 +156,46 @@ describe('mapCampaign', () => {
     expect(c.insights?.newCustomerRate).toBeDefined();
   });
 
-  it('无 daily 数据 + period → 降级为汇总(不报错,KPI 来自 metrics)', async () => {
-    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); // campaignRow 无 daily
-    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-17' });
-    const byLabel = Object.fromEntries(c.kpis.map((k) => [k.label, k.value]));
-    expect(byLabel['Total Revenues']).toBe('$876,360'); // 来自 metrics,非 daily
+  // ── 宁缺勿假:无 analytics 兜底 ──────────────────────────────
+
+  it('无 daily + period → 空态卡(No data for this period),不读 analytics', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow);
+    const r = await mapCampaign('c1', { startDate: '2026-10-13', endDate: '2026-10-19' });
+    expect(r.kpis).toEqual([{ label: 'No data for this period', value: '—', highlight: false }]);
+    expect(r.trend).toEqual({ labels: [], revenue: [], clicks: [], orders: [] });
+    expect(r.publishers).toEqual([]);
+    expect(r.dataCoverage?.covered).toBeNull();
+    expect(r.dataCoverage?.complete).toBe(false);
+  });
+
+  it('部分覆盖 + period → 出真实数 + dataCoverage.missingDays>0', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    // 请求 10-12~10-20(9 天),daily 期内有 12/15/16/20 四天 → missing 5
+    const r = await mapCampaign('c1', { startDate: '2026-10-12', endDate: '2026-10-20' });
+    expect(r.kpis.find((k) => k.label === 'Clicks')?.value).toBe('1,000'); // 100+200+300+400
+    expect(r.dataCoverage).toMatchObject({ covered: { start: '2026-10-12', end: '2026-10-20' }, missingDays: 5, complete: false });
+  });
+
+  it('零交集 + period → 空态卡 + covered=null', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    const r = await mapCampaign('c1', { startDate: '2026-11-01', endDate: '2026-11-05' });
+    expect(r.kpis).toEqual([{ label: 'No data for this period', value: '—', highlight: false }]);
+    expect(r.dataCoverage?.covered).toBeNull();
+  });
+
+  it('无 period(汇总口径)→ metrics 缺字段渲染 Metric unavailable,不兜 0', async () => {
+    const partial = { ...campaignRow, metrics: { totalRevenue: 876360 } };
+    prismaMock.campaign.findUnique.mockResolvedValue(partial);
+    const r = await mapCampaign('c1');
+    expect(r.kpis.find((k) => k.label === 'Clicks')?.value).toBe('Metric unavailable');
+    expect(r.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('$876,360');
+  });
+
+  it('无 period + analytics 有数据 → KPI/trend 不来自 analytics(宁缺勿假)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow);
+    const r = await mapCampaign('c1');
+    expect(r.kpis.find((k) => k.label === 'Clicks')?.value).toBe('348,619'); // metrics.clicks 真实值
+    expect(r.trend.labels).toEqual([]); // analytics.trend 不再进 trend
   });
 
   it('period 半开(只 startDate)→ 单边过滤', async () => {
@@ -220,11 +249,11 @@ describe('mapCampaign', () => {
     expect(cvr!.value).toBe('1.3%');
   });
 
-  it('汇总 clicks=0 → CVR 兜底 0%(除零安全)', async () => {
+  it('汇总 clicks=0 → CVR 不可用 Metric unavailable(宁缺勿假,不兜 0%)', async () => {
     const row = { ...campaignRow, metrics: { ...campaignRow.metrics, clicks: 0 } };
     prismaMock.campaign.findUnique.mockResolvedValue(row);
     const c = await mapCampaign('c1');
-    expect(c.kpis.find((k) => k.label === 'Conversion Rate')!.value).toBe('0%');
+    expect(c.kpis.find((k) => k.label === 'Conversion Rate')!.value).toBe('Metric unavailable');
   });
 
   it('mapFromDaily(reportPeriod)KPI 含 CVR(期内 orders/clicks)', async () => {
@@ -292,5 +321,25 @@ describe('mapCampaign', () => {
       currentOrders: 50, previousOrders: 20,
       currentSales: 5000, previousSales: 2000,
     });
+  });
+
+  it('无 period → dataCoverage.requested 回退 campaign 起止', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow);
+    const r = await mapCampaign('c1');
+    expect(r.dataCoverage?.requested).toEqual({ start: '2026-10-12', end: '2026-11-10' });
+  });
+
+  it('有 period → dataCoverage.requested = 所选周期', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    const r = await mapCampaign('c1', { startDate: '2026-10-12', endDate: '2026-10-20' });
+    expect(r.dataCoverage?.requested).toEqual({ start: '2026-10-12', end: '2026-10-20' });
+  });
+
+  it('汇总 clicks=100 + orders=0 → CVR 为真实 0%(非 Metric unavailable)', async () => {
+    const real = { ...campaignRow, metrics: { totalRevenue: 876360, clicks: 100, orders: 0, newCustomers: 5, aov: 0 } };
+    prismaMock.campaign.findUnique.mockResolvedValue(real);
+    const r = await mapCampaign('c1');
+    expect(r.kpis.find((k) => k.label === 'Conversion Rate')?.value).toBe('0%');
+    expect(r.kpis.find((k) => k.label === 'Orders')?.value).toBe('0');
   });
 });

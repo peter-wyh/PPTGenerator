@@ -1,13 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ai-generate.service 顶层 import prisma，纯函数测试里 mock 掉避免实例化 PrismaClient。
-vi.mock('../../prisma', () => ({
-  prisma: {
-    campaign: { findUnique: vi.fn() },
-  },
+const prismaMock = vi.hoisted(() => ({
+  campaign: { findUnique: vi.fn() },
 }));
+vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
-import { rewriteExternalAssets } from './ai-generate.service';
+import { aiGenerateService, rewriteExternalAssets, SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 
 describe('ai-generate.service · rewriteExternalAssets', () => {
   const base = 'https://campaignreport.sk8s.cn';
@@ -75,5 +74,50 @@ describe('ai-generate.service · rewriteExternalAssets', () => {
     expect(out).not.toContain('cdn.jsdelivr.net/npm/chart.js');
     // 图标 class 不受影响
     expect(out).toContain('fas fa-chart-line');
+  });
+});
+
+describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
+  const dailyCamp = {
+    id: 'c1', name: 'T', platform: 'TikTok', startDate: '2026-10-01', endDate: '2026-10-31',
+    budget: 1, status: 'x', businessLineCode: 'FT', metrics: { clicks: 1 },
+    analytics: { trend: [{ date: '2026-10-01', revenue: 999 }], summary: { totalRevenue: 999 }, topProducts: [{ n: 1 }], weeklyTrend: [{ w: 1 }], topMarkets: [{ m: 1 }], insights: [{ i: 1 }], customerSplit: { newCustomers: 1, returningCustomers: 2 } },
+    businessLine: { name: 'FT' }, advertiser: { name: 'A' },
+    campaignCreators: [{
+      creator: { name: 'M', platform: 'TikTok', partnerType: 'creator' },
+      cpsPerformances: [{ clicks: 0, orders: 0, gmv: 0, spend: 0, commission: 0, impressions: 0,
+        daily: [{ date: '2026-10-02', clicks: '10', orders: '1', gmv: '100', impressions: '0', spend: '0', commission: '0', newCustomers: '0' }] }],
+      performance: { summary: {} },
+    }],
+  };
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('有 period 且 daily 有交集 → 上下文含 periodKpis + dataCoverage，不含 analytics 数字字段', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
+    expect(json).toContain('periodKpis');
+    expect(json).toContain('dataCoverage');
+    expect(json).not.toContain('topProducts');
+    expect(json).not.toContain('weeklyTrend'); // 顶层扁平字段也不出现
+    expect(json).not.toContain('analytics');
+  });
+
+  it('有 period 零交集 → 无 periodKpis，附 dataCoverage(covered=null)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-11-01', endDate: '2026-11-05' });
+    expect(json).not.toContain('periodKpis');
+    expect(json).toContain('"covered": null');
+  });
+
+  it('无 period → dataGaps 列出缺失维度', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    const json = await aiGenerateService.buildCampaignContext('c1');
+    expect(json).toContain('dataGaps');
+  });
+
+  it('SYSTEM_PROMPT_DISPLAY 含 Data Unavailable 禁编造规则', () => {
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('Data Unavailable');
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('禁止编造');
   });
 });
