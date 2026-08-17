@@ -81,13 +81,31 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
       return;
     }
     let cancelled = false;
+    // 同步清掉上一模板的窗口/日期:fetch 期间不残留 A 的状态供 B 误提交。
+    setRange(null);
+    setPeriod({ startDate: '', endDate: '' });
     setRangeLoading(true);
     const rp = (t?.meta as { reportPeriod?: { startDate?: string; endDate?: string } } | undefined)?.reportPeriod;
+    // 降级:不标区间、不越界校验,但仍保留起≤止+非空校验(PeriodPicker required)。
+    const fallback = () => {
+      setRange(null);
+      setPeriod({ startDate: rp?.startDate ?? '', endDate: rp?.endDate ?? '' });
+    };
     getCampaign(cid)
       .then((c) => {
-        if (cancelled || !c) return;
+        if (cancelled) return;
+        if (!c) {
+          // campaign 已不存在(getCampaign 吞错返回 undefined):与失败同路降级。
+          fallback();
+          return;
+        }
         const min = c.startDate;
         const max = earlierDate(c.endDate, todayIso()); // 未来日期无数据
+        if (min > max) {
+          // 未开始/坏数据 → 窗口为空:按无窗口降级,避免对话框变死胡同。
+          fallback();
+          return;
+        }
         setRange({ min, max });
         const candidate = rp ? { startDate: rp.startDate ?? '', endDate: rp.endDate ?? '' } : null;
         const initial =
@@ -95,10 +113,7 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
         setPeriod(initial);
       })
       .catch(() => {
-        if (cancelled) return;
-        // 降级:不标区间、不越界校验,但仍保留起≤止+非空校验(PeriodPicker required)。
-        setRange(null);
-        setPeriod({ startDate: rp?.startDate ?? '', endDate: rp?.endDate ?? '' });
+        if (!cancelled) fallback();
       })
       .finally(() => {
         if (!cancelled) setRangeLoading(false);
@@ -115,7 +130,8 @@ export function CreateFromTemplateDialog({ open, loading, error, onCancel, onSub
     !!selected &&
     (selected.meta?.styleType === 'ai-html' || selected.meta?.renderType === 'html-report') &&
     !!selected.meta?.campaignId;
-  const canSubmit = !!selectedId && !loading && !fetching && (isLiveReport ? periodValid : true);
+  const canSubmit =
+    !!selectedId && !loading && !fetching && (isLiveReport ? periodValid && !rangeLoading : true);
 
   const submit = () => {
     if (!selected) return;
