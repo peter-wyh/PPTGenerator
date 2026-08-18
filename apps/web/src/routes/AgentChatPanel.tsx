@@ -10,6 +10,37 @@ import { Button } from '@/components/Button';
 import { htmlTemplatesApi, type SSEChunk } from '@/api/htmlTemplates';
 import type { AgentChatMessage } from '@/api/htmlTemplates';
 
+/** 可折叠的 AI 思考过程（复用于流式临时气泡 + 聊天历史永久展示） */
+function CollapsibleReasoning({ text, defaultCollapsed = true }: { text: string; defaultCollapsed?: boolean }) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!collapsed && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [collapsed, text]);
+
+  return (
+    <div className="mt-1.5">
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="mb-1 text-[10px] text-foreground-muted hover:text-foreground-secondary"
+      >
+        {collapsed ? '▸ 展开思考' : '▾ 收起思考'}
+      </button>
+      {!collapsed && (
+        <div
+          ref={scrollRef}
+          className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[11px] leading-relaxed text-foreground-muted"
+        >
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface AgentChatPanelProps {
   projectId: string;
   currentHtml: string;
@@ -53,9 +84,6 @@ export function AgentChatPanel({
   const [reasoning, setReasoning] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  // 思考气泡正文折叠（思考完成后可收起）+ 自动滚底
-  const [thinkingCollapsed, setThinkingCollapsed] = useState(false);
-  const thinkingScrollRef = useRef<HTMLDivElement>(null);
 
   // 已选择的图片（base64 data URL 数组），随消息一起发送
   const [pendingImages, setPendingImages] = useState<string[]>([]);
@@ -66,13 +94,6 @@ export function AgentChatPanel({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [agentHistory, loading, pendingImages, reasoning]);
-
-  // 思考气泡正文自动滚底（reasoning 流式追加时）
-  useEffect(() => {
-    if (thinkingScrollRef.current && !thinkingCollapsed) {
-      thinkingScrollRef.current.scrollTop = thinkingScrollRef.current.scrollHeight;
-    }
-  }, [reasoning, thinkingCollapsed]);
 
   // ── 图片上传处理 ──
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +154,6 @@ export function AgentChatPanel({
     setLoading(false);
     setIsThinking(false);
     setReasoning('');
-    setThinkingCollapsed(false);
   }, []);
 
   // ★ handleSend — SSE 流式编辑
@@ -198,6 +218,7 @@ export function AgentChatPanel({
             role: 'assistant',
             content: '已更新 ✅',
             action: 'edit',
+            reasoning: reasoning || undefined,
             ts: new Date().toISOString(),
           };
           const finalHistory = [...newHistory, aiMsg];
@@ -222,7 +243,6 @@ export function AgentChatPanel({
         setLoading(false);
         setIsThinking(false);
         setReasoning('');
-        setThinkingCollapsed(false);
         abortRef.current = null;
         onBusyChange?.(false);
       }
@@ -286,6 +306,13 @@ export function AgentChatPanel({
                 </div>
               )}
               {msg.content}
+              {msg.reasoning && (
+                /* 首次生成的思考默认展开呈现；后续编辑的思考默认折叠 */
+                <CollapsibleReasoning
+                  text={msg.reasoning}
+                  defaultCollapsed={msg.action !== 'generate'}
+                />
+              )}
             </div>
           </div>
         ))}
@@ -307,24 +334,7 @@ export function AgentChatPanel({
               </div>
               {/* 正文：思考流（reasoning 非空时显示；思考完成后可折叠） */}
               {reasoning && (
-                <div className="mt-1.5">
-                  {!isThinking && (
-                    <button
-                      onClick={() => setThinkingCollapsed(!thinkingCollapsed)}
-                      className="mb-1 text-[10px] text-foreground-muted hover:text-foreground-secondary"
-                    >
-                      {thinkingCollapsed ? '▸ 展开思考' : '▾ 收起思考'}
-                    </button>
-                  )}
-                  {!thinkingCollapsed && (
-                    <div
-                      ref={thinkingScrollRef}
-                      className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[11px] leading-relaxed text-foreground-muted"
-                    >
-                      {reasoning}
-                    </div>
-                  )}
-                </div>
+                <CollapsibleReasoning text={reasoning} defaultCollapsed={false} />
               )}
             </div>
           </div>

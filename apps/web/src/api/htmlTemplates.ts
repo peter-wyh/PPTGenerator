@@ -51,6 +51,8 @@ export interface AgentChatMessage {
   content: string;
   action?: 'generate' | 'edit' | 'fix' | 'manual';
   ts: string;
+  /** AI 思考过程（chain-of-thought），流式结束后保存到聊天记录 */
+  reasoning?: string;
   /** 附件图片的 base64 data URL 列表（vision 多模态编辑用） */
   images?: string[];
 }

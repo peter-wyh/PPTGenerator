@@ -28,10 +28,17 @@ interface VisualEditorProps {
 }
 
 const DEVICE_WIDTHS: Record<string, string> = {
-  desktop: '100%',
+  desktop: '自适应',
   tablet: '768px',
   mobile: '375px',
 };
+
+/**
+ * ★ 桌面设备画布宽度动态锁定为「容器宽 + 右侧面板宽」——
+ * 与预览 iframe（无面板全宽）断点行为完全一致（Tailwind md:/lg: 同触发），
+ * 画布超宽时整体缩放适配可视区（Figma 式 WYSIWYG）。
+ */
+const SIDE_PANEL_WIDTH = 300;
 
 // ── HTML 预处理工具 ──
 
@@ -119,6 +126,8 @@ export function VisualEditor({
   const [previewMode, setPreviewMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedInfo, setSelectedInfo] = useState<string>('未选中元素');
+  // ★ 桌面画布锁定宽度（容器宽+面板宽），0 = 未测量
+  const [desktopWidth, setDesktopWidth] = useState(0);
 
   // ★ 选中图片时的状态：null = 未选中图片，object = 选中了 img 组件
   const [selectedImg, setSelectedImg] = useState<{ comp: any; src: string; alt: string } | null>(null);
@@ -198,7 +207,8 @@ export function VisualEditor({
     editor.setComponents(parsed.bodyHtml);
     lastLoadedBodyRef.current = parsed.bodyHtml;
 
-    editor.setDevice(defaultDevice);
+    // ★ 桌面设备由 device/desktopWidth effect 接管（动态宽度+缩放）
+    if (defaultDevice !== 'desktop') editor.setDevice(defaultDevice);
 
     // ── 监听内容变化（防抖回调）──
     const debouncedChange = () => {
@@ -637,8 +647,37 @@ export function VisualEditor({
   // ── 设备切换 ──
   useEffect(() => {
     if (!editorRef.current) return;
-    editorRef.current.setDevice(device);
-  }, [device]);
+    const editor = editorRef.current;
+
+    if (device === 'desktop' && desktopWidth > 0) {
+      // ★ 动态设备:宽度=预览等效宽(容器+面板),断点行为与预览 iframe 一致。
+      // setZoom 参数是百分数(0.23.4 源码 setZoom(100*ratio));传小数会被
+      // onZoomChange 的 zoom<1→1 下限钳到 1%(scale 0.01)。
+      editor.Devices.add({ id: 'desktop-wide', name: 'desktop-wide', width: `${desktopWidth}px` });
+      editor.setDevice('desktop-wide');
+      requestAnimationFrame(() => {
+        if (!editorRef.current) return;
+        const viewEl = editor.Canvas.getCanvasView().el;
+        const ratio = viewEl.clientWidth / desktopWidth;
+        // ratio≈1 时传 0(0=100% 不缩放)
+        editor.Canvas.setZoom(ratio >= 0.999 ? 0 : Math.round(ratio * 100));
+      });
+    } else {
+      editor.setDevice(device);
+      editor.Canvas.setZoom(0);
+    }
+  }, [device, desktopWidth]);
+
+  // ── 测量容器宽度 → 桌面画布锁定宽（容器+面板 = 预览等效宽）──
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => setDesktopWidth(el.clientWidth + SIDE_PANEL_WIDTH);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const togglePreviewMode = useCallback(() => {
     setPreviewMode((prev) => {

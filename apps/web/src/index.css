@@ -186,8 +186,12 @@ mark {
   height: auto !important;
   width: 100% !important;
 }
+/* 桌面画布锁定预览等效宽:wrapper 宽度由 device 内联样式控制,
+   高度仍强制 100%(否则塌陷);内层元素填满 wrapper */
+.gjs-frame-wrapper {
+  height: 100% !important;
+}
 .gjs-frames,
-.gjs-frame-wrapper,
 .gjs-frame,
 .gjs-cv-canvas__frames {
   width: 100% !important;

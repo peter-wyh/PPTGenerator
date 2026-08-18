@@ -315,6 +315,7 @@ export function HtmlStudio() {
       const abortCtrl = new AbortController();
       abortRef.current = abortCtrl;
       let streamingHtml = '';
+      let streamingReasoning = ''; // 首次生成的思考过程，完成后存入会话首条消息
 
       try {
         await htmlTemplatesApi.generateStream(
@@ -327,6 +328,7 @@ export function HtmlStudio() {
           (chunk) => {
             if (chunk.type === 'reasoning') {
               setIsThinking(true);
+              streamingReasoning += chunk.text;
               setReasoning((prev) => prev + chunk.text);
             } else if (chunk.type === 'content') {
               setIsThinking(false);
@@ -361,6 +363,7 @@ export function HtmlStudio() {
               ? '⚠️ 报告已生成（部分内容被截断）。建议简化需求或重试。你也可以用自然语言继续编辑。'
               : '✨ 报告已生成并自动保存！你可以用自然语言修改，比如：「把标题改成 XXX」「KPI 卡片用品牌色渐变」',
             action: 'generate',
+            reasoning: streamingReasoning || undefined,
             ts: new Date().toISOString(),
           };
           setAgentHistory([genMsg]);
@@ -368,7 +371,7 @@ export function HtmlStudio() {
           // 自动保存
           if (id) {
             try {
-              await htmlTemplatesApi.autoSave(id, streamingHtml, undefined, {
+              await htmlTemplatesApi.autoSave(id, streamingHtml, [genMsg], {
                 prompt: vals.prompt,
                 designMd: vals.designMd,
               });
