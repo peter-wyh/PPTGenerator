@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-18 — 修复:html-report 模板新建报告被归入 PPT 类型 + ADMIN 复制他人报告 404
+
+两个用户可直接感知的 bug,根因都在服务端 projects 模块:
+
+- **从模板新建类型错乱**(`apps/server/src/modules/projects/projects.service.ts`):`renderType: "html-report"` 的历史模板 meta 无 `styleType`——`createFromTemplate` 原样拷贝导致新报告 `styleType` 为空,前端列表按 `styleType ?? 'ppt'` 归入 PPT tab、路由进可视化编辑器而非 HTML 工作台。修复:构建 meta 时 `renderType==='html-report'` 且缺 `styleType` 则补 `'ai-html'`(显式 `ppt` 不覆盖)。
+- **ADMIN 复制报告失败**(`projects.service.ts`):19395f1 给超管加全局视角(列表可见全部项目),但 `duplicate` 仍只认 `ownerId === owner`——ADMIN 复制他人报告 404 → 前端「复制失败,请重试」。修复:对齐 `getOwnedOrThrow`/`getHtml` 已有的 admin 豁免,副本归属 ADMIN 自己。
+
+**验证**:server 全量 334/334(新增 4 用例:admin 复制放行/普通用户 404/styleType 补全/显式 ppt 不覆盖)、server+web tsc 0 错、dev server 实测 ADMIN 复制他人报告 201、从 dm 模板新建 `styleType: ai-html`。
+
 ## 2026-08-16 — 安全加固与可靠性优化(P0×3 + P1×4)+ AI 生成状态自愈
 
 对服务整体做一轮安全与可靠性专项：堵住弱密钥、无限流、公开提示词三类 P0 风险，补 AI 重试、导出并发、成本审计与首屏体积四项 P1，并顺手修掉两个用户可直接感知的前端顽疾。

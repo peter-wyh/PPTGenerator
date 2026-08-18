@@ -130,6 +130,28 @@ describe('projects.service · duplicate 自动找号', () => {
       (prismaMock.project.create.mock.calls[0][0] as { data: { name: string } }).data.name,
     ).toBe('我的报告 副本 2');
   });
+
+  it('ADMIN 复制他人报告 → 放行(对齐 list/get 的 admin 全局视角),副本归属 ADMIN', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(makeProject({ ownerId: 'u_dm' }));
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'ADMIN' });
+    prismaMock.project.findFirst.mockResolvedValueOnce(null);
+    prismaMock.project.create.mockImplementation(({ data }) =>
+      Promise.resolve(makeProject({ name: (data as { name: string }).name })),
+    );
+    await projectsService.duplicate('u_admin', 'prj_1');
+    const createData = (prismaMock.project.create.mock.calls[0][0] as { data: Record<string, unknown> }).data;
+    expect(createData.name).toBe('我的报告 副本');
+    expect(createData.owner).toEqual({ connect: { id: 'u_admin' } });
+  });
+
+  it('普通用户复制他人报告 → 404(不泄露存在性)', async () => {
+    prismaMock.project.findUnique.mockResolvedValue(makeProject({ ownerId: 'u_dm' }));
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'USER' });
+    await expect(projectsService.duplicate('u_ap', 'prj_1')).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    expect(prismaMock.project.create).not.toHaveBeenCalled();
+  });
 });
 
 describe('projects.service · getHtml', () => {
@@ -272,5 +294,43 @@ describe('projects.service · createFromTemplate reportPeriod 覆盖', () => {
 
     const createData = (prismaMock.project.create.mock.calls[0][0] as any).data;
     expect(createData.meta.reportPeriod).toEqual({ startDate: '2026-07-01', endDate: '2026-07-31' });
+  });
+
+  it('renderType=html-report 且模板缺 styleType → 补 ai-html(否则新报告被前端归入 PPT 类型)', async () => {
+    prismaMock.template.findUnique.mockResolvedValue({
+      id: 'tpl1', name: 'dm 模板', status: 'PUBLISHED', width: 1242, height: 1656,
+      pages: [] as any, htmlContent: '<html>report</html>',
+      // 历史数据形状：只有 renderType，没有 styleType
+      meta: { scenario: 'campaign-report', renderType: 'html-report', businessLine: 'DM', templateType: 'weekly' },
+    });
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'prj_new', ownerId: 'u1', createdAt: new Date(), updatedAt: new Date(), ...(data as object) }),
+    );
+
+    await projectsService.createFromTemplate('u1', 'tpl1');
+
+    const createData = (prismaMock.project.create.mock.calls[0][0] as any).data;
+    expect(createData.meta.styleType).toBe('ai-html');
+    expect(createData.meta.renderType).toBe('html-report');
+    // htmlContent 一并拷贝
+    expect(createData.htmlContent).toBe('<html>report</html>');
+  });
+
+  it('styleType=ppt 模板 → 不补 ai-html(即使 renderType=html-report 也不覆盖显式 styleType)', async () => {
+    prismaMock.template.findUnique.mockResolvedValue({
+      id: 'tpl1', name: 'PPT 模板', status: 'PUBLISHED', width: 1280, height: 720,
+      pages: [] as any,
+      meta: { styleType: 'ppt', renderType: 'html-report' },
+    });
+    prismaMock.project.findFirst.mockResolvedValue(null);
+    prismaMock.project.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'prj_new', ownerId: 'u1', createdAt: new Date(), updatedAt: new Date(), ...(data as object) }),
+    );
+
+    await projectsService.createFromTemplate('u1', 'tpl1');
+
+    const createData = (prismaMock.project.create.mock.calls[0][0] as any).data;
+    expect(createData.meta.styleType).toBe('ppt');
   });
 });

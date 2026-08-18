@@ -363,6 +363,12 @@ export const projectsService = {
       void _omit;
       meta = rest;
     }
+    // HTML 报告模板(meta.renderType==='html-report')的历史数据无 styleType——
+    // 不补的话新报告 meta.styleType 为空,前端列表按 styleType??'ppt' 归入 PPT tab、
+    // 路由进可视化编辑器而非 HTML 工作台。这里归一为 'ai-html'(列表/路由/HtmlStudio 全靠它分流)。
+    if ((tpl.meta as Record<string, unknown> | null)?.renderType === 'html-report' && !meta?.styleType) {
+      meta = { ...(meta ?? {}), styleType: 'ai-html' };
+    }
     if (reportPeriod) meta = { ...(meta ?? {}), reportPeriod };
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
@@ -385,7 +391,9 @@ export const projectsService = {
   ): Promise<ProjectDetail> {
     // 直接查 Prisma 获取完整原始记录（toDetail 会剥离 htmlContent 等字段）
     const src = await prisma.project.findUnique({ where: { id } });
-    if (!src || src.ownerId !== ownerId) {
+    // ADMIN 可复制任意报告(对齐 getOwnedOrThrow/getHtml 的 admin 豁免):
+    // 列表对 ADMIN 展示全部项目,若无豁免,超管复制他人报告会 404 → 前端「复制失败」。
+    if (!src || (src.ownerId !== ownerId && !await isAdminUser(ownerId))) {
       throw ApiError.notFound('Project not found');
     }
     // 生成唯一副本名:「X 副本」、「X 副本 2」…(对齐 templates.service.duplicate)
