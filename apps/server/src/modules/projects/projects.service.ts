@@ -370,6 +370,14 @@ export const projectsService = {
       meta = { ...(meta ?? {}), styleType: 'ai-html' };
     }
     if (reportPeriod) meta = { ...(meta ?? {}), reportPeriod };
+    // ★ 从模板创建若传了新周期 → HTML 内容走三级链刷新（data-field 渲染 → AI 重生成/快照 → 日期替换），
+    // 而非原样复制模板快照。与 duplicate 换周期同一实现（_refreshHtmlForPeriod）。
+    // 注意:必须传模板「原始 meta」(旧周期),replacePeriodInHtml 靠它构建替换映射。
+    let htmlContent = tpl.htmlContent;
+    if (htmlContent && reportPeriod) {
+      const tplRawMeta = (tpl.meta ?? {}) as Record<string, unknown>;
+      htmlContent = await this._refreshHtmlForPeriod(htmlContent, tplRawMeta, reportPeriod);
+    }
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
       name: projectName,
@@ -377,8 +385,8 @@ export const projectsService = {
       height: tpl.height,
       pages: JSON.parse(JSON.stringify(tpl.pages)) as unknown as Prisma.InputJsonValue,
       ...(meta ? { meta: meta as unknown as Prisma.InputJsonValue } : {}),
-      // ★ 复制 HTML 报告内容（若有）
-      ...(tpl.htmlContent ? { htmlContent: tpl.htmlContent } : {}),
+      // ★ 复制 HTML 报告内容（若有，传新周期时已按三级链刷新）
+      ...(htmlContent ? { htmlContent } : {}),
     };
     const project = await prisma.project.create({ data });
     return toDetail(project);
@@ -429,36 +437,14 @@ export const projectsService = {
     }
 
     // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
-    // 优先级：data-field 模板渲染 → AI 重新生成 → 快照值替换 → 日期替换
-    let htmlContent = src.htmlContent;
-
-    if (htmlContent && newPeriod) {
-      const srcMeta = (src.meta ?? {}) as Record<string, unknown>;
-      const campaignId = srcMeta.campaignId as string | undefined;
-      const reportPeriod: { startDate?: string; endDate?: string } = {};
-      if (newPeriod.startDate) reportPeriod.startDate = newPeriod.startDate;
-      if (newPeriod.endDate) reportPeriod.endDate = newPeriod.endDate;
-
-      if (campaignId) {
-        // 1) 最高优先：data-field 模板渲染（< 100ms，零 AI 调用）
-        const { isTemplatedHtml, renderTemplate } = await import('../html-templates/template-renderer');
-        if (isTemplatedHtml(htmlContent)) {
-          try {
-            htmlContent = await renderTemplate(htmlContent, campaignId, reportPeriod);
-            console.log('[duplicate] Template rendered (data-field) for period', JSON.stringify(reportPeriod));
-          } catch (err) {
-            console.error('[duplicate] Template render failed, falling back to AI/snapshot:', err);
-            htmlContent = await this._fallbackPeriodUpdate(htmlContent, srcMeta, campaignId, reportPeriod);
-          }
-        } else {
-          // 2) 非 data-field 模板 → AI 重新生成 or 快照替换
-          htmlContent = await this._fallbackPeriodUpdate(htmlContent, srcMeta, campaignId, reportPeriod);
-        }
-      } else {
-        // 无 campaignId → 仅日期替换
-        htmlContent = replacePeriodInHtml(htmlContent, src.meta, newPeriod);
-      }
-    }
+    // 有新周期 → 三级链刷新（data-field 渲染 → AI 重生成/快照 → 日期替换）
+    const htmlContent = newPeriod
+      ? await this._refreshHtmlForPeriod(
+          src.htmlContent,
+          (src.meta ?? {}) as Record<string, unknown>,
+          newPeriod,
+        )
+      : src.htmlContent;
 
     const data: Prisma.ProjectCreateInput = {
       owner: { connect: { id: ownerId } },
@@ -476,6 +462,45 @@ export const projectsService = {
     const project = await prisma.project.create({ data });
 
     return toDetail(project);
+  },
+
+  /**
+   * ★ 按新周期刷新 HTML 报告内容（duplicate / createFromTemplate 共用的三级链）：
+   * 1) data-field 模板渲染（< 100ms，零 AI 调用）
+   * 2) AI 重新生成 / 快照值替换（_fallbackPeriodUpdate）
+   * 3) 无 campaignId 或全失败 → 日期文字替换（replacePeriodInHtml）
+   * 无新周期时原样返回。
+   */
+  async _refreshHtmlForPeriod(
+    html: string | null,
+    srcMeta: Record<string, unknown> | null | undefined,
+    newPeriod: { startDate?: string; endDate?: string; month?: string },
+  ): Promise<string | null> {
+    if (!html) return html;
+    if (!newPeriod || !(newPeriod.month || newPeriod.startDate || newPeriod.endDate)) return html;
+    const meta = (srcMeta ?? {}) as Record<string, unknown>;
+    const campaignId = meta.campaignId as string | undefined;
+    const reportPeriod: { startDate?: string; endDate?: string } = {};
+    if (newPeriod.startDate) reportPeriod.startDate = newPeriod.startDate;
+    if (newPeriod.endDate) reportPeriod.endDate = newPeriod.endDate;
+
+    if (campaignId) {
+      // 1) 最高优先：data-field 模板渲染（< 100ms，零 AI 调用）
+      const { isTemplatedHtml, renderTemplate } = await import('../html-templates/template-renderer');
+      if (isTemplatedHtml(html)) {
+        try {
+          const out = await renderTemplate(html, campaignId, reportPeriod);
+          console.log('[refreshHtmlForPeriod] Template rendered (data-field) for period', JSON.stringify(reportPeriod));
+          return out;
+        } catch (err) {
+          console.error('[refreshHtmlForPeriod] Template render failed, falling back to AI/snapshot:', err);
+        }
+      }
+      // 2) 非 data-field 模板 → AI 重新生成 or 快照替换（内部最终兜底日期替换）
+      return this._fallbackPeriodUpdate(html, meta, campaignId, reportPeriod);
+    }
+    // 3) 无 campaignId → 仅日期文字替换
+    return replacePeriodInHtml(html, meta, newPeriod);
   },
 
   /**

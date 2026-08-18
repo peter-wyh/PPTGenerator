@@ -138,6 +138,7 @@ export const templatesService = {
       pages?: Page[];
       meta?: ProjectMeta;
       note?: string;
+      htmlContent?: string;
     },
   ): Promise<TemplateDetail> {
     // Reject duplicate template names (case-insensitive, trimmed).
@@ -157,6 +158,8 @@ export const templatesService = {
       pages: (input.pages ?? defaultTemplatePages()) as unknown as Prisma.InputJsonValue,
       ...(input.meta ? { meta: input.meta as unknown as Prisma.InputJsonValue } : {}),
       ...(input.note ? { note: input.note } : {}),
+      // AI HTML 模板内容(createTemplateSchema 接受但此前未落库 → 建出的模板丢 HTML)
+      ...(input.htmlContent ? { htmlContent: input.htmlContent } : {}),
       status: 'DRAFT',
     };
     const template = await prisma.template.create({ data });

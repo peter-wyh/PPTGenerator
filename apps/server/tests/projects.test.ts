@@ -269,4 +269,71 @@ describe('projects CRUD', () => {
     // 其它 meta 字段保留（如 businessLine）
     expect(res.body.project.meta.businessLine).toBe('FT');
   });
+
+  it('createFromTemplate 传新周期 → HTML 模板内容按三级链刷新(无 campaign 走日期替换)', async () => {
+    const admin = await setupAdmin('seed-admin5@x.com');
+    // 建 AI HTML 模板:htmlContent 带旧周期日期,meta 带旧 reportPeriod(无 campaignId → 第 3 级链)
+    const created = await request(app()).post('/api/v1/templates').set(admin.h).send({
+      name: 'AI-HTML-TPL',
+      width: 1280,
+      height: 720,
+      pages: [{ id: 'h1', name: '封面', components: [] }],
+      htmlContent: '<h1>Report 2025-07-01 ~ 2025-07-31</h1><p>2025年07月 KPI</p>',
+      meta: {
+        businessLine: 'FT',
+        scenario: 'campaign-report',
+        styleType: 'ai-html',
+        reportPeriod: { startDate: '2025-07-01', endDate: '2025-07-31' },
+      },
+    });
+    expect(created.status).toBe(201);
+    const tplId = created.body.template.id;
+    await request(app()).patch(`/api/v1/templates/${tplId}`).set(admin.h).send({ status: 'PUBLISHED' });
+
+    const { h } = await setupOwner('seed-user5@x.com');
+    // 传新周期(2025-08-01 ~ 2025-08-31)
+    const res = await request(app())
+      .post('/api/v1/projects/from-template')
+      .set(h)
+      .send({
+        templateId: tplId,
+        name: '八月报告',
+        reportPeriod: { startDate: '2025-08-01', endDate: '2025-08-31' },
+      });
+    expect(res.status).toBe(201);
+    // meta.reportPeriod 已覆盖为新周期
+    expect(res.body.project.meta.reportPeriod).toEqual({ startDate: '2025-08-01', endDate: '2025-08-31' });
+
+    // htmlContent 已按新周期刷新(getHtml 验证)
+    const htmlRes = await request(app()).get(`/api/v1/projects/${res.body.project.id}/html`).set(h);
+    expect(htmlRes.status).toBe(200);
+    expect(htmlRes.body.html).toContain('2025-08-01');
+    expect(htmlRes.body.html).toContain('2025-08-31');
+    expect(htmlRes.body.html).not.toContain('2025-07-01');
+  });
+
+  it('createFromTemplate 不传周期 → HTML 模板内容原样复制(兼容旧行为)', async () => {
+    const admin = await setupAdmin('seed-admin6@x.com');
+    const created = await request(app()).post('/api/v1/templates').set(admin.h).send({
+      name: 'AI-HTML-TPL2',
+      width: 1280,
+      height: 720,
+      pages: [{ id: 'h1', name: '封面', components: [] }],
+      htmlContent: '<h1>Report 2025-07-01 ~ 2025-07-31</h1>',
+      meta: { businessLine: 'FT', scenario: 'campaign-report', styleType: 'ai-html' },
+    });
+    const tplId = created.body.template.id;
+    await request(app()).patch(`/api/v1/templates/${tplId}`).set(admin.h).send({ status: 'PUBLISHED' });
+
+    const { h } = await setupOwner('seed-user6@x.com');
+    const res = await request(app())
+      .post('/api/v1/projects/from-template')
+      .set(h)
+      .send({ templateId: tplId, name: '七月报告' });
+    expect(res.status).toBe(201);
+    const htmlRes = await request(app()).get(`/api/v1/projects/${res.body.project.id}/html`).set(h);
+    expect(htmlRes.status).toBe(200);
+    // 未传周期 → 原样复制
+    expect(htmlRes.body.html).toContain('2025-07-01');
+  });
 });
