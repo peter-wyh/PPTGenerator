@@ -8,7 +8,6 @@ import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
 import { DuplicateProjectDialog } from '@/components/DuplicateProjectDialog';
 import { SaveAsTemplateDialog } from '@/components/SaveAsTemplateDialog';
-import { GenerateHtmlReportOverlay } from '@/editor/components/GenerateHtmlReportOverlay';
 import {
   SCENARIOS,
   SCENARIO_LABELS,
@@ -136,13 +135,6 @@ export function Projects() {
     void refresh();
   }, []);
 
-  // AI 生成 HTML：创建报告后进入生成 overlay（与数据管理入口同一流程链路）
-  const [genHtmlOverlay, setGenHtmlOverlay] = useState<{
-    projectId: string;
-    campaignId?: string;
-    campaignName?: string;
-  } | null>(null);
-
   async function handleCreate(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta; templateId?: string }) {
     setCreating(true);
     setCreateError(null);
@@ -156,13 +148,9 @@ export function Projects() {
       }
       const { project: p, seeded } = await projectsApi.create(values.name, values.width, values.height, values.meta);
       setShowCreate(false);
-      // AI 生成 HTML：进入生成 overlay（与数据管理入口同一流程链路）
+      // AI 生成 HTML：直接进入沉浸式 AI HTML 工作台（原 ⚡生成 overlay 已废弃）。
       if (values.meta.styleType === 'ai-html') {
-        setGenHtmlOverlay({
-          projectId: p.id,
-          campaignId: values.meta.campaignId,
-          campaignName: values.meta.campaignInfo?.campaignName,
-        });
+        navigate(`/projects/${p.id}/html-studio`);
         return;
       }
       navigate(`/projects/${p.id}`, { state: { seeded } });
@@ -184,7 +172,8 @@ export function Projects() {
     try {
       const p = await createProjectFromTemplate(values.templateId, values.name, values.reportPeriod);
       setShowFromTemplate(false);
-      navigate(`/projects/${p.id}`);
+      // html 模板建出的报告是 AI HTML 类型：直接进 HTML 工作台，而不是可视化编辑器。
+      navigate(p.meta?.styleType === 'ai-html' ? `/projects/${p.id}/html-studio` : `/projects/${p.id}`);
     } catch {
       setFromTplError('创建失败，模板可能已下架，请重试');
     } finally {
@@ -529,20 +518,6 @@ export function Projects() {
         onCancel={() => !editSubmitting && setEditing(null)}
         onSubmit={handleEdit}
       />
-
-      {/* AI 生成 HTML：创建后进入生成 overlay（与数据管理入口同一流程） */}
-      {genHtmlOverlay && (
-        <GenerateHtmlReportOverlay
-          projectId={genHtmlOverlay.projectId}
-          campaignId={genHtmlOverlay.campaignId}
-          campaignName={genHtmlOverlay.campaignName}
-          onClose={() => setGenHtmlOverlay(null)}
-          onSaved={(pid) => {
-            setGenHtmlOverlay(null);
-            navigate(`/projects/${pid}`);
-          }}
-        />
-      )}
 
       {/* 存为模版对话框 */}
       {saveTplFor && (

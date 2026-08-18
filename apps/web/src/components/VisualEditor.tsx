@@ -39,6 +39,8 @@ const DEVICE_WIDTHS: Record<string, string> = {
  * 画布超宽时整体缩放适配可视区（Figma 式 WYSIWYG）。
  */
 const SIDE_PANEL_WIDTH = 300;
+/** 预览 iframe 容器的 p-4 gutter（左右共 32px），画布宽度对齐时扣除。 */
+const PREVIEW_GUTTER = 32;
 
 // ── HTML 预处理工具 ──
 
@@ -668,11 +670,16 @@ export function VisualEditor({
     }
   }, [device, desktopWidth]);
 
-  // ── 测量容器宽度 → 桌面画布锁定宽（容器+面板 = 预览等效宽）──
+  // ── 测量容器宽度 → 桌面画布锁定宽 ──
+  // ★ 测根元素（flex-1 主体区）而非 containerRef（canvas 挂载点）——
+  //   containerRef 在「编辑器内部预览」时被 GrapesJS preview 命令隐藏/替换,
+  //   ResizeObserver 触发重测会把 desktopWidth 带偏。根元素布局稳定。
+  // ★ 画布宽 = 根宽 - 预览 iframe 的 p-4 gutter(2×16px) + 右侧面板 300px：
+  //   与「预览」模式等效宽度对齐，Tailwind md:/lg: 断点行为一致，WYSIWYG。
   useEffect(() => {
-    const el = containerRef.current;
+    const el = containerRef.current?.closest('.visual-editor-root') as HTMLElement | null;
     if (!el) return;
-    const measure = () => setDesktopWidth(el.clientWidth + SIDE_PANEL_WIDTH);
+    const measure = () => setDesktopWidth(Math.max(320, el.clientWidth - PREVIEW_GUTTER + SIDE_PANEL_WIDTH));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -732,7 +739,7 @@ export function VisualEditor({
   }, [selectedImg]);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-surface-subtle">
+    <div className="visual-editor-root flex h-full w-full flex-col overflow-hidden bg-surface-subtle">
       {/* ── 工具栏 ── */}
       <div className="flex h-10 shrink-0 items-center justify-between border-b border-border-default bg-surface-primary px-3">
         <div className="flex items-center gap-1.5">

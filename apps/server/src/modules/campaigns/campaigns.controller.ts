@@ -47,11 +47,13 @@ export const campaignController = {
 
   // ─── Analytics ───────────────────────────────────────────────────────────────
   getAnalytics: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ analytics: await campaignService.getAnalytics(req.params.campaignId, userId(req)) });
+    const v = req.user as AuthPayload;
+    res.json({ analytics: await campaignService.getAnalytics(req.params.campaignId, v.id, v.role === 'ADMIN') });
   }),
 
   updateAnalytics: asyncHandler(async (req: Request, res: Response) => {
-    const result = await campaignService.updateAnalytics(req.params.campaignId, userId(req), req.body.analytics ?? req.body);
+    const v = req.user as AuthPayload;
+    const result = await campaignService.updateAnalytics(req.params.campaignId, v.id, req.body.analytics ?? req.body, v.role === 'ADMIN');
     res.json({ analytics: result.analytics });
   }),
 
@@ -80,7 +82,8 @@ export const campaignController = {
 
   // ─── CampaignCreator ───────────────────────────────────────────────────────
   listLinks: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ campaignCreators: await campaignCreatorService.listByCampaign(req.params.campaignId, userId(req)) });
+    const v = req.user as AuthPayload;
+    res.json({ campaignCreators: await campaignCreatorService.listByCampaign(req.params.campaignId, v.id, v.role === 'ADMIN') });
   }),
 
   upsertLink: asyncHandler(async (req: Request, res: Response) => {
@@ -99,14 +102,16 @@ export const campaignController = {
   // ─── Performance ───────────────────────────────────────────────────────────
   getPerformance: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId, creatorId } = req.params;
-    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const v = req.user as AuthPayload;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, v.id, v.role === 'ADMIN');
     const perf = await performanceService.getByCampaignCreator(linkId);
     res.json({ performance: perf });
   }),
 
   upsertPerformance: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId, creatorId } = req.params;
-    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const v = req.user as AuthPayload;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, v.id, v.role === 'ADMIN');
     const perf = await performanceService.upsert({ campaignCreatorId: linkId, ...req.body });
     res.status(201).json({ performance: perf });
   }),
@@ -114,14 +119,16 @@ export const campaignController = {
   // ─── Collaboration ─────────────────────────────────────────────────────────
   getCollaboration: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId, creatorId } = req.params;
-    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const v = req.user as AuthPayload;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, v.id, v.role === 'ADMIN');
     const collab = await collaborationService.getByCampaignCreator(linkId);
     res.json({ collaboration: collab });
   }),
 
   upsertCollaboration: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId, creatorId } = req.params;
-    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, userId(req));
+    const v = req.user as AuthPayload;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, v.id, v.role === 'ADMIN');
     const legacyId = `collab:${campaignId}:${creatorId}`;
     const collab = await collaborationService.upsert({
       campaignCreatorId: linkId,

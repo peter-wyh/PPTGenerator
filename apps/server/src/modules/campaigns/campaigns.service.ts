@@ -57,14 +57,14 @@ export const campaignService = {
   },
   // ─── Analytics (Campaign 级分析数据) ──────────────────────────────────────
   /** 获取 Campaign 分析数据（analytics JSON）。 */
-  async getAnalytics(campaignId: string, ownerId: string) {
-    const c = await this.getOrThrow(campaignId, ownerId);
+  async getAnalytics(campaignId: string, ownerId: string, admin = false) {
+    const c = await this.getOrThrow(campaignId, ownerId, admin);
     return (c.analytics as Record<string, unknown> | null) ?? null;
   },
 
   /** 更新 Campaign 分析数据（analytics JSON 全量覆盖）。 */
-  async updateAnalytics(campaignId: string, ownerId: string, analytics: Record<string, unknown>) {
-    await this.getOrThrow(campaignId, ownerId);
+  async updateAnalytics(campaignId: string, ownerId: string, analytics: Record<string, unknown>, admin = false) {
+    await this.getOrThrow(campaignId, ownerId, admin);
     return prisma.campaign.update({
       where: { id: campaignId },
       data: { analytics: analytics as Prisma.InputJsonValue },
@@ -129,9 +129,9 @@ export const creatorService = {
 // ─── CampaignCreator ─────────────────────────────────────────────────────────
 
 export const campaignCreatorService = {
-  async listByCampaign(campaignId: string, ownerId: string) {
-    // Verify campaign belongs to user
-    await campaignService.getOrThrow(campaignId, ownerId);
+  async listByCampaign(campaignId: string, ownerId: string, admin = false) {
+    // Verify campaign belongs to user（ADMIN 豁免——列表页全局视角,与 campaignService.list 对齐）
+    await campaignService.getOrThrow(campaignId, ownerId, admin);
     return prisma.campaignCreator.findMany({
       where: { campaignId },
       include: {
@@ -198,8 +198,8 @@ export const campaignCreatorService = {
 
 export const performanceService = {
   /** 按 (campaignId, creatorId) 查找 CampaignCreator，返回其 id。 */
-  async resolveLinkId(campaignId: string, creatorId: string, ownerId: string): Promise<string> {
-    await campaignService.getOrThrow(campaignId, ownerId);
+  async resolveLinkId(campaignId: string, creatorId: string, ownerId: string, admin = false): Promise<string> {
+    await campaignService.getOrThrow(campaignId, ownerId, admin);
     const link = await prisma.campaignCreator.findUnique({
       where: { campaignId_creatorId: { campaignId, creatorId } },
     });

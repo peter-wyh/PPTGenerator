@@ -106,11 +106,36 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
           <div>
             报告类型：<span className="text-foreground-primary">{meta.scenarioSub ?? '—'}</span>
           </div>
+          {/* ★ 回显源报告关联的 Campaign（campaignId 存在时才有意义） */}
+          {meta.campaignId && (meta.campaignInfo?.campaignName || meta.campaignInfo?.startDate || meta.campaignInfo?.endDate) && (
+            <div>
+              关联 Campaign：
+              <span className="text-foreground-primary">
+                {[
+                  meta.campaignInfo?.campaignName,
+                  meta.campaignInfo?.startDate && meta.campaignInfo?.endDate
+                    ? `${meta.campaignInfo.startDate} ~ ${meta.campaignInfo.endDate}`
+                    : meta.campaignInfo?.startDate ?? meta.campaignInfo?.endDate,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </div>
+          )}
         </div>
 
         {hasPeriod && (
           <div className="mb-4 space-y-2">
             <label className="text-xs font-medium text-foreground-secondary">报告周期</label>
+            {/* ★ 回显源周期（只读），编辑行才是新周期 */}
+            {(currentPeriod.startDate || currentPeriod.endDate || currentPeriod.month) && (
+              <p className="text-[11px] text-foreground-muted">
+                源周期：
+                {currentPeriod.month
+                  ? currentPeriod.month
+                  : `${currentPeriod.startDate ?? '—'} ~ ${currentPeriod.endDate ?? '—'}`}
+              </p>
+            )}
             {isMonthly ? (
               <input
                 type="month"
