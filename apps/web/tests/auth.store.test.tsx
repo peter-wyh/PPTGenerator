@@ -72,7 +72,7 @@ describe('auth store', () => {
       accessToken: 'tok',
       expiresIn: 900,
     });
-    await useAuthStore.getState().login('dg@mediaket.local', 'x');
+    await useAuthStore.getState().login('dg@mediakit.local', 'x');
     expect(useAuthStore.getState().user?.businessLineCode).toBe('DG');
   });
 

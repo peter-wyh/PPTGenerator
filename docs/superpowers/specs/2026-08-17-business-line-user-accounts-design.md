@@ -5,7 +5,7 @@
 
 ## 背景与目标
 
-系统目前只有一个 `admin@mediaket.local`（ADMIN）账号，所有业务数据挂在 admin 名下。
+系统目前只有一个 `admin@mediakit.local`（ADMIN）账号，所有业务数据挂在 admin 名下。
 业务线（BusinessLine，6 条：FT/SM/CX/DG/KN/DM）已作为独立字典表存在，但与用户无关联。
 
 目标：**每个业务线一个用户账号**，实现业务线级数据可见性隔离：
@@ -44,8 +44,8 @@ model User {
 
 新建 `prisma/seed-users.ts` 并入 `db:seed` 主链：
 
-- 遍历库中 `BusinessLine`，按 email upsert：`{code小写}@mediaket.local`
-  （如 `dg@mediaket.local`），role `USER`，`businessLineCode: bl.code`，name 取业务线名
+- 遍历库中 `BusinessLine`，按 email upsert：`{code小写}@mediakit.local`
+  （如 `dg@mediakit.local`），role `USER`，`businessLineCode: bl.code`，name 取业务线名
 - 统一初始密码 `mediakit123`（scrypt 哈希，复用 `utils/hash.ts`）
 - 业务线被删时仅告警不删账号——User 删除会级联删除其名下 Campaign/Project 等数据，自动清理有毁数据风险；幂等可重跑
 
@@ -162,7 +162,7 @@ reportPeriod/CpsDaily 派生数据不单独隔离——它们经 campaign 关联
 - auth store：/me 返回 businessLineCode 入 store
 
 **手动验证**
-- seed 后 `dg@mediaket.local` 登录 → 只见 DG 数据；admin 登录 → 全部
+- seed 后 `dg@mediakit.local` 登录 → 只见 DG 数据；admin 登录 → 全部
 
 ## 6. 错误处理
 

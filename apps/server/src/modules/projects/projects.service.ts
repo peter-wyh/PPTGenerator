@@ -179,10 +179,16 @@ function replacePeriodInHtml(
   return result;
 }
 
+/** 查用户是否 ADMIN（供 projects.service 内部用）。 */
+async function isAdminUser(userId: string): Promise<boolean> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  return u?.role === 'ADMIN';
+}
+
 export const projectsService = {
-  async list(ownerId: string): Promise<ProjectSummary[]> {
+  async list(ownerId: string, admin = false): Promise<ProjectSummary[]> {
     const projects = await prisma.project.findMany({
-      where: { ownerId },
+      where: admin ? {} : { ownerId },
       orderBy: { updatedAt: 'desc' },
     });
     return projects.map(toSummary);
@@ -256,16 +262,16 @@ export const projectsService = {
     return { detail: toDetail(project), seeded };
   },
 
-  /** 取得 owner 自己的项目，否则 404（不泄露存在性）。 */
+  /** 取得 owner 自己的项目，ADMIN 可查看任意项目。否则 404（不泄露存在性）。 */
   async getOwnedOrThrow(ownerId: string, id: string): Promise<ProjectDetail> {
     const project = await prisma.project.findUnique({ where: { id } });
-    if (!project || project.ownerId !== ownerId) {
+    if (!project || (project.ownerId !== ownerId && !await isAdminUser(ownerId))) {
       throw ApiError.notFound('Project not found');
     }
     return toDetail(project);
   },
 
-  /** 属主读取某报告的 HTML 源码(仅供列表预览/下载/复制)。 */
+  /** 属主读取某报告的 HTML 源码(仅供列表预览/下载/复制)。ADMIN 可读取任意。 */
   async getHtml(
     ownerId: string,
     id: string,
@@ -274,7 +280,7 @@ export const projectsService = {
       where: { id },
       select: { id: true, name: true, ownerId: true, htmlContent: true, updatedAt: true },
     });
-    if (!project || project.ownerId !== ownerId) {
+    if (!project || (project.ownerId !== ownerId && !await isAdminUser(ownerId))) {
       throw ApiError.notFound('Project not found');
     }
     return {

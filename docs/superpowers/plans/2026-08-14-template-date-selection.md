@@ -573,7 +573,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ```tsx
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import type { Campaign, TemplateSummary } from '@mediaket/shared';
+import type { Campaign, TemplateSummary } from '@mediakit/shared';
 
 const aiHtmlTpl = {
   id: 't1',

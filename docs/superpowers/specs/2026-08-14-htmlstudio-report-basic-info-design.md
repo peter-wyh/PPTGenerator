@@ -98,7 +98,7 @@ const handleEditBasicInfo = async (values: {
 |---|---|
 | `apps/web/src/routes/HtmlStudio.tsx` | 新增 `showEdit` state、`handleEditBasicInfo`、表头 chip 组 + `✏️ 编辑` 按钮、`<CreateProjectDialog>` 渲染;新增 `formatReportPeriod` 与 `CreateProjectDialog` 的 import。约 +35 行。 |
 
-**import 路径(实现注意)**:`formatReportPeriod` 从正确包名 `@mediakit/shared` 导入(见 `EditorTopbar.tsx` 现有用法)。`HtmlStudio.tsx:22` 现有 `import type { ProjectDetail, ProjectMeta } from '@mediaket/shared'` 是已知 typo 包名(缺 `i`,本地 dirty node_modules 能解析、clean install 会断)。借此改动顺手把第 22 行合并进正确的 `@mediakit/shared` 导入(与 `formatReportPeriod` 同一行),消除一处 typo 债务,无需单独改动。
+**import 路径(实现注意)**:`formatReportPeriod` 从正确包名 `@mediakit/shared` 导入(见 `EditorTopbar.tsx` 现有用法)。`HtmlStudio.tsx:22` 现有 `import type { ProjectDetail, ProjectMeta } from '@mediakit/shared'` 是已知 typo 包名(缺 `i`,本地 dirty node_modules 能解析、clean install 会断)。借此改动顺手把第 22 行合并进正确的 `@mediakit/shared` 导入(与 `formatReportPeriod` 同一行),消除一处 typo 债务,无需单独改动。
 
 **零后端改动**:`PATCH /projects/:id` 与 `updateProjectSchema`(`projects.schema.ts:513-521`)已支持 `{ name?, width?, height?, meta? }`。
 

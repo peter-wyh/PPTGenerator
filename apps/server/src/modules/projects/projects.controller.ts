@@ -10,7 +10,8 @@ function owner(req: Request): string {
 
 export const projectsController = {
   list: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ projects: await projectsService.list(owner(req)) });
+    const v = req.user as AuthPayload;
+    res.json({ projects: await projectsService.list(owner(req), v.role === 'ADMIN') });
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {

@@ -315,7 +315,7 @@ describe('creator-stats-strip registry', () => {
 
 - [ ] **Step 2: 运行测试，确认失败**
 
-Run: `pnpm --filter @mediaket/web exec vitest run apps/web/tests/registry.test.ts`（注意拼写：`@mediakit/web`）
+Run: `pnpm --filter @mediakit/web exec vitest run apps/web/tests/registry.test.ts`（注意拼写：`@mediakit/web`）
 Expected: FAIL（propertySchema 仍含 `{ key: 'stats', kind: 'list' }`）。
 
 - [ ] **Step 3: 实现 — 清空 propertySchema**

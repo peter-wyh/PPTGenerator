@@ -10,6 +10,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     delete: vi.fn(),
   },
+  user: { findUnique: vi.fn() },
   template: { findUnique: vi.fn() },
 }));
 
@@ -67,6 +68,7 @@ describe('projects.service · create 全局重名校验', () => {
 describe('projects.service · update 改名校验', () => {
   it('非归属者 → 404,不查重名/不更新', async () => {
     prismaMock.project.findUnique.mockResolvedValue(makeProject({ ownerId: 'u_other' }));
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'USER' });
     await expect(
       projectsService.update('u_ap', 'prj_1', { name: '新名' }),
     ).rejects.toMatchObject({ statusCode: 404 });
@@ -151,6 +153,7 @@ describe('projects.service · getHtml', () => {
 
   it('非属主 → 404(不泄露存在性)', async () => {
     prismaMock.project.findUnique.mockResolvedValue(makeProject({ ownerId: 'u_other' }));
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'USER' });
     await expect(projectsService.getHtml('u_ap', 'prj_1')).rejects.toMatchObject({
       statusCode: 404,
     });

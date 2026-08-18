@@ -1,6 +1,6 @@
 /**
  * 业务线账号 seed：
- * 1. 按库中 BusinessLine 为每条业务线 upsert 一个 USER 账号（{code小写}@mediaket.local / mediaket123）。
+ * 1. 按库中 BusinessLine 为每条业务线 upsert 一个 USER 账号（{code小写}@mediakit.local / mediakit123）。
  * 2. 把 ADMIN 名下的存量业务数据按 businessLine 字段划归到对应业务线账号（ownerId 机制）。
  *
  * 幂等：可重复执行。划归只动「当前归 ADMIN 所有」的行，不会抢业务线账号新建的数据。
@@ -12,7 +12,7 @@ import { hashPassword } from '../src/utils/hash';
 
 const prisma = new PrismaClient();
 
-const PASSWORD = 'mediaket123';
+const PASSWORD = 'mediakit123';
 
 export async function seedBusinessLineUsers(): Promise<void> {
   const lines = await prisma.businessLine.findMany({ orderBy: { code: 'asc' } });
@@ -21,7 +21,7 @@ export async function seedBusinessLineUsers(): Promise<void> {
     return;
   }
   for (const bl of lines) {
-    const email = `${bl.code.toLowerCase()}@mediaket.local`;
+    const email=***;
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       await prisma.user.update({

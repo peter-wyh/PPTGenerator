@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
   // 1. admin（幂等 upsert）
-  const email = 'admin@mediaket.local';
+  const email = 'admin@mediakit.local';
   const password = 'admin123';
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
     console.log(`[seed] created admin user: ${email} / ${password}`);
   }
 
-  // 2. 业务线账号（{code小写}@mediaket.local / mediaket123）+ 存量划归
+  // 2. 业务线账号（{code小写}@mediakit.local / mediakit123）+ 存量划归
   await seedBusinessLineUsers();
   await reassignOwnersToBusinessLines();
 }

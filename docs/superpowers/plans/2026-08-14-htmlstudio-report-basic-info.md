@@ -27,7 +27,7 @@
 - `projectsApi.update(id, patch)`(`apps/web/src/api/projects.ts:15-18`):返回更新后的 `ProjectDetail`(已 `.then(r => r.data.project)`)。patch 形状 `{ name?; width?; height?; meta? }` 与对话框 `onSubmit` 的 values **直接兼容**。
 - `formatReportPeriod(rp: ReportPeriod, scenarioSub?: string): string`(`packages/shared/src/theme/utils.ts:268`):`{ month: '2026-08' }` → `"2026年8月"`;`{ startDate, endDate }` → `"2026-08-01 ~ 2026-08-31"`;无值 → `''`。
 - 标签 pill 样式参考 `EditorTopbar.tsx:111-118`:`hidden rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary md:inline`。
-- `HtmlStudio.tsx:138-141` 已用 `project?.meta?.campaignId` / `project?.meta?.reportPeriod` 派生状态(在所有 early-return 之前,project 可能为 null → 用可选链)。`HtmlStudio.tsx:22` 现有 `import type { ProjectDetail, ProjectMeta } from '@mediaket/shared'` 是 typo 包名(缺 `i`),本计划顺手合并修正为 `@mediakit/shared`。
+- `HtmlStudio.tsx:138-141` 已用 `project?.meta?.campaignId` / `project?.meta?.reportPeriod` 派生状态(在所有 early-return 之前,project 可能为 null → 用可选链)。`HtmlStudio.tsx:22` 现有 `import type { ProjectDetail, ProjectMeta } from '@mediakit/shared'` 是 typo 包名(缺 `i`),本计划顺手合并修正为 `@mediakit/shared`。
 
 ### 命令约定(已验证可运行)
 
@@ -140,13 +140,13 @@ Modify `apps/web/src/routes/HtmlStudio.tsx:22`:
 
 旧:
 ```ts
-import type { ProjectDetail, ProjectMeta } from '@mediaket/shared';
+import type { ProjectDetail, ProjectMeta } from '@mediakit/shared';
 ```
 新:
 ```ts
 import { type ProjectDetail, type ProjectMeta, formatReportPeriod } from '@mediakit/shared';
 ```
-> 顺带把 typo 包名 `@mediaket/shared` 修正为正确包名 `@mediakit/shared`;`type` 内联修饰保留类型只导入语义,同时新增值导入 `formatReportPeriod`。
+> 顺带把 typo 包名 `@mediakit/shared` 修正为正确包名 `@mediakit/shared`;`type` 内联修饰保留类型只导入语义,同时新增值导入 `formatReportPeriod`。
 
 - [ ] **Step 4: 派生 basicInfoTags**
 

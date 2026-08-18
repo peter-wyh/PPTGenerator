@@ -10,7 +10,7 @@ recipe 报告的**渲染管线已就绪并已落在 main**：`recipe/campaign-re
 
 但「切到 recipe 模式」实测做不到——四个缺口（见 §3）。`worktree-report-recipe`(456292e) 只做了渲染管线，已被 main 超越，且**它也没有「创建 recipe 版本」的落库代码**，合并无收益。
 
-同时本机 `mediaket@%` MySQL 用户当前用 `sha256_password` 插件，prisma 5.22 新连接报 `Unknown authentication plugin 'sha256_password'`，server 只靠启动时的旧连接池撑着——**一旦重启就断**，是本次后端部署的硬前提。
+同时本机 `mediakit@%` MySQL 用户当前用 `sha256_password` 插件，prisma 5.22 新连接报 `Unknown authentication plugin 'sha256_password'`，server 只靠启动时的旧连接池撑着——**一旦重启就断**，是本次后端部署的硬前提。
 
 ## 2. 目标
 
@@ -34,7 +34,7 @@ recipe 报告的**渲染管线已就绪并已落在 main**：`recipe/campaign-re
 |---|---|---|
 | **G1 进不去 recipe** | 全代码无任何路径写 `HtmlVersion.recipeId`（`saveHtmlVersion` 不带 recipeId；`saveRecipeConfig` 要求版本已有 recipeId → 先有鸡先有蛋）；前端 recipe 生成走 `autoSave(htmlContent)`，永不产生 recipe 版本 | 后端新增 `createRecipeVersion` + 路由；前端 recipe 生成改调它（见 §5、§6） |
 | **G2 改时间段不落库** | DataPanel「重新生成」调 `/generate {mode:'recipe'}`，但该端点只回 `{html}`、不回 `reportContent`，故重算结果仅刷预览、无法 `saveRecipeConfig` 固化 | 后端新增 `recomputeRecipe(versionId, reportPeriod)`：重跑 `mapCampaign` 并覆盖 `reportContent`+`html`+`meta.reportPeriod`；DataPanel 改调它（见 §5、§6） |
-| **G3 DB auth** | `mediaket@%` = `sha256_password`，新连接全挂，重启即断 | `ALTER USER 'mediaket'@'%' IDENTIFIED WITH caching_sha2_password BY 'mediaket_pw'; FLUSH PRIVILEGES;`（需先修 docker CLI 脱节才能 exec） |
+| **G3 DB auth** | `mediakit@%` = `sha256_password`，新连接全挂，重启即断 | `ALTER USER 'mediakit'@'%' IDENTIFIED WITH caching_sha2_password BY 'mediakit_pw'; FLUSH PRIVILEGES;`（需先修 docker CLI 脱节才能 exec） |
 | **G4 test 报告** | 仍是 AI 静态快照（已用 recipe 渲染的 htmlContent 临时顶上） | 部署后对 `cmso5ho...` 跑一次 `createRecipeVersion`（一次性脚本/直接调路由） |
 
 ## 5. 后端接口契约
@@ -75,8 +75,8 @@ recipe 报告的**渲染管线已就绪并已落在 main**：`recipe/campaign-re
 ## 7. DB 鉴权修复（G3，最先做）
 
 执行顺序受它制约：不修则后端改动**部署即断**。
-1. 用户侧先修 docker CLI 脱节：`docker context use default`（或重启 Docker Desktop），直到 `docker ps` 能稳定看到 `mediaket-mysql-1`。
-2. 取容器 id 后：`docker exec -e MYSQL_PWD=mediaket_root <cid> mysql -uroot -h127.0.0.1 -e "ALTER USER 'mediaket'@'%' IDENTIFIED WITH caching_sha2_password BY 'mediaket_pw'; FLUSH PRIVILEGES;"`
+1. 用户侧先修 docker CLI 脱节：`docker context use default`（或重启 Docker Desktop），直到 `docker ps` 能稳定看到 `mediakit-mysql-1`。
+2. 取容器 id 后：`docker exec -e MYSQL_PWD=mediakit_root <cid> mysql -uroot -h127.0.0.1 -e "ALTER USER 'mediakit'@'%' IDENTIFIED WITH caching_sha2_password BY 'mediakit_pw'; FLUSH PRIVILEGES;"`
 3. 验证：本地 `tsx` 起 prisma 跑一次 `count()`，不再报 `sha256_password`。
 
 ## 8. 执行顺序

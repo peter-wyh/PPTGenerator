@@ -12,11 +12,13 @@ export const campaignController = {
   // ─── Campaign ──────────────────────────────────────────────────────────────
   list: asyncHandler(async (req: Request, res: Response) => {
     const q = req.query as { businessLineId?: string; advertiserId?: string; businessLineCode?: string; status?: string };
-    res.json({ campaigns: await campaignService.list({ ownerId: userId(req), ...q }) });
+    const v = req.user as AuthPayload;
+    res.json({ campaigns: await campaignService.list({ ownerId: v.id, admin: v.role === 'ADMIN', ...q }) });
   }),
 
   get: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ campaign: await campaignService.getOrThrow(req.params.id, userId(req)) });
+    const v = req.user as AuthPayload;
+    res.json({ campaign: await campaignService.getOrThrow(req.params.id, v.id, v.role === 'ADMIN') });
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {

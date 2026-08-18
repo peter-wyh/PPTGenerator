@@ -13,8 +13,8 @@
 ## 前置(重要)
 
 - **测试 DB 容器必须在跑**:`apps/server/vitest.config.ts` 的 `globalSetup` 会连 `mysql://...@localhost:3317/mediakit_test`、`tests/setup.ts` 每个测试后用真实 prisma `TRUNCATE` + `redis.flushdb()`。即便本计划的测试全部 mock 了 prisma/global.fetch,vitest 启动仍会触发 globalSetup。先 `pnpm db:up`(起 mediakit 容器,端口 3317/6389),再跑测试。
-- **跑测试命令**(从仓库根):`pnpm --filter @mediaket/server test <相对 apps/server 的路径>`(脚本 `vitest run`,会追加路径作为 filter)。例:`pnpm --filter @mediaket/server test src/modules/html-templates/recipe/format.test.ts`。
-- **类型检查**:`pnpm --filter @mediaket/server build`(即 `tsc --noEmit`)。
+- **跑测试命令**(从仓库根):`pnpm --filter @mediakit/server test <相对 apps/server 的路径>`(脚本 `vitest run`,会追加路径作为 filter)。例:`pnpm --filter @mediakit/server test src/modules/html-templates/recipe/format.test.ts`。
+- **类型检查**:`pnpm --filter @mediakit/server build`(即 `tsc --noEmit`)。
 - **提交约定**(用户工作区常有并发 WIP):每个任务结尾**只 `git add` 本任务新增/修改的具体文件**,与 `git commit` 写在同一条命令里(参考 [[ide-resets-git-index]]、[[isolate-feature-work-in-worktree]])。
 - **源文件**:本计划中 Handlebars 模板以仓库根 `DG Campaign Report.html` 为蓝本,动态段替换为 Handlebars 语法,静态段原样保留。
 
@@ -51,14 +51,14 @@
 - [ ] **Step 1: 安装**
 
 ```bash
-pnpm --filter @mediaket/server add handlebars
-pnpm --filter @mediaket/server add -D @types/handlebars
+pnpm --filter @mediakit/server add handlebars
+pnpm --filter @mediakit/server add -D @types/handlebars
 ```
 
 - [ ] **Step 2: 验证可导入**
 
 ```bash
-node -e "console.log(require('handlebars').VERSION)" 2>/dev/null || pnpm --filter @mediaket/server exec node -e "import('handlebars').then(h=>console.log('hbs',h.default.VERSION))"
+node -e "console.log(require('handlebars').VERSION)" 2>/dev/null || pnpm --filter @mediakit/server exec node -e "import('handlebars').then(h=>console.log('hbs',h.default.VERSION))"
 ```
 
 预期:打印 handlebars 版本号(如 `4.7.8`)。
@@ -107,7 +107,7 @@ describe('format', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/format.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/format.test.ts`
 Expected: FAIL(模块不存在 / 导出缺失)。
 
 - [ ] **Step 3: 最小实现**
@@ -132,7 +132,7 @@ export function formatPct(v: number): string {
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/format.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/format.test.ts`
 Expected: PASS(4 个用例)。
 
 - [ ] **Step 5: 提交**
@@ -207,7 +207,7 @@ describe('CampaignReportContent', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/schema.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/schema.test.ts`
 Expected: FAIL(模块不存在)。
 
 - [ ] **Step 3: 实现**
@@ -264,7 +264,7 @@ export type CampaignReportContent = z.infer<typeof CampaignReportContent>;
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/schema.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/schema.test.ts`
 Expected: PASS(5 用例)。
 
 - [ ] **Step 5: 提交**
@@ -347,7 +347,7 @@ export interface Recipe {
 
 - [ ] **Step 4: 类型检查**
 
-Run: `pnpm --filter @mediaket/server build`
+Run: `pnpm --filter @mediakit/server build`
 Expected: 通过(无 TS 错;`CampaignReportContent` 导入自 schema.ts)。
 
 - [ ] **Step 5: 提交**
@@ -675,7 +675,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 **先核对 metrics 键名**:`campaign.metrics` 是 freeform Json,由前端写入。仓库代码高频键:`totalRevenue / clicks / orders / newCustomers / aov / newCustomerRate`(见 `apps/web/src` 用法)。mapper 以这些为契约,缺失按 0/"—"兜底。**实现前用一条查询确认真实数据键名**:
 
 ```bash
-pnpm --filter @mediaket/server exec node -e "import('./src/prisma').then(async ({prisma})=>{const c=await prisma.campaign.findFirst({select:{name:true,metrics:true,analytics:true}});console.log(JSON.stringify(c,null,2));process.exit(0)})"
+pnpm --filter @mediakit/server exec node -e "import('./src/prisma').then(async ({prisma})=>{const c=await prisma.campaign.findFirst({select:{name:true,metrics:true,analytics:true}});console.log(JSON.stringify(c,null,2));process.exit(0)})"
 ```
 
 > 若真实键名与下面 `M.kpis` 不同,改 `metric()` 读取键即可(mapper 只在这一处读 metrics)。
@@ -772,7 +772,7 @@ describe('mapCampaign', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/mapper.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/mapper.test.ts`
 Expected: FAIL(模块不存在)。
 
 - [ ] **Step 3: 实现**
@@ -877,7 +877,7 @@ export async function mapCampaign(campaignId: string): Promise<CampaignReportCon
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/mapper.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/mapper.test.ts`
 Expected: PASS(7 用例)。
 
 > 若 Step 0 的真实 metrics 键名与 `metric(m,'totalRevenue')` 等不一致:改 `metric()` 调用的键名,重跑测试;fixture 的 metrics 也改成真实形状。
@@ -963,7 +963,7 @@ describe('fillActionable', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/narrative.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/narrative.test.ts`
 Expected: FAIL(模块不存在)。
 
 - [ ] **Step 3: 实现**
@@ -1039,7 +1039,7 @@ export async function fillActionable(c: CampaignReportContent): Promise<Campaign
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/narrative.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/narrative.test.ts`
 Expected: PASS(5 用例)。
 
 - [ ] **Step 5: 提交**
@@ -1121,7 +1121,7 @@ describe('render', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/render.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/render.test.ts`
 Expected: FAIL(`render` 不存在)。
 
 - [ ] **Step 3: 实现**
@@ -1160,12 +1160,12 @@ export async function render(input: RenderInput): Promise<string> {
 
 - [ ] **Step 4: 跑测试,生成快照**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/recipe/campaign-report/render.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/recipe/campaign-report/render.test.ts`
 Expected: PASS;首次运行在 `__snapshots__/render.test.ts.snap` 生成快照。
 
 - [ ] **Step 5: 人工核对快照**
 
-打开快照文件,核对:DG 五子卡骨架在、KPI 五卡在、Chart.js `data:` 数组是真实数字、AI 文案卡在。若与 DG 视觉有出入,改 `template.hbs` 后 `pnpm --filter @mediaket/server test ... -- -u` 更新快照(并说明原因)。
+打开快照文件,核对:DG 五子卡骨架在、KPI 五卡在、Chart.js `data:` 数组是真实数字、AI 文案卡在。若与 DG 视觉有出入,改 `template.hbs` 后 `pnpm --filter @mediakit/server test ... -- -u` 更新快照(并说明原因)。
 
 - [ ] **Step 6: 提交**
 
@@ -1215,7 +1215,7 @@ export type { Recipe, RecipeId, RenderInput } from './types';
 
 - [ ] **Step 3: 类型检查**
 
-Run: `pnpm --filter @mediaket/server build`
+Run: `pnpm --filter @mediakit/server build`
 Expected: 通过。
 
 - [ ] **Step 4: 提交**
@@ -1286,7 +1286,7 @@ describe('generate · mode=recipe', () => {
 
 - [ ] **Step 3: 跑测试确认失败**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/html-templates.controller.recipe.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/html-templates.controller.recipe.test.ts`
 Expected: FAIL(`mode==='recipe'` 分支不存在 → 落入 else 走 AI 分支 → mock 不符)。
 
 - [ ] **Step 4: 改 controller(加分支)**
@@ -1326,7 +1326,7 @@ generate: asyncHandler(async (req: Request, res: Response) => {
 
 - [ ] **Step 5: 跑测试确认通过**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates/html-templates.controller.recipe.test.ts`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates/html-templates.controller.recipe.test.ts`
 Expected: PASS(2 用例)。
 
 - [ ] **Step 6: 提交**
@@ -1343,20 +1343,20 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 - [ ] **Step 1: 跑本特性全部测试**
 
-Run: `pnpm --filter @mediaket/server test src/modules/html-templates`
+Run: `pnpm --filter @mediakit/server test src/modules/html-templates`
 Expected: 全 PASS(含 recipe 子目录 + 现有 html-templates 测试 + 新 controller.recipe 测试)。
 
 - [ ] **Step 2: 类型检查整仓 server**
 
-Run: `pnpm --filter @mediaket/server build`
+Run: `pnpm --filter @mediakit/server build`
 Expected: 0 error。
 
 - [ ] **Step 3: 手测端点(需 dev server + DB)**
 
 ```bash
 # 拿一个真实 campaign id(从 DB)
-CID=$(pnpm --filter @mediaket/server exec node -e "import('./src/prisma').then(({prisma})=>prisma.campaign.findFirst().then(c=>{console.log(c?.id);process.exit(0)}))")
-# 起 dev server 后(另一终端 pnpm --filter @mediaket/server dev),带登录态 cookie 调:
+CID=$(pnpm --filter @mediakit/server exec node -e "import('./src/prisma').then(({prisma})=>prisma.campaign.findFirst().then(c=>{console.log(c?.id);process.exit(0)}))")
+# 起 dev server 后(另一终端 pnpm --filter @mediakit/server dev),带登录态 cookie 调:
 curl -s localhost:4000/api/v1/html-templates/generate -H 'Content-Type: application/json' -H "Cookie: $AUTH_COOKIE" -d "{\"mode\":\"recipe\",\"campaignId\":\"$CID\"}" | head -c 400
 ```
 

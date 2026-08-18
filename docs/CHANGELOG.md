@@ -200,7 +200,7 @@ Creator 引入 partnerType 维度,列表、详情、编辑、导入与 seed 全�
 - **web 镜像**(`apps/web/Dockerfile`、`apps/web/nginx.conf`):nginx:alpine 托管 Vite dist + SPA fallback,`/api/*`、`/uploads/*` 反代 server:4000。
 - **api 镜像**(`apps/server/Dockerfile`、`docker-entrypoint.sh`):node20-slim + 打包 Chromium,保持 `tsx src/index.ts` 运行;entrypoint 先 `prisma migrate deploy` 再启动;build 期按构建报错补装 unzip、拷贝 tsconfig.base.json。
 - **编排与 CI**(`docker-compose.prod.yml`、`.env.prod.example`、`.gitlab-ci.yml`、`.dockerignore`):compose 只起 web+server;`.gitignore` 掉 `.env.prod` 防密钥入库;CI 构建并推送 web+server 镜像到 GitLab Container Registry。
-- **构建堵点修复**:27 处 `@mediaket/shared` 拼写修正为 `@mediakit/shared`(本地脏 node_modules 掩盖、clean install 即 TS2307);corepack 签名过期改构建前升级 corepack@latest;CI Chromium 下载超时改为 build 期跳过 + runtime 用 apt 系统源安装;移除 runtime 孤儿 HTTPS_PROXY(指向不可达私网 IP 致 migrate 崩)并让 entrypoint 直调 `./node_modules/.bin/` 绕开 npx 网络层。
+- **构建堵点修复**:27 处 `@mediakit/shared` 拼写修正为 `@mediakit/shared`(本地脏 node_modules 掩盖、clean install 即 TS2307);corepack 签名过期改构建前升级 corepack@latest;CI Chromium 下载超时改为 build 期跳过 + runtime 用 apt 系统源安装;移除 runtime 孤儿 HTTPS_PROXY(指向不可达私网 IP 致 migrate 崩)并让 entrypoint 直调 `./node_modules/.bin/` 绕开 npx 网络层。
 - **Redis 指定 DB**(`apps/server/src/config.ts`、`redis.ts`):新增 `REDIS_DB` 环境变量(默认 0),多实例共享 Redis 时按库隔离。
 
 ## 2026-07-27 — 编辑器两批次改进:19 项快速优化 + 架构级能力
@@ -309,7 +309,7 @@ obsidian todo 驱动的两批改进:batch-1 覆盖类型/预设/组件/UI/流程
 - **store 拆分**(`editor/store-types.ts` + `store-helpers.ts`):store.ts 1279→989 行,re-export 保持兼容。
 - **保存竞态**(`editor/useAutosave.ts` + store):dirty 标志不可靠,改 `dirtyTick` 递增计数器。
 - **画布**(`editor/components/CanvasComponent.tsx`):React.memo + 自定义比较器,拖拽跳过无关组件重渲染。
-- **稳定性**:修复 27 处 `@mediaket`→`@mediakit` 拼写(本地脏 node_modules 掩盖)、`loadProject` HMR 重挂载覆盖编辑、标题块字号缺省回显全局值(而非 0)、22 个测试失败修复、删除 2514 行死代码 PropertyPanel。
+- **稳定性**:修复 27 处 `@mediakit`→`@mediakit` 拼写(本地脏 node_modules 掩盖)、`loadProject` HMR 重挂载覆盖编辑、标题块字号缺省回显全局值(而非 0)、22 个测试失败修复、删除 2514 行死代码 PropertyPanel。
 
 ## 2026-07-15 — 报告组件 ← 达人合作绑定 + 达人数据补全
 

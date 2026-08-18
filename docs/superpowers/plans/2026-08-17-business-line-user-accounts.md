@@ -309,7 +309,7 @@ function toPublicUser(u: User) {
 Run: `pnpm --filter @mediakit/server exec tsc --noEmit`
 Expected: 无输出
 
-Run: `pnpm --filter @mediaket/server exec vitest run`
+Run: `pnpm --filter @mediakit/server exec vitest run`
 Expected: 全绿（既有测试不受影响；若有测试构造 AuthPayload 缺字段报 TS 错，按报错位置补 `businessLineCode: null`）
 
 - [ ] **Step 6: Commit**
@@ -334,7 +334,7 @@ git commit -m "feat(auth): req.user/登录响应/users API 透传 businessLineCo
 ```typescript
 /**
  * 业务线账号 seed：
- * 1. 按库中 BusinessLine 为每条业务线 upsert 一个 USER 账号（{code小写}@mediaket.local / mediakit123）。
+ * 1. 按库中 BusinessLine 为每条业务线 upsert 一个 USER 账号（{code小写}@mediakit.local / mediakit123）。
  * 2. 把 ADMIN 名下的存量业务数据按 businessLine 字段划归到对应业务线账号（ownerId 机制）。
  *
  * 幂等：可重复执行。划归只动「当前归 ADMIN 所有」的行，不会抢业务线账号新建的数据。
@@ -355,7 +355,7 @@ export async function seedBusinessLineUsers(): Promise<void> {
     return;
   }
   for (const bl of lines) {
-    const email = `${bl.code.toLowerCase()}@mediaket.local`;
+    const email = `${bl.code.toLowerCase()}@mediakit.local`;
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       await prisma.user.update({
@@ -450,7 +450,7 @@ async function main(): Promise<void> {
     console.log(`[seed] created admin user: ${email} / ${password}`);
   }
 
-  // 2. 业务线账号（{code小写}@mediaket.local / mediakit123）+ 存量划归
+  // 2. 业务线账号（{code小写}@mediakit.local / mediakit123）+ 存量划归
   await seedBusinessLineUsers();
   await reassignOwnersToBusinessLines();
 }
@@ -551,7 +551,7 @@ describe('dataService · get（业务线隔离）', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/data/data.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/data/data.service.test.ts`
 Expected: FAIL（list 只收 1 参 / get 不存在）
 
 - [ ] **Step 3: 实现 service**
@@ -719,7 +719,7 @@ function viewer(req: Request): AuthPayload {
 Run: `pnpm --filter @mediakit/server exec vitest run src/modules/data`
 Expected: 全部通过（含 data.routes.test.ts 的 401 用例）
 
-Run: `pnpm --filter @mediaket/server exec tsc --noEmit`
+Run: `pnpm --filter @mediakit/server exec tsc --noEmit`
 Expected: 无输出
 
 - [ ] **Step 6: Commit**
@@ -976,7 +976,7 @@ router.use(authenticate);
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/lookup`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/lookup`
 Expected: 3 passed
 
 - [ ] **Step 5: Commit**
@@ -1126,7 +1126,7 @@ campaign 下拉 onChange（L595 附近）锁定时禁止覆盖：
       accessToken: 'tok',
       expiresIn: 900,
     });
-    await useAuthStore.getState().login('dg@mediaket.local', 'x');
+    await useAuthStore.getState().login('dg@mediakit.local', 'x');
     expect(useAuthStore.getState().user?.businessLineCode).toBe('DG');
   });
 ```
@@ -1157,7 +1157,7 @@ git commit -m "feat(web): 业务线账号锁定新建弹窗业务线 + 顶栏业
 
 - [ ] **Step 1: 全量测试**
 
-Run: `pnpm --filter @mediaket/server exec vitest run`
+Run: `pnpm --filter @mediakit/server exec vitest run`
 Expected: 全绿（对照：改动前基线全绿）
 
 Run: `pnpm --filter @mediakit/web exec vitest run`
@@ -1168,7 +1168,7 @@ Expected: 全绿（基线 806+）
 Run: `pnpm --filter @mediakit/server exec tsc --noEmit && pnpm --filter @mediakit/web exec tsc -b --force`
 Expected: 均无输出
 
-- [ ] **Step 3: 真库执行（dev DB：mediaket 容器 mysql:3317）**
+- [ ] **Step 3: 真库执行（dev DB：mediakit 容器 mysql:3317）**
 
 ```bash
 # 容器在跑（mediakit-mysql-1 / mediakit-redis-1）；不在则 docker compose up -d
@@ -1176,7 +1176,7 @@ pnpm --filter @mediakit/server exec prisma migrate deploy   # 应用 user_busine
 pnpm --filter @mediakit/server db:seed                      # admin + 业务线账号 + 划归
 ```
 
-Expected: migrate 输出 `1 migration found ... applied`；seed 打印 6 个 `created: xx@mediaket.local / mediakit123` + `reassign: Campaign=6 DataRecord(CAMPAIGN)=6 Project=26`
+Expected: migrate 输出 `1 migration found ... applied`；seed 打印 6 个 `created: xx@mediakit.local / mediakit123` + `reassign: Campaign=6 DataRecord(CAMPAIGN)=6 Project=26`
 
 - [ ] **Step 4: DB sanity check**
 
@@ -1185,11 +1185,11 @@ docker exec mediakit-mysql-1 mysql -umediakit -pmediakit_pw -e "
 SELECT email, role, businessLineCode FROM User ORDER BY email;
 SELECT businessLineCode, ownerId, COUNT(*) FROM Campaign GROUP BY businessLineCode, ownerId;
 SELECT ownerId, COUNT(*) FROM Project GROUP BY ownerId;
-SELECT ownerId, kind, COUNT(*) FROM DataRecord GROUP BY ownerId, kind" mediaket
+SELECT ownerId, kind, COUNT(*) FROM DataRecord GROUP BY ownerId, kind" mediakit
 ```
 
 Expected:
-- User：admin(ADMIN, NULL) + 6 个 `{code小写}@mediaket.local`(USER, 各 code) + db/cascade(USER, NULL)
+- User：admin(ADMIN, NULL) + 6 个 `{code小写}@mediakit.local`(USER, 各 code) + db/cascade(USER, NULL)
 - Campaign：6 行各归对应业务线账号（ownerId 不再是 admin）
 - Project：admin 只剩 1 条（meta.businessLine NULL）；其余按业务线分布（FT8/DG8/DM9/CX1 + cascade 那条不动）
 - DataRecord：CAMPAIGN 6 条归业务线账号；CREATOR 12 条仍归 admin
@@ -1201,8 +1201,8 @@ pnpm dev   # web :5173 + server :4000
 ```
 
 验证清单（注意登录限流 10 次/5 分钟，慢慢来）：
-1. `dg@mediaket.local` / `mediakit123` 登录 → 顶栏显示 `DG` 徽章 → 报告管理只见 DG 的 8 个项目 → 数据管理 Campaign 只见 DG 的 1 条 → 新建报告弹窗业务线锁定为 DG（灰）→ Creator 页仍能看到全部达人（共享读）
-2. `admin@mediaket.local` / `admin123` 登录 → 顶栏 ADMIN 徽章无业务线徽章 → 报告管理见全部（含 cascade 的 1 条 + 业务线账号新建的）→ 弹窗业务线可选
+1. `dg@mediakit.local` / `mediakit123` 登录 → 顶栏显示 `DG` 徽章 → 报告管理只见 DG 的 8 个项目 → 数据管理 Campaign 只见 DG 的 1 条 → 新建报告弹窗业务线锁定为 DG（灰）→ Creator 页仍能看到全部达人（共享读）
+2. `admin@mediakit.local` / `admin123` 登录 → 顶栏 ADMIN 徽章无业务线徽章 → 报告管理见全部（含 cascade 的 1 条 + 业务线账号新建的）→ 弹窗业务线可选
 3. 业务线账号用 curl 直接 GET `/api/v1/campaigns`（带其 token）→ 只返回本业务线 campaign
 
 - [ ] **Step 6: 更新 PROJECT.md**
@@ -1211,8 +1211,8 @@ pnpm dev   # web :5173 + server :4000
 
 ```markdown
 pnpm --filter @mediakit/server db:seed    # admin@mediakit.local / admin123
-# 同时生成业务线账号（按 BusinessLine 表）：{code小写}@mediaket.local / mediaket123
-# 如 ft@mediaket.local / sm@… / cx@… / dg@… / kn@… / dm@…（role=USER，数据按 ownerId 隔离到本业务线）
+# 同时生成业务线账号（按 BusinessLine 表）：{code小写}@mediakit.local / mediakit123
+# 如 ft@mediakit.local / sm@… / cx@… / dg@… / kn@… / dm@…（role=USER，数据按 ownerId 隔离到本业务线）
 ```
 
 - [ ] **Step 7: Commit**

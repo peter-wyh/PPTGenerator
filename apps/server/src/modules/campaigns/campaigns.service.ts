@@ -7,12 +7,13 @@ import { Prisma } from '@prisma/client';
 export const campaignService = {
   async list(opts: {
     ownerId: string;
+    admin?: boolean;
     businessLineId?: string;
     advertiserId?: string;
     businessLineCode?: string;
     status?: string;
   }) {
-    const where: Prisma.CampaignWhereInput = { ownerId: opts.ownerId };
+    const where: Prisma.CampaignWhereInput = opts.admin ? {} : { ownerId: opts.ownerId };
     if (opts.businessLineId) where.businessLineId = opts.businessLineId;
     if (opts.advertiserId) where.advertiserId = opts.advertiserId;
     if (opts.businessLineCode) where.businessLineCode = opts.businessLineCode;
@@ -28,8 +29,10 @@ export const campaignService = {
     });
   },
 
-  async getOrThrow(id: string, ownerId: string) {
-    const rec = await prisma.campaign.findFirst({ where: { id, ownerId } });
+  async getOrThrow(id: string, ownerId: string, admin = false) {
+    const where: Prisma.CampaignWhereUniqueInput = { id };
+    if (!admin) where.ownerId = ownerId;
+    const rec = await prisma.campaign.findFirst({ where });
     if (!rec) throw ApiError.notFound('Campaign not found');
     return rec;
   },

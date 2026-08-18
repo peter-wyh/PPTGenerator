@@ -175,7 +175,7 @@ describe('projects.service · duplicate 自动找号', () => {
 
 - [ ] **Step 2: 跑测试,确认失败**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/projects/projects.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/projects/projects.service.test.ts`
 Expected: FAIL(create/update 未做重名校验,duplicate 仍硬编码「X 副本」)。create 重名用例会因 `prisma.project.create` 被调用而 fail;duplicate 用例会因名字是「我的报告 副本」但没找号逻辑——实际上第一条 duplicate 用例当前实现恰好也产出「我的报告 副本」会意外通过,只有第二条(副本 2)失败。整体 describe 至少一个失败即可。
 
 - [ ] **Step 3: 实现 create 重名校验**
@@ -271,12 +271,12 @@ Expected: FAIL(create/update 未做重名校验,duplicate 仍硬编码「X 副�
 
 - [ ] **Step 6: 跑测试,确认通过**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/projects/projects.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/projects/projects.service.test.ts`
 Expected: PASS(全部用例)。
 
 - [ ] **Step 7: 回归 templates.service.test.ts(共享 prisma mock 形态,确认未碰)**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/templates/templates.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/templates/templates.service.test.ts`
 Expected: PASS(本任务未改 templates,应全绿;其中 `projects.service · createFromTemplate` describe 依赖 projects.service,确认仍通过)。
 
 - [ ] **Step 8: 提交**
@@ -345,7 +345,7 @@ describe('projects.service · getHtml', () => {
 
 - [ ] **Step 2: 跑测试,确认失败**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/projects/projects.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/projects/projects.service.test.ts`
 Expected: FAIL(`projectsService.getHtml is not a function`)。
 
 - [ ] **Step 3: service 增加 getHtml**
@@ -394,7 +394,7 @@ router.get('/:id/html', validate({ params: idParamSchema }), projectsController.
 
 - [ ] **Step 6: 跑测试,确认通过**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/projects/projects.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/projects/projects.service.test.ts`
 Expected: PASS(含新 getHtml 用例)。
 
 - [ ] **Step 7: 提交**
@@ -476,7 +476,7 @@ describe('html-templates.service · saveHtmlAsNewProject 全局重名', () => {
 
 - [ ] **Step 2: 跑测试,确认失败**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/html-templates/html-templates.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/html-templates/html-templates.service.test.ts`
 Expected: FAIL(重名用例:当前无校验,`create` 被调用 → 用例 fail)。
 
 - [ ] **Step 3: 实现重名校验**
@@ -498,7 +498,7 @@ Expected: FAIL(重名用例:当前无校验,`create` 被调用 → 用例 fail)�
 
 - [ ] **Step 4: 跑测试,确认通过**
 
-Run: `pnpm --filter @mediaket/server exec vitest run src/modules/html-templates/html-templates.service.test.ts`
+Run: `pnpm --filter @mediakit/server exec vitest run src/modules/html-templates/html-templates.service.test.ts`
 Expected: PASS。
 
 - [ ] **Step 5: 提交**
@@ -540,7 +540,7 @@ EOF
 
 - [ ] **Step 2: 跑现有测试,确认转绿**
 
-Run: `pnpm --filter @mediaket/web exec vitest run tests/projects.page.test.tsx`
+Run: `pnpm --filter @mediakit/web exec vitest run tests/projects.page.test.tsx`
 Expected: PASS(原有 6 个用例)。
 
 - [ ] **Step 3: mock 增加 getHtml**
@@ -634,7 +634,7 @@ vi.mock('@/api/projects', () => ({
 
 - [ ] **Step 5: 跑测试,确认两个新用例失败**
 
-Run: `pnpm --filter @mediaket/web exec vitest run tests/projects.page.test.tsx`
+Run: `pnpm --filter @mediakit/web exec vitest run tests/projects.page.test.tsx`
 Expected: FAIL(下拉还不存在;`handleCreate` 当前 catch 只写死「创建失败,请重试」,读不到 `error.message`)。
 
 - [ ] **Step 6: 实现 projectsApi.getHtml**
@@ -792,7 +792,7 @@ Expected: FAIL(下拉还不存在;`handleCreate` 当前 catch 只写死「创建
 
 - [ ] **Step 9: 跑测试,确认通过**
 
-Run: `pnpm --filter @mediaket/web exec vitest run tests/projects.page.test.tsx`
+Run: `pnpm --filter @mediakit/web exec vitest run tests/projects.page.test.tsx`
 Expected: PASS(原有 + 2 个新用例)。
 
 - [ ] **Step 10: 提交**
@@ -841,7 +841,7 @@ EOF
 
 - [ ] **Step 2: 类型检查**
 
-Run: `pnpm --filter @mediaket/web exec tsc -b`
+Run: `pnpm --filter @mediakit/web exec tsc -b`
 Expected: 通过(纯字符串路径调整,无类型变化)。
 
 - [ ] **Step 3: 提交**
@@ -864,20 +864,20 @@ EOF
 
 - [ ] **Step 1: server 全量测试**
 
-Run: `pnpm --filter @mediaket/server test`
+Run: `pnpm --filter @mediakit/server test`
 Expected: PASS(含新 `projects.service.test.ts`、`html-templates.service.test.ts`,且未破坏 `templates.service.test.ts`)。
 
 - [ ] **Step 2: web 全量测试**
 
-Run: `pnpm --filter @mediaket/web test`
+Run: `pnpm --filter @mediakit/web test`
 Expected: PASS(含对齐后的 `projects.page.test.tsx`)。
 
 - [ ] **Step 3: 类型检查(双端)**
 
 Run:
 ```
-pnpm --filter @mediaket/server exec tsc -b
-pnpm --filter @mediaket/web exec tsc -b
+pnpm --filter @mediakit/server exec tsc -b
+pnpm --filter @mediakit/web exec tsc -b
 ```
 Expected: 通过。
 

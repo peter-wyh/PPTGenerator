@@ -4,7 +4,7 @@
 
 **Goal:** 让 html-studio 报告成为真 recipe 版本（数据驱动、改时间段秒级重算并落库），并修掉 DB 鉴权定时炸弹。
 
-**Architecture:** 补全 main 里已有的 recipe 脚手架——新增后端 `createRecipeVersion`（建带 `recipeId` 的 active 版本）+ `recomputeRecipe`（换时间段重跑 `mapCampaign` 并落库）两条路径，前端生成入口/重算入口改调它们；先用 ops 修 `mediaket@%` 的 `sha256_password` 鉴权（否则 server 重启即断）。
+**Architecture:** 补全 main 里已有的 recipe 脚手架——新增后端 `createRecipeVersion`（建带 `recipeId` 的 active 版本）+ `recomputeRecipe`（换时间段重跑 `mapCampaign` 并落库）两条路径，前端生成入口/重算入口改调它们；先用 ops 修 `mediakit@%` 的 `sha256_password` 鉴权（否则 server 重启即断）。
 
 **Tech Stack:** Express + Prisma + Zod（server）、React + Vite + axios（web）、vitest（测试）。recipe：`mapCampaign`（mapper.ts）+ `getRecipe().render`（recipe/index.ts）。
 
@@ -32,36 +32,36 @@
 
 ---
 
-## Task 1: G3 — 修复 mediaket DB 鉴权（ops 前提，最先做）
+## Task 1: G3 — 修复 mediakit DB 鉴权（ops 前提，最先做）
 
-**Why first:** 后端代码可用 vitest mock 测，但要**重启 server 部署 / 手动验证 / G4 转换**都必须新建 DB 连接，而 `mediaket@%` 现在是 `sha256_password`，prisma 5.22 新连接全挂。
+**Why first:** 后端代码可用 vitest mock 测，但要**重启 server 部署 / 手动验证 / G4 转换**都必须新建 DB 连接，而 `mediakit@%` 现在是 `sha256_password`，prisma 5.22 新连接全挂。
 
 - [ ] **Step 1: 修 docker CLI 脱节**
 
-当前 `docker ps` 列不出 `mediaket-mysql-1`（虽 :3317 LISTEN、server 旧池活着）。先让 CLI 重新看到容器：
+当前 `docker ps` 列不出 `mediakit-mysql-1`（虽 :3317 LISTEN、server 旧池活着）。先让 CLI 重新看到容器：
 
 ```bash
 docker context use default
-docker ps --format '{{.Names}}\t{{.Status}}' | grep mediaket-mysql
+docker ps --format '{{.Names}}\t{{.Status}}' | grep mediakit-mysql
 ```
 
-Expected: 看到 `mediaket-mysql-1  Up ... (healthy)`。若仍看不到，重启 Docker Desktop 后重试。
+Expected: 看到 `mediakit-mysql-1  Up ... (healthy)`。若仍看不到，重启 Docker Desktop 后重试。
 
 - [ ] **Step 2: 取容器 id**
 
 ```bash
-CID=$(docker ps -q --filter name=mediaket-mysql)
+CID=$(docker ps -q --filter name=mediakit-mysql)
 echo "$CID"   # 应输出一串容器 id
 ```
 
 - [ ] **Step 3: 改 auth 插件为 caching_sha2_password**
 
 ```bash
-docker exec -e MYSQL_PWD=mediaket_root "$CID" mysql -uroot -h127.0.0.1 -N \
-  -e "ALTER USER 'mediaket'@'%' IDENTIFIED WITH caching_sha2_password BY 'mediaket_pw'; FLUSH PRIVILEGES; SELECT user,host,plugin FROM mysql.user WHERE user='mediaket';"
+docker exec -e MYSQL_PWD=mediakit_root "$CID" mysql -uroot -h127.0.0.1 -N \
+  -e "ALTER USER 'mediakit'@'%' IDENTIFIED WITH caching_sha2_password BY 'mediakit_pw'; FLUSH PRIVILEGES; SELECT user,host,plugin FROM mysql.user WHERE user='mediakit';"
 ```
 
-Expected: 一行 `mediaket	%	caching_sha2_password`（密码仍 `mediaket_pw`，与 `apps/server/.env` 的 `DATABASE_URL` 一致）。
+Expected: 一行 `mediakit	%	caching_sha2_password`（密码仍 `mediakit_pw`，与 `apps/server/.env` 的 `DATABASE_URL` 一致）。
 
 - [ ] **Step 4: 验证新 prisma 连接成功**
 
@@ -75,7 +75,7 @@ await prisma.$disconnect();
 ```
 运行后删除：
 ```bash
-DATABASE_URL="mysql://mediaket:mediaket_pw@localhost:3317/mediaket" \
+DATABASE_URL="mysql://mediakit:mediakit_pw@localhost:3317/mediakit" \
   apps/server/node_modules/.bin/tsx apps/server/prisma/_probe.ts
 rm apps/server/prisma/_probe.ts
 ```
