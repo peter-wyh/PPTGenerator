@@ -23,15 +23,14 @@ export function Projects() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ★ 类型菜单（左侧 3 项，替代原顶部 Tab；styleType 缺省视为 'ppt'）
-  type StyleTab = 'ppt' | 'single' | 'ai-html';
+  // ★ 类型菜单（左侧 2 项：单页面类型已废弃下线；styleType 缺省视为 'ppt'）
+  type StyleTab = 'ppt' | 'ai-html';
   const [activeTab, setActiveTab] = useState<StyleTab>('ppt');
   const TAB_LABELS: Record<StyleTab, string> = {
     ppt: 'PPT 多页',
-    single: '单页面',
     'ai-html': 'AI HTML',
   };
-  const styleOf = (p: ProjectSummary) => (p.meta?.styleType ?? 'ppt') as StyleTab;
+  const styleOf = (p: ProjectSummary) => (p.meta?.styleType === 'ai-html' ? 'ai-html' : 'ppt') as StyleTab;
 
   // 新建项目弹窗
   const [showCreate, setShowCreate] = useState(false);
@@ -219,7 +218,7 @@ export function Projects() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* 左侧类型菜单（3 种报告类型，与数据管理的左侧菜单布局对齐） */}
+      {/* 左侧类型菜单（2 种报告类型，与数据管理的左侧菜单布局对齐） */}
       <aside className="flex w-52 shrink-0 flex-col border-r border-border-default bg-surface-primary">
         <div className="px-4 py-4">
           <h1 className="font-headings text-lg font-semibold text-foreground-primary">报告管理</h1>
@@ -228,7 +227,7 @@ export function Projects() {
           </p>
         </div>
         <nav className="flex-1 overflow-auto px-2">
-          {(['ppt', 'single', 'ai-html'] as const).map((t) => {
+          {(['ppt', 'ai-html'] as const).map((t) => {
             const count = projects.filter((p) => styleOf(p) === t).length;
             const active = activeTab === t;
             return (

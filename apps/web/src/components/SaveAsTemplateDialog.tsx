@@ -28,13 +28,13 @@ const RENDER_TYPE_LABELS: Record<RenderType, string> = {
  * 优先用 styleType（权威字段），旧数据无 styleType 时回退到宽高推断。
  */
 function inferRenderType(
-  styleType: 'ppt' | 'single' | 'ai-html' | undefined,
+  styleType: 'ppt' | 'ai-html' | undefined,
   w: number,
   h: number,
 ): RenderType {
   if (styleType === 'ai-html') return 'html-report';
   if (styleType === 'ppt') return 'multi-page';
-  // styleType='single' 或无 styleType 时用宽高推断
+  // 旧数据无 styleType（或残留的 single）时用宽高推断
   if (h > w) return 'long-poster';
   const ratio = w / h;
   if (ratio >= 1.5) return 'multi-page';

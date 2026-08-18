@@ -16,25 +16,6 @@ import { useAuthStore } from '@/stores/auth';
 /** PPT 多页固定 16:9（1920×1080），不支持自定义。 */
 const PPT_SIZE = { w: 1920, h: 1080 };
 
-interface SinglePreset {
-  id: string;
-  label: string;
-  ratio: string;
-  w: number;
-  h: number;
-}
-
-/** 单页面预设尺寸（参考 Canva 逻辑），第一个为自定义。 */
-const SINGLE_PRESETS: SinglePreset[] = [
-  { id: 'custom', label: '自定义', ratio: '—', w: 0, h: 0 },
-  { id: 'xhs', label: '小红书竖图', ratio: '3:4', w: 1242, h: 1656 },
-  { id: 'ig-story', label: 'Instagram Story', ratio: '9:16', w: 1080, h: 1920 },
-  { id: 'ig-square', label: 'Instagram 正方形', ratio: '1:1', w: 1080, h: 1080 },
-  { id: 'wechat-header', label: '公众号头图', ratio: '2.35:1', w: 900, h: 383 },
-  { id: 'a4-landscape', label: '报告 A4 横版', ratio: '√2:1', w: 1754, h: 1240 },
-  { id: 'a4-portrait', label: '报告 A4 竖版', ratio: '1:√2', w: 1240, h: 1754 },
-];
-
 /** 创建人建议列表（可自由输入）。 */
 const CREATOR_SUGGESTIONS = ['alex', 'stella', 'reese', 'stacey'];
 
@@ -122,7 +103,7 @@ export function CreateProjectDialog({
   const [scenario, setScenario] = useState<Scenario | ''>('');
   const [scenarioSub, setScenarioSub] = useState<ScenarioSub>('weekly');
   const [creator, setCreator] = useState('');
-  const [styleType, setStyleType] = useState<'ppt' | 'single' | 'ai-html'>('ppt');
+  const [styleType, setStyleType] = useState<'ppt' | 'ai-html'>('ppt');
 
   // 创建模式：'blank' = 从空白创建，'template' = 从模版创建
   const [createMode, setCreateMode] = useState<'blank' | 'template'>('blank');
@@ -158,11 +139,10 @@ export function CreateProjectDialog({
   const [blOptions, setBlOptions] = useState<{ code: string; name: string }[]>([]);
   const [advOptions, setAdvOptions] = useState<{ name: string }[]>([]);
 
-  // 单页面尺寸
-  const [singlePresetId, setSinglePresetId] = useState(SINGLE_PRESETS[1].id); // 默认小红书竖图
-  const [singleW, setSingleW] = useState(SINGLE_PRESETS[1].w);
-  const [singleH, setSingleH] = useState(SINGLE_PRESETS[1].h);
-  const isSingle = styleType === 'single';
+  // 画布尺寸（single 类型已废弃，此组状态实际服务 PPT 预设选择）
+  const [singlePresetId, setSinglePresetId] = useState('16-9');
+  const [singleW, setSingleW] = useState(PPT_SIZE.w);
+  const [singleH, setSingleH] = useState(PPT_SIZE.h);
 
   // 提交尝试标记：仅在用户点过「创建」后才显示校验错误（避免边填边报错）
   const [submitted, setSubmitted] = useState(false);
@@ -207,7 +187,7 @@ export function CreateProjectDialog({
     setScenario((m?.scenario ?? '') as Scenario | '');
     setScenarioSub(m?.scenarioSub ?? 'weekly');
     setCreator(m?.creator ?? '');
-    setStyleType((m?.styleType as 'ppt' | 'single' | 'ai-html') ?? 'ppt');
+    setStyleType((m?.styleType as 'ppt' | 'ai-html') ?? 'ppt');
     // 回显业务线:业务线账号锁定优先于历史值(锁定 effect 在前,此处不能清掉锁定的值)
     setBusinessLine(lockedBusinessLine ?? m?.businessLine ?? '');
     setCampaignId(m?.campaignId ?? '');
@@ -216,19 +196,8 @@ export function CreateProjectDialog({
     // 回显已有的报告时间范围
     setReportPeriod((m?.reportPeriod as ReportPeriod | undefined) ?? {});
 
-    // 单页模式：尝试匹配已有预设，否则设为自定义
-    if ((m?.styleType as string) === 'single') {
-      const matched = SINGLE_PRESETS.find((p) => p.w === initW && p.h === initH);
-      if (matched) {
-        setSinglePresetId(matched.id);
-      } else {
-        setSinglePresetId('custom');
-      }
-      setSingleW(initW);
-      setSingleH(initH);
-    } else if ((m?.styleType as string) === 'ppt') {
-      // PPT 多页模式：保留实际尺寸用于回显（默认 1920×1080），
-      // 尝试匹配预设，否则设为自定义
+    // 旧 single 类型已废弃：回显时统一归一到 PPT 预设匹配
+    {
       const pptPresets = [
         { id: '16-9', w: 1920, h: 1080 },
         { id: '16-10', w: 1920, h: 1200 },
@@ -239,12 +208,6 @@ export function CreateProjectDialog({
       setSinglePresetId(matchedPpt?.id ?? 'custom-ppt');
       setSingleW(initW || PPT_SIZE.w);
       setSingleH(initH || PPT_SIZE.h);
-    } else if (!m) {
-      // 新建(无 initial)：PPT 多页默认 16:9(1920×1080)。
-      // 修复:singleW/H 初始为单页面预设(小红书 1242×1656),不重置会以竖图尺寸提交。
-      setSinglePresetId('16-9');
-      setSingleW(PPT_SIZE.w);
-      setSingleH(PPT_SIZE.h);
     }
   }, [open, initial]);
 
@@ -279,14 +242,6 @@ export function CreateProjectDialog({
   }, [open]);
 
   if (!open) return null;
-
-  function pickSinglePreset(p: SinglePreset) {
-    setSinglePresetId(p.id);
-    if (p.id !== 'custom') {
-      setSingleW(p.w);
-      setSingleH(p.h);
-    }
-  }
 
   // Campaign 现为可选绑定：不再要求 campaign 场景必须选择 Campaign。
   // 仅校验项目名 + 业务线必填。
@@ -325,10 +280,9 @@ export function CreateProjectDialog({
       return;
     }
 
-    // PPT 多页：使用实际值（不再强制覆写为 1920×1080）；
-    // 单页面用预设或自定义
-    const w = isSingle ? Math.max(200, Math.min(5000, Math.round(singleW))) : singleW || PPT_SIZE.w;
-    const h = isSingle ? Math.max(200, Math.min(5000, Math.round(singleH))) : singleH || PPT_SIZE.h;
+    // PPT 多页：使用实际值（不再强制覆写为 1920×1080）；single 类型已废弃
+    const w = singleW || PPT_SIZE.w;
+    const h = singleH || PPT_SIZE.h;
 
     // campaign-report 的模版类型取值与 scenarioSub 同集合;报告类型下拉双写两者。
     const reportSub: ScenarioSub | undefined =
@@ -499,13 +453,12 @@ export function CreateProjectDialog({
             autoFocus
           />
 
-          {/* 样式类型（第一步选择，决定后续流程） */}
+          {/* 样式类型（第一步选择，决定后续流程；单页面类型已废弃下线） */}
           <div>
             <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">样式类型</span>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'ppt' as const, label: 'PPT 多页', hint: '多页幻灯片报告' },
-                { id: 'single' as const, label: '单页面', hint: '单页长图 / 海报' },
                 { id: 'ai-html' as const, label: 'AI 生成 HTML', hint: '跳转 GrapesJS 编辑器' },
               ].map((s) => (
                 <button
@@ -753,86 +706,53 @@ export function CreateProjectDialog({
             </datalist>
           </div>
 
-          {/* 画布尺寸（AI HTML 类型不需要设定尺寸） */}
+          {/* 画布尺寸（AI HTML 类型不需要设定尺寸；single 已废弃） */}
           {styleType !== 'ai-html' && (
           <div>
             <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">画布尺寸</span>
 
-            {isSingle ? (
-              /* 单页面模式：预设卡片 + 自定义宽高 */
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {SINGLE_PRESETS.map((p) => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      onClick={() => pickSinglePreset(p)}
-                      className={`rounded-lg border px-3 py-2 text-left transition ${
-                        singlePresetId === p.id
-                          ? 'border-accent-primary bg-accent-primary/5 text-foreground-primary'
-                          : 'border-border-default hover:bg-surface-hover text-foreground-secondary'
-                      }`}
-                    >
-                      <div className="text-sm font-medium">{p.label}</div>
-                      {p.id !== 'custom' && (
-                        <div className="text-[11px] text-foreground-muted">{p.ratio} · {p.w}×{p.h}</div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                {singlePresetId === 'custom' && (
-                  <div className="flex items-center gap-2">
-                    <Input name="singleW" type="number" label="宽 (px)" value={singleW} onChange={(e) => setSingleW(Number(e.target.value))} />
-                    <span className="mt-5 text-foreground-muted">×</span>
-                    <Input name="singleH" type="number" label="高 (px)" value={singleH} onChange={(e) => setSingleH(Number(e.target.value))} />
-                  </div>
-                )}
-                <p className="text-[11px] text-foreground-muted">当前尺寸：{singleW} × {singleH} px</p>
+            {/* PPT 多页模式：默认 16:9 (1920×1080)，支持自定义 */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {[
+                  { id: '16-9', label: '16:9 标准', ratio: '16:9', w: 1920, h: 1080 },
+                  { id: '16-10', label: '16:10', ratio: '16:10', w: 1920, h: 1200 },
+                  { id: '4-3', label: '4:3', ratio: '4:3', w: 1440, h: 1080 },
+                  { id: 'a4-h', label: 'A4 横版', ratio: '√2:1', w: 1754, h: 1240 },
+                  { id: 'custom-ppt', label: '自定义', ratio: '—', w: 0, h: 0 },
+                ].map((p) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    onClick={() => {
+                      setSinglePresetId(p.id);
+                      if (p.id !== 'custom-ppt') {
+                        setSingleW(p.w);
+                        setSingleH(p.h);
+                      }
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-left transition ${
+                      singlePresetId === p.id
+                        ? 'border-accent-primary bg-accent-primary/5 text-foreground-primary'
+                        : 'border-border-default hover:bg-surface-hover text-foreground-secondary'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{p.label}</div>
+                    {p.id !== 'custom-ppt' && (
+                      <div className="text-[11px] text-foreground-muted">{p.ratio} · {p.w}×{p.h}</div>
+                    )}
+                  </button>
+                ))}
               </div>
-            ) : (
-              /* PPT 多页模式：默认 16:9 (1920×1080)，支持自定义 */
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {[
-                    { id: '16-9', label: '16:9 标准', ratio: '16:9', w: 1920, h: 1080 },
-                    { id: '16-10', label: '16:10', ratio: '16:10', w: 1920, h: 1200 },
-                    { id: '4-3', label: '4:3', ratio: '4:3', w: 1440, h: 1080 },
-                    { id: 'a4-h', label: 'A4 横版', ratio: '√2:1', w: 1754, h: 1240 },
-                    { id: 'custom-ppt', label: '自定义', ratio: '—', w: 0, h: 0 },
-                  ].map((p) => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      onClick={() => {
-                        setSinglePresetId(p.id);
-                        if (p.id !== 'custom-ppt') {
-                          setSingleW(p.w);
-                          setSingleH(p.h);
-                        }
-                      }}
-                      className={`rounded-lg border px-3 py-2 text-left transition ${
-                        singlePresetId === p.id
-                          ? 'border-accent-primary bg-accent-primary/5 text-foreground-primary'
-                          : 'border-border-default hover:bg-surface-hover text-foreground-secondary'
-                      }`}
-                    >
-                      <div className="text-sm font-medium">{p.label}</div>
-                      {p.id !== 'custom-ppt' && (
-                        <div className="text-[11px] text-foreground-muted">{p.ratio} · {p.w}×{p.h}</div>
-                      )}
-                    </button>
-                  ))}
+              {singlePresetId === 'custom-ppt' && (
+                <div className="flex items-center gap-2">
+                  <Input name="pptW" type="number" label="宽 (px)" value={singleW} onChange={(e) => { setSingleW(Number(e.target.value)); setSinglePresetId('custom-ppt'); }} />
+                  <span className="mt-5 text-foreground-muted">×</span>
+                  <Input name="pptH" type="number" label="高 (px)" value={singleH} onChange={(e) => { setSingleH(Number(e.target.value)); setSinglePresetId('custom-ppt'); }} />
                 </div>
-                {(singlePresetId === 'custom-ppt' || singlePresetId === 'custom') && (
-                  <div className="flex items-center gap-2">
-                    <Input name="pptW" type="number" label="宽 (px)" value={singleW} onChange={(e) => { setSingleW(Number(e.target.value)); setSinglePresetId('custom-ppt'); }} />
-                    <span className="mt-5 text-foreground-muted">×</span>
-                    <Input name="pptH" type="number" label="高 (px)" value={singleH} onChange={(e) => { setSingleH(Number(e.target.value)); setSinglePresetId('custom-ppt'); }} />
-                  </div>
-                )}
-                <p className="text-[11px] text-foreground-muted">当前尺寸：{singleW} × {singleH} px</p>
-              </div>
-            )}
+              )}
+              <p className="text-[11px] text-foreground-muted">当前尺寸：{singleW} × {singleH} px</p>
+            </div>
           </div>
           )}
 

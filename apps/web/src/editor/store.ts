@@ -302,7 +302,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         reportData: projectMeta?.reportData ?? {},
       });
 
-      // 新建单页面项目：若 meta 中携带 metaInitialTemplate，自动应用模版到第一页。
+      // metaInitialTemplate（single 类型遗留）：若携带且首页为空，自动应用模版到第一页。
       const initTpl = projectMeta?.metaInitialTemplate;
       if (initTpl && pages.length > 0 && pages[0].components.length === 0) {
         // 延迟调用以避免在 set() 过程中嵌套 set
@@ -1242,7 +1242,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
         }
         const patchCampaign = pageCategory(pageType) === 'campaign-report' || pageCategory(pageType) === 'creator-collab';
         const patchCreator = pageCategory(pageType) === 'creator-case' || pageCategory(pageType) === 'creator-collab';
-        let canvasHeightOverride: number | undefined;
         const mapped = s.pages.map((p) => {
           if (p.id !== pageId) return p;
           const next: Page = { ...p, pageType };
@@ -1260,10 +1259,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
             if (tpl) {
               const comps = tpl.components().map((c) => ({ ...clone(c), id: newId() }));
               next.components = comps;
-              // 单页超长模板：仅在单页面模式下自动调整画板高度以容纳所有组件
-              if (tpl.canvasHeight && tpl.canvasHeight > s.canvasHeight && s.projectMeta?.styleType === 'single') {
-                canvasHeightOverride = tpl.canvasHeight;
-              }
+              // 单页超长模板画板高度自适应已随 single 类型废弃移除
               // 如果模板有 pageTitleIndex，设置标题组件
               if (tpl.pageTitleIndex != null && comps[tpl.pageTitleIndex]) {
                 next.titleComponentId = comps[tpl.pageTitleIndex].id;
@@ -1282,7 +1278,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
           : mapped;
         return {
           pages: patched,
-          ...(canvasHeightOverride ? { canvasHeight: canvasHeightOverride } : {}),
         };
       });
     },
