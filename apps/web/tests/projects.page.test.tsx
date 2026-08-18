@@ -96,15 +96,15 @@ describe('Projects page', () => {
     ]);
     renderPage();
     await screen.findByText('A');
-    expect(screen.getByText('3 / 3 个报告')).toBeInTheDocument();
+    expect(screen.getByText(/3 \/ 3 个PPT 多页报告/)).toBeInTheDocument();
 
     const combos = screen.getAllByRole('combobox'); // [业务线, 场景]
     await user.selectOptions(combos[0], 'FT');
-    expect(screen.getByText('2 / 3 个报告')).toBeInTheDocument();
+    expect(screen.getByText(/2 \/ 3 个PPT 多页报告/)).toBeInTheDocument();
     expect(screen.queryByText('B')).toBeNull();
 
     await user.selectOptions(combos[1], 'media-kit');
-    expect(screen.getByText('1 / 3 个报告')).toBeInTheDocument(); // FT ∩ media-kit = C
+    expect(screen.getByText(/1 \/ 3 个PPT 多页报告/)).toBeInTheDocument(); // FT ∩ media-kit = C
     expect(screen.getByText('C')).toBeInTheDocument();
     expect(screen.queryByText('A')).toBeNull();
   });
@@ -132,7 +132,9 @@ describe('Projects page', () => {
     await screen.findByText(/FT · Fanstoshop/);
     await user.selectOptions(screen.getByRole('combobox', { name: '业务线' }), 'FT');
     // PPT 多页模式默认 16:9(1920×1080):显式选「PPT 多页」再提交
-    await user.click(screen.getByText('PPT 多页'));
+    // (左侧类型菜单也有同名文本,须在弹窗内查找)
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByText('PPT 多页'));
     await user.click(screen.getByRole('button', { name: '创建' }));
 
     await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
@@ -265,6 +267,8 @@ describe('Projects page', () => {
       summary('p1', 'AI 报告', 0, { styleType: 'ai-html', businessLine: 'FT' }),
     ]);
     renderPage();
+    // ai-html 报告在「AI HTML」菜单下(左侧类型导航,不再有 Tab)
+    await user.click(await screen.findByRole('button', { name: /AI HTML/ }));
     await screen.findByText('AI 报告');
 
     await user.click(screen.getByRole('button', { name: /HTML ▾/ }));

@@ -23,15 +23,15 @@ export function Projects() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 分类 tab
-  type StyleTab = 'all' | 'ppt' | 'single' | 'ai-html';
-  const [activeTab, setActiveTab] = useState<StyleTab>('all');
+  // ★ 类型菜单（左侧 3 项，替代原顶部 Tab；styleType 缺省视为 'ppt'）
+  type StyleTab = 'ppt' | 'single' | 'ai-html';
+  const [activeTab, setActiveTab] = useState<StyleTab>('ppt');
   const TAB_LABELS: Record<StyleTab, string> = {
-    all: '全部',
     ppt: 'PPT 多页',
     single: '单页面',
     'ai-html': 'AI HTML',
   };
+  const styleOf = (p: ProjectSummary) => (p.meta?.styleType ?? 'ppt') as StyleTab;
 
   // 新建项目弹窗
   const [showCreate, setShowCreate] = useState(false);
@@ -117,7 +117,7 @@ export function Projects() {
 
   const filtered = projects.filter(
     (p) =>
-      (activeTab === 'all' || (p.meta?.styleType ?? 'ppt') === activeTab) &&
+      styleOf(p) === activeTab &&
       (!filterBL || p.meta?.businessLine === filterBL) &&
       (!filterScenario || p.meta?.scenario === filterScenario),
   );
@@ -219,93 +219,82 @@ export function Projects() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* 左侧侧栏 */}
+      {/* 左侧类型菜单（3 种报告类型，与数据管理的左侧菜单布局对齐） */}
       <aside className="flex w-52 shrink-0 flex-col border-r border-border-default bg-surface-primary">
         <div className="px-4 py-4">
-          <h1 className="font-headings text-lg font-semibold text-foreground-primary">我的报告</h1>
+          <h1 className="font-headings text-lg font-semibold text-foreground-primary">报告管理</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
             管理 · 筛选 · 创建报告
           </p>
         </div>
-        <div className="flex flex-col gap-2 px-3 pb-3">
-          <Button variant="secondary" onClick={() => setShowFromTemplate(true)} className="w-full">
-            从模板新建
-          </Button>
-          <Button onClick={() => setShowCreate(true)} className="w-full">+ 新建报告</Button>
-        </div>
-
-        {/* 筛选器 */}
-        <div className="border-t border-border-subtle px-3 py-3">
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-foreground-muted">筛选</p>
-          <div className="flex flex-col gap-2">
-            <select
-              value={filterBL}
-              onChange={(e) => setFilterBL(e.target.value)}
-              className="w-full rounded-md border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-secondary"
-            >
-              <option value="">全部业务线</option>
-              {BUSINESS_LINES.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-            <select
-              value={filterScenario}
-              onChange={(e) => setFilterScenario(e.target.value as Scenario | '')}
-              className="w-full rounded-md border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-secondary"
-            >
-              <option value="">全部场景</option>
-              {SCENARIOS.map((s) => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
-            </select>
-            {(filterBL || filterScenario) && (
+        <nav className="flex-1 overflow-auto px-2">
+          {(['ppt', 'single', 'ai-html'] as const).map((t) => {
+            const count = projects.filter((p) => styleOf(p) === t).length;
+            const active = activeTab === t;
+            return (
               <button
-                onClick={() => { setFilterBL(''); setFilterScenario(''); }}
-                className="text-left text-[10px] text-foreground-muted hover:text-foreground-primary"
+                key={t}
+                onClick={() => setActiveTab(t)}
+                className={`mb-1 flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
+                  active
+                    ? 'bg-accent-primary/10 font-medium text-accent-primary'
+                    : 'text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary'
+                }`}
               >
-                ✕ 清除筛选
+                <span>{TAB_LABELS[t]}</span>
+                <span className="text-xs text-foreground-muted">{count}</span>
               </button>
-            )}
-            <span className="text-[10px] text-foreground-muted">
-              {filtered.length} / {projects.length} 个报告
-            </span>
-          </div>
-        </div>
+            );
+          })}
+        </nav>
       </aside>
 
       {/* 右侧内容区 */}
       <main className="min-w-0 flex-1 overflow-auto p-6">
-        {/* 分类 Tab */}
-        {!loading && projects.length > 0 && (
-          <div className="mb-4 flex gap-1 border-b border-border-default">
-            {(['all', 'ppt', 'single', 'ai-html'] as const).map((t) => {
-              const count = t === 'all'
-                ? projects.length
-                : projects.filter((p) => (p.meta?.styleType ?? 'ppt') === t).length;
-              return (
-                <button
-                  key={t}
-                  onClick={() => setActiveTab(t)}
-                  className={`relative px-4 py-2 text-sm font-medium transition ${
-                    activeTab === t
-                      ? 'text-accent-primary'
-                      : 'text-foreground-secondary hover:text-foreground-primary'
-                  }`}
-                >
-                  {TAB_LABELS[t]}
-                  <span className="ml-1.5 text-[11px] text-foreground-muted">{count}</span>
-                  {activeTab === t && (
-                    <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent-primary" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* ★ 工具条：新建 + 筛选都放表格上方 */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={() => setShowFromTemplate(true)}>
+            从模板新建
+          </Button>
+          <Button onClick={() => setShowCreate(true)}>+ 新建报告</Button>
+          <span className="mx-1 h-5 w-px bg-border-default" />
+          <select
+            value={filterBL}
+            onChange={(e) => setFilterBL(e.target.value)}
+            className="rounded-md border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-secondary"
+          >
+            <option value="">全部业务线</option>
+            {BUSINESS_LINES.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+          <select
+            value={filterScenario}
+            onChange={(e) => setFilterScenario(e.target.value as Scenario | '')}
+            className="rounded-md border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-secondary"
+          >
+            <option value="">全部场景</option>
+            {SCENARIOS.map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+          {(filterBL || filterScenario) && (
+            <button
+              onClick={() => { setFilterBL(''); setFilterScenario(''); }}
+              className="text-[10px] text-foreground-muted hover:text-foreground-primary"
+            >
+              ✕ 清除筛选
+            </button>
+          )}
+          <span className="ml-auto text-xs text-foreground-muted">
+            {filtered.length} / {projects.filter((p) => styleOf(p) === activeTab).length} 个{TAB_LABELS[activeTab]}报告
+          </span>
+        </div>
+
         {loading ? (
           <p className="text-sm text-foreground-muted">加载中…</p>
         ) : projects.length === 0 ? (
-          <p className="text-sm text-foreground-muted">还没有报告，点击左侧「新建报告」开始吧。</p>
+          <p className="text-sm text-foreground-muted">还没有报告，点击上方「+ 新建报告」开始吧。</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-foreground-muted">没有符合筛选条件的报告。</p>
         ) : (
@@ -314,7 +303,6 @@ export function Projects() {
               <thead>
                 <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
                   <th className="px-3 py-2 font-medium">报告名称</th>
-                  <th className="px-3 py-2 font-medium">样式</th>
                   <th className="px-3 py-2 font-medium">业务线</th>
                   <th className="px-3 py-2 font-medium">场景</th>
                   <th className="px-3 py-2 font-medium">广告主</th>
@@ -338,17 +326,6 @@ export function Projects() {
                       >
                         {p.name}
                       </button>
-                    </td>
-                    <td className="px-3 py-2 text-foreground-secondary">
-                      <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                        (p.meta?.styleType ?? 'ppt') === 'ai-html'
-                          ? 'bg-purple-100 text-purple-700'
-                          : (p.meta?.styleType ?? 'ppt') === 'single'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {TAB_LABELS[(p.meta?.styleType ?? 'ppt') as StyleTab]}
-                      </span>
                     </td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.businessLine ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{scenarioText(p.meta)}</td>
