@@ -103,6 +103,34 @@ describe('RecipeEditor · 保存', () => {
   });
 });
 
+describe('RecipeEditor · 数据层透传', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('reportContent.dataCoverage 零覆盖 → DataPanel 红条透传', async () => {
+    render(
+      <RecipeEditor
+        versionId="v1"
+        recipeId="campaign-report"
+        campaignId="c1"
+        reportContent={{
+          dataCoverage: {
+            requested: { start: '2026-10-12', end: '2026-10-20' },
+            covered: null,
+            missingDays: 9,
+            complete: false,
+          },
+        }}
+        tokenOverrides={{}}
+        manifestOverrides={{}}
+        onSaved={() => {}}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(/请先导入 CPS daily/)).toBeTruthy());
+  });
+});
+
 describe('DataPanel · 宁缺勿假提示', () => {
   it('coverage.covered=null → 红条(请先导入 CPS daily)', () => {
     render(
