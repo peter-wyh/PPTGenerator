@@ -14,7 +14,7 @@
  * 四层 default 值由父组件从 HtmlVersionDetail 注入(reportContent/tokenOverrides/manifestOverrides)。
  */
 import { useState, useEffect, useCallback } from 'react';
-import { htmlTemplatesApi, type ManifestOverrides } from '@/api/htmlTemplates';
+import { htmlTemplatesApi, type ManifestOverrides, type RecipeDataCoverage } from '@/api/htmlTemplates';
 import { DataPanel } from './DataPanel';
 import { ContentPanel } from './ContentPanel';
 import { StylePanel } from './StylePanel';
@@ -40,6 +40,9 @@ export function RecipeEditor(props: Props) {
   const [previewHtml, setPreviewHtml] = useState('');
   const [saving, setSaving] = useState(false);
   const [previewError, setPreviewError] = useState('');
+
+  // 「宁缺勿假」数据覆盖,从 reportContent 提取传给 DataPanel
+  const coverage = (props.reportContent as { dataCoverage?: RecipeDataCoverage } | null | undefined)?.dataCoverage;
 
   // debounce reRender — 任意一层变化都触发(失败不阻塞编辑)
   useEffect(() => {
@@ -89,6 +92,7 @@ export function RecipeEditor(props: Props) {
           campaignId={props.campaignId}
           reportPeriod={props.reportPeriod}
           versionId={props.versionId}
+          coverage={coverage}
           onRecomputed={() => props.onSaved?.()}
           onRegenerated={handleRegenerated}
         />

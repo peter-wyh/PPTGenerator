@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RecipeEditor } from '@/editor/components/recipe-editor/RecipeEditor';
+import { DataPanel } from '@/editor/components/recipe-editor/DataPanel';
 import { htmlTemplatesApi } from '@/api/htmlTemplates';
 
 vi.mock('@/api/htmlTemplates', () => ({
@@ -99,5 +100,44 @@ describe('RecipeEditor · 保存', () => {
       );
     });
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  });
+});
+
+describe('DataPanel · 宁缺勿假提示', () => {
+  it('coverage.covered=null → 红条(请先导入 CPS daily)', () => {
+    render(
+      <DataPanel
+        campaignId="c1"
+        versionId="v1"
+        coverage={{ covered: null, missingDays: 9, complete: false }}
+        onRecomputed={() => {}}
+      />,
+    );
+    expect(screen.getByText(/请先导入 CPS daily/)).toBeTruthy();
+  });
+
+  it('coverage 部分覆盖 → 黄条(实际数据区间 + 缺失天数)', () => {
+    render(
+      <DataPanel
+        campaignId="c1"
+        versionId="v1"
+        coverage={{ covered: { start: '2026-10-15', end: '2026-10-20' }, missingDays: 6, complete: false }}
+        onRecomputed={() => {}}
+      />,
+    );
+    expect(screen.getByText(/实际数据区间 2026-10-15 ~ 2026-10-20,缺 6 天/)).toBeTruthy();
+  });
+
+  it('coverage.complete=true → 无提示条', () => {
+    render(
+      <DataPanel
+        campaignId="c1"
+        versionId="v1"
+        coverage={{ covered: { start: 'a', end: 'b' }, missingDays: 0, complete: true }}
+        onRecomputed={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/实际数据区间/)).toBeNull();
+    expect(screen.queryByText(/请先导入/)).toBeNull();
   });
 });

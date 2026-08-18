@@ -336,6 +336,13 @@ export function HtmlStudio() {
               setGeneratedHtml(chunk.html);
               setTruncated(chunk.truncated);
               streamingHtml = chunk.html;
+              if (chunk.dataCoverage && !chunk.dataCoverage.complete) {
+                toast.error(
+                  chunk.dataCoverage.covered
+                    ? `实际数据区间 ${chunk.dataCoverage.covered.start} ~ ${chunk.dataCoverage.covered.end},缺 ${chunk.dataCoverage.missingDays} 天`
+                    : '所选周期无数据,报告含 Data Unavailable 区块',
+                );
+              }
             } else if (chunk.type === 'error') {
               setError(chunk.message);
             }

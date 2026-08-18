@@ -55,13 +55,21 @@ export interface AgentChatMessage {
   images?: string[];
 }
 
+/** 「宁缺勿假」数据覆盖(服务端 recipe reportContent.dataCoverage / SSE done chunk 附带)。 */
+export interface RecipeDataCoverage {
+  requested?: { start: string; end: string };
+  covered: { start: string; end: string } | null;
+  missingDays: number;
+  complete: boolean;
+}
+
 // ─── SSE 流式类型 ───────────────────────────────────────────
 
 /** SSE 事件类型 */
 export type SSEChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean }
+  | { type: 'done'; html: string; truncated: boolean; dataCoverage?: RecipeDataCoverage }
   | { type: 'error'; message: string };
 
 /** 通用 SSE 流式消费者（fetch + ReadableStream，绕过 axios 不支持 SSE） */

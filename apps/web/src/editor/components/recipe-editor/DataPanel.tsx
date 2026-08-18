@@ -14,10 +14,13 @@
  */
 import { useState } from 'react';
 import { htmlTemplatesApi } from '@/api/htmlTemplates';
+import type { RecipeDataCoverage } from '@/api/htmlTemplates';
 
 interface Props {
   campaignId?: string;
   reportPeriod?: { startDate?: string; endDate?: string };
+  /** 「宁缺勿假」数据覆盖(来自 reportContent.dataCoverage,不完整时显示红/黄提示条)。 */
+  coverage?: RecipeDataCoverage | null;
   /** 当前 recipe 版本 id(G2 接线后传入,有值则走 recomputeRecipe 持久化路径)。 */
   versionId?: string;
   /** 有 versionId 时,recompute 成功后回调(父组件重载版本,新 reportContent 注入)。 */
@@ -26,7 +29,7 @@ interface Props {
   onRegenerated?: (html: string) => void;
 }
 
-export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initialPeriod, versionId, onRecomputed, onRegenerated }: Props) {
+export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initialPeriod, versionId, coverage, onRecomputed, onRegenerated }: Props) {
   const [campaignId, setCampaignId] = useState(initialCampaignId ?? '');
   const [startDate, setStartDate] = useState(initialPeriod?.startDate ?? '');
   const [endDate, setEndDate] = useState(initialPeriod?.endDate ?? '');
@@ -120,6 +123,17 @@ export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initial
         重新生成会从 campaign 拉取最新数据并覆盖当前内容
       </p>
       {error && <p className="mt-1 text-[10px] text-red">{error}</p>}
+      {coverage && !coverage.complete && (
+        <p
+          className={`mt-1 rounded px-2 py-1 text-[10px] ${
+            coverage.covered ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600'
+          }`}
+        >
+          {coverage.covered
+            ? `实际数据区间 ${coverage.covered.start} ~ ${coverage.covered.end},缺 ${coverage.missingDays} 天`
+            : '所选周期无数据,请先导入 CPS daily(POST /campaigns/import/cps-daily)'}
+        </p>
+      )}
     </fieldset>
   );
 }
