@@ -513,8 +513,16 @@ Return the COMPLETE updated HTML. Output ONLY the HTML code.`;
 export type StreamChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage }
+  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage; dataCoverage?: DoneDataCoverage }
   | { type: 'error'; message: string };
+
+/** done chunk 携带的周期数据覆盖(前端 toast 提醒用)。 */
+export interface DoneDataCoverage {
+  requested: { start: string; end: string };
+  covered: { start: string; end: string } | null;
+  missingDays: number;
+  complete: boolean;
+}
 
 /** token 用量（网关 last chunk 的 usage 字段，供成本统计）。 */
 export interface StreamUsage {
@@ -688,6 +696,35 @@ function postProcessHtml(html: string): string {
 }
 
 export const aiGenerateService = {
+  /**
+   * 计算指定 campaign + 周期的数据覆盖(与 buildCampaignContext 内部同口径)。
+   * 供流式 generate/edit 在 done chunk 中附带,前端 toast 提醒用。无 campaign 时返回 undefined。
+   */
+  async getDataCoverage(
+    campaignId: string | undefined,
+    reportPeriod?: { startDate?: string; endDate?: string },
+  ): Promise<DoneDataCoverage | undefined> {
+    if (!campaignId) return undefined;
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { campaignCreators: { include: { cpsPerformances: true } } },
+    });
+    if (!campaign) return undefined;
+    const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
+    const cov = computeCoverage(
+      campaign,
+      hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined,
+      campaign.endDate,
+    );
+    return {
+      requested: {
+        start: reportPeriod?.startDate ?? campaign.startDate,
+        end: reportPeriod?.endDate ?? campaign.endDate,
+      },
+      ...cov,
+    };
+  },
+
   /**
    * Build the campaign context JSON from the database.
    * Selects core fields, desensitizes sensitive data.
@@ -1314,6 +1351,8 @@ export const aiGenerateService = {
     const campaignData = params.campaignId
       ? await this.buildCampaignContext(params.campaignId, params.reportPeriod)
       : 'No campaign data provided.';
+    // done chunk 附带数据覆盖(与 context 同口径,前端 toast 提醒用)
+    const dataCoverage = await this.getDataCoverage(params.campaignId, params.reportPeriod);
 
     let designGuide = params.designMd ?? '';
     if (!designGuide.trim() && params.campaignId) {
@@ -1422,7 +1461,7 @@ export const aiGenerateService = {
       model: DEEPSEEK_MODEL,
     });
 
-    yield { type: 'done', html: processedHtml, truncated, usage: endUsage };
+    yield { type: 'done', html: processedHtml, truncated, usage: endUsage, ...(dataCoverage ? { dataCoverage } : {}) };
   },
 
   /**
@@ -1534,6 +1573,7 @@ export const aiGenerateService = {
       model: DEEPSEEK_MODEL,
     });
 
+    // edit 流无 campaignId 概念(纯 HTML 编辑),不附 dataCoverage
     yield { type: 'done', html: processedHtml, truncated, usage: endUsage };
   },
 };
