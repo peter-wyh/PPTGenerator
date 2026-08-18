@@ -104,6 +104,91 @@ describe('projects.service · update 改名校验', () => {
   });
 });
 
+describe('projects.service · update 换周期(③ 假动作修复)', () => {
+  const OLD_HTML = '<html><body>Report Period: 2026-07-01 ~ 2026-07-31</body></html>';
+
+  /** findUnique 依调用次序返回:1) getOwnedOrThrow 2) raw 读取(含 htmlContent)。 */
+  function mockTwoReads(first: unknown, second: unknown) {
+    prismaMock.project.findUnique
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(second);
+  }
+
+  it('换 reportPeriod 且有 htmlContent → htmlContent 走三级链刷新(日期被替换)', async () => {
+    const rawWithHtml = makeProject({
+      meta: { reportPeriod: { startDate: '2026-07-01', endDate: '2026-07-31' }, styleType: 'ai-html' },
+      htmlContent: OLD_HTML,
+    });
+    mockTwoReads(rawWithHtml, rawWithHtml);
+    prismaMock.project.update.mockImplementation(({ data }) =>
+      Promise.resolve(makeProject(data as Record<string, unknown>)),
+    );
+
+    await projectsService.update('u_ap', 'prj_1', {
+      meta: {
+        styleType: 'ai-html',
+        reportPeriod: { startDate: '2026-08-01', endDate: '2026-08-31' },
+      } as any,
+    });
+
+    const updateData = (prismaMock.project.update.mock.calls[0][0] as any).data;
+    // ★ htmlContent 被刷新(旧日期→新日期)
+    expect(updateData.htmlContent).toContain('2026-08-01');
+    expect(updateData.htmlContent).not.toContain('2026-07-31');
+    expect(updateData.meta.reportPeriod).toEqual({ startDate: '2026-08-01', endDate: '2026-08-31' });
+  });
+
+  it('周期未变化(仅改名/改尺寸) → 不触发 HTML 刷新', async () => {
+    const proj = makeProject({
+      meta: { reportPeriod: { startDate: '2026-07-01', endDate: '2026-07-31' } },
+      htmlContent: OLD_HTML,
+    });
+    mockTwoReads(proj, proj);
+    prismaMock.project.update.mockImplementation(({ data }) =>
+      Promise.resolve(makeProject(data as Record<string, unknown>)),
+    );
+
+    await projectsService.update('u_ap', 'prj_1', { name: '新名' });
+
+    const updateData = (prismaMock.project.update.mock.calls[0][0] as any).data;
+    expect(updateData.htmlContent).toBeUndefined();
+  });
+
+  it('meta.reportPeriod 相同值重放 → 不触发刷新(幂等)', async () => {
+    const proj = makeProject({
+      meta: { reportPeriod: { startDate: '2026-07-01', endDate: '2026-07-31' } },
+      htmlContent: OLD_HTML,
+    });
+    mockTwoReads(proj, proj);
+    prismaMock.project.update.mockImplementation(({ data }) =>
+      Promise.resolve(makeProject(data as Record<string, unknown>)),
+    );
+
+    await projectsService.update('u_ap', 'prj_1', {
+      meta: { reportPeriod: { startDate: '2026-07-01', endDate: '2026-07-31' } } as any,
+    });
+
+    const updateData = (prismaMock.project.update.mock.calls[0][0] as any).data;
+    expect(updateData.htmlContent).toBeUndefined();
+  });
+
+  it('无 htmlContent 的 PPT 项目 → meta 正常落库,无刷新逻辑参与', async () => {
+    const proj = makeProject({ meta: { styleType: 'ppt' } });
+    mockTwoReads(proj, proj);
+    prismaMock.project.update.mockImplementation(({ data }) =>
+      Promise.resolve(makeProject(data as Record<string, unknown>)),
+    );
+
+    await projectsService.update('u_ap', 'prj1', {
+      meta: { styleType: 'ppt', reportPeriod: { startDate: '2026-08-01' } } as any,
+    });
+
+    const updateData = (prismaMock.project.update.mock.calls[0][0] as any).data;
+    expect(updateData.htmlContent).toBeUndefined();
+    expect(updateData.meta.reportPeriod).toEqual({ startDate: '2026-08-01' });
+  });
+});
+
 describe('projects.service · duplicate 自动找号', () => {
   it('「X 副本」无冲突 → 用「X 副本」', async () => {
     prismaMock.project.findUnique.mockResolvedValue(makeProject({ name: '我的报告' }));

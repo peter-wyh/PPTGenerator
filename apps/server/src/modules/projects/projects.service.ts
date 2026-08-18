@@ -302,7 +302,9 @@ export const projectsService = {
       meta?: ProjectMeta;
     },
   ): Promise<ProjectDetail> {
-    await this.getOwnedOrThrow(ownerId, id);
+    const existing = await this.getOwnedOrThrow(ownerId, id);
+    // getOwnedOrThrow 返回 toDetail（剥离 htmlContent），换周期刷新需读原始记录。
+    const raw = await prisma.project.findUnique({ where: { id } });
 
     // 改名时拒绝重名(trim 后全局唯一),与 templates.service.update 一致。
     let trimmedName: string | undefined;
@@ -323,6 +325,36 @@ export const projectsService = {
     if (input.height !== undefined) data.height = input.height;
     if (input.pages !== undefined) data.pages = input.pages as unknown as Prisma.InputJsonValue;
     if (input.meta !== undefined) data.meta = input.meta as unknown as Prisma.InputJsonValue;
+
+    // ★ ③ 修「假动作」：PATCH 换 reportPeriod 且项目有 AI HTML 内容时，
+    // 自动走与 duplicate/createFromTemplate 相同的三级链刷新 HTML（真数据/真日期），
+    // 而非只改 meta 标签、HTML 仍是旧周期快照。
+    if (input.meta !== undefined && raw?.htmlContent) {
+      const oldPeriod = (existing.meta as Record<string, unknown> | null)?.reportPeriod as
+        | { month?: string; startDate?: string; endDate?: string }
+        | undefined;
+      const newPeriod = (input.meta as Record<string, unknown>).reportPeriod as
+        | { month?: string; startDate?: string; endDate?: string }
+        | undefined;
+      const periodChanged =
+        !!newPeriod &&
+        (newPeriod.month || newPeriod.startDate || newPeriod.endDate) &&
+        (oldPeriod?.month !== newPeriod.month ||
+          oldPeriod?.startDate !== newPeriod.startDate ||
+          oldPeriod?.endDate !== newPeriod.endDate);
+      if (periodChanged) {
+        // 传「旧 meta」（含旧周期快照）供 replacePeriodInHtml 构建替换映射（与 from-template 同理）。
+        const refreshed = await this._refreshHtmlForPeriod(
+          raw.htmlContent,
+          (existing.meta ?? {}) as Record<string, unknown>,
+          newPeriod!,
+        );
+        if (refreshed && refreshed !== raw.htmlContent) {
+          data.htmlContent = refreshed;
+        }
+      }
+    }
+
     const project = await prisma.project.update({ where: { id }, data });
     return toDetail(project);
   },
