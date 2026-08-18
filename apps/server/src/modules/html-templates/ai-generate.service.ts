@@ -91,7 +91,7 @@ This is a CLIENT-FACING report shown to paying advertisers and brand partners.
     d. DERIVED METRICS: ROAS = GMV / Spend. AOV = GMV / Orders. Engagement Rate = Engagement / Impressions. Recalculate these from the raw values — do NOT copy pre-computed ratios that may be stale.
     e. NO INDEPENDENT SEEDS: Do NOT treat analytics.weeklyTrend, analytics.dailyTrend, and creator CPS as independent datasets. They are different views of the SAME underlying data. If they disagree, trust the creator CPS aggregation (it is the most granular) and adjust the trend data to match.
     f. PEAK/HIGHLIGHT LABELS: If the report shows "Peak Week" or "Best ROAS" callout labels, verify those values against the actual chart data array — do NOT hardcode label values that could drift from the chart.
-11. DATA INTEGRITY (hard rule): If the context JSON provides \`dataGaps\` or a \`dataCoverage\` with \`covered: null\` or \`complete: false\`, you MUST render an explicit "Data Unavailable" placeholder block for the affected dimensions (grey card, dashed border, label "Data Unavailable"). NEVER invent, estimate, or extrapolate any number. If \`dataCoverage.covered\` is narrower than the requested period, display the actual covered date range prominently under the report header.
+11. DATA INTEGRITY (hard rule): If the context JSON provides \`dataGaps\` or a \`dataCoverage\` with \`covered: null\` or \`complete: false\`, you MUST render an explicit "Data Unavailable" placeholder block for the affected dimensions (grey card, dashed border, label "Data Unavailable"). NEVER invent, estimate, or extrapolate any number. If \`dataCoverage.covered\` is narrower than the requested period, display the actual covered date range prominently under the report header. When \`periodKpis\` is present alongside \`campaign.metrics\`, \`periodKpis\` represents the actual report-period scope — ALWAYS use \`periodKpis\` for KPI cards and summary numbers. Treat \`campaign.metrics\` as fallback-only when \`periodKpis\` is absent.
 
 ═══ DESIGN SYSTEM (CRITICAL — READ THE BRAND DESIGN GUIDE) ═══
 The Brand Design Guide (from business line design.md) is provided at the end of the user message. You MUST follow it strictly for ALL visual decisions:
@@ -167,7 +167,7 @@ Define these reusable classes. Use colors from the design guide, NOT hardcoded v
 ═══ REPORT STRUCTURE (DEFAULT) ═══
 Unless the user's instruction specifies a fixed section layout, generate a report by analyzing the campaign data and choosing the most informative modules:
 
-1. DATA ANALYSIS: Scan campaign JSON for available dimensions — campaign info, creators, dailyTrend, weeklyTrend, topProducts, topMarkets, insights, customerSplit, metrics. Evaluate each dimension's information value (is the data rich? does it have distribution/trend/ranking? or is it empty?). Skip dimensions with no meaningful data.
+1. DATA ANALYSIS: Scan campaign JSON for available dimensions — campaign info, creators, dailyTrend (period data), metrics, dataCoverage, dataGaps. Evaluate each dimension's information value (is the data rich? does it have distribution/trend/ranking? or is it empty?). Skip dimensions with no meaningful data.
 
 2. MODULE SELECTION: Pick 4-8 modules prioritizing the richest data dimensions:
    - Header (ALWAYS): business line logo + advertiser logo + campaign name + date range
@@ -318,7 +318,7 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
     - d. **派生指标重算**：ROAS = GMV / Spend，AOV = GMV / Orders，Engagement Rate = Engagement / Impressions——从原始值重新计算，不复用可能过期的预计算比值
     - e. **禁止独立 seed**：analytics.weeklyTrend、dailyTrend 和创作者 CPS 不是独立数据集，而是同一底层数据的不同视图。如有冲突，以创作者 CPS 聚合为准（最细粒度），调整趋势数据使其匹配
     - f. **峰值/高亮标签**：报告中 "Peak Week"、"Best ROAS" 等标注必须与实际图表数据数组交叉验证，不硬编码可能漂移的标签值
-11. **数据完整性（硬规则）**：上下文提供 \`dataGaps\` 或 \`dataCoverage\` 显示 \`covered: null\` / \`complete: false\` 时，受影响维度必须渲染显式的 "Data Unavailable" 占位区块（灰卡虚线边框）；禁止编造、估算或外推任何数字；\`dataCoverage.covered\` 窄于请求周期时，在报告头部显著展示实际数据区间。
+11. **数据完整性（硬规则）**：上下文提供 \`dataGaps\` 或 \`dataCoverage\` 显示 \`covered: null\` / \`complete: false\` 时，受影响维度必须渲染显式的 "Data Unavailable" 占位区块（灰卡虚线边框）；禁止编造、估算或外推任何数字；\`dataCoverage.covered\` 窄于请求周期时，在报告头部显著展示实际数据区间。当 periodKpis 与 campaign.metrics 同时存在时,periodKpis 才是报告周期口径——KPI 卡与汇总数字一律优先使用 periodKpis,campaign.metrics 仅在无 periodKpis 时兜底。
 
 ## 🎨 设计系统 (DESIGN SYSTEM)
 
@@ -378,7 +378,7 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 
 **默认模式**——AI 自主分析 Campaign 数据后选择 4-8 个模块：
 
-1. **数据分析**：扫描 JSON 中的可用维度（creators、dailyTrend、topProducts…），评估信息价值
+1. **数据分析**：扫描 JSON 中的可用维度（campaign info、creators、dailyTrend（周期数据）、metrics、dataCoverage、dataGaps），评估信息价值
 2. **模块选择**：优先选择数据最丰富的维度
 3. **可视化匹配**：趋势→折线/面积图、占比→环形图、排名→柱状图/表格
 
@@ -482,7 +482,7 @@ Conduct your internal reasoning / chain-of-thought ENTIRELY in Simplified Chines
 4. Your response must start directly with <!DOCTYPE html>. No markdown fences, no explanations.
 5. DATA CONSISTENCY: When editing, ensure all numbers remain internally consistent — trend chart sums must equal KPI totals, distribution breakdowns must equal the overall total, and derived metrics (ROAS, AOV) must match their raw components. If you change a value in one place, update ALL dependent values everywhere in the report.
 6. SCRIPT PRESERVATION (CRITICAL): The HTML may contain Chart.js initialization code in a <script> block before </body>. You MUST preserve ALL such scripts EXACTLY as-is — every new Chart(...) call, every data array, every configuration option. Do NOT drop, reorder, or rewrite script blocks. If you are not explicitly asked to change a chart, keep its initialization code byte-for-byte identical.
-7. DATA INTEGRITY: If the context includes dataGaps or incomplete dataCoverage (covered: null / complete: false), never fabricate numbers; keep/render explicit "Data Unavailable" placeholder blocks (grey card, dashed border) for the missing dimensions. If dataCoverage.covered is narrower than the requested period, display the actual covered date range prominently under the report header.
+7. DATA INTEGRITY: If the context includes dataGaps or incomplete dataCoverage (covered: null / complete: false), never fabricate numbers; keep/render explicit "Data Unavailable" placeholder blocks (grey card, dashed border) for the missing dimensions. If dataCoverage.covered is narrower than the requested period, display the actual covered date range prominently under the report header. When \`periodKpis\` is present alongside \`campaign.metrics\`, always prefer \`periodKpis\` (report-period scope); \`campaign.metrics\` is fallback-only.
 
 ═══ EDIT GUIDELINES ═══
 - Style changes (colors, fonts, spacing): modify CSS in <style> or inline styles.

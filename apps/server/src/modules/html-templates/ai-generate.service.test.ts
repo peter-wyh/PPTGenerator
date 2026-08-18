@@ -120,4 +120,9 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
     expect(SYSTEM_PROMPT_DISPLAY).toContain('Data Unavailable');
     expect(SYSTEM_PROMPT_DISPLAY).toContain('禁止编造');
   });
+
+  it('SYSTEM_PROMPT_DISPLAY 含 periodKpis 优先级规则', () => {
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('periodKpis');
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('优先使用 periodKpis');
+  });
 });
