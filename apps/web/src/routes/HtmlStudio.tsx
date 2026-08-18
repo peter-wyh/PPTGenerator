@@ -500,6 +500,8 @@ export function HtmlStudio() {
           onHtmlChange={(html) => setGeneratedHtml(html)}
           onHistoryChange={setAgentHistory}
           onBusyChange={handleBusyChange}
+          campaignId={campaignId}
+          reportPeriod={reportPeriod}
         />
       )}
     </aside>

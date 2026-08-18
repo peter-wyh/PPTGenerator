@@ -306,7 +306,14 @@ export const htmlTemplatesApi = {
       .then((r) => r.data),
 
   /** Agent 增量编辑：当前 HTML + 指令（可选附带图片）→ 修改后的完整 HTML */
-  agentEdit: (input: { currentHtml: string; instruction: string; images?: string[] }) =>
+  agentEdit: (input: {
+    currentHtml: string;
+    instruction: string;
+    images?: string[];
+    /** 数据上下文：服务端据此注入真实 DB 数据（防伪造） */
+    campaignId?: string;
+    reportPeriod?: { startDate?: string; endDate?: string };
+  }) =>
     api
       .post<{ html: string }>('/html-templates/agent-edit', input, {
         timeout: 300000,
@@ -315,7 +322,14 @@ export const htmlTemplatesApi = {
 
   /** SSE 流式 Agent 编辑（reasoning + content 实时转发） */
   agentEditStream: (
-    input: { currentHtml: string; instruction: string; images?: string[] },
+    input: {
+      currentHtml: string;
+      instruction: string;
+      images?: string[];
+      /** 数据上下文：服务端据此注入真实 DB 数据（防伪造） */
+      campaignId?: string;
+      reportPeriod?: { startDate?: string; endDate?: string };
+    },
     onChunk: (chunk: SSEChunk) => void,
     signal?: AbortSignal,
   ) =>

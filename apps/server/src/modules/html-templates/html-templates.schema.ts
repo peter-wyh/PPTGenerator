@@ -52,6 +52,12 @@ export const agentEditSchema = z.object({
   currentHtml: z.string().min(1),
   instruction: z.string().min(1).max(2000),
   images: z.array(z.string()).optional(), // base64 编码的图片（data URL）
+  // ★ ④ 数据上下文：可选 campaignId + reportPeriod，服务端据此注入真实 DB 数据（防伪造）
+  campaignId: z.string().max(120).optional(),
+  reportPeriod: z.object({
+    startDate: z.string().max(40).optional(),
+    endDate: z.string().max(40).optional(),
+  }).optional(),
 });
 
 /**

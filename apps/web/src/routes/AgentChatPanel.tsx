@@ -53,6 +53,9 @@ interface AgentChatPanelProps {
    * 供父组件（HtmlStudio）驱动中栏画布遮罩 + 兜底取消（左栏收起时）。
    */
   onBusyChange?: (busy: boolean, cancel?: () => void) => void;
+  /** ★ ④ 数据上下文：绑定的 Campaign + 报告周期。随编辑请求发送，服务端注入真实 DB 数据防伪造。 */
+  campaignId?: string;
+  reportPeriod?: { startDate?: string; endDate?: string };
 }
 
 const QUICK_ACTIONS = [
@@ -72,6 +75,8 @@ export function AgentChatPanel({
   onHtmlChange,
   onHistoryChange,
   onBusyChange,
+  campaignId,
+  reportPeriod,
 }: AgentChatPanelProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -194,6 +199,9 @@ export function AgentChatPanel({
             currentHtml,
             instruction: text || '请参考上传的图片修改报告',
             images: hasImages ? sentImages : undefined,
+            // ★ ④ 数据上下文：服务端注入真实 DB 数据，AI 数据改动以此为唯一真源
+            campaignId,
+            reportPeriod,
           },
           (chunk: SSEChunk) => {
             if (chunk.type === 'reasoning') {

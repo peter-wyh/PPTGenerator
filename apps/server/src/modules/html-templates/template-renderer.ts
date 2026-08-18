@@ -386,12 +386,14 @@ export async function renderTemplate(
   for (const [field, value] of Object.entries(data.kpis)) {
     // 匹配: <tag ... data-field="fieldName" ...>oldText</tag>
     // 替换为: <tag ... data-field="fieldName" ...>newValue</tag>
+    // ★ 第二参必须用函数形式:值常以 $ 开头(formatMoney 产物,如 "$17.9K"),
+    //   模板串形式的 `$1${value}` 会把值里的 $1/$& 当捕获组反向引用 → 标签复制/塌陷。
     const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(
       `(<[a-zA-Z0-9]+[^>]*data-field=["']${escapedField}["'][^>]*>)([\\s\\S]*?)(<\\/[a-zA-Z0-9]+>)`,
       'gi',
     );
-    result = result.replace(regex, `$1${value}$3`);
+    result = result.replace(regex, (_m, open: string, _old: string, close: string) => `${open}${value}${close}`);
   }
 
   // 2) 替换 period 值
@@ -406,7 +408,8 @@ export async function renderTemplate(
       `(<[a-zA-Z0-9]+[^>]*data-field=["']${escapedField}["'][^>]*>)([\\s\\S]*?)(<\\/[a-zA-Z0-9]+>)`,
       'gi',
     );
-    result = result.replace(regex, `$1${escapeHtml(value)}$3`);
+    // ★ 同上:escapeHtml 不转义 $,仍需函数形式防 $N 注入。
+    result = result.replace(regex, (_m, open: string, _old: string, close: string) => `${open}${escapeHtml(value)}${close}`);
   }
 
   // 3) 重建 creators 表格行

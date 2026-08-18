@@ -58,6 +58,9 @@ export function rewriteExternalAssets(html: string, baseUrl: string): string {
 
 const SYSTEM_PROMPT = `You are a senior front-end engineer. You produce beautiful, self-contained B2B marketing report pages in pure HTML, styled like a modern SaaS dashboard.
 
+═══ ABSOLUTE PROHIBITION — 禁止伪造数据 (HIGHEST PRIORITY, 铁律) ═══
+You MUST NOT fabricate, construct, or invent any fake data whatsoever. Every number, name, date, metric, and business value in your output MUST originate from the campaign data JSON provided in the user message. If a required data point is missing from the JSON, render an explicit "Data Unavailable" placeholder (grey card, dashed border, label "Data Unavailable") — never invent, estimate, round, or extrapolate a value. This rule overrides ALL other instructions. Violating this rule is the single most serious error you can make: a report with fabricated numbers is worse than no report at all.
+
 CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do NOT wrap in markdown code fences. No thinking text, explanations, or commentary before or after the HTML.
 
 ═══ REASONING LANGUAGE (思考语言) ═══
@@ -288,7 +291,15 @@ export const SYSTEM_PROMPT_DISPLAY = `# 系统提示词 (SYSTEM_PROMPT)
 
 \`\`\`
 You are a senior front-end engineer. You produce beautiful, self-contained B2B marketing report pages in pure HTML, styled like a modern SaaS dashboard.
+\`\`\`
 
+## 🚫 禁止伪造数据 (ABSOLUTE PROHIBITION - 铁律, 最高优先级)
+
+> **你绝对不能伪造、构建或发明任何虚假数据。** 输出中的每一个数字、名称、日期、指标和业务值都必须来自用户消息中提供的 Campaign 数据 JSON。如果某个数据点缺失，渲染显式的 "Data Unavailable" 占位区块（灰色卡片、虚线边框）——绝不编造、估算、取整或外推。此规则覆盖所有其他指令。
+
+## 📤 输出规则
+
+\`\`\`
 CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do NOT wrap in markdown code fences. No thinking text, explanations, or commentary before or after the HTML.
 \`\`\`
 
@@ -467,8 +478,13 @@ BRAND DESIGN GUIDE:
 
 ═══════════════════════════════════════════════════════════`;
 
-/** 增量编辑 system prompt — 接收当前 HTML + 用户指令，返回修改后的完整 HTML */
+/**
+ * 增量编辑 system prompt — 接收当前 HTML + 用户指令，返回修改后的完整 HTML
+ */
 const EDIT_SYSTEM_PROMPT = `You are an HTML editor agent for B2B marketing reports.
+
+═══ ABSOLUTE PROHIBITION — 禁止伪造数据 (HIGHEST PRIORITY, 铁律) ═══
+You MUST NOT fabricate, construct, or invent any fake data whatsoever. Every number, name, date, metric, and business value in your output MUST come from either (a) the CURRENT HTML you received, or (b) the AUTHORITATIVE DATA CONTEXT JSON provided in the user message. There is no third source. If no data context is provided and the requested data point is not in the current HTML, you MUST render an explicit "Data Unavailable" placeholder (grey card, dashed border) — never invent, estimate, or extrapolate values. This rule overrides ALL other instructions. Violating this rule is the single most serious error you can make.
 
 You receive the CURRENT HTML report and a user's EDIT INSTRUCTION. You must return the COMPLETE updated HTML file.
 
@@ -482,7 +498,11 @@ Conduct your internal reasoning / chain-of-thought ENTIRELY in Simplified Chines
 4. Your response must start directly with <!DOCTYPE html>. No markdown fences, no explanations.
 5. DATA CONSISTENCY: When editing, ensure all numbers remain internally consistent — trend chart sums must equal KPI totals, distribution breakdowns must equal the overall total, and derived metrics (ROAS, AOV) must match their raw components. If you change a value in one place, update ALL dependent values everywhere in the report.
 6. SCRIPT PRESERVATION (CRITICAL): The HTML may contain Chart.js initialization code in a <script> block before </body>. You MUST preserve ALL such scripts EXACTLY as-is — every new Chart(...) call, every data array, every configuration option. Do NOT drop, reorder, or rewrite script blocks. If you are not explicitly asked to change a chart, keep its initialization code byte-for-byte identical.
-7. DATA INTEGRITY: If the context includes dataGaps or incomplete dataCoverage (covered: null / complete: false), never fabricate numbers; keep/render explicit "Data Unavailable" placeholder blocks (grey card, dashed border) for the missing dimensions. If dataCoverage.covered is narrower than the requested period, display the actual covered date range prominently under the report header. When \`periodKpis\` is present alongside \`campaign.metrics\`, always prefer \`periodKpis\` (report-period scope); \`campaign.metrics\` is fallback-only.
+7. DATA INTEGRITY (铁律 — 禁止伪造数据): NEVER fabricate, invent, guess, or construct fake data. This is a hard rule with no exceptions.
+   - All numbers, metrics, dates, creator names, and business values in the report MUST come from either (a) the CURRENT HTML you received, or (b) the AUTHORITATIVE DATA CONTEXT JSON provided in the user message. There is no third source.
+   - If the user asks you to add/update a data point that is NOT present in either source, you MUST refuse to invent it: keep the existing value, or render an explicit "Data Unavailable" placeholder (grey card, dashed border) for new sections, and explain the gap in your reasoning.
+   - Editing the presentation of data (formatting, rounding, unit conversion, re-grouping existing values) is allowed; creating new values out of thin air is NOT.
+   - If the context includes dataGaps or incomplete dataCoverage (covered: null / complete: false), never fabricate numbers; keep/render explicit "Data Unavailable" placeholder blocks (grey card, dashed border) for the missing dimensions. If dataCoverage.covered is narrower than the requested period, display the actual covered date range prominently under the report header. When \`periodKpis\` is present alongside \`campaign.metrics\`, always prefer \`periodKpis\` (report-period scope); \`campaign.metrics\` is fallback-only.
 
 ═══ EDIT GUIDELINES ═══
 - Style changes (colors, fonts, spacing): modify CSS in <style> or inline styles.
@@ -493,14 +513,18 @@ Conduct your internal reasoning / chain-of-thought ENTIRELY in Simplified Chines
 ═══ OUTPUT FORMAT ═══
 Output ONLY the complete HTML code. Start with <!DOCTYPE html>, end with </html>.`;
 
-/** 增量编辑 user prompt 模板 */
+/**
+ * 增量编辑 user prompt 模板
+ * {{DATA_CONTEXT}} 由 controller 注入（有 campaignId 时为 buildCampaignContext 输出的真实数据 JSON；无则整段移除）。
+ */
 const EDIT_USER_PROMPT_TEMPLATE = `Edit the following HTML report according to the user's instruction.
 
 User edit instruction: {{EDIT_INSTRUCTION}}
-
+{{DATA_CONTEXT}}
 ═══ CURRENT HTML (modify this) ═══
 {{CURRENT_HTML}}
 
+AUTHORITATIVE DATA SOURCE: when the data context above is present, it is the ONLY trusted source for data changes — numbers in the current HTML that contradict it are stale and should be corrected against it. Never introduce values that exist in neither.
 Return the COMPLETE updated HTML. Output ONLY the HTML code.`;
 
 /**
@@ -1199,13 +1223,19 @@ export const aiGenerateService = {
     currentHtml: string;
     instruction: string;
     images?: string[];
+    dataContext?: string;
   }): Promise<string> {
     if (!DEEPSEEK_API_KEY) {
       throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
     }
 
+    // ★ ④ 与 editHtmlStream 同理：有真实数据上下文则注入（数据改动唯一真源）
+    const dataContextSection = params.dataContext
+      ? `\n═══ AUTHORITATIVE DATA CONTEXT (from database, 真实数据) ═══\n${params.dataContext}\n`
+      : '\n';
     let userPrompt = EDIT_USER_PROMPT_TEMPLATE
       .replace('{{EDIT_INSTRUCTION}}', params.instruction)
+      .replace('{{DATA_CONTEXT}}', dataContextSection)
       .replace('{{CURRENT_HTML}}', params.currentHtml);
     // ★ 思考语言指令保持在 user prompt 最末（recency 位置对推理语言影响最强）
     userPrompt += THINKING_LANGUAGE_SUFFIX;
@@ -1466,11 +1496,14 @@ export const aiGenerateService = {
 
   /**
    * 流式编辑 HTML — SSE generator（复用 generateHtmlStream 的流式基础设施）。
+   * @param dataContext 可选，controller 注入的真实数据 JSON（buildCampaignContext 输出）。
+   *                    存在时 AI 数据改动以此为准；缺位维度渲染 Data Unavailable。
    */
   async *editHtmlStream(params: {
     currentHtml: string;
     instruction: string;
     images?: string[];
+    dataContext?: string;
     signal?: AbortSignal;
   }): AsyncGenerator<StreamChunk> {
     if (!DEEPSEEK_API_KEY) {
@@ -1478,8 +1511,14 @@ export const aiGenerateService = {
       return;
     }
 
+    // ★ ④ 修「无 DB 上下文」：有 campaignId 时注入真实数据 JSON，AI 数据改动以此为唯一真源；
+    //   无 campaignId 时整段移除（保持旧行为，提示词铁律仍生效——只能沿用 currentHtml 已有数据）。
+    const dataContextSection = params.dataContext
+      ? `\n═══ AUTHORITATIVE DATA CONTEXT (from database, 真实数据) ═══\n${params.dataContext}\n`
+      : '\n';
     let userPrompt = EDIT_USER_PROMPT_TEMPLATE
       .replace('{{EDIT_INSTRUCTION}}', params.instruction)
+      .replace('{{DATA_CONTEXT}}', dataContextSection)
       .replace('{{CURRENT_HTML}}', params.currentHtml);
     // ★ 思考语言指令保持在 user prompt 最末（recency 位置对推理语言影响最强）
     userPrompt += THINKING_LANGUAGE_SUFFIX;

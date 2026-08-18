@@ -154,11 +154,16 @@ export const htmlTemplateController = {
 
   /** Agent 增量编辑：当前 HTML + 用户指令（可选附带图片）→ 修改后的完整 HTML */
   agentEdit: asyncHandler(async (req: Request, res: Response) => {
-    const { currentHtml, instruction, images } = req.body;
+    const { currentHtml, instruction, images, campaignId, reportPeriod } = req.body;
+    // ★ ④ 数据上下文：有 campaignId → 注入真实 DB 数据（AI 数据改动唯一真源），杜绝凭空编造
+    const dataContext = campaignId
+      ? await aiGenerateService.buildCampaignContext(campaignId, reportPeriod).catch(() => undefined)
+      : undefined;
     const html = await aiGenerateService.editHtml({
       currentHtml,
       instruction,
       images,
+      dataContext,
     });
     res.json({ html });
   }),
@@ -202,17 +207,23 @@ export const htmlTemplateController = {
 
   /** SSE 流式 Agent 增量编辑 */
   agentEditStream: async (req: Request, res: Response) => {
-    const { currentHtml, instruction, images } = req.body;
+    const { currentHtml, instruction, images, campaignId, reportPeriod } = req.body;
     initSSE(res);
 
     const abortCtrl = new AbortController();
     req.on('close', () => abortCtrl.abort());
 
     try {
+      // ★ ④ 数据上下文：有 campaignId → 注入真实 DB 数据（AI 数据改动唯一真源），杜绝凭空编造。
+      //   失败不阻断编辑流（降级为旧行为，提示词铁律仍兜底）。
+      const dataContext = campaignId
+        ? await aiGenerateService.buildCampaignContext(campaignId, reportPeriod).catch(() => undefined)
+        : undefined;
       for await (const chunk of aiGenerateService.editHtmlStream({
         currentHtml,
         instruction,
         images,
+        dataContext,
         signal: abortCtrl.signal,
       })) {
         sseWrite(res, chunk);
