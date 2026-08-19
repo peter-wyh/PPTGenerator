@@ -68,7 +68,6 @@ export function HtmlStudio() {
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   // ★ SSE 流式状态
-  const [reasoning, setReasoning] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [truncated, setTruncated] = useState(false);
   const [genStage, setGenStage] = useState(0);
@@ -251,7 +250,6 @@ export function HtmlStudio() {
     abortRef.current = null;
     setGenerating(false);
     setIsThinking(false);
-    setReasoning('');
     stopStageTimer();
   }, [stopStageTimer]);
 
@@ -263,7 +261,6 @@ export function HtmlStudio() {
       setError('');
       setGeneratedHtml('');
       setSaved(false);
-      setReasoning('');
       setIsThinking(false);
       setTruncated(false);
       void updateAiHtmlStatus('generating');
@@ -340,7 +337,6 @@ export function HtmlStudio() {
             if (chunk.type === 'reasoning') {
               setIsThinking(true);
               streamingReasoning += chunk.text;
-              setReasoning((prev) => prev + chunk.text);
             } else if (chunk.type === 'content') {
               setIsThinking(false);
               streamingHtml += chunk.text;
@@ -366,7 +362,6 @@ export function HtmlStudio() {
         // 成功
         if (streamingHtml && streamingHtml.startsWith('<')) {
           void updateAiHtmlStatus('generated');
-          setReasoning('');
           const genMsg: AgentChatMessage = {
             role: 'assistant',
             content: truncated
@@ -414,7 +409,6 @@ export function HtmlStudio() {
       } finally {
         setGenerating(false);
         setIsThinking(false);
-        setReasoning('');
         stopStageTimer();
         abortRef.current = null;
       }
@@ -523,10 +517,9 @@ export function HtmlStudio() {
           onBusyChange={handleBusyChange}
           campaignId={campaignId}
           reportPeriod={reportPeriod}
-          /* ★ ③-1 首次生成流纳入对话：进行时气泡（阶段+思考流+取消） */
+          /* ★ ③-1 首次生成流纳入对话：进行时气泡（中文阶段提示+取消；不展示思考原文） */
           generating={generating}
           genStageText={GEN_STAGES[genStage]}
-          genReasoning={reasoning}
           onCancelGenerate={handleCancel}
         />
       )}
@@ -616,10 +609,11 @@ export function HtmlStudio() {
             </div>
           </div>
 
-          {/* 源码面板 */}
+          {/* ★ 源码面板：左侧代码编辑 + 右侧实时预览分栏 */}
           {showSource && phase === 'chat' ? (
             <div className="flex flex-1 overflow-hidden">
-              <div className="flex flex-1 flex-col overflow-hidden">
+              {/* 左：HTML 源码编辑 */}
+              <div className="flex w-1/2 flex-col overflow-hidden border-r border-border-default">
                 <div className="flex h-8 shrink-0 items-center justify-between border-b border-border-default px-3 bg-surface-primary">
                   <span className="text-xs font-medium text-foreground-secondary">HTML 源码（手动编辑 → 保存生效）</span>
                   <div className="flex items-center gap-1.5">
@@ -659,6 +653,21 @@ export function HtmlStudio() {
                   className="flex-1 resize-none bg-surface-secondary p-3 font-mono text-[11px] leading-relaxed text-foreground-primary focus:outline-none"
                   spellCheck={false}
                 />
+              </div>
+              {/* 右：实时预览（桌面宽度，iframe srcDoc 即时反映左侧编辑） */}
+              <div className="flex flex-1 flex-col overflow-hidden bg-surface-subtle">
+                <div className="flex h-8 shrink-0 items-center border-b border-border-default px-3 bg-surface-primary">
+                  <span className="text-xs font-medium text-foreground-secondary">实时预览</span>
+                </div>
+                <div className="flex flex-1 items-start justify-center overflow-auto p-3">
+                  <iframe
+                    srcDoc={generatedHtml}
+                    title="Source Live Preview"
+                    className="h-full w-full bg-white shadow-sm"
+                    style={{ borderRadius: 6, border: '1px solid var(--border-default, #e5e7eb)' }}
+                    sandbox="allow-same-origin allow-scripts"
+                  />
+                </div>
               </div>
             </div>
           ) : phase === 'chat' && viewMode === 'visual' ? (
@@ -725,12 +734,6 @@ export function HtmlStudio() {
               <p className="mt-1 text-xs text-foreground-muted">
                 {isThinking ? 'AI 正在思考…' : '正在生成报告…'}
               </p>
-              {/* ★ 思考流（首次生成在中栏 loading 区展示，完成后丢弃） */}
-              {reasoning && (
-                <div className="mt-4 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-surface-secondary px-4 py-3 text-left text-[11px] leading-relaxed text-foreground-muted">
-                  {reasoning}
-                </div>
-              )}
               <button
                 onClick={handleCancel}
                 className="mt-4 rounded-md border border-red/30 px-3 py-1.5 text-xs text-red hover:bg-red/5"
@@ -829,7 +832,6 @@ export function HtmlStudio() {
                   setGeneratedHtml('');
                   setSaved(false);
                   setShowSource(false);
-                  setReasoning('');
                   setTruncated(false);
                 }
               }}

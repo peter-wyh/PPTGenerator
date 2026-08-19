@@ -50,7 +50,7 @@ function CollapsibleReasoning({ text, defaultCollapsed = true }: { text: string;
           onClick={() => setCollapsed(!collapsed)}
           className="text-[10px] text-foreground-muted hover:text-foreground-secondary"
         >
-          {collapsed ? '▸ 展开思考' : '▾ 收起思考'}
+          {collapsed ? '▸ AI 思考过程' : '▾ 收起思考过程'}
         </button>
         {!collapsed && (
           <button
@@ -104,7 +104,6 @@ interface AgentChatPanelProps {
    */
   generating?: boolean;
   genStageText?: string;
-  genReasoning?: string;
   onCancelGenerate?: () => void;
 }
 
@@ -129,7 +128,6 @@ export function AgentChatPanel({
   reportPeriod,
   generating = false,
   genStageText = '',
-  genReasoning = '',
   onCancelGenerate,
 }: AgentChatPanelProps) {
   const [input, setInput] = useState('');
@@ -369,10 +367,10 @@ export function AgentChatPanel({
               )}
               {msg.content}
               {msg.reasoning && (
-                /* 首次生成的思考默认展开呈现；后续编辑的思考默认折叠 */
+                /* 思考原文改默认折叠（中文入口「AI 思考过程」），不自动展开 */
                 <CollapsibleReasoning
                   text={msg.reasoning}
-                  defaultCollapsed={msg.action !== 'generate'}
+                  defaultCollapsed={true}
                 />
               )}
             </div>
@@ -394,14 +392,11 @@ export function AgentChatPanel({
                   取消
                 </button>
               </div>
-              {/* 正文：思考流（reasoning 非空时显示；思考完成后可折叠） */}
-              {reasoning && (
-                <CollapsibleReasoning text={reasoning} defaultCollapsed={false} />
-              )}
+              {/* ★ 思考过程不再展示原文——仅保留中文状态描述（思考中/编辑中） */}
             </div>
           </div>
         )}
-        {/* ★ ③-1 首次生成进行时气泡：阶段轮播 + 思考流 + 取消（与编辑 loading 气泡同视觉模式） */}
+        {/* ★ ③-1 首次生成进行时气泡：阶段轮播（中文）+ 取消；不展示思考原文 */}
         {generating && !loading && (
           <div className="flex justify-start">
             <div className="max-w-[85%] rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
@@ -417,9 +412,6 @@ export function AgentChatPanel({
                   取消
                 </button>
               </div>
-              {genReasoning && (
-                <CollapsibleReasoning text={genReasoning} defaultCollapsed={false} />
-              )}
             </div>
           </div>
         )}
