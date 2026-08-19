@@ -10,7 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { templatesApi } from '@/api/templates';
 import { Button } from '@/components/Button';
 import { VisualEditor } from '@/components/VisualEditor';
-import type { TemplateDetail } from '@mediaket/shared';
+import type { TemplateDetail } from '@mediakit/shared';
 
 export function TemplateHtmlStudio() {
   const { id } = useParams<{ id: string }>();
