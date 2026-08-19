@@ -182,6 +182,10 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
        render Top-Selling Products table with separate ORDERS and QTY columns when both exist.
      * basket (when present) = shopping-basket structure: multiItemRate/threePlusRate (% of orders
        with ≥2 / ≥3 distinct products), avgItemsPerOrder — ideal as an insight card with big numbers.
+   - Comparison (priorPeriod, when present) → MoM comparison table/bars: current vs prior period KPIs
+     with mom % delta badges (green up / red down). mom=null means prior period was 0 — show "N/A".
+   - Media placements (mediaPlacements, when present) → image card grid: placement name + screenshot
+     (or placeholder) + description. Qualitative showcase — no numeric metrics needed.
    - Ranking (creator performance) → table with avatar, tier tags, highlighted best values
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
@@ -800,6 +804,13 @@ export const aiGenerateService = {
 
     // 期内汇总数据（有请求周期且 daily 与之有交集时计算——由 coverage 判定，而非仅"存在 daily"）
     let periodKpis: { label: string; value: string }[] | null = null;
+    // 缺口① MoM：前一期 KPI + 环比（前一期有 daily 数据时才有值）
+    let priorPeriod: {
+      period: string;
+      kpis: { revenues: number; clicks: number; orders: number; newCustomers: number };
+      priorKpis: { revenues: number; clicks: number; orders: number; newCustomers: number };
+      mom: { revenues: string | null; clicks: string | null; orders: string | null; newCustomers: string | null };
+    } | null = null;
     if (hasPeriod && cov.covered) {
       type DailySum = { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number; newCustomers: number };
       const total: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
@@ -861,6 +872,49 @@ export const aiGenerateService = {
         orders: byDate.get(d)!.orders,
       }));
       console.log(`[buildCampaignContext] Period-aware data computed: ${dates.length} days, GMV=$${total.gmv.toFixed(0)}, orders=${total.orders}`);
+
+      // ── 缺口① MoM 环比：前一期 = 报告周期往前推同样长度（宁缺勿假：前一期无 daily 数据不注入）──
+      if (reportPeriod?.startDate && reportPeriod.endDate) {
+        const dayMs = 86_400_000;
+        const s = new Date(reportPeriod.startDate).getTime();
+        const e = new Date(reportPeriod.endDate).getTime();
+        const len = Math.max(e - s + dayMs, dayMs);
+        const pStart = new Date(s - len).toISOString().slice(0, 10);
+        const pEnd = new Date(s - dayMs).toISOString().slice(0, 10);
+        const inPrior = (d: string) => d >= pStart && d <= pEnd;
+        const pt: typeof total = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
+        let priorDays = 0;
+        for (const cc of campaign.campaignCreators) {
+          for (const p of cc.cpsPerformances ?? []) {
+            const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
+            for (const d of daily) {
+              const date = String(d.date ?? '');
+              if (!date || !inPrior(date)) continue;
+              pt.clicks += num(d.clicks); pt.orders += num(d.orders); pt.gmv += num(d.gmv);
+              pt.newCustomers += num(d.newCustomers); priorDays++;
+            }
+          }
+        }
+        if (priorDays > 0) {
+          const mom = (cur: number, prev: number) =>
+            prev > 0 ? `${cur >= prev ? '+' : ''}${Math.round(((cur - prev) / prev) * 1000) / 10}%` : null;
+          priorPeriod = {
+            period: `${pStart} ~ ${pEnd}`,
+            kpis: {
+              revenues: total.gmv, clicks: total.clicks, orders: total.orders, newCustomers: total.newCustomers,
+            },
+            priorKpis: {
+              revenues: pt.gmv, clicks: pt.clicks, orders: pt.orders, newCustomers: pt.newCustomers,
+            },
+            mom: {
+              revenues: mom(total.gmv, pt.gmv),
+              clicks: mom(total.clicks, pt.clicks),
+              orders: mom(total.orders, pt.orders),
+              newCustomers: mom(total.newCustomers, pt.newCustomers),
+            },
+          };
+        }
+      }
     }
 
     // 构建 logo 绝对 URL（AI 生成的自包含 HTML 需要完整 URL 才能引用图片）。
@@ -886,6 +940,18 @@ export const aiGenerateService = {
     } catch {
       orderInsights = null; // campaign 不存在等异常 → 不注入
     }
+
+    // ★ 缺口④ 媒体资源位：analytics.mediaPlacements 白名单提取（定性：name/screenshotUrl/description）。
+    //   analytics 数字字段仍不进上下文；此处仅资源位展示信息。截图走 resolveUrl 转 /uploads 绝对地址。
+    const mediaPlacements = ((campaign.analytics as Record<string, unknown> | null)?.mediaPlacements as
+      | { name?: string; screenshotUrl?: string; description?: string }[]
+      | undefined)
+      ?.filter((m) => m?.name)
+      .map((m) => ({
+        name: m.name!,
+        ...(m.screenshotUrl ? { screenshotUrl: resolveUrl(m.screenshotUrl) ?? m.screenshotUrl } : {}),
+        ...(m.description ? { description: m.description } : {}),
+      })) ?? [];
 
     const context = {
       campaign: {
@@ -930,6 +996,11 @@ export const aiGenerateService = {
         topProducts: orderInsights.topProducts,
         ...(orderInsights.basket ? { basket: orderInsights.basket } : {}),
       } : {}),
+      // ★ 缺口① MoM 环比：前一期 KPI 对比（前一期有 daily 数据时注入）。
+      //   mom 字段 = (cur-prior)/prior 百分比字符串（如 "+27.6%"）；null = 前一期为 0，无法计算。
+      ...(priorPeriod ? { priorPeriod } : {}),
+      // ★ 缺口④ 媒体资源位（定性）。
+      ...(mediaPlacements.length ? { mediaPlacements } : {}),
       /** 业务线 design.md 在 DESIGN_GUIDE_SUFFIX 中单独追加，不嵌在 campaign JSON 中（避免重复发送） */
       creators: campaign.campaignCreators
         .map((cc) => {

@@ -23,6 +23,7 @@ import type {
   ProductPerformance,
   MarketPerformance,
   PromotionOffer,
+  MediaPlacement,
 } from '@mediakit/shared';
 
 interface Props {
@@ -255,6 +256,26 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
               onChange={(e) => onChange({ ...item, rationale: e.target.value })} placeholder="Reason (e.g. ROAS 4.10)" />
             <input className="border rounded px-1 py-0.5 text-[11px]" value={item.action}
               onChange={(e) => onChange({ ...item, action: e.target.value })} placeholder="Action recommendation" />
+          </div>
+        )}
+      />
+
+      {/* Media Placements — 媒体方站内资源位（定性展示） */}
+      <ListSection<MediaPlacement>
+        title="Media Placements" desc="媒体方站内资源位（Homepage Hero / Featured 等，定性截图展示）"
+        items={data.mediaPlacements ?? []}
+        onChange={(items) => setData({ ...data, mediaPlacements: items })}
+        newItem={() => ({ name: '', screenshotUrl: '', description: '' })}
+        renderRow={(item, onChange) => (
+          <div className="flex flex-col skin-gap-xs w-full">
+            <input className="border rounded px-1 py-0.5 text-[11px]" value={item.name}
+              onChange={(e) => onChange({ ...item, name: e.target.value })} placeholder="Placement name (e.g. DigChic Homepage Hero)" />
+            <div className="flex skin-gap-xs">
+              <input className="flex-1 min-w-0 border rounded px-1 py-0.5 text-[11px]" value={item.screenshotUrl ?? ''}
+                onChange={(e) => onChange({ ...item, screenshotUrl: e.target.value })} placeholder="Screenshot URL (/uploads/... 或 https://...)" />
+            </div>
+            <input className="border rounded px-1 py-0.5 text-[11px]" value={item.description ?? ''}
+              onChange={(e) => onChange({ ...item, description: e.target.value })} placeholder="Description (投放时段 / 位置)" />
           </div>
         )}
       />

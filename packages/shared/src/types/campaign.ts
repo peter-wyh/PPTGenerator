@@ -743,4 +743,20 @@ export interface CampaignAnalytics {
   topMarkets?: MarketPerformance[];
   /** Top Promotion Offers（促销活动 / 优惠码效果）。 */
   promotionOffers?: PromotionOffer[];
+  /**
+   * 媒体方站内资源位（campaign 级定性展示：Homepage Hero / Featured Products 等）。
+   * 与达人维度 PlacementPerformance 不同——此处仅记录资源位名称/截图/说明，
+   * 不含数字指标（数字真源仍是 CPS daily），用于报告的 Media Placement 展示模块。
+   */
+  mediaPlacements?: MediaPlacement[];
+}
+
+/** 媒体方站内资源位（campaign 级、定性）。 */
+export interface MediaPlacement {
+  /** 资源位名称，如 'DigChic Homepage Hero'。 */
+  name: string;
+  /** 截图 URL（可选，空 → 占位）。 */
+  screenshotUrl?: string;
+  /** 说明（投放时段 / 位置描述）。 */
+  description?: string;
 }
