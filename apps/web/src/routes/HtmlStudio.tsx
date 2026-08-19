@@ -312,10 +312,21 @@ export function HtmlStudio() {
       }
 
       // AI 模式 — SSE 流式
+      // ★ ③-1/③-3 生成过程纳入对话流程：点击生成立即切 Chat 模式，
+      //   用户提示词作为 user 消息入列，思考流在对话气泡中实时展示，
+      //   完成后 assistant 消息落历史（与后续迭代编辑同一条时间线）。
       const abortCtrl = new AbortController();
       abortRef.current = abortCtrl;
       let streamingHtml = '';
-      let streamingReasoning = ''; // 首次生成的思考过程，完成后存入会话首条消息
+      let streamingReasoning = ''; // 首次生成的思考过程，完成后存入会话 assistant 消息
+
+      const userMsg: AgentChatMessage = {
+        role: 'user',
+        content: vals.prompt?.trim() || '🤖 自动生成报告（自主模式，无附加指令）',
+        ts: new Date().toISOString(),
+      };
+      setPhase('chat');
+      setAgentHistory([userMsg]);
 
       try {
         await htmlTemplatesApi.generateStream(
@@ -356,7 +367,6 @@ export function HtmlStudio() {
         if (streamingHtml && streamingHtml.startsWith('<')) {
           void updateAiHtmlStatus('generated');
           setReasoning('');
-          setPhase('chat');
           const genMsg: AgentChatMessage = {
             role: 'assistant',
             content: truncated
@@ -366,12 +376,12 @@ export function HtmlStudio() {
             reasoning: streamingReasoning || undefined,
             ts: new Date().toISOString(),
           };
-          setAgentHistory([genMsg]);
+          setAgentHistory([userMsg, genMsg]);
 
           // 自动保存
           if (id) {
             try {
-              await htmlTemplatesApi.autoSave(id, streamingHtml, [genMsg], {
+              await htmlTemplatesApi.autoSave(id, streamingHtml, [userMsg, genMsg], {
                 prompt: vals.prompt,
                 designMd: vals.designMd,
               });
@@ -383,11 +393,22 @@ export function HtmlStudio() {
           // 不走下方 catch（generateStream 不抛错），须在此回退状态，
           // 否则 aiHtmlStatus 永久卡在 generating，列表徽标一直显示「生成中」。
           void updateAiHtmlStatus('pending');
+          setAgentHistory([userMsg, {
+            role: 'assistant',
+            content: `❌ 生成失败：${error}`,
+            ts: new Date().toISOString(),
+          }]);
         }
       } catch (e: unknown) {
         const err = e as { message?: string; name?: string };
         if (err.name !== 'AbortError') {
           setError(err.message || '生成失败，请重试');
+          // ★ 失败/取消回退 config 面板（保留表单值），供用户调整后重试
+          setPhase('config');
+        } else {
+          // 用户主动取消：回退配置面板，清掉对话中的进行时消息
+          setPhase('config');
+          setAgentHistory([]);
         }
         void updateAiHtmlStatus('pending');
       } finally {
@@ -502,6 +523,11 @@ export function HtmlStudio() {
           onBusyChange={handleBusyChange}
           campaignId={campaignId}
           reportPeriod={reportPeriod}
+          /* ★ ③-1 首次生成流纳入对话：进行时气泡（阶段+思考流+取消） */
+          generating={generating}
+          genStageText={GEN_STAGES[genStage]}
+          genReasoning={reasoning}
+          onCancelGenerate={handleCancel}
         />
       )}
     </aside>

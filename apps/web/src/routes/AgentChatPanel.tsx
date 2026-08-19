@@ -10,9 +10,10 @@ import { Button } from '@/components/Button';
 import { htmlTemplatesApi, type SSEChunk } from '@/api/htmlTemplates';
 import type { AgentChatMessage } from '@/api/htmlTemplates';
 
-/** 可折叠的 AI 思考过程（复用于流式临时气泡 + 聊天历史永久展示） */
+/** 可折叠的 AI 思考过程（复用于流式临时气泡 + 聊天历史永久展示）★ 支持全屏 */
 function CollapsibleReasoning({ text, defaultCollapsed = true }: { text: string; defaultCollapsed?: boolean }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [fullscreen, setFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,20 +22,60 @@ function CollapsibleReasoning({ text, defaultCollapsed = true }: { text: string;
     }
   }, [collapsed, text]);
 
+  // ★ ③-2 全屏模式：Esc 退出
+  useEffect(() => {
+    if (!fullscreen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [fullscreen]);
+
+  const body = (
+    <div
+      ref={scrollRef}
+      className={`whitespace-pre-wrap text-[11px] leading-relaxed text-foreground-muted ${
+        fullscreen ? 'flex-1 overflow-y-auto p-6 font-mono' : 'max-h-40 overflow-y-auto'
+      }`}
+    >
+      {text}
+    </div>
+  );
+
   return (
     <div className="mt-1.5">
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="mb-1 text-[10px] text-foreground-muted hover:text-foreground-secondary"
-      >
-        {collapsed ? '▸ 展开思考' : '▾ 收起思考'}
-      </button>
-      {!collapsed && (
-        <div
-          ref={scrollRef}
-          className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[11px] leading-relaxed text-foreground-muted"
+      <div className="mb-1 flex items-center gap-2">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="text-[10px] text-foreground-muted hover:text-foreground-secondary"
         >
-          {text}
+          {collapsed ? '▸ 展开思考' : '▾ 收起思考'}
+        </button>
+        {!collapsed && (
+          <button
+            onClick={() => setFullscreen(true)}
+            className="text-[10px] text-foreground-muted hover:text-foreground-secondary"
+            title="全屏查看思考过程 (Esc 退出)"
+          >
+            ⛶ 全屏
+          </button>
+        )}
+      </div>
+      {!collapsed && !fullscreen && body}
+      {/* ★ ③-2 全屏思考浮层：覆盖整个视口 */}
+      {fullscreen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-surface-primary/95 backdrop-blur-sm">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-default px-4">
+            <span className="text-sm font-medium text-foreground-primary">🧠 AI 思考过程</span>
+            <button
+              onClick={() => setFullscreen(false)}
+              className="rounded-md border border-border-default px-3 py-1.5 text-xs text-foreground-secondary hover:bg-surface-hover"
+            >
+              ✕ 退出全屏 (Esc)
+            </button>
+          </div>
+          {body}
         </div>
       )}
     </div>
@@ -56,6 +97,15 @@ interface AgentChatPanelProps {
   /** ★ ④ 数据上下文：绑定的 Campaign + 报告周期。随编辑请求发送，服务端注入真实 DB 数据防伪造。 */
   campaignId?: string;
   reportPeriod?: { startDate?: string; endDate?: string };
+  /**
+   * ★ ③-1 首次生成流（HtmlStudio handleGenerate 驱动）：
+   * active=true 时面板底部渲染「生成中」进行时气泡（阶段轮播 + 思考流 + 取消），
+   * 与迭代编辑的 loading 气泡同一视觉模式，生成过程完整纳入对话时间线。
+   */
+  generating?: boolean;
+  genStageText?: string;
+  genReasoning?: string;
+  onCancelGenerate?: () => void;
 }
 
 const QUICK_ACTIONS = [
@@ -77,6 +127,10 @@ export function AgentChatPanel({
   onBusyChange,
   campaignId,
   reportPeriod,
+  generating = false,
+  genStageText = '',
+  genReasoning = '',
+  onCancelGenerate,
 }: AgentChatPanelProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -343,6 +397,28 @@ export function AgentChatPanel({
               {/* 正文：思考流（reasoning 非空时显示；思考完成后可折叠） */}
               {reasoning && (
                 <CollapsibleReasoning text={reasoning} defaultCollapsed={false} />
+              )}
+            </div>
+          </div>
+        )}
+        {/* ★ ③-1 首次生成进行时气泡：阶段轮播 + 思考流 + 取消（与编辑 loading 气泡同视觉模式） */}
+        {generating && !loading && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
+              <div className="flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-1 font-medium text-foreground-secondary">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-primary" />
+                  {genStageText || '正在生成报告…'}
+                </span>
+                <button
+                  onClick={onCancelGenerate}
+                  className="text-[10px] text-red hover:underline"
+                >
+                  取消
+                </button>
+              </div>
+              {genReasoning && (
+                <CollapsibleReasoning text={genReasoning} defaultCollapsed={false} />
               )}
             </div>
           </div>

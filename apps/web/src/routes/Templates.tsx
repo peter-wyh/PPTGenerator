@@ -23,14 +23,13 @@ import { toast } from '../components/Toast';
 /** 渲染类型 → 标签 + 徽章颜色（与报告管理页 styleType 徽章风格一致） */
 const RENDER_TYPE_BADGES: Record<string, { label: string; cls: string }> = {
   'multi-page': { label: '多页 PPT', cls: 'bg-orange-100 text-orange-700' },
-  'long-poster': { label: '长图海报', cls: 'bg-blue-100 text-blue-700' },
   'html-report': { label: 'HTML 报告', cls: 'bg-purple-100 text-purple-700' },
 };
-/** 兼容旧数据：meta.renderType 为空时根据宽高推断 */
+/** 兼容旧数据：meta.renderType 为空时根据宽高推断（长图海报已裁撤，竖版归 HTML 报告） */
 function renderTypeOf(t: TemplateSummary): string {
   const rt = (t.meta as Record<string, unknown>)?.renderType as string | undefined;
   if (rt) return rt;
-  if (t.height > t.width) return 'long-poster';
+  if (t.height > t.width) return 'html-report';
   const ratio = t.width / t.height;
   return ratio >= 1.5 ? 'multi-page' : 'html-report';
 }

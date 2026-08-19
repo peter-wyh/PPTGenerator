@@ -492,7 +492,7 @@ const projectMetaFields = {
   footerConfig: footerConfigSchema.optional(),
   /** 报告时间范围（驱动报告标题周期文案）。 */
   reportPeriod: reportPeriodSchema.optional(),
-  /** 渲染类型：multi-page / long-poster / html-report（P1-15，模板管理流）。 */
+  /** 渲染类型：multi-page / html-report（P1-15，模板管理流；长图海报已裁撤）。 */
   renderType: z.string().max(40).optional(),
   /** AI HTML 报告生成状态（HtmlStudio 写入，项目列表状态徽标读取）。 */
   aiHtmlStatus: z.enum(['generated', 'generating', 'pending']).optional(),

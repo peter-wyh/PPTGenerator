@@ -34,11 +34,10 @@ const DEVICE_WIDTHS: Record<string, string> = {
 };
 
 /**
- * ★ 桌面设备画布宽度动态锁定为「容器宽 + 右侧面板宽」——
- * 与预览 iframe（无面板全宽）断点行为完全一致（Tailwind md:/lg: 同触发），
- * 画布超宽时整体缩放适配可视区（Figma 式 WYSIWYG）。
+ * ★ 桌面设备画布宽度动态锁定为「预览 iframe 等效视口宽」（根宽 − gutter）——
+ * 断点求值环境与预览完全一致（Tailwind md:/lg: 同触发），
+ * 画布比预览窄的部分（右侧样式面板 300px）由 setZoom 等比缩放适配（Figma 式 WYSIWYG）。
  */
-const SIDE_PANEL_WIDTH = 300;
 /** 预览 iframe 容器的 p-4 gutter（左右共 32px），画布宽度对齐时扣除。 */
 const PREVIEW_GUTTER = 32;
 
@@ -671,15 +670,14 @@ export function VisualEditor({
   }, [device, desktopWidth]);
 
   // ── 测量容器宽度 → 桌面画布锁定宽 ──
-  // ★ 测根元素（flex-1 主体区）而非 containerRef（canvas 挂载点）——
-  //   containerRef 在「编辑器内部预览」时被 GrapesJS preview 命令隐藏/替换,
-  //   ResizeObserver 触发重测会把 desktopWidth 带偏。根元素布局稳定。
-  // ★ 画布宽 = 根宽 - 预览 iframe 的 p-4 gutter(2×16px) + 右侧面板 300px：
-  //   与「预览」模式等效宽度对齐，Tailwind md:/lg: 断点行为一致，WYSIWYG。
+  // ★ WYSIWYG 原则：device 宽必须等于「预览」模式 iframe 的 CSS 视口宽（根宽 − p-4×2 gutter）。
+  //   两者断点(md:768/lg:1024/xl:1280)求值环境一致，Tailwind 响应式行为才一致。
+  //   画布区比预览区窄 300px（右侧样式面板），由 setZoom 按 device 宽等比缩放适配——
+  //   而非把 +300 补进 device 宽（那是像素平移，会改变断点求值 → 预览/编辑布局漂移）。
   useEffect(() => {
     const el = containerRef.current?.closest('.visual-editor-root') as HTMLElement | null;
     if (!el) return;
-    const measure = () => setDesktopWidth(Math.max(320, el.clientWidth - PREVIEW_GUTTER + SIDE_PANEL_WIDTH));
+    const measure = () => setDesktopWidth(Math.max(320, el.clientWidth - PREVIEW_GUTTER));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);

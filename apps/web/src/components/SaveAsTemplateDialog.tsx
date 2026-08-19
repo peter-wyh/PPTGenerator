@@ -15,11 +15,10 @@ interface SaveAsTemplateDialogProps {
   onSaved?: (templateId: string) => void;
 }
 
-type RenderType = 'multi-page' | 'long-poster' | 'html-report';
+type RenderType = 'multi-page' | 'html-report';
 
 const RENDER_TYPE_LABELS: Record<RenderType, string> = {
   'multi-page': '多页 PPT',
-  'long-poster': '长图海报',
   'html-report': 'HTML 报告',
 };
 
@@ -34,8 +33,8 @@ function inferRenderType(
 ): RenderType {
   if (styleType === 'ai-html') return 'html-report';
   if (styleType === 'ppt') return 'multi-page';
-  // 旧数据无 styleType（或残留的 single）时用宽高推断
-  if (h > w) return 'long-poster';
+  // 旧数据无 styleType（或残留的 single）时用宽高推断（长图海报已裁撤，竖版归 HTML 报告）
+  if (h > w) return 'html-report';
   const ratio = w / h;
   if (ratio >= 1.5) return 'multi-page';
   return 'html-report';

@@ -262,7 +262,7 @@ export interface ProjectMeta {
 
   /** 创建时自动应用的单页面模版 pageType（仅用于新建流程，应用后清除）。 */
   metaInitialTemplate?: string;
-  /** P1-15: 渲染类型 — 'multi-page'=多页PPT, 'long-poster'=长图海报, 'html-report'=HTML报告。 */
+  /** P1-15: 渲染类型 — 'multi-page'=多页PPT, 'html-report'=HTML报告（长图海报已裁撤）。 */
   renderType?: string;
 
   /** AI HTML 生成状态：'generated'=已生成, 'generating'=生成中, 'pending'=未生成。 */

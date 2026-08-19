@@ -8,19 +8,17 @@ import {
 } from '@/projectsMeta';
 import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
 
-/** P1-15: 渲染类型 — 第一步先选这个，再展示对应配置 */
-type RenderType = 'multi-page' | 'long-poster' | 'html-report';
+/** P1-15: 渲染类型 — 第一步先选这个，再展示对应配置（2026-08 裁撤长图海报，仅剩两类） */
+type RenderType = 'multi-page' | 'html-report';
 
 const RENDER_TYPES: { value: RenderType; label: string; desc: string }[] = [
   { value: 'multi-page', label: '多页 PPT', desc: '16:9 幻灯片，多页编辑' },
-  { value: 'long-poster', label: '长图海报', desc: '单页竖版长图，适合社媒传播' },
   { value: 'html-report', label: 'HTML 报告', desc: '可交互网页，支持嵌入链接' },
 ];
 
 /** 各渲染类型对应的默认尺寸 */
 const RENDER_DEFAULT_SIZE: Record<RenderType, { w: number; h: number }> = {
   'multi-page': { w: 1920, h: 1080 },
-  'long-poster': { w: 1080, h: 1920 },
   'html-report': { w: 1280, h: 0 }, // h=0 表示自适应高度
 };
 
@@ -44,12 +42,12 @@ const selectCls =
 
 /**
  * 根据宽高推断渲染类型（兼容旧数据——meta 中尚无 renderType 字段的模板）。
- * - 竖版（高>宽）→ 长图海报
+ * - 竖版（高>宽）→ HTML 报告（长图海报已裁撤，竖版归入 HTML 报告）
  * - 接近 16:9（宽≥高且 ratio≥1.5）→ 多页 PPT
- * - 其余（如 1242×1656 接近竖版但略宽）→ HTML 报告
+ * - 其余 → HTML 报告
  */
 function inferRenderType(w: number, h: number): RenderType {
-  if (h > w) return 'long-poster';
+  if (h > w) return 'html-report';
   const ratio = w / h;
   if (ratio >= 1.5) return 'multi-page';
   return 'html-report';
