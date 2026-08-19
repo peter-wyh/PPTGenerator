@@ -587,6 +587,22 @@ export interface BusinessLine {
   designMdUrl?: string;
 }
 
+/** 业务线报告指南(AI 提示词层配置:品牌视觉/章节结构/展示形式偏好/语调与术语)。 */
+export interface Guide {
+  /** 展示名,如 "DG 月报指南"。 */
+  name: string;
+  /** 报告场景(月报/结案/复盘…),空=通用(仅可作 isDefault 兜底)。 */
+  scenario?: string;
+  /** Markdown 指南正文。 */
+  content: string;
+  /** 关联业务线 id。 */
+  businessLineId: string;
+  /** 业务线默认指南(同业务线唯一)。 */
+  isDefault?: boolean;
+  /** 停用后不参与匹配。 */
+  isActive?: boolean;
+}
+
 /** 商家（查找表 Merchant 表的条目；广告主通过 merchantId 引用）。 */
 export interface Merchant {
   /** 例如 'm1'。 */

@@ -178,6 +178,7 @@ model BusinessLine {
 
   advertisers Advertiser[]
   campaigns   Campaign[]
+  guides       Guide[]
 
   @@index([merchantId])
 }
@@ -223,6 +224,27 @@ model MarketingEvent {
 
   @@index([advertiserId])
   @@index([startDate])
+}
+
+/// 业务线报告指南(AI 提示词层配置:品牌视觉/章节结构/展示形式/语调术语)。
+model Guide {
+  id             String       @id @default(cuid())
+  businessLineId String
+  businessLine   BusinessLine @relation(fields: [businessLineId], references: [id])
+  /// 报告场景(月报/结案/复盘…),空=通用(仅可作 isDefault 兜底,不参与精确匹配)。
+  scenario       String?
+  /// 展示名,如 "DG 月报指南"。
+  name           String
+  /// Markdown 指南正文(约定分节:品牌视觉/章节结构/展示形式偏好/语调与术语)。
+  content        String       @db.Text
+  /// 业务线默认指南(同业务线唯一,service 写入时互斥)。
+  isDefault      Boolean      @default(false)
+  /// 停用后不参与匹配(软停用,不物理删除)。
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([businessLineId])
 }
 
 /// 投放活动。
