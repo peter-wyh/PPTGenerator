@@ -26,6 +26,9 @@ RUN pnpm --filter @mediakit/web build
 ######## runtime ########
 FROM harbor.duomai.com/tool/nginx:stable-alpine AS runtime
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# K8s/非-compose 环境：启动时用 API_UPSTREAM 替换代理目标（默认 compose 服务名）
+COPY apps/web/nginx-init.sh /docker-entrypoint.d/40-api-upstream.sh
+RUN chmod +x /docker-entrypoint.d/40-api-upstream.sh
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
