@@ -20,6 +20,7 @@ const MENUS: MenuItem[] = [
   { path: '/data/advertisers', label: '广告主' },
   { path: '/data/marketing-events', label: '营销活动' },
   { path: '/data/business-lines', label: '业务线' },
+  { path: '/data/api-docs', label: '接口文档' },
 ];
 
 function isActive(path: string, pathname: string) {
