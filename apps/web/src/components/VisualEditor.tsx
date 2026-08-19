@@ -90,6 +90,28 @@ function parseHtmlForEditor(
   return { bodyHtml, headCss, headLinks, tailwindCdn, headInlineScripts, fullHead: headContent, bodyScripts };
 }
 
+/**
+ * ★ 触发 Tailwind Play CDN 全量重扫（幂等，可重复调用）。
+ * 画布组件先于 Tailwind 注入加载时，Play CDN 的 MutationObserver 错过初始 class，
+ * grid/flex 等工具类不生成 → 编辑画布与预览布局不一致。
+ * 重新赋值 tailwind.config 等价于一次 config 变更，Play CDN 会全量重扫 class 并
+ * 重新生成工具类样式。时序上 Tailwind 初始化、config 注入、组件落 DOM 均为异步，
+ * 单次重扫可能仍赶在交集之前——helper 内置「立即 + 梯度延迟重试」兜底。
+ */
+function triggerTwRescan(canvasDoc: Document): void {
+  const fire = () => {
+    const w = canvasDoc.defaultView as (Window & { tailwind?: { config: unknown } }) | null;
+    if (w?.tailwind) {
+      w.tailwind.config = w.tailwind.config;
+      return true;
+    }
+    return false;
+  };
+  fire();
+  // 梯度延迟兜底：Tailwind 运行时/组件 DOM 就绪有先后，多打几枪保证命中交集
+  [100, 400, 1000].forEach((delay) => setTimeout(() => fire(), delay));
+}
+
 function reconstructFullHtml(originalHtml: string, editedBodyHtml: string, editorCss: string, bodyScripts: string[]): string {
   const headMatch = originalHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
   const headContent = headMatch ? headMatch[1] : '';
@@ -325,6 +347,9 @@ export function VisualEditor({
 
       // 2) 注入 Tailwind CDN —— onload 后追加 head 内联脚本（tailwind.config 品牌色等）
       //    ★ config 必须在 Tailwind 运行时就绪后执行（Play CDN 会在每个 config 变更时重扫 class）
+      //    ★ 画布组件先于 Tailwind 注入加载 → Play CDN 的 MutationObserver 错过初始 class，
+      //      注入完成后必须「重新赋值 config」主动触发一次全量重扫，否则 grid/flex 工具类
+      //      不生成 → 编辑画布布局与预览不一致（垂直平铺）。
       if (parsed.tailwindCdn) {
         const injectHeadScripts = () => {
           for (const s of parsed.headInlineScripts) {
@@ -332,6 +357,8 @@ export function VisualEditor({
             el.textContent = s;
             canvasHead.appendChild(el);
           }
+          // 主动触发 Play CDN 重扫（等价于 config 变更，全量重新生成工具类样式）
+          triggerTwRescan(canvasDoc);
         };
         const twScript = canvasDoc.createElement('script');
         twScript.src = parsed.tailwindCdn;
@@ -682,6 +709,8 @@ export function VisualEditor({
       el.textContent = s;
       canvasDoc.head.appendChild(el);
     }
+    // ★ 主动触发 Play CDN 重扫——外部版本切换后 body 已重建，重扫确保工具类样式同步
+    triggerTwRescan(canvasDoc);
   }, [html]);
 
   // ── 设备切换 ──

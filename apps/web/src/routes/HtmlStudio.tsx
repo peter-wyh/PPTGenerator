@@ -609,11 +609,10 @@ export function HtmlStudio() {
             </div>
           </div>
 
-          {/* ★ 源码面板：左侧代码编辑 + 右侧实时预览分栏 */}
+          {/* 源码面板 */}
           {showSource && phase === 'chat' ? (
             <div className="flex flex-1 overflow-hidden">
-              {/* 左：HTML 源码编辑 */}
-              <div className="flex w-1/2 flex-col overflow-hidden border-r border-border-default">
+              <div className="flex flex-1 flex-col overflow-hidden">
                 <div className="flex h-8 shrink-0 items-center justify-between border-b border-border-default px-3 bg-surface-primary">
                   <span className="text-xs font-medium text-foreground-secondary">HTML 源码（手动编辑 → 保存生效）</span>
                   <div className="flex items-center gap-1.5">
@@ -653,21 +652,6 @@ export function HtmlStudio() {
                   className="flex-1 resize-none bg-surface-secondary p-3 font-mono text-[11px] leading-relaxed text-foreground-primary focus:outline-none"
                   spellCheck={false}
                 />
-              </div>
-              {/* 右：实时预览（桌面宽度，iframe srcDoc 即时反映左侧编辑） */}
-              <div className="flex flex-1 flex-col overflow-hidden bg-surface-subtle">
-                <div className="flex h-8 shrink-0 items-center border-b border-border-default px-3 bg-surface-primary">
-                  <span className="text-xs font-medium text-foreground-secondary">实时预览</span>
-                </div>
-                <div className="flex flex-1 items-start justify-center overflow-auto p-3">
-                  <iframe
-                    srcDoc={generatedHtml}
-                    title="Source Live Preview"
-                    className="h-full w-full bg-white shadow-sm"
-                    style={{ borderRadius: 6, border: '1px solid var(--border-default, #e5e7eb)' }}
-                    sandbox="allow-same-origin allow-scripts"
-                  />
-                </div>
               </div>
             </div>
           ) : phase === 'chat' && viewMode === 'visual' ? (
