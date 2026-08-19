@@ -72,6 +72,7 @@ model Guide {
       > 无指南(仅 SYSTEM_PROMPT_CORE)
 ```
 
+- scenario 为空的指南(`scenario = null`)只能作为 isDefault 参与第二级;不参与第一级精确匹配(避免"通用指南抢走特定场景")
 - scenario 来自 ai-generate 请求可选参数 `scenario: z.string().optional()`;前端生成面板暴露"报告类型"选择,首期可不传
 - 匹配不到静默降级,不报错;响应回传 `guideUsed: {id, name}` 供前端提示
 - 同优先级多条时按 `updatedAt DESC` 取最新
@@ -113,7 +114,7 @@ model Guide {
 ```
 POST /api/html-templates/ai-generate (或 edit 变体)
   ↓ controller Zod 校验(新增可选 scenario)
-  ↓ guideService.pickForCampaign(campaignId/businessLineId, scenario?)
+  ↓ guideService.pickForCampaign(businessLineId, scenario?)
       SELECT ... WHERE businessLineId=? AND isActive
       ORDER BY (scenario匹配) DESC, isDefault DESC, updatedAt DESC LIMIT 1
   ↓ buildSystemPrompt(campaign, guide) 拼装
