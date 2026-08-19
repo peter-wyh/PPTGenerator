@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError';
 import { config } from '../../config';
 import { fetchChatCompletionWithRetry } from './ai-client';
 import { computeCoverage } from './recipe/campaign-report/coverage';
+import { campaignService } from '../campaigns/campaigns.service';
 
 /**
  * AI HTML 报告生成服务。
@@ -177,6 +178,10 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
    - KPI Overview (ALWAYS): extract 3-6 core metrics from metrics/analytics, display as large brand-color number cards
    - Time series (dailyTrend/weeklyTrend) → line chart / area chart / bar chart (Chart.js)
    - Distribution (topProducts/topMarkets/categories) → doughnut chart / horizontal bar chart / progress bars
+     * topProducts rows carry BOTH orders and qty (qty = units sold, ≥ orders for multi-packs) —
+       render Top-Selling Products table with separate ORDERS and QTY columns when both exist.
+     * basket (when present) = shopping-basket structure: multiItemRate/threePlusRate (% of orders
+       with ≥2 / ≥3 distinct products), avgItemsPerOrder — ideal as an insight card with big numbers.
    - Ranking (creator performance) → table with avatar, tier tags, highlighted best values
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
@@ -867,6 +872,21 @@ export const aiGenerateService = {
     const resolveUrl = (p?: string | null) =>
       p && p.startsWith('/uploads/') ? `${baseUrl}${p}` : (p || null);
 
+    // ★ 订单商品明细聚合（CampaignOrder/CampaignOrderItem）：Top-Sales（含 QTY）+ 购物篮。
+    //   宁缺勿假：无订单数据时不注入任何字段（AI 渲染 Data Unavailable）。
+    //   server 内部聚合查询，无用户语境 —— admin 通道（与 computeCoverage 同口径）。
+    let orderInsights: Awaited<ReturnType<typeof campaignService.getOrderInsights>> | null = null;
+    try {
+      orderInsights = hasPeriod && reportPeriod
+        ? await campaignService.getOrderInsights(campaignId, '', {
+            start: reportPeriod.startDate,
+            end: reportPeriod.endDate,
+          }, true)
+        : await campaignService.getOrderInsights(campaignId, '', undefined, true);
+    } catch {
+      orderInsights = null; // campaign 不存在等异常 → 不注入
+    }
+
     const context = {
       campaign: {
         name: campaign.name,
@@ -902,6 +922,14 @@ export const aiGenerateService = {
       ...(dailyTrend ? { dailyTrend } : {}),
       // ★ 期内 KPI 总量（当存在时，AI 应使用这些而非 campaign.metrics）
       ...(periodKpis ? { periodKpis } : {}),
+      // ★ 订单商品聚合：Top-Sales 排行（orders/qty/revenue）+ 购物篮结构。
+      //   含义：topProducts.orders = 含该商品的订单数；qty = 售出件数（多件装一件多 qty）。
+      //   basket = 购物篮指标（multiItemRate/threePlusRate 单位 %，avgItemsPerOrder 件/单）。
+      //   AI 应优先用 topProducts 渲染 Top-Selling Products 表（含 QTY 列）。
+      ...(orderInsights && orderInsights.topProducts.length ? {
+        topProducts: orderInsights.topProducts,
+        ...(orderInsights.basket ? { basket: orderInsights.basket } : {}),
+      } : {}),
       /** 业务线 design.md 在 DESIGN_GUIDE_SUFFIX 中单独追加，不嵌在 campaign JSON 中（避免重复发送） */
       creators: campaign.campaignCreators
         .map((cc) => {

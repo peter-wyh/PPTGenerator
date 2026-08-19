@@ -71,8 +71,68 @@ export const campaignService = {
       select: { analytics: true },
     });
   },
-};
+  /**
+   * 订单商品聚合：Top-Sales 商品排行（orders/qty/revenue）+ 购物篮结构指标。
+   * period 可选切片（YYYY-MM-DD 区间，按 orderDate 过滤）。admin 豁免 owner 校验（列表页全局视角）。
+   */
+  async getOrderInsights(campaignId: string, ownerId: string, period?: { start?: string; end?: string }, admin = false) {
+    await this.getOrThrow(campaignId, ownerId, admin);
+    const orders = await prisma.campaignOrder.findMany({
+      where: {
+        campaignId,
+        ...(period?.start || period?.end ? {
+          orderDate: {
+            ...(period.start ? { gte: new Date(period.start) } : {}),
+            ...(period.end ? { lte: new Date(`${period.end}T23:59:59.999Z`) } : {}),
+          },
+        } : {}),
+      },
+      include: { items: true },
+    });
 
+    // ── 商品聚合 ──
+    const byProduct = new Map<string, { orders: number; qty: number; revenue: number; category?: string }>();
+    // ── 购物篮 ──
+    let multiItemOrders = 0, threePlusOrders = 0, totalItems = 0;
+    for (const o of orders) {
+      const perProduct = new Map<string, { qty: number; revenue: number; category?: string }>();
+      for (const it of o.items) {
+        const cur = perProduct.get(it.productName) ?? { qty: 0, revenue: 0, category: it.category ?? undefined };
+        cur.qty += it.qty;
+        cur.revenue += Number(it.lineTotal);
+        perProduct.set(it.productName, cur);
+      }
+      for (const [name, v] of perProduct) {
+        const agg = byProduct.get(name) ?? { orders: 0, qty: 0, revenue: 0, category: v.category };
+        agg.orders += 1;                      // 含该商品的订单数（同单同品合并为一）
+        agg.qty += v.qty;
+        agg.revenue += v.revenue;
+        if (!agg.category && v.category) agg.category = v.category;
+        byProduct.set(name, agg);
+      }
+      const distinctItems = perProduct.size;
+      const itemCount = [...perProduct.values()].reduce((s, x) => s + x.qty, 0);
+      totalItems += itemCount;
+      if (distinctItems >= 2) multiItemOrders++;
+      if (distinctItems >= 3) threePlusOrders++;
+    }
+
+    const topProducts = [...byProduct.entries()]
+      .map(([name, v]) => ({ name, orders: v.orders, qty: v.qty, revenue: Math.round(v.revenue * 100) / 100, category: v.category ?? null }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    const orderCount = orders.length;
+    const basket = orderCount ? {
+      orderCount,
+      multiItemRate: Math.round((multiItemOrders / orderCount) * 1000) / 10,
+      threePlusRate: Math.round((threePlusOrders / orderCount) * 1000) / 10,
+      avgItemsPerOrder: Math.round((totalItems / orderCount) * 10) / 10,
+    } : null;
+
+    return { orderCount, topProducts, basket };
+  },
+};
 // ─── Creator ─────────────────────────────────────────────────────────────────
 
 export const creatorService = {
@@ -541,6 +601,93 @@ export const importService = {
             productName, category, market, promoName, promoType,
           },
         });
+        updated++;
+      } catch {
+        skipped++;
+      }
+    }
+    return { updated, skipped };
+  },
+
+  /** 导入订单商品明细（联盟平台订单导出）。幂等：(campaignId, orderId) 重导覆盖。 */
+  async importOrders(_ownerId: string, items: Record<string, unknown>[]) {
+    let updated = 0, skipped = 0;
+    // 同一订单可能拆多行（每商品一行）——先按 orderId 分组
+    const grouped = new Map<string, Record<string, unknown>[]>();
+    for (const item of items) {
+      const campaignId = String(item.campaignId ?? '');
+      const orderId = String(item.orderId ?? '');
+      if (!campaignId || !orderId) { skipped++; continue; }
+      const key = `${campaignId}::${orderId}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(item);
+    }
+
+    for (const [key, rows] of grouped) {
+      try {
+        const [campaignId, orderId] = key.split('::');
+        const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+        if (!campaign) { skipped += rows.length; continue; }
+
+        // 达人归属（可选）：campaignId+creatorId → CampaignCreator.id
+        let campaignCreatorId: string | null = null;
+        const creatorIdRaw = String(rows[0].creatorId ?? '').trim();
+        if (creatorIdRaw) {
+          const link = await prisma.campaignCreator.findFirst({ where: { campaignId, creatorId: creatorIdRaw } });
+          campaignCreatorId = link?.id ?? null;
+        }
+
+        // 订单头字段取首行（同单多行应一致）
+        const orderDateRaw = String(rows[0].orderDate ?? '').trim();
+        const orderDate = orderDateRaw ? new Date(orderDateRaw) : null;
+        const orderStatus = String(rows[0].orderStatus ?? '').trim() || null;
+
+        // 商品行
+        const itemRows = rows
+          .map((r) => {
+            const productName = String(r.productName ?? '').trim();
+            if (!productName) return null;
+            const qty = parseInt(String(r.qty ?? '1'), 10) || 1;
+            const unitPrice = new Prisma.Decimal(parseFloat(String(r.unitPrice ?? '0').replace(/[$,]/g, '')) || 0);
+            const lineRaw = parseFloat(String(r.lineTotal ?? '0').replace(/[$,]/g, '')) || 0;
+            const lineTotal = lineRaw > 0 ? new Prisma.Decimal(lineRaw) : unitPrice.mul(qty);
+            return {
+              productName,
+              category: String(r.category ?? '').trim() || null,
+              sku: String(r.sku ?? '').trim() || null,
+              qty,
+              unitPrice,
+              lineTotal,
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null);
+        if (!itemRows.length) { skipped += rows.length; continue; }
+
+        // 幂等 upsert：重导同单先清空 items 再重建（先查再分支，避免 create+update 双写翻倍）
+        const existing = await prisma.campaignOrder.findUnique({
+          where: { campaignId_orderId: { campaignId, orderId } },
+          select: { id: true },
+        });
+        if (existing) {
+          await prisma.campaignOrder.update({
+            where: { id: existing.id },
+            data: {
+              campaignCreatorId, orderDate, orderStatus,
+              items: { deleteMany: {} },   // 清空旧商品行
+            },
+          });
+          await prisma.campaignOrderItem.createMany({
+            data: itemRows.map((r) => ({ ...r, campaignOrderId: existing.id })),
+          });
+        } else {
+          await prisma.campaignOrder.create({
+            data: {
+              campaignId, orderId, campaignCreatorId, orderDate, orderStatus,
+              items: { create: itemRows },
+            },
+          });
+        }
+
         updated++;
       } catch {
         skipped++;

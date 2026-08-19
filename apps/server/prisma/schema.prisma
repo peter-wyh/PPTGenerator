@@ -243,6 +243,7 @@ model Campaign {
   updatedAt DateTime @updatedAt
 
   campaignCreators CampaignCreator[]
+  orders           CampaignOrder[]
 
   @@index([ownerId])
   @@index([businessLineId])
@@ -320,6 +321,7 @@ model CampaignCreator {
   performance   CreatorPerformance?
   collaboration Collaboration?
   cpsPerformances CpsPerformance[]
+  orders        CampaignOrder[]
 
   @@unique([campaignId, creatorId])
   @@index([campaignId])
@@ -401,6 +403,58 @@ model ReportScheme {
 
   @@index([ownerId])
   @@index([businessLineCode])
+}
+
+// ─── Phase 6: 订单商品明细 ──────────────────────────────────────────────────
+// 订单真源在联盟平台（ShareASale/Awin 等）；此处为导入快照，用于
+// Top-Sales 商品排行（含 QTY 件数）与购物篮结构分析。
+// 唯一键 (campaignId, orderId) 幂等：重导覆盖（先删 items 再重建）。
+
+/// 订单头：一行 = 一个归因订单。
+model CampaignOrder {
+  id                String   @id @default(cuid())
+  campaignId        String
+  campaign          Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  /// 归因达人（campaign × creator 的 CampaignCreator.id；无归属可空）。
+  campaignCreatorId String?
+  campaignCreator   CampaignCreator? @relation(fields: [campaignCreatorId], references: [id])
+  /// 平台订单号（幂等键组成）。
+  orderId           String
+  /// 下单时间。
+  orderDate         DateTime?
+  /// 订单状态（paid/shipped/refunded…，来自平台导出）。
+  orderStatus       String?
+
+  items             CampaignOrderItem[]
+
+  @@unique([campaignId, orderId])
+  @@index([campaignId])
+  @@index([campaignCreatorId])
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+/// 订单商品行：一行 = 订单 × 商品。
+model CampaignOrderItem {
+  id          String         @id @default(cuid())
+  order       CampaignOrder  @relation(fields: [campaignOrderId], references: [id], onDelete: Cascade)
+  campaignOrderId String
+  /// 商品名（平台导出原名）。
+  productName String
+  /// 品类标签（可选，来自商品库或人工标注）。
+  category    String?
+  /// SKU（可选）。
+  sku         String?
+  /// 购买件数 ← QTY 排行榜数据源。
+  qty         Int            @default(1)
+  /// 单价。
+  unitPrice   Decimal        @default(0) @db.Decimal(14, 2)
+  /// 行小计 = qty × unitPrice。
+  lineTotal   Decimal        @default(0) @db.Decimal(14, 2)
+
+  @@index([campaignOrderId])
+  @@index([productName])
 }
 
 /// CPS 链接效果（一行=一条 CPS 跟踪链接的汇总数据）。

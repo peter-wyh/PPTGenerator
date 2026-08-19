@@ -174,4 +174,19 @@ export const campaignController = {
     const result = await importService.importCpsDaily(userId(req), items);
     res.json(result);
   }),
+
+  importOrders: asyncHandler(async (req: Request, res: Response) => {
+    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const result = await importService.importOrders(userId(req), items);
+    res.json(result);
+  }),
+
+  /** 订单商品聚合：Top-Sales（含 QTY）+ 购物篮指标。query: start/end（可选 YYYY-MM-DD）。 */
+  getOrderInsights: asyncHandler(async (req: Request, res: Response) => {
+    const id = String(req.params.id ?? '');
+    const { start, end } = req.query as { start?: string; end?: string };
+    const v = req.user as AuthPayload;
+    const insights = await campaignService.getOrderInsights(id, v.id, { start, end }, v.role === 'ADMIN');
+    res.json(insights);
+  }),
 };

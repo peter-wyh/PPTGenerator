@@ -9,6 +9,7 @@
  * - collaborationDaily:  合作每日明细（互动数据）
  * - cps:                 CPS 链接效果汇总（一条 CPS 链接一行）
  * - cpsDaily:            CPS 链接每日明细
+ * - orders:              订单商品明细（联盟平台订单导出；聚合出 Top-Sales QTY 排行 + 购物篮指标）
  */
 
 // ─── Campaign ──────────────────────────────────────────────────────────────
@@ -91,10 +92,20 @@ export const CPS_DAILY_FIELDS = [
 ] as const;
 export const CPS_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 'date'];
 
+// ─── 订单商品明细（联盟平台订单导出）───────────────────────────────────────
+// 一行 = 订单 × 商品。同订单多商品 = 多行共享 orderId。
+// 聚合产出：Top-Sales 商品排行（含 QTY 件数）+ 购物篮结构（多件单占比等）。
+
+export const ORDERS_FIELDS = [
+  'campaignId', 'creatorId', 'orderId', 'orderDate', 'orderStatus',
+  'productName', 'category', 'sku', 'qty', 'unitPrice', 'lineTotal',
+] as const;
+export const ORDERS_REQUIRED = ['campaignId', 'orderId', 'productName'];
+
 // ─── 类型定义 ──────────────────────────────────────────────────────────────
 
 export type DataKind = 'campaign' | 'creator' | 'collaboration';
-export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily' | 'cps' | 'cpsDaily';
+export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily' | 'cps' | 'cpsDaily' | 'orders';
 
 export interface PreviewItem {
   data: Record<string, unknown>;
@@ -111,6 +122,7 @@ const FIELDS: Record<ImportKind, readonly string[]> = {
   collaborationDaily: COLLAB_DAILY_FIELDS,
   cps: CPS_FIELDS,
   cpsDaily: CPS_DAILY_FIELDS,
+  orders: ORDERS_FIELDS,
 };
 const REQUIRED: Record<ImportKind, string[]> = {
   campaign: [...CAMPAIGN_REQUIRED],
@@ -121,6 +133,7 @@ const REQUIRED: Record<ImportKind, string[]> = {
   collaborationDaily: [...COLLAB_DAILY_REQUIRED],
   cps: [...CPS_REQUIRED],
   cpsDaily: [...CPS_DAILY_REQUIRED],
+  orders: [...ORDERS_REQUIRED],
 };
 
 /** 预览表格展示的列。 */
@@ -133,6 +146,7 @@ export const PREVIEW_COLUMNS: Record<ImportKind, string[]> = {
   collaborationDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'dailyDate', 'dailyImpressions'],
   cps: ['campaignId', 'creatorId', 'collabId', 'contentType', 'linkUrl', 'clicks', 'orders', 'gmv', 'commission', 'productName', 'category', 'market', 'promoName', 'promoType'],
   cpsDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'date', 'dailyClicks', 'dailyOrders', 'dailyGmv', 'dailySpend', 'dailyNewCustomers'],
+  orders: ['campaignId', 'creatorId', 'orderId', 'orderDate', 'orderStatus', 'productName', 'category', 'sku', 'qty', 'unitPrice', 'lineTotal'],
 };
 
 function checkRequired(kind: ImportKind, data: Record<string, unknown>): string[] {
@@ -261,7 +275,7 @@ function getFieldComments(kind: ImportKind): Record<string, string> {
       featured: '是否精选（yes/no）',
     };
   }
-  if (kind === 'collaboration' || kind === 'collaborationDaily' || kind === 'cps' || kind === 'cpsDaily') {
+  if (kind === 'collaboration' || kind === 'collaborationDaily' || kind === 'cps' || kind === 'cpsDaily' || kind === 'orders') {
     return {
       ...base,
       campaignId: '关联Campaign的ID',
@@ -284,6 +298,14 @@ function getFieldComments(kind: ImportKind): Record<string, string> {
       epc: 'EPC单次点击产出',
       date: '日期 YYYY-MM-DD',
       dailyDate: '日期 YYYY-MM-DD',
+      orderId: '平台订单号（同订单多商品=多行共享）',
+      orderDate: '下单时间（YYYY-MM-DD 或含时分秒）',
+      orderStatus: '订单状态（paid/shipped/refunded等）',
+      productName: '商品名称（平台导出原名）',
+      sku: 'SKU编码',
+      qty: '购买件数（多件装默认1）',
+      unitPrice: '单价（含$或,自动清洗）',
+      lineTotal: '行小计=qty×unitPrice（缺省自动计算）',
     };
   }
   return base;
@@ -363,7 +385,7 @@ export function downloadTemplate(kind: ImportKind): void {
       '# gmv/commission/spend: GMV/佣金/花费(品牌侧成本)',
       '# 必填字段: campaignId,creatorId,contentType',
     ].join('\n');
-  } else { // cpsDaily
+  } else if (kind === 'cpsDaily') {
     example = [
       'camp-001,cre-mia,collab-001,video,2026-03-15,1800,54000,55,6500,650,180,12',
       'camp-001,cre-mia,collab-001,video,2026-03-16,1600,48000,48,5800,580,150,10',
@@ -373,6 +395,20 @@ export function downloadTemplate(kind: ImportKind): void {
       '# 每行=一条 CPS 链接在某天的归因数据',
       '# 关联键: campaignId+creatorId+contentType+date → 合并到 CpsPerformance.daily JSON',
       '# 必填字段: campaignId,creatorId,contentType,date',
+    ].join('\n');
+  } else { // orders
+    example = [
+      'camp-001,cre-mia,ord-1001,2026-07-01 14:32,paid,Solids 3 Pack - Black,内裤,PSD-3PK-BLK,1,$35.19,$35.19',
+      'camp-001,cre-mia,ord-1001,2026-07-01 14:32,paid,6 Pack - Baby Blues,内裤,PSD-6PK-BLUE,2,$58.38,$116.76',
+      'camp-001,cre-sofia,ord-1002,2026-07-02 09:15,paid,Solids 3 Pack - Black,内裤,PSD-3PK-BLK,1,$35.19,$35.19',
+    ].join('\n');
+    note = [
+      '# 每行=订单×商品（同订单多商品=多行共享同一 orderId）',
+      '# 幂等键: campaignId+orderId 重导覆盖（自动清旧商品行重建）',
+      '# creatorId 可选——填写则支持达人×商品交叉分析',
+      '# qty=件数（Top-Sales QTY 列数据源）; lineTotal 缺省时自动=qty×unitPrice',
+      '# 聚合产出: Top-Selling Products 排行(orders/qty/revenue) + 购物篮指标(多件单占比/均件数)',
+      '# 必填字段: campaignId,orderId,productName',
     ].join('\n');
   }
 

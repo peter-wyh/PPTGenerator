@@ -91,6 +91,7 @@ export function CampaignCollabPage() {
   const dailyCsvRef = useRef<HTMLInputElement>(null);
   const cpsCsvRef = useRef<HTMLInputElement>(null);
   const cpsDailyCsvRef = useRef<HTMLInputElement>(null);
+  const ordersCsvRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (filterCampaign) {
@@ -231,6 +232,30 @@ export function CampaignCollabPage() {
       setTick((t) => t + 1);
     } catch {
       toast.error('CPS 每日明细导入失败');
+    }
+  }
+
+  /** 订单商品明细 CSV 导入（联盟平台订单导出） */
+  function onCsvOrders(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    parseFile(f)
+      .then((sheets) => {
+        setPreviewKind('orders');
+        setPreview(buildPreviewFromRows('orders', sheets[0]?.rows ?? []));
+      })
+      .catch(() => toast.error('文件解析失败'));
+  }
+
+  async function confirmOrdersImport(validItems: Record<string, unknown>[]) {
+    setPreview(null);
+    try {
+      const r = await campaignsApi.importOrders(validItems);
+      toast.success(`订单明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      setTick((t) => t + 1);
+    } catch {
+      toast.error('订单明细导入失败');
     }
   }
 
@@ -558,6 +583,12 @@ export function CampaignCollabPage() {
         >
           导入 CPS 每日明细 CSV
         </button>
+        <button
+          onClick={() => ordersCsvRef.current?.click()}
+          className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary"
+        >
+          导入订单明细 CSV
+        </button>
         <select
           onChange={(e) => { if (e.target.value) downloadTemplate(e.target.value as ImportKind); e.target.value = ''; }}
           className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
@@ -568,11 +599,13 @@ export function CampaignCollabPage() {
           <option value="collaborationDaily">每日互动模板</option>
           <option value="cps">CPS 汇总模板</option>
           <option value="cpsDaily">CPS 每日明细模板</option>
+          <option value="orders">订单明细模板</option>
         </select>
         <input ref={csvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsv} />
         <input ref={dailyCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvDaily} />
         <input ref={cpsCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvCps} />
         <input ref={cpsDailyCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvCpsDaily} />
+        <input ref={ordersCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvOrders} />
       </div>
 
       {filtered.length === 0 ? (
@@ -689,6 +722,7 @@ export function CampaignCollabPage() {
             previewKind === 'collaborationDaily' ? confirmDailyImport
             : previewKind === 'cps' ? confirmCpsImport
             : previewKind === 'cpsDaily' ? confirmCpsDailyImport
+            : previewKind === 'orders' ? confirmOrdersImport
             : confirmCollabImport
           }
           onCancel={() => setPreview(null)}
