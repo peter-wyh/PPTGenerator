@@ -718,22 +718,34 @@ export function VisualEditor({
     if (!editorRef.current) return;
     const editor = editorRef.current;
 
+    // ★ setZoom(0) 会被 grapesjs 0.23.4 钳到下限 1%（transform matrix(0.01)，
+    //   画布视觉塌缩成 8px）——0 并非"100% 不缩放"。不缩放必须显式传 100。
+    const fitZoom = (targetW: number, capAt100 = true) => {
+      requestAnimationFrame(() => {
+        if (!editorRef.current || targetW <= 0) return;
+        const viewEl = editor.Canvas.getCanvasView().el;
+        const ratio = viewEl.clientWidth / targetW;
+        const pct = ratio >= 0.999 ? 100 : Math.max(1, Math.round(ratio * 100));
+        // capAt100: 手机视图(375px)不放大到画布区满宽——放大导致文字模糊，居中留白更符合常规编辑器行为
+        editor.Canvas.setZoom(capAt100 ? Math.min(pct, 100) : pct);
+      });
+    };
+
     if (device === 'desktop' && desktopWidth > 0) {
       // ★ 动态设备:宽度=预览等效宽(容器+面板),断点行为与预览 iframe 一致。
-      // setZoom 参数是百分数(0.23.4 源码 setZoom(100*ratio));传小数会被
-      // onZoomChange 的 zoom<1→1 下限钳到 1%(scale 0.01)。
       editor.Devices.add({ id: 'desktop-wide', name: 'desktop-wide', width: `${desktopWidth}px` });
       editor.setDevice('desktop-wide');
-      requestAnimationFrame(() => {
-        if (!editorRef.current) return;
-        const viewEl = editor.Canvas.getCanvasView().el;
-        const ratio = viewEl.clientWidth / desktopWidth;
-        // ratio≈1 时传 0(0=100% 不缩放)
-        editor.Canvas.setZoom(ratio >= 0.999 ? 0 : Math.round(ratio * 100));
-      });
+      fitZoom(desktopWidth);
     } else {
       editor.setDevice(device);
-      editor.Canvas.setZoom(0);
+      if (device === 'desktop') {
+        // 初始挂载 desktopWidth 尚未测得——先按 100% 渲染，测量后 effect 重跑再 fit
+        editor.Canvas.setZoom(100);
+      } else {
+        // ★ 平板(768)/手机(375)同样按画布区宽度自适应缩放，与桌面同款 fit 逻辑
+        const targetW = device === 'tablet' ? 768 : 375;
+        fitZoom(targetW);
+      }
     }
   }, [device, desktopWidth]);
 
