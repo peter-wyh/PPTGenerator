@@ -45,19 +45,32 @@ const PREVIEW_GUTTER = 32;
 
 function parseHtmlForEditor(
   fullHtml: string
-): { bodyHtml: string; headCss: string; headLinks: string[]; tailwindCdn: string | null; fullHead: string; bodyScripts: string[] } {
+): { bodyHtml: string; headCss: string; headLinks: string[]; tailwindCdn: string | null; headInlineScripts: string[]; fullHead: string; bodyScripts: string[] } {
   const headMatch = fullHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
   const headContent = headMatch ? headMatch[1] : '';
 
   const styleBlocks = headContent.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) || [];
   const headCss = styleBlocks.map(s => s.replace(/<\/?style[^>]*>/gi, '')).join('\n');
 
+  // ★ head 内联脚本（tailwind.config 品牌色定义等）——必须同步注入画布，
+  //   否则自定义色 token（brand.primary 等）在编辑画布失效
+  const headInlineScripts: string[] = [];
+  const headScriptTags = headContent.match(/<script[^>]*>[\s\S]*?<\/script>/gi) || [];
+  for (const tag of headScriptTags) {
+    if (/\ssrc=/i.test(tag)) continue; // src 外链另行处理
+    const inner = tag.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+    if (inner) headInlineScripts.push(inner);
+  }
+
   const linkTags = headContent.match(/<link[^>]*>/gi) || [];
   const headLinks = linkTags.filter(l =>
     /stylesheet/i.test(l) || /fonts\.googleapis/i.test(l) || /font-awesome/i.test(l) || /preconnect/i.test(l)
   );
 
-  const twMatch = headContent.match(/<script[^>]*src="(https:\/\/cdn\.tailwindcss\.com[^"]*)"/i);
+  // ★ Tailwind 运行时检测：cdn.tailwindcss.com（旧版直引）+ 自托管 play.min.js
+  //   （服务端 CDN 重写后 HTML 里是 /vendor/tailwind/play.min.js，两种都要认，
+  //    否则编辑画布不注入 Tailwind → grid/flex 全失效 → 内容垂直平铺）
+  const twMatch = headContent.match(/<script[^>]*src="(https?:\/\/cdn\.tailwindcss\.com[^"]*|[^"]*\/vendor\/tailwind\/play\.min\.js[^"]*)"/i);
   const tailwindCdn = twMatch ? twMatch[1] : null;
 
   // ★ GREEDY match (* not *?) — 确保双 body 标签时也能捕获到所有内容（含脚本）
@@ -74,7 +87,7 @@ function parseHtmlForEditor(
   });
   bodyHtml = bodyHtml.replace(/<script[^>]*><\/script>/gi, '');
 
-  return { bodyHtml, headCss, headLinks, tailwindCdn, fullHead: headContent, bodyScripts };
+  return { bodyHtml, headCss, headLinks, tailwindCdn, headInlineScripts, fullHead: headContent, bodyScripts };
 }
 
 function reconstructFullHtml(originalHtml: string, editedBodyHtml: string, editorCss: string, bodyScripts: string[]): string {
@@ -310,11 +323,28 @@ export function VisualEditor({
         canvasHead.appendChild(styleEl);
       }
 
-      // 2) 注入 Tailwind CDN
+      // 2) 注入 Tailwind CDN —— onload 后追加 head 内联脚本（tailwind.config 品牌色等）
+      //    ★ config 必须在 Tailwind 运行时就绪后执行（Play CDN 会在每个 config 变更时重扫 class）
       if (parsed.tailwindCdn) {
+        const injectHeadScripts = () => {
+          for (const s of parsed.headInlineScripts) {
+            const el = canvasDoc.createElement('script');
+            el.textContent = s;
+            canvasHead.appendChild(el);
+          }
+        };
         const twScript = canvasDoc.createElement('script');
         twScript.src = parsed.tailwindCdn;
+        twScript.onload = injectHeadScripts;
+        twScript.onerror = injectHeadScripts; // 加载失败也注入 config/style，降级为无 Tailwind 视图
         canvasHead.appendChild(twScript);
+      } else {
+        // 无 Tailwind 的报告（纯 style）也要注入 head 内联脚本
+        for (const s of parsed.headInlineScripts) {
+          const el = canvasDoc.createElement('script');
+          el.textContent = s;
+          canvasHead.appendChild(el);
+        }
       }
 
       // 3) 注入字体和样式链接
@@ -642,6 +672,15 @@ export function VisualEditor({
       const styleEl = canvasDoc.createElement('style');
       styleEl.textContent = parsed.headCss;
       canvasDoc.head.appendChild(styleEl);
+    }
+    // ★ head 内联脚本（tailwind.config 等）同样需要重注入（外部版本切换时色板定义会变）
+    const oldCfg = canvasDoc.head.querySelectorAll('script[data-head-inline]');
+    oldCfg.forEach(s => s.remove());
+    for (const s of parsed.headInlineScripts) {
+      const el = canvasDoc.createElement('script');
+      el.setAttribute('data-head-inline', '1');
+      el.textContent = s;
+      canvasDoc.head.appendChild(el);
     }
   }, [html]);
 
