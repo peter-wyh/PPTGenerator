@@ -51,7 +51,7 @@ export function EditorTopbar() {
     if (useEditorStore.getState().dirty) {
       if (!window.confirm('有未保存的更改，确定离开吗？')) return;
     }
-    navigate(isTemplate ? '/templates' : '/projects');
+    navigate(isTemplate ? '/templates' : '/projects/ppt');
   };
 
   async function handleEdit(values: { name: string; width: number; height: number; meta: import('@mediakit/shared').ProjectMeta }) {

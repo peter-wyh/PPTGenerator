@@ -39,8 +39,8 @@ export function Layout({ children }: LayoutProps) {
             Report Generator
           </button>
           <button
-            onClick={() => navigate('/projects')}
-            className={navBtn(location.pathname === '/projects')}
+            onClick={() => navigate('/projects/ppt')}
+            className={navBtn(location.pathname === '/projects' || location.pathname.startsWith('/projects/ppt') || location.pathname.startsWith('/projects/ai-html'))}
           >
             报告管理
           </button>

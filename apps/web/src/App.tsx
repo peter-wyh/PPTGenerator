@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Login } from './routes/Login';
 import { ProtectedLayout, useRestoreSession } from './routes/ProtectedLayout';
 import { ToastContainer } from './components/Toast';
@@ -38,7 +38,10 @@ export function App() {
           {/* 公开分享页：匿名可访问，不在 ProtectedLayout 内 */}
           <Route path="/share/:token" element={<SharePage />} />
           <Route element={<ProtectedLayout />}>
-            <Route path="/projects" element={<Projects />} />
+            {/* ★ 报告管理两类报告独立路由：可直达/可刷新/前进后退不丢；:tab 用静态路由避免与 bare 布局的 /projects/:id 冲突 */}
+            <Route path="/projects" element={<Navigate to="/projects/ppt" replace />} />
+            <Route path="/projects/ppt" element={<Projects />} />
+            <Route path="/projects/ai-html" element={<Projects />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/schemes" element={<SchemesPage />} />
             <Route path="/data" element={<DataManagement />}>

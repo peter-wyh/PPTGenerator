@@ -57,7 +57,7 @@ const summary = (id: string, name: string, pageCount = 1, meta?: Record<string, 
 
 function renderPage() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={['/projects/ppt']}>
       <Projects />
     </MemoryRouter>,
   );
@@ -267,7 +267,7 @@ describe('Projects page', () => {
       summary('p1', 'AI 报告', 0, { styleType: 'ai-html', businessLine: 'FT' }),
     ]);
     renderPage();
-    // ai-html 报告在「AI HTML」菜单下(左侧类型导航,不再有 Tab)
+    // ai-html 报告在「AI HTML」菜单下(独立路由 /projects/ai-html,点击左侧导航切换)
     await user.click(await screen.findByRole('button', { name: /AI HTML/ }));
     await screen.findByText('AI 报告');
 

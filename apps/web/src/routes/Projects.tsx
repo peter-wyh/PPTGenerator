@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { projectsApi } from '@/api/projects';
 import { createProjectFromTemplate } from '@/api/templates';
 import { Button } from '@/components/Button';
@@ -24,8 +24,11 @@ export function Projects() {
   const [loading, setLoading] = useState(true);
 
   // ★ 类型菜单（左侧 2 项：单页面类型已废弃下线；styleType 缺省视为 'ppt'）
+  // ★★ activeTab 由路由派生（/projects/ppt | /projects/ai-html 独立路由）——
+  //    可直达、可刷新、浏览器前进后退不丢状态
   type StyleTab = 'ppt' | 'ai-html';
-  const [activeTab, setActiveTab] = useState<StyleTab>('ppt');
+  const location = useLocation();
+  const activeTab: StyleTab = location.pathname.endsWith('/ai-html') ? 'ai-html' : 'ppt';
   const TAB_LABELS: Record<StyleTab, string> = {
     ppt: 'PPT 多页',
     'ai-html': 'AI HTML',
@@ -233,7 +236,7 @@ export function Projects() {
             return (
               <button
                 key={t}
-                onClick={() => setActiveTab(t)}
+                onClick={() => navigate(`/projects/${t}`)}
                 className={`mb-1 flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
                   active
                     ? 'bg-accent-primary/10 font-medium text-accent-primary'

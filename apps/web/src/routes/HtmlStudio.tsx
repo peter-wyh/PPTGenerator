@@ -465,7 +465,7 @@ export function HtmlStudio() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <p className="text-sm text-red">{projectError || '报告不存在'}</p>
-          <Button variant="secondary" className="mt-4" onClick={() => navigate('/projects')}>
+          <Button variant="secondary" className="mt-4" onClick={() => navigate('/projects/ppt')}>
             返回报告列表
           </Button>
         </div>
@@ -773,7 +773,7 @@ export function HtmlStudio() {
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border-default bg-surface-primary px-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate('/projects/ai-html')}
             className="text-sm text-foreground-muted transition hover:text-foreground-primary"
             title="返回报告列表"
           >
