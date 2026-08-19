@@ -3,7 +3,7 @@
  * 展示导入的订单（CampaignOrder）：campaign 筛选 + 分页 + 商品行展开。
  * 数据源：GET /campaigns/orders/list（admin 全局视角）。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { campaignsApi, type OrderRow, type OrdersPage } from '@/api/campaignsApi';
 
 function fmtDate(v: string | null) {
@@ -101,11 +101,11 @@ export default function OrdersPage() {
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border-subtle">
                 {rows.map((row) => {
                   const isOpen = !!expanded[row.id];
                   return (
-                    <tbody key={row.id} className="divide-y divide-border-subtle">
+                    <Fragment key={row.id}>
                       <tr className="hover:bg-surface-hover/50">
                         <td className="px-3 py-2 font-mono text-[11px]">{row.orderId}</td>
                         <td className="px-3 py-2">{row.campaign?.name ?? '—'}</td>
@@ -157,7 +157,7 @@ export default function OrdersPage() {
                           </td>
                         </tr>
                       )}
-                    </tbody>
+                    </Fragment>
                   );
                 })}
               </tbody>
