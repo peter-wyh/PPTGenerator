@@ -31,3 +31,7 @@ npm-debug.log*
 # local dev infra & uploads
 docker-compose.yml
 uploads
+
+# bulk data samples not needed in images
+Cases
+Example
