@@ -58,6 +58,7 @@ router.post('/import/collaboration-daily', campaignController.importCollaboratio
 router.post('/import/cps', campaignController.importCps);
 router.post('/import/cps-daily', campaignController.importCpsDaily);
 router.post('/import/orders', campaignController.importOrders);
+router.get('/orders/list', campaignController.listOrders);
 router.get('/:id/order-insights', campaignController.getOrderInsights);
 
 export const campaignsRoutes = router;

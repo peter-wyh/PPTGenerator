@@ -263,4 +263,28 @@ export const campaignsApi = {
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/cps-daily', { items }).then((r) => r.data),
   importOrders: (items: Record<string, unknown>[]) =>
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/orders', { items }).then((r) => r.data),
+  /** 订单明细列表（数据管理页）：campaign 筛选 + 分页，含 items/campaign/creator 展开。 */
+  listOrders: (params: { campaignId?: string; page?: number; pageSize?: number }) =>
+    api.get<OrdersPage>('/campaigns/orders/list', { params }).then((r) => r.data),
 };
+
+/** /campaigns/orders/list 响应（listOrders）。 */
+export interface OrdersPage {
+  rows: OrderRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** 订单行（含商品明细展开）。 */
+export interface OrderRow {
+  id: string;
+  campaignId: string;
+  campaign: { id: string; name: string };
+  campaignCreator?: { id: string; creator: { name: string; avatar?: string | null } } | null;
+  orderId: string;
+  orderDate: string | null;
+  orderStatus: string | null;
+  createdAt: string;
+  items: { id: string; productName: string; category?: string | null; sku?: string | null; qty: number; unitPrice: string; lineTotal: string }[];
+}

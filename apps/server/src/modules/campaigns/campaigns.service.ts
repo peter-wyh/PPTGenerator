@@ -132,6 +132,37 @@ export const campaignService = {
 
     return { orderCount, topProducts, basket };
   },
+
+  /**
+   * 订单明细列表（数据管理独立页）：分页 + campaign 筛选 + items 展开。
+   * admin 豁免——全局视角（与 list() 对齐）；非 admin 仅本人 owner 的 campaign 订单。
+   */
+  async listOrders(
+    ownerId: string,
+    opts: { campaignId?: string; page?: number; pageSize?: number; admin?: boolean } = {},
+  ) {
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, opts.pageSize ?? 20));
+    const where: Prisma.CampaignOrderWhereInput = {
+      ...(opts.campaignId ? { campaignId: opts.campaignId } : {}),
+      ...(opts.admin ? {} : { campaign: { ownerId } }),
+    };
+    const [rows, total] = await Promise.all([
+      prisma.campaignOrder.findMany({
+        where,
+        orderBy: [{ orderDate: 'desc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          items: { orderBy: { lineTotal: 'desc' } },
+          campaign: { select: { id: true, name: true } },
+          campaignCreator: { select: { id: true, creator: { select: { name: true, avatar: true } } } },
+        },
+      }),
+      prisma.campaignOrder.count({ where }),
+    ]);
+    return { rows, total, page, pageSize };
+  },
 };
 // ─── Creator ─────────────────────────────────────────────────────────────────
 

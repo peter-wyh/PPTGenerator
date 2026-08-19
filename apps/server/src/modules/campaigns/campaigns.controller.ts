@@ -189,4 +189,19 @@ export const campaignController = {
     const insights = await campaignService.getOrderInsights(id, v.id, { start, end }, v.role === 'ADMIN');
     res.json(insights);
   }),
+
+  /** 订单明细列表（数据管理页）：query: campaignId/page/pageSize。admin 全局，非 admin 限本人 campaign。 */
+  listOrders: asyncHandler(async (req: Request, res: Response) => {
+    const v = req.user as AuthPayload;
+    const { campaignId } = req.query as { campaignId?: string };
+    const page = parseInt(String(req.query.page ?? '1'), 10) || 1;
+    const pageSize = parseInt(String(req.query.pageSize ?? '20'), 10) || 20;
+    const result = await campaignService.listOrders(v.id, {
+      campaignId: campaignId || undefined,
+      page,
+      pageSize,
+      admin: v.role === 'ADMIN',
+    });
+    res.json(result);
+  }),
 };

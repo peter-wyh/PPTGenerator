@@ -13,6 +13,7 @@ const MENUS: MenuItem[] = [
     children: [
       { path: '/data/campaigns', label: 'Campaign 列表' },
       { path: '/data/campaign-collabs', label: '合作列表' },
+      { path: '/data/orders', label: '订单明细' },
     ],
   },
   { path: '/data/creators', label: '达人库' },
