@@ -42,4 +42,21 @@ export const listBusinessLinesQuerySchema = z.object({
   merchantId: z.string().optional(),
 });
 
+// ─── MarketingEvent（营销活动）────────────────────────────────────────────────
+
+export const createMarketingEventSchema = z.object({
+  name: z.string().min(1).max(191),
+  description: z.string().max(2000).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate 须为 YYYY-MM-DD'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate 须为 YYYY-MM-DD'),
+  advertiserId: z.string().min(1),
+});
+
+export const updateMarketingEventSchema = createMarketingEventSchema.partial();
+
+/** GET /api/v1/marketing-events?advertiserId= */
+export const listMarketingEventsQuerySchema = z.object({
+  advertiserId: z.string().optional(),
+});
+
 export { idParamSchema };

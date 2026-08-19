@@ -18,6 +18,7 @@ const MENUS: MenuItem[] = [
   },
   { path: '/data/creators', label: '达人库' },
   { path: '/data/advertisers', label: '广告主' },
+  { path: '/data/marketing-events', label: '营销活动' },
   { path: '/data/business-lines', label: '业务线' },
 ];
 

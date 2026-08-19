@@ -4,7 +4,7 @@
  * 读取公开（无需登录）；写操作需登录。
  */
 import { api } from './client';
-import type { BusinessLine, Merchant, Advertiser } from '@mediakit/shared';
+import type { BusinessLine, Merchant, Advertiser, MarketingEvent } from '@mediakit/shared';
 
 // ─── DTO（后端返回的完整行，含关联）─────────────────────────────────────────
 
@@ -24,6 +24,11 @@ export interface AdvertiserDTO extends Advertiser {
   businessLineId: string;
   businessLine?: { id: string; code: string; name: string };
   merchant?: { id: string; name: string };
+}
+
+export interface MarketingEventDTO extends MarketingEvent {
+  id: string;
+  advertiser?: { id: string; name: string; businessLine?: { code: string; name: string } };
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────
@@ -65,4 +70,15 @@ export const lookupApi = {
   updateAdvertiser: (id: string, data: Partial<{ name: string; logo: string; businessLineId: string; merchantId: string }>) =>
     api.patch<{ advertiser: AdvertiserDTO }>(`/lookup/advertisers/${id}`, data).then((r) => r.data.advertiser),
   removeAdvertiser: (id: string) => api.delete(`/lookup/advertisers/${id}`),
+
+  // MarketingEvent（营销活动）
+  listMarketingEvents: (advertiserId?: string) =>
+    api
+      .get<{ marketingEvents: MarketingEventDTO[] }>('/lookup/marketing-events', { params: { advertiserId } })
+      .then((r) => r.data.marketingEvents),
+  createMarketingEvent: (data: { name: string; description?: string; startDate: string; endDate: string; advertiserId: string }) =>
+    api.post<{ marketingEvent: MarketingEventDTO }>('/lookup/marketing-events', data).then((r) => r.data.marketingEvent),
+  updateMarketingEvent: (id: string, data: Partial<{ name: string; description: string; startDate: string; endDate: string; advertiserId: string }>) =>
+    api.patch<{ marketingEvent: MarketingEventDTO }>(`/lookup/marketing-events/${id}`, data).then((r) => r.data.marketingEvent),
+  removeMarketingEvent: (id: string) => api.delete(`/lookup/marketing-events/${id}`),
 };

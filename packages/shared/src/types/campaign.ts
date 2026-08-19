@@ -607,6 +607,20 @@ export interface Advertiser {
   logo?: string;
 }
 
+/** 营销活动（广告主维度的市场活动记录：名称/简介/时间跨度）。 */
+export interface MarketingEvent {
+  /** 活动名称。 */
+  name: string;
+  /** 活动简介。 */
+  description?: string;
+  /** 开始日期 YYYY-MM-DD。 */
+  startDate: string;
+  /** 结束日期 YYYY-MM-DD。 */
+  endDate: string;
+  /** 关联广告主 id。 */
+  advertiserId: string;
+}
+
 /** 商品（campaign 关联的带货商品）。 */
 export interface Product {
   /** 商品 ID。 */

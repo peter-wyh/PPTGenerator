@@ -197,11 +197,33 @@ model Advertiser {
   @@index([businessLineId])
   @@index([merchantId])
   campaigns   Campaign[]
+  marketingEvents MarketingEvent[]
 }
 
 // ─── Phase 2: Campaign / Creator / CampaignCreator ──────────────────────────
 // 核心业务实体独立成表,支持结构化查询 + 外键关联。
 // DataRecord 保留作为扩展/兼容层,旧数据迁移后可废弃。
+
+/// 营销活动（广告主维度的市场活动记录：名称/简介/时间跨度）。
+model MarketingEvent {
+  id           String     @id @default(cuid())
+  /// 活动名称。
+  name         String
+  /// 活动简介。
+  description  String?
+  /// 开始日期 YYYY-MM-DD。
+  startDate    String
+  /// 结束日期 YYYY-MM-DD。
+  endDate      String
+  /// 关联广告主。
+  advertiserId String
+  advertiser   Advertiser @relation(fields: [advertiserId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([advertiserId])
+  @@index([startDate])
+}
 
 /// 投放活动。
 model Campaign {

@@ -12,6 +12,9 @@ import {
   updateAdvertiserSchema,
   listAdvertisersQuerySchema,
   listBusinessLinesQuerySchema,
+  createMarketingEventSchema,
+  updateMarketingEventSchema,
+  listMarketingEventsQuerySchema,
 } from './lookup.schema';
 
 const router = Router();
@@ -25,6 +28,8 @@ router.get('/business-lines', validate({ query: listBusinessLinesQuerySchema }),
 router.get('/business-lines/:id', validate({ params: idParamSchema }), lookupController.getBusinessLine);
 router.get('/advertisers', validate({ query: listAdvertisersQuerySchema }), lookupController.listAdvertisers);
 router.get('/advertisers/:id', validate({ params: idParamSchema }), lookupController.getAdvertiser);
+router.get('/marketing-events', validate({ query: listMarketingEventsQuerySchema }), lookupController.listMarketingEvents);
+router.get('/marketing-events/:id', validate({ params: idParamSchema }), lookupController.getMarketingEvent);
 
 router.post('/merchants', validate({ body: createMerchantSchema }), lookupController.createMerchant);
 router.patch('/merchants/:id', validate({ params: idParamSchema, body: updateMerchantSchema }), lookupController.updateMerchant);
@@ -37,5 +42,9 @@ router.delete('/business-lines/:id', validate({ params: idParamSchema }), lookup
 router.post('/advertisers', validate({ body: createAdvertiserSchema }), lookupController.createAdvertiser);
 router.patch('/advertisers/:id', validate({ params: idParamSchema, body: updateAdvertiserSchema }), lookupController.updateAdvertiser);
 router.delete('/advertisers/:id', validate({ params: idParamSchema }), lookupController.removeAdvertiser);
+
+router.post('/marketing-events', validate({ body: createMarketingEventSchema }), lookupController.createMarketingEvent);
+router.patch('/marketing-events/:id', validate({ params: idParamSchema, body: updateMarketingEventSchema }), lookupController.updateMarketingEvent);
+router.delete('/marketing-events/:id', validate({ params: idParamSchema }), lookupController.removeMarketingEvent);
 
 export const lookupRoutes = router;

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { merchantService, businessLineService, advertiserService } from './lookup.service';
+import { merchantService, businessLineService, advertiserService, marketingEventService } from './lookup.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 
 export const lookupController = {
@@ -73,6 +73,29 @@ export const lookupController = {
 
   removeAdvertiser: asyncHandler(async (req: Request, res: Response) => {
     await advertiserService.remove(req.params.id);
+    res.status(204).end();
+  }),
+
+  // ─── MarketingEvent（营销活动）──────────────────────────────────────────────
+  listMarketingEvents: asyncHandler(async (req: Request, res: Response) => {
+    const { advertiserId } = req.query as { advertiserId?: string };
+    res.json({ marketingEvents: await marketingEventService.list({ advertiserId }) });
+  }),
+
+  getMarketingEvent: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ marketingEvent: await marketingEventService.getOrThrow(req.params.id) });
+  }),
+
+  createMarketingEvent: asyncHandler(async (req: Request, res: Response) => {
+    res.status(201).json({ marketingEvent: await marketingEventService.create(req.body) });
+  }),
+
+  updateMarketingEvent: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ marketingEvent: await marketingEventService.update(req.params.id, req.body) });
+  }),
+
+  removeMarketingEvent: asyncHandler(async (req: Request, res: Response) => {
+    await marketingEventService.remove(req.params.id);
     res.status(204).end();
   }),
 };

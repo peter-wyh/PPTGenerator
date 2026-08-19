@@ -120,3 +120,39 @@ export const advertiserService = {
     await prisma.advertiser.delete({ where: { id } });
   },
 };
+
+// ─── MarketingEvent（营销活动）────────────────────────────────────────────────
+
+export const marketingEventService = {
+  async list(opts?: { advertiserId?: string }) {
+    const where: Prisma.MarketingEventWhereInput = {};
+    if (opts?.advertiserId) where.advertiserId = opts.advertiserId;
+    return prisma.marketingEvent.findMany({
+      where,
+      orderBy: [{ startDate: 'desc' }],
+      include: {
+        advertiser: { select: { id: true, name: true, businessLine: { select: { code: true, name: true } } } },
+      },
+    });
+  },
+
+  async getOrThrow(id: string) {
+    const rec = await prisma.marketingEvent.findUnique({ where: { id } });
+    if (!rec) throw ApiError.notFound('MarketingEvent not found');
+    return rec;
+  },
+
+  async create(data: { name: string; description?: string; startDate: string; endDate: string; advertiserId: string }) {
+    return prisma.marketingEvent.create({ data });
+  },
+
+  async update(id: string, data: Partial<{ name: string; description: string; startDate: string; endDate: string; advertiserId: string }>) {
+    await this.getOrThrow(id);
+    return prisma.marketingEvent.update({ where: { id }, data });
+  },
+
+  async remove(id: string) {
+    await this.getOrThrow(id);
+    await prisma.marketingEvent.delete({ where: { id } });
+  },
+};
