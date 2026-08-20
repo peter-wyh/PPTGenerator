@@ -49,6 +49,8 @@ apps/server/scripts/*
 
 # db 同步产物（覆盖/备份 dump，见 scripts/db-overwrite-to-test.sh）
 scripts/.db-sync/
+# 本地 DB 备份 dump（含真实数据，不入库）
+backups/
 # 工具脚本入库例外（drift 补列/测试库重建）
 !apps/server/scripts/*.mjs
 !apps/server/scripts/*.cjs
