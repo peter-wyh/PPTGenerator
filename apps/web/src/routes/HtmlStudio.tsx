@@ -73,7 +73,7 @@ export function HtmlStudio() {
   const [genStage, setGenStage] = useState(0);
   const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const lastGenParams = useRef<{ mode: 'ai' | 'recipe'; prompt: string; designMd: string } | null>(null);
+  const lastGenParams = useRef<{ mode: 'ai' | 'recipe'; prompt: string; designMd: string; scenario: string } | null>(null);
 
   // ★ Chat 模式编辑繁忙状态（驱动中栏画布遮罩）+ 兜底取消（左栏收起时）
   const [chatBusy, setChatBusy] = useState(false);
@@ -255,7 +255,7 @@ export function HtmlStudio() {
 
   // ★ handleGenerate — SSE 流式生成
   const handleGenerate = useCallback(
-    async (vals: { mode: 'ai' | 'recipe'; prompt: string; designMd: string }) => {
+    async (vals: { mode: 'ai' | 'recipe'; prompt: string; designMd: string; scenario: string }) => {
       lastGenParams.current = vals;
       setGenerating(true);
       setError('');
@@ -330,7 +330,7 @@ export function HtmlStudio() {
           {
             prompt: vals.prompt,
             campaignId,
-            designMd: vals.designMd.trim() || undefined,
+            scenario: vals.scenario || undefined,
             reportPeriod,
           },
           (chunk) => {

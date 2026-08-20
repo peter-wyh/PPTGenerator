@@ -8,7 +8,7 @@ type Mode = 'ai' | 'recipe';
 
 interface Props {
   campaignId?: string;
-  onGenerate: (vals: { mode: Mode; prompt: string; designMd: string }) => void;
+  onGenerate: (vals: { mode: Mode; prompt: string; designMd: string; scenario: string }) => void;
   generating?: boolean;
   generateLabel?: string;
   error?: string;
@@ -18,6 +18,7 @@ export function AiGenerateForm({ campaignId, onGenerate, generating, generateLab
   const [mode, setMode] = useState<Mode>('ai');
   const [prompt, setPrompt] = useState('');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
+  const [scenario, setScenario] = useState('');
 
   const [designMd, setDesignMd] = useState('');
   const [designMdLoading, setDesignMdLoading] = useState(false);
@@ -71,6 +72,7 @@ export function AiGenerateForm({ campaignId, onGenerate, generating, generateLab
       mode,
       prompt: mode === 'ai' ? prompt : '',
       designMd: mode === 'ai' ? designMd.trim() : '',
+      scenario,
     });
   };
 
@@ -141,6 +143,21 @@ export function AiGenerateForm({ campaignId, onGenerate, generating, generateLab
             )}
           </div>
 
+          {/* 报告场景 — 决定匹配哪份业务线指南(无匹配自动降级默认指南) */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-foreground-muted">报告场景</label>
+            <select
+              value={scenario}
+              onChange={(e) => setScenario(e.target.value)}
+              className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary"
+            >
+              <option value="">通用（默认指南）</option>
+              <option value="月报">月报</option>
+              <option value="结案">结案</option>
+              <option value="复盘">复盘</option>
+            </select>
+          </div>
+
           {/* 提示词编辑器 */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
@@ -149,7 +166,7 @@ export function AiGenerateForm({ campaignId, onGenerate, generating, generateLab
                 {designMd.trim() && (
                   <span
                     className="flex items-center gap-1 rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary"
-                    title="业务线设计规范会自动注入到 AI 生成请求中"
+                    title="业务线报告指南自动注入系统提示词"
                   >
                     📎 {'{{design.md}}'} 已注入
                   </span>

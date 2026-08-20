@@ -8,6 +8,8 @@ vi.mock('@/api/htmlTemplates', () => ({
       designMd: '# brand guide',
       businessLineName: 'WANDER',
       businessLineCode: 'WD',
+      guideName: 'DG 默认指南',
+      guideId: 'g1',
     }),
     getSystemPrompt: vi.fn().mockResolvedValue('# SYSTEM_PROMPT\nUse exact data.'),
   },
@@ -45,6 +47,16 @@ describe('AiGenerateForm', () => {
     expect(htmlTemplatesApi.getSystemPrompt).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText('系统提示词'));
     await waitFor(() => expect(htmlTemplatesApi.getSystemPrompt).toHaveBeenCalled());
+  });
+
+  it('scenario 选择器:切「月报」→ onGenerate 携带 scenario', async () => {
+    const onGenerate = vi.fn();
+    render(<AiGenerateForm campaignId="c1" onGenerate={onGenerate} />);
+    await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1'));
+    fireEvent.change(screen.getByDisplayValue('通用（默认指南）'), { target: { value: '月报' } });
+    fireEvent.click(screen.getByRole('button', { name: /生成报告/ }));
+    const arg = onGenerate.mock.calls[0][0];
+    expect(arg.scenario).toBe('月报');
   });
 
   it('recipe 模式点生成 → onGenerate mode=recipe, prompt/designMd 为空串', async () => {

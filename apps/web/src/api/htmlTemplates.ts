@@ -71,7 +71,7 @@ export interface RecipeDataCoverage {
 export type SSEChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean; dataCoverage?: RecipeDataCoverage }
+  | { type: 'done'; html: string; truncated: boolean; dataCoverage?: RecipeDataCoverage; guideUsed?: { id: string; name: string } | null }
   | { type: 'error'; message: string };
 
 /** 通用 SSE 流式消费者（fetch + ReadableStream，绕过 axios 不支持 SSE） */
@@ -181,7 +181,7 @@ export const htmlTemplatesApi = {
     input: {
       prompt?: string;
       campaignId?: string;
-      designMd?: string;
+      scenario?: string;
       reportPeriod?: { startDate?: string; endDate?: string };
     },
     onChunk: (chunk: SSEChunk) => void,
@@ -247,7 +247,7 @@ export const htmlTemplatesApi = {
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
   getDesignGuide: (campaignId: string) =>
     api
-      .get<{ designMd: string; businessLineName: string; businessLineCode: string }>(
+      .get<{ designMd: string; businessLineName: string; businessLineCode: string; guideName: string; guideId: string | null }>(
         `/html-templates/campaign/${campaignId}/design-guide`,
       )
       .then((r) => r.data),
