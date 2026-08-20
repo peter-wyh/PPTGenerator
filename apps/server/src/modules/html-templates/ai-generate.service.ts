@@ -1031,7 +1031,7 @@ export const aiGenerateService = {
       ...(priorPeriod ? { priorPeriod } : {}),
       // ★ 缺口④ 媒体资源位（定性）。
       ...(mediaPlacements.length ? { mediaPlacements } : {}),
-      /** 业务线 design.md 在 DESIGN_GUIDE_SUFFIX 中单独追加，不嵌在 campaign JSON 中（避免重复发送） */
+      /** 业务线指南由 resolveForCampaign 匹配后经 buildSystemPrompt 拼进 system prompt,不嵌在 campaign JSON 中（避免重复发送） */
       creators: campaign.campaignCreators
         .map((cc) => {
           // ★ 当有期内数据时，使用期内切片的 CPS 而非全量汇总
