@@ -98,6 +98,7 @@ export default function OrdersPage() {
                   <th className="px-3 py-2">状态</th>
                   <th className="px-3 py-2 text-right">商品数</th>
                   <th className="px-3 py-2 text-right">订单金额</th>
+                  <th className="px-3 py-2 text-right">佣金</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -116,6 +117,9 @@ export default function OrdersPage() {
                         <td className="px-3 py-2">{row.orderStatus ?? '—'}</td>
                         <td className="px-3 py-2 text-right">{row.items.length}</td>
                         <td className="px-3 py-2 text-right font-medium">{fmtMoney(orderTotal(row))}</td>
+                        <td className="px-3 py-2 text-right font-medium text-accent-primary">
+                          {row.commission != null ? fmtMoney(row.commission) : <span className="text-foreground-muted">—</span>}
+                        </td>
                         <td className="px-3 py-2 text-right">
                           {row.items.length > 0 && (
                             <button
@@ -129,7 +133,7 @@ export default function OrdersPage() {
                       </tr>
                       {isOpen && (
                         <tr>
-                          <td colSpan={8} className="bg-surface-secondary/50 px-3 py-2">
+                          <td colSpan={9} className="bg-surface-secondary/50 px-3 py-2">
                             <table className="w-full text-[11px]">
                               <thead>
                                 <tr className="text-left text-foreground-muted">

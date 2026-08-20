@@ -287,4 +287,9 @@ export interface OrderRow {
   orderStatus: string | null;
   createdAt: string;
   items: { id: string; productName: string; category?: string | null; sku?: string | null; qty: number; unitPrice: string; lineTotal: string }[];
+  /** Awin 镜像字段（可空——仅联盟导出导入的订单有值）。 */
+  commission?: string | null;
+  clickDevice?: string | null;
+  customerCountry?: string | null;
+  clickRef?: string | null;
 }

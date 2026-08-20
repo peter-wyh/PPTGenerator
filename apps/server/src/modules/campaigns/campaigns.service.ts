@@ -357,6 +357,63 @@ export const collaborationService = {
 
 // ─── Batch Import (structured tables) ────────────────────────────────────────
 
+// Awin transactions 导出字段镜像：camelCase key -> 值 coerce；空串统一转 null。
+// 订单级核心三列（order_reference/date/commission_status）由 orderId/orderDate/orderStatus
+// 承接，不在此字典；镜像值保持原样（yes/no 枚举不转 boolean）。
+const ORDER_MIRROR_FIELDS: Record<string, (v: string) => unknown> = {
+  awinId: (v) => v,
+  advertiserId: (v) => v,
+  saleAmount: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
+  commission: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
+  validationDate: (v) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d; },
+  clickRef: (v) => v,
+  type: (v) => v,
+  siteName: (v) => v,
+  url: (v) => v,
+  declineReason: (v) => v,
+  clickThroughTime: (v) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d; },
+  voucherCodeUsed: (v) => v,
+  lapseTime: (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; },
+  amended: (v) => v,
+  amendReason: (v) => v,
+  oldSaleAmount: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
+  oldCommission: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
+  differentCurrency: (v) => v,
+  clickDevice: (v) => v,
+  transactionDevice: (v) => v,
+  publisherUrl: (v) => v,
+  transactionParts: (v) => v,
+  customerCountry: (v) => v,
+  customParameters: (v) => v,
+  paidToPublisher: (v) => v,
+  paymentStatus: (v) => v,
+  paymentId: (v) => v,
+  transactionQueryId: (v) => v,
+  clickRef2: (v) => v,
+  clickRef3: (v) => v,
+  clickRef4: (v) => v,
+  clickRef5: (v) => v,
+  clickRef6: (v) => v,
+  voucherCode: (v) => v,
+  commissionSharingPublisherId: (v) => v,
+  commissionSharingPublisher: (v) => v,
+  commissionSharingSelectedRatePublisherId: (v) => v,
+  products: (v) => v,
+  campaignLabel: (v) => v,
+  customerAcquisition: (v) => v,
+};
+
+/** 从导入行提取 Awin 镜像字段（未出现的 key 跳过，空串 → null）。 */
+function mirrorOrderFields(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, coerce] of Object.entries(ORDER_MIRROR_FIELDS)) {
+    if (!(key in row)) continue;
+    const v = String(row[key] ?? '').trim();
+    out[key] = v === '' ? null : coerce(v);
+  }
+  return out;
+}
+
 export const importService = {
   /** 批量导入达人基础数据：按 id upsert Creator。 */
   async importCreators(ownerId: string, items: Record<string, unknown>[]) {
@@ -668,10 +725,11 @@ export const importService = {
           campaignCreatorId = link?.id ?? null;
         }
 
-        // 订单头字段取首行（同单多行应一致）
+        // 订单头字段取首行（同单多行应一致）；Awin 镜像列一并提取
         const orderDateRaw = String(rows[0].orderDate ?? '').trim();
         const orderDate = orderDateRaw ? new Date(orderDateRaw) : null;
         const orderStatus = String(rows[0].orderStatus ?? '').trim() || null;
+        const mirrored = mirrorOrderFields(rows[0]);
 
         // 商品行
         const itemRows = rows
@@ -704,6 +762,7 @@ export const importService = {
             where: { id: existing.id },
             data: {
               campaignCreatorId, orderDate, orderStatus,
+              ...mirrored,
               items: { deleteMany: {} },   // 清空旧商品行
             },
           });
@@ -714,6 +773,7 @@ export const importService = {
           await prisma.campaignOrder.create({
             data: {
               campaignId, orderId, campaignCreatorId, orderDate, orderStatus,
+              ...mirrored,
               items: { create: itemRows },
             },
           });
