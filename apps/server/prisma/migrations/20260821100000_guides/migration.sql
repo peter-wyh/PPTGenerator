@@ -12,3 +12,5 @@ CREATE TABLE `Guide` (
     INDEX `Guide_businessLineId_idx`(`businessLineId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER TABLE `Guide` ADD CONSTRAINT `Guide_businessLineId_fkey` FOREIGN KEY (`businessLineId`) REFERENCES `BusinessLine`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
