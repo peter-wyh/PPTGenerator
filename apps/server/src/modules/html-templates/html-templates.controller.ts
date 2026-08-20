@@ -76,19 +76,21 @@ export const htmlTemplateController = {
   generate: asyncHandler(async (req: Request, res: Response) => {
     const { mode, recipeId, prompt, campaignId, theme, reportPeriod } = req.body;
     let html: string;
+    let guideUsed: { id: string; name: string } | null = null;
     if (mode === 'recipe') {
       const { getRecipe } = await import('./recipe');
-      html = await getRecipe(recipeId ?? 'campaign-report').render({ campaignId, theme, designMd: req.body.designMd, reportPeriod });
+      html = await getRecipe(recipeId ?? 'campaign-report').render({ campaignId, theme, reportPeriod });
     } else {
-      // ai mode(现状,不动)
-      html = await aiGenerateService.generateHtml({
+      const out = await aiGenerateService.generateHtml({
         campaignId,
         prompt: prompt || 'Generate a comprehensive campaign performance report',
-        designMd: req.body.designMd,
+        scenario: req.body.scenario,
         reportPeriod,
       });
+      html = out.html;
+      guideUsed = out.guideUsed;
     }
-    res.json({ html });
+    res.json({ html, guideUsed });
   }),
 
   /** 保存生成的 HTML 到项目（兼容旧接口，同时写入 HtmlVersion 表） */
@@ -170,7 +172,7 @@ export const htmlTemplateController = {
 
   /** SSE 流式生成 HTML 报告 */
   generateStream: async (req: Request, res: Response) => {
-    const { prompt, campaignId, designMd, reportPeriod } = req.body;
+    const { prompt, campaignId, scenario, reportPeriod } = req.body;
     initSSE(res);
 
     // AbortController: 前端断开连接时取消上游 fetch
@@ -181,7 +183,7 @@ export const htmlTemplateController = {
       for await (const chunk of aiGenerateService.generateHtmlStream({
         campaignId,
         prompt: prompt || 'Generate a comprehensive campaign performance report',
-        designMd,
+        scenario,
         reportPeriod,
         signal: abortCtrl.signal,
       })) {

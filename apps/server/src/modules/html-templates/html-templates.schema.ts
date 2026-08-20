@@ -31,7 +31,8 @@ export const generateHtmlSchema = z.object({
   prompt: z.string().optional(),
   campaignId: z.string().optional(),
   theme: z.enum(['light', 'dark']).optional(),
-  designMd: z.string().optional(),
+  /** 报告场景(月报/结案/复盘…),决定匹配哪份业务线指南 */
+  scenario: z.string().max(64).optional(),
   reportPeriod: z.object({ startDate: z.string(), endDate: z.string() }).optional(),
 });
 

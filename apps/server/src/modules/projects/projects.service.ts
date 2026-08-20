@@ -547,16 +547,16 @@ export const projectsService = {
     // 先替换日期文案
     html = replacePeriodInHtml(html, srcMeta, reportPeriod);
 
-    // 若有 aiPrompt/designMd，AI 重新生成（达人列表按周期过滤）
+    // 若有 aiPrompt，AI 重新生成（达人列表按周期过滤；designMd 已废除,改由 Guide 表自动匹配）
     if (srcMeta.aiPrompt || srcMeta.designMd) {
       try {
         const { aiGenerateService } = await import('../html-templates/ai-generate.service');
-        html = await aiGenerateService.generateHtml({
+        const out = await aiGenerateService.generateHtml({
           campaignId,
           prompt: (srcMeta.aiPrompt as string) || '(Analyze the campaign data and create an insightful HTML report.)',
-          designMd: (srcMeta.designMd as string) || undefined,
           reportPeriod,
         });
+        html = out.html;
         console.log('[duplicate] AI regenerated HTML for period', JSON.stringify(reportPeriod));
         return html;
       } catch (err) {

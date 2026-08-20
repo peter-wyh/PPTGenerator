@@ -2,6 +2,7 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import { config } from '../../config';
 import { fetchChatCompletionWithRetry } from './ai-client';
+import { resolveForCampaign } from '../guides/guide.service';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { campaignService } from '../campaigns/campaigns.service';
 
@@ -468,25 +469,6 @@ FOOTER: Write the business line attribution (exact name from the campaign JSON) 
 
 Generate the full HTML report now. Output ONLY the HTML code, nothing else.`;
 
-/** 当 designGuide 不为空时追加到 user prompt 的额外指令 */
-const DESIGN_GUIDE_SUFFIX = `
-
-═══════════════════════════════════════════════════════════
-★★★ BRAND DESIGN GUIDE (MANDATORY — FOLLOW STRICTLY) ★★★
-═══════════════════════════════════════════════════════════
-
-The design guide below defines the EXACT colors, fonts, component styles, and visual language for this report's brand. You MUST:
-
-1. Extract every hex color value and use them in tailwind.config, CSS classes, and inline styles.
-2. Import and use the exact Google Fonts specified.
-3. Apply component styling (radius, shadows, borders, spacing) as described.
-4. Do NOT use any hardcoded values from the system prompt — the design guide overrides all defaults.
-
-BRAND DESIGN GUIDE:
-{{DESIGN_GUIDE}}
-
-═══════════════════════════════════════════════════════════`;
-
 /** 业务线指南拼进 system prompt 的段(替代原 DESIGN_GUIDE_SUFFIX 的用户提示词注入;入口接入见 generateHtml 等四入口) */
 const GUIDE_SYSTEM_SUFFIX = `
 
@@ -588,7 +570,7 @@ Return the COMPLETE updated HTML. Output ONLY the HTML code.`;
 export type StreamChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage; dataCoverage?: DoneDataCoverage }
+  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage; dataCoverage?: DoneDataCoverage; guideUsed?: { id: string; name: string } | null }
   | { type: 'error'; message: string };
 
 /** done chunk 携带的周期数据覆盖(前端 toast 提醒用)。 */
@@ -1113,9 +1095,10 @@ export const aiGenerateService = {
   async generateHtml(params: {
     campaignId?: string;
     prompt: string;
-    designMd?: string;
+    /** 报告场景(月报/结案/复盘…),决定匹配哪份业务线指南 */
+    scenario?: string;
     reportPeriod?: { startDate?: string; endDate?: string };
-  }): Promise<string> {
+  }): Promise<{ html: string; guideUsed: { id: string; name: string } | null }> {
     if (!DEEPSEEK_API_KEY) {
       throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
     }
@@ -1124,25 +1107,16 @@ export const aiGenerateService = {
       ? await this.buildCampaignContext(params.campaignId, params.reportPeriod)
       : 'No campaign data provided.';
 
-    // design.md 来源：前端传入 > DB BusinessLine.designMd（通过 campaign 关联）
-    // 注意：designGuide 不再嵌在 campaign JSON 中（已在 buildCampaignContext 中移除）
-    let designGuide = params.designMd ?? '';
-    if (!designGuide.trim() && params.campaignId) {
-      const campaign = await prisma.campaign.findUnique({
-        where: { id: params.campaignId },
-        include: { businessLine: true },
-      });
-      designGuide = campaign?.businessLine?.designMd ?? '';
-    }
+    // 业务线指南:Guide 表按 businessLine+scenario 匹配,拼进 system prompt(替代 designMd 用户提示词注入)
+    const { guide, businessLineName } = params.campaignId
+      ? await resolveForCampaign(params.campaignId, params.scenario)
+      : { guide: null, businessLineName: '' };
+    const guideUsed = guide ? { id: guide.id, name: guide.name } : null;
+    const systemPrompt = buildSystemPrompt({ businessLineName, guideContent: guide?.content });
 
     let userPrompt = USER_PROMPT_TEMPLATE
       .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')
       .replace('{{CAMPAIGN_DATA}}', campaignData);
-
-    // 追加业务线 design.md 规范
-    if (designGuide && designGuide.trim()) {
-      userPrompt += DESIGN_GUIDE_SUFFIX.replace('{{DESIGN_GUIDE}}', designGuide.trim());
-    }
 
     // ★ 思考语言指令保持在 user prompt 最末（recency 位置对推理语言影响最强）
     userPrompt += THINKING_LANGUAGE_SUFFIX;
@@ -1167,7 +1141,7 @@ export const aiGenerateService = {
         apiKey: DEEPSEEK_API_KEY,
         model: DEEPSEEK_MODEL,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
@@ -1353,7 +1327,7 @@ export const aiGenerateService = {
     // 9) 海外公共 CDN → 自托管（国内不可达，否则报告无样式/无图表）
     processedHtml = rewriteExternalAssets(processedHtml, SELF_HOST_BASE);
 
-    return processedHtml;
+    return { html: processedHtml, guideUsed };
   },
 
   /**
@@ -1509,7 +1483,8 @@ export const aiGenerateService = {
   async *generateHtmlStream(params: {
     campaignId?: string;
     prompt: string;
-    designMd?: string;
+    /** 报告场景(月报/结案/复盘…),决定匹配哪份业务线指南 */
+    scenario?: string;
     reportPeriod?: { startDate?: string; endDate?: string };
     signal?: AbortSignal;
   }): AsyncGenerator<StreamChunk> {
@@ -1525,21 +1500,16 @@ export const aiGenerateService = {
     // done chunk 附带数据覆盖(与 context 同口径,前端 toast 提醒用)
     const dataCoverage = await this.getDataCoverage(params.campaignId, params.reportPeriod);
 
-    let designGuide = params.designMd ?? '';
-    if (!designGuide.trim() && params.campaignId) {
-      const campaign = await prisma.campaign.findUnique({
-        where: { id: params.campaignId },
-        include: { businessLine: true },
-      });
-      designGuide = campaign?.businessLine?.designMd ?? '';
-    }
+    // 业务线指南:Guide 表按 businessLine+scenario 匹配,拼进 system prompt(替代 designMd 用户提示词注入)
+    const { guide, businessLineName } = params.campaignId
+      ? await resolveForCampaign(params.campaignId, params.scenario)
+      : { guide: null, businessLineName: '' };
+    const guideUsed = guide ? { id: guide.id, name: guide.name } : null;
+    const systemPrompt = buildSystemPrompt({ businessLineName, guideContent: guide?.content });
 
     let userPrompt = USER_PROMPT_TEMPLATE
       .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')
       .replace('{{CAMPAIGN_DATA}}', campaignData);
-    if (designGuide && designGuide.trim()) {
-      userPrompt += DESIGN_GUIDE_SUFFIX.replace('{{DESIGN_GUIDE}}', designGuide.trim());
-    }
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     const maxTokens = isReasoningModel ? 16000 : 8192;
@@ -1553,7 +1523,7 @@ export const aiGenerateService = {
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
@@ -1632,7 +1602,7 @@ export const aiGenerateService = {
       model: DEEPSEEK_MODEL,
     });
 
-    yield { type: 'done', html: processedHtml, truncated, usage: endUsage, ...(dataCoverage ? { dataCoverage } : {}) };
+    yield { type: 'done', html: processedHtml, truncated, usage: endUsage, guideUsed, ...(dataCoverage ? { dataCoverage } : {}) };
   },
 
   /**

@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// DEEPSEEK_API_KEY 在模块顶层读取,须在 import 之前(hoisted)设置
+vi.hoisted(() => { process.env.DEEPSEEK_API_KEY = 'test-key'; });
+
 // ai-generate.service 顶层 import prisma，纯函数测试里 mock 掉避免实例化 PrismaClient。
 const prismaMock = vi.hoisted(() => ({
   campaign: { findUnique: vi.fn() },
   guide: { findMany: vi.fn() },
 }));
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
+
+const aiClientMock = vi.hoisted(() => ({ fetchChatCompletionWithRetry: vi.fn() }));
+vi.mock('./ai-client', () => aiClientMock);
 
 import { aiGenerateService, buildSystemPrompt, rewriteExternalAssets, SYSTEM_PROMPT, SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 
@@ -125,6 +131,63 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
   it('SYSTEM_PROMPT_DISPLAY 含 periodKpis 优先级规则', () => {
     expect(SYSTEM_PROMPT_DISPLAY).toContain('periodKpis');
     expect(SYSTEM_PROMPT_DISPLAY).toContain('优先使用 periodKpis');
+  });
+});
+
+describe('generateHtml · 指南接入与 guideUsed 回传', () => {
+  /** buildCampaignContext + resolveForCampaign 共用 campaign.findUnique mock 的最小形状 */
+  const camp = {
+    name: 'T', platform: 'x', startDate: '2026-07-01', endDate: '2026-07-31',
+    budget: 0, status: 'x', businessLineCode: 'DG', metrics: null, analytics: null,
+    businessLineId: 'bl1', businessLine: { name: 'DG 好物', code: 'DG' },
+    advertiser: null, campaignCreators: [],
+  };
+  const okResp = {
+    ok: true,
+    status: 200,
+    json: async () => ({ choices: [{ message: { content: '<!DOCTYPE html><html><body>ok</body></html>' } }] }),
+  } as any;
+
+  beforeEach(() => {
+    process.env.DEEPSEEK_API_KEY = 'test-key';
+    aiClientMock.fetchChatCompletionWithRetry.mockReset().mockResolvedValue({ response: okResp, attempts: 1 });
+  });
+
+  it('campaign 带 businessLineId → system 含指南,pick 用 scenario;返回 guideUsed', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    prismaMock.guide.findMany.mockResolvedValue([
+      { id: 'g-mo', scenario: '月报', name: 'DG 月报指南', content: '## 语调与术语\n用「创作者」', isDefault: false, isActive: true, updatedAt: new Date() },
+    ]);
+    const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p', scenario: '月报' });
+    expect(out.html).toContain('<!DOCTYPE html>');
+    expect(out.guideUsed).toEqual({ id: 'g-mo', name: 'DG 月报指南' });
+    const body = aiClientMock.fetchChatCompletionWithRetry.mock.calls[0][0];
+    const sys = body.messages.find((m: any) => m.role === 'system').content as string;
+    expect(sys).toContain('BUSINESS LINE GUIDE');
+    expect(sys).toContain('用「创作者」');
+    expect(sys).toContain('Prepared by DG 好物');
+    expect(sys).not.toContain('{{GUIDE}}'); // 占位符已替换
+  });
+
+  it('无匹配指南 → system 等于 CORE,guideUsed=null,user prompt 不再拼设计指南', async () => {
+    // 无业务线名(businessLine 缺失 → businessLineName='') → system 严格等于 CORE
+    prismaMock.campaign.findUnique.mockResolvedValue({ ...camp, businessLine: null });
+    prismaMock.guide.findMany.mockResolvedValue([]);
+    const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p' });
+    expect(out.guideUsed).toBeNull();
+    const body = aiClientMock.fetchChatCompletionWithRetry.mock.calls[0][0];
+    const sys = body.messages.find((m: any) => m.role === 'system').content as string;
+    expect(sys).toBe(SYSTEM_PROMPT);
+    const user = body.messages.find((m: any) => m.role === 'user').content as string;
+    expect(user).not.toContain('BRAND DESIGN GUIDE'); // 旧注入路径已废除
+  });
+
+  it('Guide 查询抛错 → 静默降级无指南,不阻断生成', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    prismaMock.guide.findMany.mockRejectedValue(new Error('db down'));
+    const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p' });
+    expect(out.guideUsed).toBeNull();
+    expect(out.html).toContain('<!DOCTYPE html>');
   });
 });
 
