@@ -112,12 +112,13 @@ describe('mapCampaign', () => {
     expect(p.linkUrl).toBe('https://tiktok.com/@miaglowup');
   });
 
-  it('metrics 缺 clicks → 回退 CPS 聚合列真源(其余缺字段仍 N/A 不兜 0)', async () => {
+  it('metrics 全空 → revenue/orders/clicks 回退 CPS 聚合列镜像,其余仍 N/A 不兜 0', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue({ ...campaignRow, metrics: {} });
     const c = await mapCampaign('c1');
-    expect(c.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('Metric unavailable');
+    expect(c.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('$192,000'); // cps.gmv 回退
     expect(c.kpis.find((k) => k.label === 'Clicks')?.value).toBe('124,678'); // cps 聚合列回退(真源)
-    expect(c.kpis.find((k) => k.label === 'Orders')?.value).toBe('Metric unavailable');
+    expect(c.kpis.find((k) => k.label === 'Orders')?.value).toBe('1,016'); // cps.orders 回退
+    expect(c.kpis.find((k) => k.label === 'New Customer Acquisition')?.value).toBe('Metric unavailable'); // daily 无行,不回退
   });
 
   it('metrics + CPS 聚合列双源皆无 clicks → Metric unavailable(不兜 0)', async () => {

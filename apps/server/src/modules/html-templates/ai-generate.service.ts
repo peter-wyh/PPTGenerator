@@ -1092,7 +1092,44 @@ export const aiGenerateService = {
           // ★ MUST use this exact URL in <img src>. It is an absolute URL.
           logoUrl: resolveUrl(campaign.advertiser?.logo),
         },
-        metrics: campaign.metrics,
+        // ★ metrics 为空时回退 CPS 聚合列/daily 全覆盖合计(与 recipe mapper 汇总分支同口径):
+        //   revenue→gmv、orders、clicks(聚合列,链接全周期汇总);newCustomers 仅 daily 100% 日期覆盖才回退。
+        //   仍缺的维度不进 metrics(AI 按铁律渲染 Data Unavailable)。
+        metrics: (() => {
+          const m = (campaign.metrics ?? {}) as Record<string, unknown>;
+          const hasVal = (v: unknown) => v !== undefined && v !== null && v !== '' && !Number.isNaN(Number(v));
+          if (!hasPeriod && !hasVal(m.totalRevenue) && !hasVal(m.clicks) && !hasVal(m.orders)) {
+            // 汇总口径 + metrics 全空 → 聚合列回退
+            let agg: { gmv: number; orders: number; clicks: number; newCustomers: number } = { gmv: 0, orders: 0, clicks: 0, newCustomers: 0 };
+            const dates = new Set<string>();
+            for (const cc of campaign.campaignCreators) {
+              for (const p of cc.cpsPerformances ?? []) {
+                agg.gmv += num(p.gmv); agg.orders += num(p.orders); agg.clicks += num(p.clicks);
+                for (const d of ((p.daily as Record<string, unknown>[]) ?? [])) {
+                  dates.add(String(d.date ?? ''));
+                  agg.newCustomers += num(d.newCustomers);
+                }
+              }
+            }
+            // daily 100% 日期覆盖才信 newCustomers(部分覆盖的合计非全周期真值)
+            const fullCover = (() => {
+              if (!campaign.startDate || !campaign.endDate) return false;
+              const days = Math.round((new Date(campaign.endDate).getTime() - new Date(campaign.startDate).getTime()) / 86400000) + 1;
+              if (days <= 0 || dates.size < days) return false;
+              for (let t = new Date(campaign.startDate).getTime(); t <= new Date(campaign.endDate).getTime(); t += 86400000) {
+                if (!dates.has(new Date(t).toISOString().slice(0, 10))) return false;
+              }
+              return true;
+            })();
+            const out: Record<string, number> = {};
+            if (agg.gmv > 0) out.totalRevenue = agg.gmv;
+            if (agg.orders > 0) out.orders = agg.orders;
+            if (agg.clicks > 0) out.clicks = agg.clicks;
+            if (fullCover && agg.newCustomers > 0) out.newCustomers = agg.newCustomers;
+            if (Object.keys(out).length) return { ...m, ...out };
+          }
+          return m;
+        })(),
         // ★ 当有 periodKpis（期内数据）时，用新数据替换 campaign.metrics
         ...(periodKpis ? { periodMetrics: periodKpis } : {}),
         // ★ analytics blob 不再进上下文（宁缺勿假：常过期、与周期不符）

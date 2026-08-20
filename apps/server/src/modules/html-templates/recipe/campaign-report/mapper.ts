@@ -414,21 +414,51 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
     };
   }
 
-  // 无 reportPeriod(汇总口径)→ metrics 有值才渲染(缺 → Metric unavailable);CPS 顶层真实汇总列保留。
+  // 无 reportPeriod(汇总口径)→ metrics 有值才渲染(缺 → 回退真源,仍缺 → Metric unavailable)。
   const m = (campaign.metrics ?? {}) as Any;
   const hasVal = (v: unknown) => v !== undefined && v !== null && v !== '' && !Number.isNaN(Number(v));
-  const totalRevenue = hasVal(m.totalRevenue) ? Number(m.totalRevenue) : null;
+  let totalRevenue = hasVal(m.totalRevenue) ? Number(m.totalRevenue) : null;
   let clicks = hasVal(m.clicks) ? Number(m.clicks) : null;
-  const orders = hasVal(m.orders) ? Number(m.orders) : null;
-  const newCustomers = hasVal(m.newCustomers) ? Number(m.newCustomers) : null;
-  const aov = hasVal(m.aov) ? Number(m.aov) : (orders !== null && orders > 0 && totalRevenue !== null ? totalRevenue / orders : null);
-  const cvr = clicks !== null && orders !== null && clicks > 0 ? (orders / clicks) * 100 : null;
-  // ★ metrics.clicks 缺失 → 回退 CPS 聚合列合计(链接全周期汇总,与汇总口径周期一致;全 0 视为无数据)
-  if (clicks === null) {
-    const aggClicks = (campaign.campaignCreators ?? []).reduce(
-      (s: number, cc: Any) => s + (cc.cpsPerformances ?? []).reduce((a: number, p: Any) => a + (Number(p.clicks) || 0), 0), 0);
-    if (aggClicks > 0) clicks = aggClicks;
+  let orders = hasVal(m.orders) ? Number(m.orders) : null;
+  let newCustomers = hasVal(m.newCustomers) ? Number(m.newCustomers) : null;
+  let cvr = clicks !== null && orders !== null && clicks > 0 ? (orders / clicks) * 100 : null;
+  let aov = hasVal(m.aov) ? Number(m.aov) : null;
+  // ★ 汇总口径回退真源链(聚合列=链接全周期汇总,口径天然一致;全 0 视为无数据不回退):
+  //   revenue→gmv, orders→orders, clicks→clicks;newCustomers 只从 daily 合计且回退前须 100% 日期覆盖
+  //   (聚合列无 newCustomers 维度,daily 部分覆盖时合计非全周期真值——宁缺勿假)。
+  const cpsAgg = (campaign.campaignCreators ?? []).reduce(
+    (s: { gmv: number; orders: number; clicks: number }, cc: Any) => {
+      const r = (cc.cpsPerformances ?? []).reduce(
+        (a: { gmv: number; orders: number; clicks: number }, p: Any) => ({
+          gmv: a.gmv + (Number(p.gmv) || 0), orders: a.orders + (Number(p.orders) || 0), clicks: a.clicks + (Number(p.clicks) || 0),
+        }), { gmv: 0, orders: 0, clicks: 0 });
+      return { gmv: s.gmv + r.gmv, orders: s.orders + r.orders, clicks: s.clicks + r.clicks };
+    }, { gmv: 0, orders: 0, clicks: 0 });
+  // newCustomers daily 全覆盖判定(dates ⊇ [startDate,endDate] 才回退)
+  const dailyAll = (campaign.campaignCreators ?? []).flatMap((cc: Any) => (cc.cpsPerformances ?? []).flatMap((p: Any) => (p.daily as Any[]) ?? []));
+  const dailyDates = new Set(dailyAll.map((d: Any) => String(d.date ?? '')));
+  const fullCover = (() => {
+    if (!campaign.startDate || !campaign.endDate) return false;
+    const days = Math.round((new Date(campaign.endDate).getTime() - new Date(campaign.startDate).getTime()) / 86400000) + 1;
+    if (days <= 0 || dailyDates.size < days) return false;
+    for (let t = new Date(campaign.startDate).getTime(); t <= new Date(campaign.endDate).getTime(); t += 86400000) {
+      if (!dailyDates.has(new Date(t).toISOString().slice(0, 10))) return false;
+    }
+    return true;
+  })();
+  // clicks 回退(聚合列)
+  if (clicks === null && cpsAgg.clicks > 0) clicks = cpsAgg.clicks;
+  // ★ metrics 全空 + 聚合列有值 → revenue/orders 同步回退(同一次导入的完整镜像)
+  if (totalRevenue === null && cpsAgg.gmv > 0) totalRevenue = cpsAgg.gmv;
+  if (orders === null && cpsAgg.orders > 0) orders = cpsAgg.orders;
+  // newCustomers 回退(daily 全覆盖)
+  if (newCustomers === null && fullCover) {
+    const nc = dailyAll.reduce((s: number, d: Any) => s + (Number(d.newCustomers) || 0), 0);
+    if (nc > 0) newCustomers = nc;
   }
+  // 回退后重算派生指标(aov/cvr)
+  if (aov === null && orders !== null && orders > 0 && totalRevenue !== null) aov = totalRevenue / orders;
+  cvr = clicks !== null && orders !== null && clicks > 0 ? (orders / clicks) * 100 : null;
 
   const kpi = (label: string, v: number | null) => {
     if (v === null) return { label, value: 'Metric unavailable', highlight: false };
