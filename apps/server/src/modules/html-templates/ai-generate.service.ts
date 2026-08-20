@@ -297,6 +297,12 @@ export const SYSTEM_PROMPT_DISPLAY = `# 系统提示词 (SYSTEM_PROMPT)
 
 > 以下为后端 \`ai-generate.service.ts\` 中完整的系统提示词，AI 生成时自动注入到 system role。
 
+## 📎 业务线指南（Guide）
+
+系统提示词按请求拼装：\`SYSTEM_PROMPT\`（下方通用规则）+ **业务线指南**（Guide 表按 campaign 的业务线+报告场景匹配一份，含品牌视觉/章节结构/展示形式偏好/语调与术语四节，指南冲突时以指南为准）+ 业务事实（署名 Prepared by {业务线名}）。指南在数据管理 → 指南 维护。
+
+---
+
 ## 🎯 角色与输出规则
 
 \`\`\`

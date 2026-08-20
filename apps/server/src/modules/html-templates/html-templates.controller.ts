@@ -281,27 +281,17 @@ export const htmlTemplateController = {
     res.json(result);
   }),
 
-  /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
+  /** 获取 Campaign 匹配的业务线指南（供前端回显：指南名/内容/业务线） */
   getDesignGuide: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId } = req.params;
-    const json = await aiGenerateService.buildCampaignContext(campaignId);
-    let designMd = '';
-    let businessLineName = '';
-    let businessLineCode = '';
-    try {
-      const parsed = JSON.parse(json);
-      designMd = parsed.designGuide ?? '';
-      // businessLine 可能是对象 {code, name, logoUrl} 或字符串
-      const bl = parsed.campaign?.businessLine;
-      if (typeof bl === 'string') {
-        businessLineName = bl;
-        businessLineCode = bl;
-      } else if (bl && typeof bl === 'object') {
-        businessLineName = bl.name ?? bl.code ?? '';
-        businessLineCode = bl.code ?? bl.name ?? '';
-      }
-    } catch { /* ignore */ }
-    res.json({ designMd, businessLineName, businessLineCode });
+    const { guide, businessLineName, businessLineCode } = await resolveForCampaign(campaignId);
+    res.json({
+      designMd: guide?.content ?? '',          // 兼容旧字段名：现指南全文
+      guideName: guide?.name ?? '',
+      guideId: guide?.id ?? null,
+      businessLineName,
+      businessLineCode,
+    });
   }),
 
   /** 返回系统提示词的 Markdown 展示版（仅供前端回显，不影响 AI 生成） */
