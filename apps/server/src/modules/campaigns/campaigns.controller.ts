@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService, importService } from './campaigns.service';
+import { orderStatsService } from './order-stats.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
 import { assertBusinessLine } from '../../utils/business-line';
@@ -188,6 +189,15 @@ export const campaignController = {
     const v = req.user as AuthPayload;
     const insights = await campaignService.getOrderInsights(id, v.id, { start, end }, v.role === 'ADMIN');
     res.json(insights);
+  }),
+
+  /** 手动重算订单日级统计中间层（OrderDailyStat）。迁移后回填 / 排查用。 */
+  recomputeOrderStats: asyncHandler(async (req: Request, res: Response) => {
+    const id = String(req.params.id ?? '');
+    const v = req.user as AuthPayload;
+    await campaignService.getOrThrow(id, v.id, v.role === 'ADMIN');
+    const result = await orderStatsService.recomputeOrderStats(id);
+    res.json(result);
   }),
 
   /** 订单明细列表（数据管理页）：query: campaignId/page/pageSize。admin 全局，非 admin 限本人 campaign。 */

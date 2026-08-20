@@ -266,6 +266,7 @@ model Campaign {
 
   campaignCreators CampaignCreator[]
   orders           CampaignOrder[]
+  orderDailyStats  OrderDailyStat[]
 
   @@index([ownerId])
   @@index([businessLineId])
@@ -555,6 +556,48 @@ model CampaignOrderItem {
 
   @@index([campaignOrderId])
   @@index([productName])
+}
+
+/// 订单日级统计中间层（recomputeOrderStats 从 CampaignOrder 物化）。
+/// 报告数字真源：Revenue/Commission/Orders 以本表为准（订单表 SUM 的快照，
+/// 与 CpsPerformance.daily 导入副本解耦）。日期口径 = 订单表已存 UTC 值
+/// DATE_FORMAT 截断，不做二次时区转换。
+model OrderDailyStat {
+  id        String   @id @default(cuid())
+  campaignId String
+  campaign  Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  /// ''（哨兵）= 该日全 campaign 聚合行；非空 = CampaignCreator.id 的 creator×date 行。
+  /// MySQL 唯一索引对 NULL 不去重，故用空串而非 NULL 表示聚合行。
+  campaignCreatorId String @default("")
+
+  /// 统计日（YYYY-MM-DD）。
+  statDate  String
+
+  totalOrders        Int      @default(0)
+  approvedOrders     Int      @default(0)
+  pendingOrders      Int      @default(0)
+  /// declined/deleted 等非 Approved/Pending 状态。
+  otherOrders        Int      @default(0)
+  /// Revenue 真源（Lead 模式佣金口径；saleAmount £1 占位不作为收入）。
+  totalCommission    Decimal  @default(0) @db.Decimal(14, 2)
+  approvedCommission Decimal  @default(0) @db.Decimal(14, 2)
+  pendingCommission  Decimal  @default(0) @db.Decimal(14, 2)
+  /// SUM(saleAmount)，Lead 模式为占位值，存档不用作 Revenue。
+  totalSaleAmount    Decimal  @default(0) @db.Decimal(14, 2)
+  /// customerAcquisition='New' 等标签的单量；标签缺失时恒 0。
+  newCustomerOrders  Int      @default(0)
+  /// 该行统计范围内任一单带 customerAcquisition 标签；false = 概念不适用，渲染 N/A。
+  hasNewCustomerTag  Boolean  @default(false)
+  /// 国家维度 Top5：[{country, orders, commission}]（开放集合，仅展示用）。
+  topCountries       Json?
+  /// 设备维度 Top5：[{device, orders}]（clickDevice 100% 有值；仅聚合行挂）。
+  topDevices         Json?
+
+  recomputedAt DateTime @default(now())
+
+  @@unique([campaignId, statDate, campaignCreatorId])
+  @@index([campaignId, statDate])
+  @@index([campaignCreatorId])
 }
 
 /// CPS 链接效果（一行=一条 CPS 跟踪链接的汇总数据）。

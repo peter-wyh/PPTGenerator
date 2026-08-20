@@ -60,5 +60,6 @@ router.post('/import/cps-daily', campaignController.importCpsDaily);
 router.post('/import/orders', campaignController.importOrders);
 router.get('/orders/list', campaignController.listOrders);
 router.get('/:id/order-insights', campaignController.getOrderInsights);
+router.post('/:id/order-stats/recompute', campaignController.recomputeOrderStats);
 
 export const campaignsRoutes = router;

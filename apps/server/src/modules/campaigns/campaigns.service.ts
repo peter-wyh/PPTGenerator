@@ -1,6 +1,7 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import { Prisma } from '@prisma/client';
+import { recomputeOrderStats } from './order-stats.service';
 
 // ─── Campaign ────────────────────────────────────────────────────────────────
 
@@ -782,6 +783,19 @@ export const importService = {
         updated++;
       } catch {
         skipped++;
+      }
+    }
+
+    // ★ 订单导入成功 → 重算日级统计中间层（OrderDailyStat）。
+    //   每批每 campaign 一次（非每单一次）；失败不阻塞导入，仅告警——
+    //   中间层可随时通过 POST /campaigns/:id/order-stats/recompute 手动补算。
+    const campaignIds = new Set([...grouped.keys()].map((k) => k.split('::')[0]));
+    for (const cid of campaignIds) {
+      try {
+        const r = await recomputeOrderStats(cid);
+        console.log(`[importOrders] order stats recomputed: campaign=${cid} rows=${r.rows} dropped=${r.dropped}`);
+      } catch (err) {
+        console.warn(`[importOrders] order stats recompute failed for campaign=${cid}:`, err);
       }
     }
     return { updated, skipped };

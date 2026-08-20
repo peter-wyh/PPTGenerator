@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ai-generate.service 顶层 import prisma，纯函数测试里 mock 掉避免实例化 PrismaClient。
 const prismaMock = vi.hoisted(() => ({
   campaign: { findUnique: vi.fn() },
+  orderDailyStat: { findMany: vi.fn() },
 }));
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
@@ -124,5 +125,116 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
   it('SYSTEM_PROMPT_DISPLAY 含 periodKpis 优先级规则', () => {
     expect(SYSTEM_PROMPT_DISPLAY).toContain('periodKpis');
     expect(SYSTEM_PROMPT_DISPLAY).toContain('优先使用 periodKpis');
+  });
+});
+
+describe('ai-generate.service · buildCampaignContext 订单中间层口径', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /** mock getRange 的两次 findMany(聚合行 → creator 行)。 */
+  function mockOrderStats(totalRows: unknown[], creatorRows: unknown[]) {
+    prismaMock.orderDailyStat.findMany
+      .mockResolvedValueOnce(totalRows)
+      .mockResolvedValueOnce(creatorRows);
+  }
+  const dec = (v: string) => ({ toString: () => v, toNumber: () => Number(v) });
+  const dailyCamp = {
+    id: 'c1', name: 'T', platform: 'TikTok', startDate: '2026-10-01', endDate: '2026-10-31',
+    budget: 1, status: 'x', businessLineCode: 'FT', metrics: { clicks: 1 },
+    analytics: {},
+    businessLine: { name: 'FT' }, advertiser: { name: 'A' },
+    campaignCreators: [{
+      id: 'cc1',
+      creator: { name: 'M', platform: 'TikTok', partnerType: 'creator' },
+      cpsPerformances: [{ clicks: 0, orders: 0, gmv: 0, spend: 0, commission: 0, impressions: 0,
+        daily: [{ date: '2026-10-02', clicks: '10', orders: '1', gmv: '100', impressions: '0', spend: '0', commission: '0', newCustomers: '0' }] }],
+      performance: { summary: {} },
+    }],
+  };
+
+  /** periodKpis 的 {label,value} 在 JSON 里是多行对象——按相邻对断言。 */
+  function kpiJson(json: string, label: string, value: string): boolean {
+    return json.includes(`"label": "${label}"`) &&
+      json.includes(`"label": "${label}"`) &&
+      new RegExp(`"label": "${label}",\\s*"value": "${value.replace(/\$/g, '\\$')}"`).test(json);
+  }
+
+  it('中间层有数据 → periodKpis 换订单源;新客标签缺失 → N/A + dataGaps 声明;注入 orderStatusSplit', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockOrderStats(
+      [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 25, approvedOrders: 20, pendingOrders: 5, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('250.00'), pendingCommission: dec('50.00'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: [{ country: 'Netherlands', orders: 25, commission: '300.00' }] }],
+      [{ statDate: '2026-10-02', campaignCreatorId: 'cc1', totalOrders: 25, approvedOrders: 20, pendingOrders: 5, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('250.00'), pendingCommission: dec('50.00'), newCustomerOrders: 0, hasNewCustomerTag: false }],
+    );
+    const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
+    // periodKpis 来自订单表:orders 25(revenue 佣金口径 300)
+    expect(kpiJson(json, 'Orders', '25')).toBe(true);
+    expect(kpiJson(json, 'Total Revenues', '$300')).toBe(true);
+    // 新客标签缺失 → N/A(不编造 0)
+    expect(kpiJson(json, 'New Customer Acquisition', 'N/A')).toBe(true);
+    // dataGaps 声明 newCustomers 缺失
+    expect(json).toContain('newCustomers');
+    // 状态拆分 + 国家注入
+    expect(json).toContain('"orderStatusSplit"');
+    expect(json).toContain('"approved": 20');
+    expect(json).toContain('"topCountries"');
+    // clicks 保持 daily(10)
+    expect(kpiJson(json, 'Clicks', '10')).toBe(true);
+  });
+
+  it('daily 无 clicks key(数据源缺失) → Clicks=N/A + dataGaps 声明 + trend 不带 clicks', async () => {
+    // daily 记录只含 orders/gmv(无 clicks key)——模拟 Awin 导入通道(从不写 clicks)
+    const noClicksCamp = {
+      ...dailyCamp,
+      campaignCreators: [{
+        ...dailyCamp.campaignCreators[0],
+        cpsPerformances: [{
+          ...dailyCamp.campaignCreators[0].cpsPerformances[0],
+          daily: [{ date: '2026-10-02', orders: '1', gmv: '100' }],
+        }],
+      }],
+    };
+    prismaMock.campaign.findUnique.mockResolvedValue(noClicksCamp);
+    mockOrderStats(
+      [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 25, approvedOrders: 20, pendingOrders: 5, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('250.00'), pendingCommission: dec('50.00'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: null, topDevices: [] }],
+      [],
+    );
+    const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
+    // Clicks 渲染 N/A,不编造 0
+    expect(kpiJson(json, 'Clicks', 'N/A')).toBe(true);
+    // dataGaps 声明 clicks 缺失
+    expect(json).toContain('"clicks"');
+    // trend 不带 clicks 字段
+    const trendMatch = json.match(/"dailyTrend":\s*\[[\s\S]*?\]/);
+    expect(trendMatch?.[0]).not.toContain('clicks');
+  });
+
+  it('设备维度注入 deviceSplit(区间合并)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockOrderStats(
+      [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 25, approvedOrders: 25, pendingOrders: 0, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('300.00'), pendingCommission: dec('0'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: null, topDevices: [{ device: 'iPhone', orders: 15 }, { device: 'Android Mobile', orders: 10 }] }],
+      [],
+    );
+    const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
+    expect(json).toContain('"deviceSplit"');
+    expect(json).toContain('"device": "iPhone"');
+  });
+
+  it('中间层有数据 + 标签可用 → 新客输真值', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockOrderStats(
+      [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 10, approvedOrders: 10, pendingOrders: 0, otherOrders: 0, totalCommission: dec('100.00'), approvedCommission: dec('100.00'), pendingCommission: dec('0'), newCustomerOrders: 4, hasNewCustomerTag: true, topCountries: null }],
+      [],
+    );
+    const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
+    expect(kpiJson(json, 'New Customer Acquisition', '4')).toBe(true);
+  });
+
+  it('中间层无数据(空行) → 走 daily 老路(不注入 orderStatusSplit)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
+    const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
+    expect(json).not.toContain('orderStatusSplit');
+    // daily 口径:orders 1 / gmv 100
+    expect(kpiJson(json, 'Orders', '1')).toBe(true);
   });
 });
