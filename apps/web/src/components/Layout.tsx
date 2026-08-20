@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
 import { Button } from './Button';
+import { Logo } from './Logo';
 
 interface LayoutProps {
   children: ReactNode;
@@ -34,9 +35,13 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/projects')}
-            className="font-headings text-xl font-semibold tracking-tight text-foreground-primary"
+            className="flex items-center gap-2"
+            aria-label="Report Generator 首页"
           >
-            Report Generator
+            <Logo size={26} />
+            <span className="font-headings text-xl font-semibold tracking-tight text-foreground-primary">
+              Report Generator
+            </span>
           </button>
           <button
             onClick={() => navigate('/projects/ppt')}
