@@ -16,6 +16,7 @@ const CreatorPage = lazy(() => import('./routes/CreatorPage').then((m) => ({ def
 const OrdersPage = lazy(() => import('./routes/OrdersPage'));
 const AdvertiserPage = lazy(() => import('./routes/AdvertiserPage').then((m) => ({ default: m.AdvertiserPage })));
 const MarketingEventPage = lazy(() => import('./routes/MarketingEventPage').then((m) => ({ default: m.MarketingEventPage })));
+const GuidePage = lazy(() => import('./routes/GuidePage').then((m) => ({ default: m.GuidePage })));
 const ApiDocsPage = lazy(() => import('./routes/ApiDocsPage'));
 const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m) => ({ default: m.BusinessLinePage })));
 const CampaignCollabPage = lazy(() => import('./routes/CampaignCollabPage').then((m) => ({ default: m.CampaignCollabPage })));
@@ -55,6 +56,7 @@ export function App() {
               <Route path="creators" element={<CreatorPage />} />
               <Route path="advertisers" element={<AdvertiserPage />} />
               <Route path="marketing-events" element={<MarketingEventPage />} />
+              <Route path="guides" element={<GuidePage />} />
               <Route path="business-lines" element={<BusinessLinePage />} />
               <Route path="api-docs" element={<ApiDocsPage />} />
             </Route>

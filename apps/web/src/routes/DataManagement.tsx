@@ -19,6 +19,7 @@ const MENUS: MenuItem[] = [
   { path: '/data/creators', label: '达人库' },
   { path: '/data/advertisers', label: '广告主' },
   { path: '/data/marketing-events', label: '营销活动' },
+  { path: '/data/guides', label: '指南' },
   { path: '/data/business-lines', label: '业务线' },
   { path: '/data/api-docs', label: '接口文档' },
 ];
