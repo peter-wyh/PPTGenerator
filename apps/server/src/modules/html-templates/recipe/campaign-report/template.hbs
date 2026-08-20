@@ -74,7 +74,9 @@
                 labels: {{{json trend.labels}}},
                 datasets: [
                     { type: 'line', label: 'Revenue ($)', data: {{{json trend.revenue}}}, borderColor: '{{tokens.brandPrimary}}', backgroundColor: '{{tokens.brandPrimary}}', borderWidth: 3, tension: 0.4, yAxisID: 'yRevenue', order: 1 },
+                    {{~#if trend.hasClicks}}
                     { type: 'line', label: 'Clicks', data: {{{json trend.clicks}}}, borderColor: '{{tokens.greyPrimary}}', borderWidth: 2, borderDash: [5,5], tension: 0.4, yAxisID: 'yCount', pointRadius: 0, order: 2 },
+                    {{~/if}}
                     { type: 'bar', label: 'Orders', data: {{{json trend.orders}}}, backgroundColor: 'rgba(255,9,158,0.15)', borderRadius: 4, yAxisID: 'yCount', order: 3 }
                 ]
             },

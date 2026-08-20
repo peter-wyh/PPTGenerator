@@ -2,8 +2,9 @@
 import { prisma } from '../../../../prisma';
 import { ApiError } from '../../../../utils/ApiError';
 import { formatMoney, formatNum, formatPct, formatRatio } from '../format';
-import { aggregateDimensions, type DimLink } from './dimensions';
+import { aggregateDimensions, type DimLink, PALETTE } from './dimensions';
 import { computeCoverage } from './coverage';
+import { getRange, type OrderStatsRange } from '../../../campaigns/order-stats.service';
 import type { CampaignReportContent } from './schema';
 
 type Any = Record<string, any>;
@@ -30,12 +31,16 @@ function mapFromDaily(
 
   // 1) 每个创作者的期内 daily 求和
   type DailySum = { clicks: number; orders: number; gmv: number; newCustomers: number };
+  // ★ clicks 缺失判定:期内 daily 记录从未出现 clicks key = 数据源缺失(渲染 Metric unavailable);
+  //   有 key 值 0 = 真实 0。宁缺勿假。
+  let clicksKeySeen = false;
   const perCreator: { cc: Any; sum: DailySum }[] = (campaign.campaignCreators ?? []).map((cc: Any) => {
     const sum: DailySum = { clicks: 0, orders: 0, gmv: 0, newCustomers: 0 };
     for (const p of cc.cpsPerformances ?? []) {
       for (const d of (p.daily as Any[] | null | undefined) ?? []) {
         const date = String(d.date ?? '');
         if (!date || !inPeriod(date)) continue;
+        if ('clicks' in d) clicksKeySeen = true;
         sum.clicks += num(d.clicks);
         sum.orders += num(d.orders);
         sum.gmv += num(d.gmv);
@@ -44,6 +49,20 @@ function mapFromDaily(
     }
     return { cc, sum };
   });
+  // ★ clicks 回退聚合列:daily 无 clicks 键 + 报告周期完整覆盖 campaign 周期(口径一致才回退,全 0 不回退)
+  let clicksFallback = false;
+  if (!clicksKeySeen) {
+    const coversAll = (!startDate || !campaign.startDate || startDate <= campaign.startDate)
+      && (!endDate || !campaign.endDate || endDate >= campaign.endDate);
+    if (coversAll) {
+      let aggTotal = 0;
+      for (const e of perCreator) {
+        const agg = (e.cc.cpsPerformances ?? []).reduce((s: number, p: Any) => s + num(p.clicks), 0);
+        if (agg > 0) { e.sum.clicks = agg; aggTotal += agg; }
+      }
+      if (aggTotal > 0) clicksFallback = true;
+    }
+  }
 
   // 2) 总量
   const total = perCreator.reduce<DailySum>(
@@ -60,9 +79,11 @@ function mapFromDaily(
   // 3) KPI(结构同 mapCampaign 现有)
   const kpis = [
     { label: 'Total Revenues', value: formatMoney(total.gmv) },
-    { label: 'Clicks', value: formatNum(total.clicks) },
+    // ★ clicks 数据源缺失 → Metric unavailable(不编造 0);CVR 同理不可算。
+    //   clicksFallback=true 时聚合列回退生效,正常出数(真源:链接全周期汇总)。
+    { label: 'Clicks', value: (clicksKeySeen || clicksFallback) ? formatNum(total.clicks) : 'Metric unavailable' },
     { label: 'Orders', value: formatNum(total.orders) },
-    { label: 'Conversion Rate', value: formatPct(Math.round(cvr * 10) / 10) },
+    { label: 'Conversion Rate', value: (clicksKeySeen || clicksFallback) ? formatPct(Math.round(cvr * 10) / 10) : 'Metric unavailable' },
     { label: 'New Customer Acquisition', value: formatNum(total.newCustomers), highlight: true },
     { label: 'AOV', value: formatMoney(aov) },
   ];
@@ -105,6 +126,8 @@ function mapFromDaily(
     revenue: dates.map((d) => byDate.get(d)!.revenue),
     clicks: dates.map((d) => byDate.get(d)!.clicks),
     orders: dates.map((d) => byDate.get(d)!.orders),
+    // ★ 回退聚合列时只有全周期总量、无日级分布——趋势图同样不画 Clicks 线(不编造日级形状)
+    hasClicks: clicksKeySeen,
   };
 
   // 6) period
@@ -180,6 +203,157 @@ function mapFromDaily(
   return { kpis, publishers, trend, period, insights };
 }
 
+/**
+ * ★ 订单中间层口径(OrderDailyStat 为真源):revenue/orders 来自订单表日级统计,
+ * clicks 保持 daily(中间层无此维度);newCustomers 仅当 customerAcquisition 有标签
+ * (hasNewCustomerTag)才输出,否则 'Metric unavailable' 且不输出 newCustomerRate。
+ * 结构与 mapFromDaily 同构,可独立测试。纯函数,不查 DB。
+ */
+function mapFromOrderStats(
+  campaign: Any,
+  orderStats: OrderStatsRange,
+  reportPeriod: { startDate?: string; endDate?: string },
+): { kpis: CampaignReportContent['kpis']; publishers: CampaignReportContent['publishers']; trend: CampaignReportContent['trend']; period: CampaignReportContent['header']['period']; insights: CampaignReportContent['insights'] } {
+  const { startDate, endDate } = reportPeriod;
+  const inPeriod = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
+  const num = (v: unknown) => Number(v) || 0;
+
+  // 1) daily 侧只取 clicks / spend / 维度标签(revenue/orders 以中间层为准)
+  const perCreatorClicks = new Map<string, number>();
+  const clicksByDate = new Map<string, number>();
+  let totalSpend = 0;
+  // ★ clicks 缺失判定:期内 daily 从未出现 clicks key = 数据源缺失
+  let clicksKeySeen = false;
+  for (const cc of campaign.campaignCreators ?? []) {
+    let clicks = 0;
+    for (const p of cc.cpsPerformances ?? []) {
+      totalSpend += num(p.spend);
+      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
+        const date = String(d.date ?? '');
+        if (!date || !inPeriod(date)) continue;
+        if ('clicks' in d) clicksKeySeen = true;
+        clicks += num(d.clicks);
+        clicksByDate.set(date, (clicksByDate.get(date) ?? 0) + num(d.clicks));
+      }
+    }
+    perCreatorClicks.set(cc.id, clicks);
+  }
+  // ★ clicks 回退聚合列:daily 无 clicks 键(日级导入通道未写入)但报告周期完整覆盖
+  //   campaign 生命周期时,回退 CpsPerformance 顶层聚合列(importCpsPerformance 导入的
+  //   链接全周期汇总,真源为 Awin Click References 等)。聚合列是全周期口径——
+  //   周期切片不满足全覆盖时口径不符,不回退;全 0 视为无数据,不回退。
+  let clicksFallback = false;
+  if (!clicksKeySeen) {
+    const coversAll = (!startDate || !campaign.startDate || startDate <= campaign.startDate)
+      && (!endDate || !campaign.endDate || endDate >= campaign.endDate);
+    if (coversAll) {
+      let aggTotal = 0;
+      for (const cc of campaign.campaignCreators ?? []) {
+        const agg = (cc.cpsPerformances ?? []).reduce((s: number, p: Any) => s + num(p.clicks), 0);
+        if (agg > 0) { perCreatorClicks.set(cc.id, agg); aggTotal += agg; }
+      }
+      if (aggTotal > 0) clicksFallback = true;
+    }
+  }
+  const totalClicks = [...perCreatorClicks.values()].reduce((s, x) => s + x, 0);
+
+  // 2) KPI:中间层 totals + daily clicks
+  const ot = orderStats.totals;
+  const aov = ot.orders ? ot.commission / ot.orders : 0;
+  const cvr = totalClicks ? (ot.orders / totalClicks) * 100 : 0;
+  const kpis = [
+    { label: 'Total Revenues', value: formatMoney(ot.commission) },
+    // ★ clicks 数据源缺失 → Metric unavailable(不编造 0);CVR 同理不可算。
+    //   clicksFallback=true 时聚合列回退生效,clicks/CVR 正常出数(真源:链接汇总)。
+    { label: 'Clicks', value: (clicksKeySeen || clicksFallback) ? formatNum(totalClicks) : 'Metric unavailable' },
+    { label: 'Orders', value: formatNum(ot.orders) },
+    { label: 'Conversion Rate', value: (clicksKeySeen || clicksFallback) ? formatPct(Math.round(cvr * 10) / 10) : 'Metric unavailable' },
+    // ★ 标签缺失 = 概念不适用 → 'Metric unavailable'(沿用 mapCampaign 汇总分支先例),不编造 0
+    { label: 'New Customer Acquisition', value: ot.hasNewCustomerTag ? formatNum(ot.newCustomers) : 'Metric unavailable', highlight: true },
+    { label: 'AOV', value: formatMoney(aov) },
+    ...(ot.approvedOrders > 0 ? [{ label: 'Approved Orders', value: formatNum(ot.approvedOrders), highlight: false }] : []),
+    ...(ot.pendingOrders > 0 ? [{ label: 'Pending Orders', value: formatNum(ot.pendingOrders), highlight: false }] : []),
+    ...(totalSpend > 0 ? [{ label: 'ROAS', value: formatRatio(ot.commission / totalSpend), highlight: false }] : []),
+  ];
+
+  // 3) publishers:revenue/orders 从 byCreator,clicks 从 daily
+  const publishers = (campaign.campaignCreators ?? []).map((cc: Any) => {
+    const oc = orderStats.byCreator.get(cc.id) ?? { orders: 0, commission: 0 };
+    const partner = cc.creator?.partnerType ?? 'creator';
+    const kind = partner === 'content_site' ? 'site' : partner === 'community' ? 'fb' : 'creator';
+    const platform = cc.creator?.platform ?? campaign.platform;
+    return {
+      name: cc.creator?.name ?? 'Unknown',
+      handle: cc.creator?.handle || undefined,
+      type: { label: kind === 'creator' ? 'Creator' : kind === 'site' ? 'Site' : 'Community', kind: kind as any },
+      screenshotUrl: `https://placehold.co/120x68/f5f7fa/1e1c24?text=${encodeURIComponent(platform)}`,
+      revenue: formatMoney(oc.commission),
+      clicks: formatNum(perCreatorClicks.get(cc.id) ?? 0),
+      orders: formatNum(oc.orders),
+      linkUrl: cc.creator?.profileUrl || undefined,
+    };
+  }).filter((p: any) => p.revenue !== '$0' || p.orders !== '0' || p.clicks !== '0');
+
+  // 4) trend:revenue/orders 从中间层 days,clicks 从 daily(日期并集,缺侧 0)
+  //    ★ clicks 无数据源(clicksKeySeen=false 且聚合列回退不满足)→ hasClicks=false,
+  //      模板不渲染 Clicks 折线——0 序列会画成贴地零线,与 KPI 总量自相矛盾。
+  const dates = [...new Set([...orderStats.days.map((d) => d.date), ...clicksByDate.keys()])].sort();
+  const trend = {
+    labels: dates,
+    revenue: dates.map((d) => orderStats.days.find((x) => x.date === d)?.commission ?? 0),
+    clicks: dates.map((d) => clicksByDate.get(d) ?? 0),
+    orders: dates.map((d) => orderStats.days.find((x) => x.date === d)?.orders ?? 0),
+    // ★ 回退聚合列时只有全周期总量、无日级分布——趋势图同样不画 Clicks 线(不编造日级形状)
+    hasClicks: clicksKeySeen,
+  };
+
+  // 5) period
+  const start = reportPeriod.startDate ?? campaign.startDate;
+  const end = reportPeriod.endDate ?? campaign.endDate;
+  const period = { start, end, display: `${shortDate(start)} - ${shortDate(end)}, ${String(start).slice(0, 4)}` };
+
+  // 6) insights:topMarket ← 中间层 topCountries(区间合并 Top5);newCustomerRate 仅标签可用时输出
+  const byCountry = new Map<string, { orders: number; commission: number }>();
+  for (const d of orderStats.days) {
+    for (const c of d.topCountries) {
+      const cur = byCountry.get(c.country) ?? { orders: 0, commission: 0 };
+      cur.orders += c.orders;
+      cur.commission += Number(c.commission) || 0;
+      byCountry.set(c.country, cur);
+    }
+  }
+  const ctyTotal = [...byCountry.values()].reduce((s, x) => s + x.orders, 0);
+  const topMarket = byCountry.size
+    ? [...byCountry.entries()]
+        .map(([country, v], i) => ({ country, revenue: formatMoney(v.commission), pct: ctyTotal ? Math.round((v.orders / ctyTotal) * 1000) / 10 : 0, color: PALETTE[i % PALETTE.length] }))
+        .sort((a, b) => b.pct - a.pct)
+    : undefined;
+
+  // 6b) 设备维度:clickDevice 订单分布(区间合并 Top5,pct = 占订单比)
+  const byDevice = new Map<string, number>();
+  for (const d of orderStats.days) {
+    for (const dv of d.topDevices) {
+      byDevice.set(dv.device, (byDevice.get(dv.device) ?? 0) + dv.orders);
+    }
+  }
+  const devTotal = [...byDevice.values()].reduce((s, x) => s + x, 0);
+  const topDevices = byDevice.size
+    ? [...byDevice.entries()]
+        .map(([device, orders]) => ({ device, orders, pct: devTotal ? Math.round((orders / devTotal) * 1000) / 10 : 0 }))
+        .sort((a, b) => b.orders - a.orders)
+    : undefined;
+
+  const insights = {
+    ...(topMarket ? { topMarket } : {}),
+    ...(topDevices ? { topDevices } : {}),
+    ...(ot.hasNewCustomerTag
+      ? { newCustomerRate: { rate: formatPct(Math.round((ot.newCustomers / Math.max(ot.orders, 1)) * 1000) / 10), newCount: ot.newCustomers, totalOrders: ot.orders } }
+      : {}),
+  };
+
+  return { kpis, publishers, trend, period, insights };
+}
+
 export async function mapCampaign(campaignId: string, reportPeriod?: { startDate?: string; endDate?: string }): Promise<CampaignReportContent> {
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
@@ -207,8 +381,25 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   const emptyKpis = [{ label: 'No data for this period', value: '\u2014', highlight: false }];
   const emptyTrend = { labels: [] as string[], revenue: [] as number[], clicks: [] as number[], orders: [] as number[] };
 
-  // 有 reportPeriod → 一律 daily 切片(有交集出真数,零交集空态;不再读 analytics 兜底)
+  // ★ 订单中间层(OrderDailyStat):订单表为真源。有行 → revenue/orders 换中间层,
+  //   clicks 保持 daily;无行(null)→ 走 mapFromDaily 老路(旧 campaign 降级)。
+  let orderStats: OrderStatsRange | null = null;
+  try {
+    orderStats = await getRange(campaignId, reportPeriod?.startDate, reportPeriod?.endDate);
+  } catch {
+    orderStats = null;
+  }
+
+  // 有 reportPeriod → 周期切片(中间层优先;有交集出真数,零交集空态;不读 analytics 兜底)
   if (hasPeriod) {
+    // ★ edge:daily coverage 为空但中间层有数据 → 仍渲染订单侧(订单真源不被 daily 覆盖判定误杀)
+    if (orderStats) {
+      const { kpis, publishers, trend, period, insights } = mapFromOrderStats(campaign, orderStats, reportPeriod!);
+      return {
+        header: { ...header, period }, kpis, trend, publishers,
+        insights, actionable: [], dataCoverage,
+      };
+    }
     if (!cov.covered) {
       return {
         header: { ...header, period: { start: requested.start, end: requested.end, display: `${shortDate(requested.start)} - ${shortDate(requested.end)}, ${String(requested.start).slice(0, 4)}` } },
@@ -227,11 +418,17 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   const m = (campaign.metrics ?? {}) as Any;
   const hasVal = (v: unknown) => v !== undefined && v !== null && v !== '' && !Number.isNaN(Number(v));
   const totalRevenue = hasVal(m.totalRevenue) ? Number(m.totalRevenue) : null;
-  const clicks = hasVal(m.clicks) ? Number(m.clicks) : null;
+  let clicks = hasVal(m.clicks) ? Number(m.clicks) : null;
   const orders = hasVal(m.orders) ? Number(m.orders) : null;
   const newCustomers = hasVal(m.newCustomers) ? Number(m.newCustomers) : null;
   const aov = hasVal(m.aov) ? Number(m.aov) : (orders !== null && orders > 0 && totalRevenue !== null ? totalRevenue / orders : null);
   const cvr = clicks !== null && orders !== null && clicks > 0 ? (orders / clicks) * 100 : null;
+  // ★ metrics.clicks 缺失 → 回退 CPS 聚合列合计(链接全周期汇总,与汇总口径周期一致;全 0 视为无数据)
+  if (clicks === null) {
+    const aggClicks = (campaign.campaignCreators ?? []).reduce(
+      (s: number, cc: Any) => s + (cc.cpsPerformances ?? []).reduce((a: number, p: Any) => a + (Number(p.clicks) || 0), 0), 0);
+    if (aggClicks > 0) clicks = aggClicks;
+  }
 
   const kpi = (label: string, v: number | null) => {
     if (v === null) return { label, value: 'Metric unavailable', highlight: false };

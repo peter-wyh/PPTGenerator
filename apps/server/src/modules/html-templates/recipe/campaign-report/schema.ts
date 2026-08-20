@@ -12,6 +12,8 @@ export const CampaignReportContent = z.object({
     revenue: z.array(z.number()),
     clicks: z.array(z.number()),
     orders: z.array(z.number()),
+    /** false = daily 无 clicks 数据源,趋势图不渲染 Clicks 线(宁缺勿假,不画贴地 0 线)。 */
+    hasClicks: z.boolean().optional(),
   }),
   publishers: z.array(z.object({
     name: z.string(),
@@ -27,6 +29,7 @@ export const CampaignReportContent = z.object({
     topCategories: z.array(z.object({ label: z.string(), pct: z.number(), color: z.string() })).optional(),
     topProducts: z.array(z.object({ name: z.string(), revenue: z.string() })).optional(),
     topMarket: z.array(z.object({ country: z.string(), revenue: z.string(), pct: z.number(), color: z.string() })).optional(),
+    topDevices: z.array(z.object({ device: z.string(), orders: z.number(), pct: z.number() })).optional(),
     topPromotion: z.array(z.object({
       name: z.string(), type: z.string(), revenue: z.string(), usage: z.string(), tagKind: z.string(),
     })).optional(),
