@@ -3,10 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ai-generate.service 顶层 import prisma，纯函数测试里 mock 掉避免实例化 PrismaClient。
 const prismaMock = vi.hoisted(() => ({
   campaign: { findUnique: vi.fn() },
+  guide: { findMany: vi.fn() },
 }));
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
-import { aiGenerateService, rewriteExternalAssets, SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
+import { aiGenerateService, buildSystemPrompt, rewriteExternalAssets, SYSTEM_PROMPT, SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 
 describe('ai-generate.service · rewriteExternalAssets', () => {
   const base = 'https://campaignreport.sk8s.cn';
@@ -124,5 +125,35 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
   it('SYSTEM_PROMPT_DISPLAY 含 periodKpis 优先级规则', () => {
     expect(SYSTEM_PROMPT_DISPLAY).toContain('periodKpis');
     expect(SYSTEM_PROMPT_DISPLAY).toContain('优先使用 periodKpis');
+  });
+});
+
+describe('buildSystemPrompt · 三层拼装', () => {
+  const guide = '# DG 报告指南\n## 品牌视觉\n主色 #ff099e\n## 语调与术语\n用「创作者」';
+
+  it('无指南无业务线名 → 等于 CORE 原文', () => {
+    expect(buildSystemPrompt({})).toBe(SYSTEM_PROMPT);
+  });
+  it('有指南 → 追加 BUSINESS LINE GUIDE 段,含指南原文与覆盖规则', () => {
+    const s = buildSystemPrompt({ guideContent: guide });
+    expect(s).toContain(SYSTEM_PROMPT);
+    expect(s).toContain('BUSINESS LINE GUIDE');
+    expect(s).toContain('#ff099e');
+    expect(s.indexOf('BUSINESS LINE GUIDE')).toBeGreaterThan(SYSTEM_PROMPT.length); // 拼在 CORE 之后
+  });
+  it('指南空串 → 视同无指南', () => {
+    expect(buildSystemPrompt({ guideContent: '   ' })).toBe(SYSTEM_PROMPT);
+  });
+  it('businessLineName → 业务事实段含 Prepared by <名称>', () => {
+    const s = buildSystemPrompt({ businessLineName: 'DG 好物' });
+    expect(s).toContain('Prepared by DG 好物');
+  });
+  it('CORE 无业务词残留:不含 "Prepared by" 字面量(署名示例已移入业务事实段)', () => {
+    expect(SYSTEM_PROMPT).not.toContain('Prepared by');
+  });
+  it('EDIT 基座:EDIT_SYSTEM_PROMPT + 指南', () => {
+    const s = buildSystemPrompt({ base: 'EDIT_BASE', guideContent: guide });
+    expect(s.startsWith('EDIT_BASE')).toBe(true);
+    expect(s).toContain('BUSINESS LINE GUIDE');
   });
 });
