@@ -37,8 +37,13 @@ export const projectsController = {
   }),
 
   duplicate: asyncHandler(async (req: Request, res: Response) => {
-    const { reportPeriod } = req.body as { reportPeriod?: { month?: string; startDate?: string; endDate?: string } };
-    res.status(201).json({ project: await projectsService.duplicate(owner(req), req.params.id, reportPeriod) });
+    const { reportPeriod, campaignId } = req.body as {
+      reportPeriod?: { month?: string; startDate?: string; endDate?: string };
+      campaignId?: string;
+    };
+    res.status(201).json({
+      project: await projectsService.duplicate(owner(req), req.params.id, reportPeriod, campaignId),
+    });
   }),
 
   createFromTemplate: asyncHandler(async (req: Request, res: Response) => {

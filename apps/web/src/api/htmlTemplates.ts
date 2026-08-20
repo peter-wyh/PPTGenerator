@@ -49,7 +49,7 @@ export interface HtmlVersionDetail extends HtmlVersionSummary {
 export interface AgentChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  action?: 'generate' | 'edit' | 'fix' | 'manual';
+  action?: 'generate' | 'edit' | 'fix' | 'manual' | 'cancelled';
   ts: string;
   /** AI 思考过程（chain-of-thought），流式结束后保存到聊天记录 */
   reasoning?: string;
