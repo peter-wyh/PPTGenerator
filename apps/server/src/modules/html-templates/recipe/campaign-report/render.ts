@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import Handlebars from 'handlebars';
 import { mapCampaign } from './mapper';
 import { fillActionable } from './narrative';
+import { pickVoiceForCampaign } from '../../../guides/guide.service';
 import { applyManifest } from './manifest';
 import { mergeTokens } from '../overrides';
 import type { RenderInput } from '../types';
@@ -38,7 +39,9 @@ export async function render(input: RenderInput): Promise<string> {
   }
   // reportContent 优先:编辑器重渲染已编辑数据时跳过 DB。
   const content = input.reportContent ?? await mapCampaign(input.campaignId!, input.reportPeriod);
-  content.actionable = await fillActionable(content);
+  // 业务线指南「语调与术语」节注入洞察文案(recipe 视觉/章节不动,仅对齐语调;查询失败降级空串)
+  const voice = input.campaignId ? await pickVoiceForCampaign(input.campaignId) : '';
+  content.actionable = await fillActionable(content, voice);
   // tokens 合并默认 + 用户覆盖;无覆盖时与原 dgTokens 等价(快照不变)。
   const tokens = mergeTokens(input.tokenOverrides);
   // 模板根字段(header/kpis/trend/publishers/insights/actionable)与 tokens.* 并列,故展开 content。

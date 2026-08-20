@@ -17,6 +17,19 @@ function okJson(obj: unknown) {
 
 beforeEach(() => { delete process.env.DEEPSEEK_API_KEY; process.env.DEEPSEEK_API_KEY = 'test-key'; vi.clearAllMocks(); });
 
+describe('fillActionable · 业务线语调注入', () => {
+  it('传 voice → prompt 含语调节;不传 → 不含 VOICE 段', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okJson([])));
+    await fillActionable(content, '用「创作者」自称「团队」');
+    let body = (fetch as any).mock.calls[0][1].body;
+    expect(body).toContain('用「创作者」');
+    (fetch as any).mockClear();
+    await fillActionable(content);
+    body = (fetch as any).mock.calls[0][1].body;
+    expect(body).not.toContain('VOICE & TERMINOLOGY');
+  });
+});
+
 describe('fillActionable', () => {
   it('合法 JSON → 解析 + Zod 通过,返回 5 卡', async () => {
     const cards = [{ icon: 'trophy', color: 'green', title: 'Top Performers', items: [{ text: 'Mia', sub: '(ROAS 4.10)' }], footer: 'Scale.' }];

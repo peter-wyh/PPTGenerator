@@ -17,12 +17,15 @@ const ActionableCard = z.object({
 
 const SYSTEM = `You write ONLY the narrative text for an affiliate marketing report's "Actionable Insights" section. You receive numbers; you return insight cards as JSON. Do not write HTML. Do not invent metrics not implied by the data.`;
 
-function buildPrompt(c: CampaignReportContent): string {
+function buildPrompt(c: CampaignReportContent, voice?: string): string {
   const topPublishers = [...c.publishers].slice(0, 5).map((p) => `${p.name} (${p.type.label}, revenue ${p.revenue}, clicks ${p.clicks}, orders ${p.orders})`);
   const kpis = c.kpis.map((k) => `${k.label}: ${k.value}`).join('; ');
+  const voiceSection = voice?.trim()
+    ? `\nVOICE & TERMINOLOGY (from business line guide — MUST follow for ALL card text):\n${voice.trim()}\n`
+    : '';
   return `Campaign KPIs: ${kpis}.
 Top publishers: ${topPublishers.join(' | ') || 'n/a'}.
-Trend points: ${c.trend.labels.length}.
+Trend points: ${c.trend.labels.length}.${voiceSection}
 
 Return a JSON array (5 cards, in this order): "Top Performers", "High Traffic / Low CVR", "Best Performing Placement", "Creative Insight", "Action Required".
 Each card: { icon (font-awesome name, e.g. trophy), color (one of: green, orange, blue, purple, red), title, items: [{text, sub?}], footer }.
@@ -36,13 +39,13 @@ function stripFences(s: string): string {
 // 推理模型（glm-5.2 / deepseek-v4 等）推理过程占大量 token，需更大 max_tokens 让 content 有空间（对齐 ai-generate.service.ts）
 const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
 
-async function callDeepSeek(c: CampaignReportContent): Promise<any[]> {
+async function callDeepSeek(c: CampaignReportContent, voice?: string): Promise<any[]> {
   const res = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${deepseekApiKey()}` },
     body: JSON.stringify({
       model: DEEPSEEK_MODEL,
-      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: buildPrompt(c) }],
+      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: buildPrompt(c, voice) }],
       temperature: 0.5,
       max_tokens: isReasoningModel ? 16000 : 8192,
     }),
@@ -69,13 +72,13 @@ async function callDeepSeek(c: CampaignReportContent): Promise<any[]> {
 }
 
 /** 填组件 6。失败(网络/非200/非法JSON/Zod)→ 重试 1 次 → 仍失败返回 [](报告照常渲染)。 */
-export async function fillActionable(c: CampaignReportContent): Promise<CampaignReportContent['actionable']> {
+export async function fillActionable(c: CampaignReportContent, voice?: string): Promise<CampaignReportContent['actionable']> {
   if (!deepseekApiKey()) return [];
   try {
-    return await callDeepSeek(c);
+    return await callDeepSeek(c, voice);
   } catch {
     try {
-      return await callDeepSeek(c); // 重试 1 次
+      return await callDeepSeek(c, voice); // 重试 1 次
     } catch (e2) {
       console.warn('[narrative] fillActionable 两次调用均失败，降级为空 actionable：', (e2 as Error)?.message ?? e2);
       return []; // 降级

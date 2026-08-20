@@ -1,12 +1,13 @@
 // render.test.ts
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const prismaMock = vi.hoisted(() => ({ campaign: { findUnique: vi.fn() } }));
+const prismaMock = vi.hoisted(() => ({ campaign: { findUnique: vi.fn() }, guide: { findMany: vi.fn() } }));
 vi.mock('../../../../prisma', () => ({ prisma: prismaMock }));
 vi.mock('./narrative', () => ({ fillActionable: vi.fn().mockResolvedValue([{ icon: 'trophy', color: 'green', title: 'Top Performers', items: [{ text: 'Mia', sub: '(ROAS 4.10)' }], footer: 'Scale.' }]) }));
 
 import { render } from './render';
 import { mapCampaign } from './mapper';
+import { fillActionable } from './narrative';
 
 const campaignRow = {
   id: 'c1', name: 'GlowLab x DIGCHIC', platform: 'TikTok',
@@ -39,7 +40,7 @@ const campaignRowWithDaily = {
   }],
 };
 
-beforeEach(() => { vi.clearAllMocks(); prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); });
+beforeEach(() => { vi.clearAllMocks(); prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); prismaMock.guide.findMany.mockResolvedValue([]); });
 
 describe('render · 宁缺勿假呈现', () => {
   // 基线 content 走真实 mapCampaign(fixture 数据),仅覆盖 dataCoverage / kpis
@@ -76,6 +77,29 @@ describe('render · 宁缺勿假呈现', () => {
     expect(html).not.toContain('Data coverage:');
     expect(html).toContain('No data for this period');
     expect(html).toContain('kpi-unavailable');
+  });
+});
+
+describe('render · 指南语调节传给洞察文案', () => {
+  it('campaign 有指南 → fillActionable 收到语调节字符串', async () => {
+    prismaMock.campaign.findUnique.mockImplementation(async () => ({
+      ...campaignRow, businessLineId: 'bl1',
+      businessLine: { name: 'DG', code: 'DG' },
+    }));
+    prismaMock.guide.findMany.mockResolvedValue([
+      { id: 'g1', scenario: null, name: '默认', content: '## 语调与术语\n用「创作者」', isDefault: true, isActive: true, businessLineId: 'bl1' },
+    ]);
+    await render({ campaignId: 'c1' });
+    const call = (fillActionable as any).mock.calls.at(-1);
+    expect(call?.[1]).toContain('用「创作者」');
+  });
+
+  it('无指南 → fillActionable 第二参为空串', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue({ ...campaignRow, businessLineId: 'bl1', businessLine: { name: 'DG', code: 'DG' } });
+    prismaMock.guide.findMany.mockResolvedValue([]);
+    await render({ campaignId: 'c1' });
+    const call = (fillActionable as any).mock.calls.at(-1);
+    expect(call?.[1]).toBe('');
   });
 });
 
