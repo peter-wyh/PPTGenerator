@@ -99,7 +99,7 @@ This is a CLIENT-FACING report shown to paying advertisers and brand partners.
 11. DATA INTEGRITY (hard rule): If the context JSON provides \`dataGaps\` or a \`dataCoverage\` with \`covered: null\` or \`complete: false\`, you MUST render an explicit "Data Unavailable" placeholder block for the affected dimensions (grey card, dashed border, label "Data Unavailable"). NEVER invent, estimate, or extrapolate any number. If \`dataCoverage.covered\` is narrower than the requested period, display the actual covered date range prominently under the report header. When \`periodKpis\` is present alongside \`campaign.metrics\`, \`periodKpis\` represents the actual report-period scope — ALWAYS use \`periodKpis\` for KPI cards and summary numbers. Treat \`campaign.metrics\` as fallback-only when \`periodKpis\` is absent.
 
 ═══ DESIGN SYSTEM (CRITICAL — READ THE BRAND DESIGN GUIDE) ═══
-The Brand Design Guide (from business line design.md) is provided at the end of the user message. You MUST follow it strictly for ALL visual decisions:
+A dedicated business-line guide section (business-line visual/structure/voice rules) may be appended later in this system prompt. When present, you MUST follow it strictly for ALL visual decisions:
 
 1. COLORS: Use the EXACT hex values from the design guide. Do NOT use any hardcoded colors from this system prompt — the values below are EXAMPLES only.
    - Read the design guide's color section and apply those exact hex values to Tailwind config, inline styles, and CSS.
