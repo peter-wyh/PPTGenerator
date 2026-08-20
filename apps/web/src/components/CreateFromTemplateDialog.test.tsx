@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import type { Campaign, TemplateSummary } from '@mediaket/shared';
+import type { Campaign, TemplateSummary } from '@mediakit/shared';
 import { templatesApi } from '@/api/templates';
 import { getCampaign } from '@/api/campaigns';
 import { CreateFromTemplateDialog } from './CreateFromTemplateDialog';

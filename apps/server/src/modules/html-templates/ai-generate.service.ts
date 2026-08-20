@@ -5,6 +5,7 @@ import { fetchChatCompletionWithRetry } from './ai-client';
 import { resolveForCampaign } from '../guides/guide.service';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { campaignService } from '../campaigns/campaigns.service';
+import { orderStatsService } from '../campaigns/order-stats.service';
 
 /**
  * AI HTML 报告生成服务。
@@ -821,10 +822,24 @@ export const aiGenerateService = {
       ...cov,
     };
     // 无 period 汇总口径：metrics 有什么用什么，缺的维度显式列出（dataGaps），AI 应渲染 Data Unavailable
-    const dataGaps = hasPeriod ? undefined : ['dailyTrend', 'weeklyTrend', 'topProducts', 'topMarkets', 'insights', 'customerSplit'];
+    const dataGaps: string[] | undefined = hasPeriod ? undefined : ['dailyTrend', 'weeklyTrend', 'topProducts', 'topMarkets', 'insights', 'customerSplit'];
+    // ★ 有 period 口径的维度缺失声明(如订单中间层无新客标签)——注入时与 dataGaps 合并
+    const periodDataGaps: string[] = [];
     // @deprecated analytics 数字字段（trend/weeklyTrend/topProducts/topMarkets/insights/customerSplit）
     // 不再作为 AI 上下文——常过期、与周期不符。需要时序/分布，请导入真实 CPS daily。
     let dailyTrend: any[] | null = null;
+
+    // ★ 中间层订单统计（OrderDailyStat）：订单表为真源——orders/revenue/commission 换此来源，
+    //   clicks/newCustomers 等中间层没有的维度保持 daily。该 campaign 无中间层行 → null → 走 daily 老路。
+    let orderStats: Awaited<ReturnType<typeof orderStatsService.getRange>> = null;
+    try {
+      orderStats = await orderStatsService.getRange(campaignId, reportPeriod?.startDate, reportPeriod?.endDate);
+    } catch {
+      orderStats = null;
+    }
+    if (orderStats) {
+      console.log(`[buildCampaignContext] orderStats available: ${orderStats.days.length} days, orders=${orderStats.totals.orders} (order-table sourced)`);
+    }
 
     // ★ 当指定 reportPeriod 且有 CPS daily 数据时，按日期切片重新计算 KPI / trend / creators CPS
     // 这使得 AI 在生成新周期报告时获得的是该周期内的真实数据，而非整个 campaign 的汇总数据
@@ -841,13 +856,20 @@ export const aiGenerateService = {
       priorKpis: { revenues: number; clicks: number; orders: number; newCustomers: number };
       mom: { revenues: string | null; clicks: string | null; orders: string | null; newCustomers: string | null };
     } | null = null;
-    if (hasPeriod && cov.covered) {
-      type DailySum = { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number; newCustomers: number };
-      const total: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
-      const perCreatorSums = new Map<string, DailySum>();
-      // 按日聚合 trend
-      const byDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
+    // ★ clicks 缺失判定:期内 daily 记录是否出现过 clicks key(导入通道从未写入 = 数据源缺失,
+    //   与「有 key 但值为 0」区分——前者渲染 N/A,后者是真实 0)。提升到块外:MoM/creators 区共用。
+    let clicksKeySeen = false;
+    type DailySum = { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number; newCustomers: number };
+    const total: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
+    const perCreatorSums = new Map<string, DailySum>();
+    const byDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
+    // ★ clicks 回退聚合列:daily 无 clicks 键 + 报告周期完整覆盖 campaign 生命周期 → 用
+    //   CpsPerformance 顶层聚合列(importCpsPerformance 导入的链接全周期汇总,真源 Awin
+    //   Click References)。周期切片不全覆盖时口径不符,不回退;全 0 视为无数据。
+    //   声明提升:KPI/MoM/creators 区共用;注入在下方 daily 扫描后(clicksKeySeen 需先得出)。
+    let clicksFallback = false;
 
+    if (hasPeriod && cov.covered) {
       for (const cc of campaign.campaignCreators) {
         const ccSum: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
         for (const p of cc.cpsPerformances ?? []) {
@@ -855,6 +877,7 @@ export const aiGenerateService = {
           for (const d of daily) {
             const date = String(d.date ?? '');
             if (!date || !inPeriod(date)) continue;
+            if ('clicks' in d) clicksKeySeen = true;
             ccSum.clicks += num(d.clicks);
             ccSum.impressions += num(d.impressions);
             ccSum.orders += num(d.orders);
@@ -880,30 +903,98 @@ export const aiGenerateService = {
         total.newCustomers += ccSum.newCustomers;
       }
 
+      // ★ clicks 聚合列回退注入:daily 无 clicks 键 + 报告周期完整覆盖 campaign 生命周期。
+      //   将链接全周期汇总(Awin Click References 真源)注入 total/perCreatorSums——
+      //   KPI Clicks/CVR、MoM、creators CPS 全链路生效;trend 日级分布仍不注入(无日级源,不编造)。
+      if (!clicksKeySeen) {
+        const coversAll = (!reportPeriod?.startDate || !campaign.startDate || reportPeriod.startDate <= campaign.startDate)
+          && (!reportPeriod?.endDate || !campaign.endDate || reportPeriod.endDate >= campaign.endDate);
+        if (coversAll) {
+          let aggTotal = 0;
+          for (const cc of campaign.campaignCreators) {
+            const agg = (cc.cpsPerformances ?? []).reduce((s, p) => s + num(p.clicks), 0);
+            if (agg > 0) {
+              const cur = perCreatorSums.get(cc.id);
+              if (cur) cur.clicks = agg;
+              aggTotal += agg;
+            }
+          }
+          if (aggTotal > 0) { total.clicks = aggTotal; clicksFallback = true; }
+        }
+      }
+
       // 格式化 KPI
       const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(Math.round(n));
       const fmtMoney = (n: number) => `$${n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toFixed(0)}`;
-      const aov = total.orders ? total.gmv / total.orders : 0;
-      periodKpis = [
-        { label: 'Total Revenues', value: fmtMoney(total.gmv) },
-        { label: 'Clicks', value: fmtNum(total.clicks) },
-        { label: 'Orders', value: fmtNum(total.orders) },
-        { label: 'New Customer Acquisition', value: fmtNum(total.newCustomers) },
-        { label: 'AOV', value: fmtMoney(aov) },
-        ...(total.spend > 0 ? [{ label: 'ROAS', value: (total.gmv / total.spend).toFixed(1) }] : []),
-      ];
+
+      if (orderStats) {
+        // ★ 中间层口径（订单表真源）：revenue/orders/newCustomers(标签判定)来自 OrderDailyStat，
+        //   clicks/impressions/spend 保持 daily（中间层无此维度）。
+        const ot = orderStats.totals;
+        const aovO = ot.orders ? ot.commission / ot.orders : 0;
+        periodKpis = [
+          { label: 'Total Revenues', value: fmtMoney(ot.commission) },
+          // ★ clicks 数据源缺失（daily 从未写入 clicks key）→ N/A，不编造 0。
+          //   clicksFallback=true → 聚合列回退生效，正常出数（真源：链接全周期汇总）。
+          { label: 'Clicks', value: (clicksKeySeen || clicksFallback) ? fmtNum(total.clicks) : 'N/A' },
+          { label: 'Orders', value: fmtNum(ot.orders) },
+          // ★ 标签缺失 = 概念不适用，显式 N/A（AI 按铁律渲染 Data Unavailable），不编造 0
+          { label: 'New Customer Acquisition', value: ot.hasNewCustomerTag ? fmtNum(ot.newCustomers) : 'N/A' },
+          { label: 'AOV', value: fmtMoney(aovO) },
+          ...(ot.approvedOrders > 0 ? [{ label: 'Approved Orders', value: fmtNum(ot.approvedOrders) }] : []),
+          ...(ot.pendingOrders > 0 ? [{ label: 'Pending Orders', value: fmtNum(ot.pendingOrders) }] : []),
+          ...(total.spend > 0 ? [{ label: 'ROAS', value: (ot.commission / total.spend).toFixed(1) }] : []),
+        ];
+        // ★ 标签缺失 = 该维度无数据:periodDataGaps 声明(AI 按铁律渲染 Data Unavailable)
+        if (!ot.hasNewCustomerTag) periodDataGaps.push('newCustomers');
+        // ★ clicks 聚合列回退生效时不声明缺口(fallback 数据真实可用)
+        if (!clicksKeySeen && !clicksFallback) periodDataGaps.push('clicks');
+      } else {
+        const aov = total.orders ? total.gmv / total.orders : 0;
+        periodKpis = [
+          { label: 'Total Revenues', value: fmtMoney(total.gmv) },
+          // ★ clicks 数据源缺失 → N/A(daily 路径同判定);聚合列回退生效则正常出数
+          { label: 'Clicks', value: (clicksKeySeen || clicksFallback) ? fmtNum(total.clicks) : 'N/A' },
+          { label: 'Orders', value: fmtNum(total.orders) },
+          { label: 'New Customer Acquisition', value: fmtNum(total.newCustomers) },
+          { label: 'AOV', value: fmtMoney(aov) },
+          ...(total.spend > 0 ? [{ label: 'ROAS', value: (total.gmv / total.spend).toFixed(1) }] : []),
+        ];
+        // ★ clicks 聚合列回退生效时不声明缺口(fallback 数据真实可用)
+        if (!clicksKeySeen && !clicksFallback) periodDataGaps.push('clicks');
+      }
 
       // 用期内 daily trend 替换 analytics trend
-      const dates = [...byDate.keys()].sort();
-      dailyTrend = dates.map((d) => ({
-        date: d,
-        revenue: byDate.get(d)!.revenue,
-        clicks: byDate.get(d)!.clicks,
-        orders: byDate.get(d)!.orders,
-      }));
-      console.log(`[buildCampaignContext] Period-aware data computed: ${dates.length} days, GMV=$${total.gmv.toFixed(0)}, orders=${total.orders}`);
+      // ★ 中间层存在时：revenue/orders 用订单表按日值，clicks 保持 daily（日期并集，缺侧 0）
+      //   clicks 数据源缺失时 trend 不带 clicks 字段（宁缺勿假——0 序列会被 AI 画成贴地零线）
+      if (orderStats) {
+        const dates = orderStats.days.map((d) => d.date).sort();
+        dailyTrend = dates.map((d) => {
+          const od = orderStats.days.find((x) => x.date === d)!;
+          return {
+            date: d,
+            revenue: od.commission,
+            orders: od.orders,
+            // clicks 有数据源才带(daily 侧 byDate;缺失不带——0 序列会被画成贴地零线)
+            ...(clicksKeySeen ? { clicks: byDate.get(d)?.clicks ?? 0 } : {}),
+          };
+        });
+        console.log(`[buildCampaignContext] Period-aware data (order-table sourced): ${dates.length} days, revenue=$${orderStats.totals.commission.toFixed(0)}, orders=${orderStats.totals.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
+      } else {
+        const dates = [...byDate.keys()].sort();
+        dailyTrend = dates.map((d) => {
+          const e = byDate.get(d)!;
+          return {
+            date: d,
+            revenue: e.revenue,
+            ...(clicksKeySeen ? { clicks: e.clicks } : {}),
+            orders: e.orders,
+          };
+        });
+        console.log(`[buildCampaignContext] Period-aware data computed: ${dates.length} days, GMV=$${total.gmv.toFixed(0)}, orders=${total.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
+      }
 
-      // ── 缺口① MoM 环比：前一期 = 报告周期往前推同样长度（宁缺勿假：前一期无 daily 数据不注入）──
+      // ── 缺口① MoM 环比：前一期 = 报告周期往前推同样长度（宁缺勿假：前一期无数据不注入）──
       if (reportPeriod?.startDate && reportPeriod.endDate) {
         const dayMs = 86_400_000;
         const s = new Date(reportPeriod.startDate).getTime();
@@ -925,22 +1016,48 @@ export const aiGenerateService = {
             }
           }
         }
-        if (priorDays > 0) {
+        // ★ 中间层口径：orders/revenue 前一期从 OrderDailyStat 取（订单真源），clicks 保持 daily
+        let priorOrderStats: Awaited<ReturnType<typeof orderStatsService.getRange>> = null;
+        if (orderStats) {
+          try {
+            priorOrderStats = await orderStatsService.getRange(campaignId, pStart, pEnd);
+          } catch {
+            priorOrderStats = null;
+          }
+        }
+        const hasPrior = priorOrderStats ? priorOrderStats.days.length > 0 : priorDays > 0;
+        if (hasPrior) {
           const mom = (cur: number, prev: number) =>
             prev > 0 ? `${cur >= prev ? '+' : ''}${Math.round(((cur - prev) / prev) * 1000) / 10}%` : null;
+          // 当前期/前一期数值：中间层存在时以订单表为准
+          const curRev = orderStats ? orderStats.totals.commission : total.gmv;
+          const curOrders = orderStats ? orderStats.totals.orders : total.orders;
+          const curNew = orderStats
+            ? (orderStats.totals.hasNewCustomerTag ? orderStats.totals.newCustomers : 0)
+            : total.newCustomers;
+          const prevRev = priorOrderStats ? priorOrderStats.totals.commission : pt.gmv;
+          const prevOrders = priorOrderStats ? priorOrderStats.totals.orders : pt.orders;
+          const prevNew = priorOrderStats
+            ? (priorOrderStats.totals.hasNewCustomerTag ? priorOrderStats.totals.newCustomers : 0)
+            : pt.newCustomers;
           priorPeriod = {
             period: `${pStart} ~ ${pEnd}`,
             kpis: {
-              revenues: total.gmv, clicks: total.clicks, orders: total.orders, newCustomers: total.newCustomers,
+              revenues: curRev, clicks: (clicksKeySeen || clicksFallback) ? total.clicks : -1, orders: curOrders, // -1 = 概念不适用
+              newCustomers: orderStats && !orderStats.totals.hasNewCustomerTag ? -1 : curNew,
             },
             priorKpis: {
-              revenues: pt.gmv, clicks: pt.clicks, orders: pt.orders, newCustomers: pt.newCustomers,
+              revenues: prevRev, clicks: (clicksKeySeen || clicksFallback) ? pt.clicks : -1, orders: prevOrders,
+              newCustomers: priorOrderStats && !priorOrderStats.totals.hasNewCustomerTag ? -1 : prevNew,
             },
             mom: {
-              revenues: mom(total.gmv, pt.gmv),
-              clicks: mom(total.clicks, pt.clicks),
-              orders: mom(total.orders, pt.orders),
-              newCustomers: mom(total.newCustomers, pt.newCustomers),
+              revenues: mom(curRev, prevRev),
+              // clicks 数据源缺失 → 环比 null(概念不适用,与 -1 语义一致);聚合列回退生效则正常算
+              clicks: (clicksKeySeen || clicksFallback) ? mom(total.clicks, pt.clicks) : null,
+              orders: mom(curOrders, prevOrders),
+              newCustomers: (orderStats && !orderStats.totals.hasNewCustomerTag)
+                ? null
+                : mom(curNew, prevNew),
             },
           };
         }
@@ -1005,14 +1122,51 @@ export const aiGenerateService = {
           // ★ MUST use this exact URL in <img src>. It is an absolute URL.
           logoUrl: resolveUrl(campaign.advertiser?.logo),
         },
-        metrics: campaign.metrics,
+        // ★ metrics 为空时回退 CPS 聚合列/daily 全覆盖合计(与 recipe mapper 汇总分支同口径):
+        //   revenue→gmv、orders、clicks(聚合列,链接全周期汇总);newCustomers 仅 daily 100% 日期覆盖才回退。
+        //   仍缺的维度不进 metrics(AI 按铁律渲染 Data Unavailable)。
+        metrics: (() => {
+          const m = (campaign.metrics ?? {}) as Record<string, unknown>;
+          const hasVal = (v: unknown) => v !== undefined && v !== null && v !== '' && !Number.isNaN(Number(v));
+          if (!hasPeriod && !hasVal(m.totalRevenue) && !hasVal(m.clicks) && !hasVal(m.orders)) {
+            // 汇总口径 + metrics 全空 → 聚合列回退
+            let agg: { gmv: number; orders: number; clicks: number; newCustomers: number } = { gmv: 0, orders: 0, clicks: 0, newCustomers: 0 };
+            const dates = new Set<string>();
+            for (const cc of campaign.campaignCreators) {
+              for (const p of cc.cpsPerformances ?? []) {
+                agg.gmv += num(p.gmv); agg.orders += num(p.orders); agg.clicks += num(p.clicks);
+                for (const d of ((p.daily as Record<string, unknown>[]) ?? [])) {
+                  dates.add(String(d.date ?? ''));
+                  agg.newCustomers += num(d.newCustomers);
+                }
+              }
+            }
+            // daily 100% 日期覆盖才信 newCustomers(部分覆盖的合计非全周期真值)
+            const fullCover = (() => {
+              if (!campaign.startDate || !campaign.endDate) return false;
+              const days = Math.round((new Date(campaign.endDate).getTime() - new Date(campaign.startDate).getTime()) / 86400000) + 1;
+              if (days <= 0 || dates.size < days) return false;
+              for (let t = new Date(campaign.startDate).getTime(); t <= new Date(campaign.endDate).getTime(); t += 86400000) {
+                if (!dates.has(new Date(t).toISOString().slice(0, 10))) return false;
+              }
+              return true;
+            })();
+            const out: Record<string, number> = {};
+            if (agg.gmv > 0) out.totalRevenue = agg.gmv;
+            if (agg.orders > 0) out.orders = agg.orders;
+            if (agg.clicks > 0) out.clicks = agg.clicks;
+            if (fullCover && agg.newCustomers > 0) out.newCustomers = agg.newCustomers;
+            if (Object.keys(out).length) return { ...m, ...out };
+          }
+          return m;
+        })(),
         // ★ 当有 periodKpis（期内数据）时，用新数据替换 campaign.metrics
         ...(periodKpis ? { periodMetrics: periodKpis } : {}),
         // ★ analytics blob 不再进上下文（宁缺勿假：常过期、与周期不符）
       },
       // ★ 数据覆盖声明：daily 与请求区间的交集情况，AI 据此渲染 Data Unavailable
       dataCoverage,
-      ...(dataGaps ? { dataGaps } : {}),
+      ...(dataGaps || periodDataGaps.length ? { dataGaps: [...(dataGaps ?? []), ...periodDataGaps] } : {}),
       // ★ 扁平化关键分析数据到顶层，降低 AI 忽略概率。
       // dailyTrend 仅有期内切片时非 null；weeklyTrend 等已废弃维度（analytics blob）完全不序列化。
       ...(dailyTrend ? { dailyTrend } : {}),
@@ -1031,29 +1185,74 @@ export const aiGenerateService = {
       ...(priorPeriod ? { priorPeriod } : {}),
       // ★ 缺口④ 媒体资源位（定性）。
       ...(mediaPlacements.length ? { mediaPlacements } : {}),
+      // ★ 订单中间层新增维度（宁缺勿假：有数据才注入）。
+      //   orderStatusSplit = Approved/Pending 单量拆分；topCountries = 订单客户国家分布（区间合并 Top5）。
+      ...(orderStats ? {
+        orderStatusSplit: {
+          approved: orderStats.totals.approvedOrders,
+          pending: orderStats.totals.pendingOrders,
+          ...(orderStats.totals.otherOrders > 0 ? { other: orderStats.totals.otherOrders } : {}),
+        },
+      } : {}),
+      ...(orderStats ? (() => {
+        const byCountry = new Map<string, { orders: number; commission: number }>();
+        for (const d of orderStats.days) {
+          for (const c of d.topCountries) {
+            const cur = byCountry.get(c.country) ?? { orders: 0, commission: 0 };
+            cur.orders += c.orders;
+            cur.commission += Number(c.commission) || 0;
+            byCountry.set(c.country, cur);
+          }
+        }
+        const list = [...byCountry.entries()]
+          .map(([country, v]) => ({ country, ...v }))
+          .sort((a, b) => b.orders - a.orders)
+          .slice(0, 5);
+        return list.length ? { topCountries: list } : {};
+      })() : {}),
+      // ★ 设备维度(clickDevice 100% 有值——订单转化设备分布,区间合并 Top5)
+      ...(orderStats ? (() => {
+        const byDevice = new Map<string, number>();
+        for (const d of orderStats.days) {
+          for (const dv of d.topDevices) {
+            byDevice.set(dv.device, (byDevice.get(dv.device) ?? 0) + dv.orders);
+          }
+        }
+        const list = [...byDevice.entries()]
+          .map(([device, orders]) => ({ device, orders }))
+          .sort((a, b) => b.orders - a.orders)
+          .slice(0, 5);
+        return list.length ? { deviceSplit: list } : {};
+      })() : {}),
       /** 业务线指南由 resolveForCampaign 匹配后经 buildSystemPrompt 拼进 system prompt,不嵌在 campaign JSON 中（避免重复发送） */
       creators: campaign.campaignCreators
         .map((cc) => {
           // ★ 当有期内数据时，使用期内切片的 CPS 而非全量汇总
           let cpsTotal: { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number };
           if (periodKpis) {
-            // 从 perCreatorSums 获取期内数据（需要重新计算，因为 perCreatorSums 在上面的作用域）
-            // 这里简化：如果 periodKpis 存在，说明 daily 数据已被切片，直接用同样的逻辑
-            const periodSum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
-            for (const p of cc.cpsPerformances ?? []) {
-              const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-              for (const d of daily) {
-                const date = String(d.date ?? '');
-                if (!date || !inPeriod(date)) continue;
-                periodSum.clicks += num(d.clicks);
-                periodSum.impressions += num(d.impressions);
-                periodSum.orders += num(d.orders);
-                periodSum.gmv += num(d.gmv);
-                periodSum.spend += num(d.spend);
-                periodSum.commission += num(d.commission);
+            // ★ 期内切片优先用 perCreatorSums(已含聚合列回退注入的 clicks);
+            //   daily 无行(该 creator 无期内数据)→ cpsPerformance 空对象兜底。
+            const s = perCreatorSums.get(cc.id);
+            if (s) {
+              cpsTotal = s;
+            } else {
+              // 理论不可达(perCreatorSums 对所有 campaignCreators 建键);防御性兜底走原切片逻辑
+              const periodSum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
+              for (const p of cc.cpsPerformances ?? []) {
+                const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
+                for (const d of daily) {
+                  const date = String(d.date ?? '');
+                  if (!date || !inPeriod(date)) continue;
+                  periodSum.clicks += num(d.clicks);
+                  periodSum.impressions += num(d.impressions);
+                  periodSum.orders += num(d.orders);
+                  periodSum.gmv += num(d.gmv);
+                  periodSum.spend += num(d.spend);
+                  periodSum.commission += num(d.commission);
+                }
               }
+              cpsTotal = periodSum;
             }
-            cpsTotal = periodSum;
           } else {
             cpsTotal = cc.cpsPerformances.reduce(
               (acc, cps) => ({
@@ -1068,6 +1267,20 @@ export const aiGenerateService = {
             );
           }
           const summary = cc.performance?.summary ?? null;
+          // ★ 中间层口径：orders/gmv(=commission)/commission 换订单表 byCreator，clicks/impressions/spend 保持 daily
+          if (orderStats) {
+            const oc = orderStats.byCreator.get(cc.id);
+            if (oc) {
+              cpsTotal = {
+                ...cpsTotal,
+                orders: oc.orders,
+                gmv: oc.commission,
+                commission: oc.commission,
+              };
+            } else {
+              cpsTotal = { ...cpsTotal, orders: 0, gmv: 0, commission: 0 };
+            }
+          }
           return {
             name: cc.creator?.name ?? 'Unknown',
             // ★ avatarUrl may be null — use initials circle fallback

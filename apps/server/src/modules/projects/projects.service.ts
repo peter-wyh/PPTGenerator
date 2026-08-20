@@ -428,6 +428,7 @@ export const projectsService = {
     ownerId: string,
     id: string,
     newPeriod?: { month?: string; startDate?: string; endDate?: string },
+    newCampaignId?: string,
   ): Promise<ProjectDetail> {
     // 直接查 Prisma 获取完整原始记录（toDetail 会剥离 htmlContent 等字段）
     const src = await prisma.project.findUnique({ where: { id } });
@@ -451,6 +452,43 @@ export const projectsService = {
 
     // 深拷贝 meta，若有新周期则覆盖 reportPeriod + reportData.campaign 日期
     let meta = src.meta ? (JSON.parse(JSON.stringify(src.meta)) as Record<string, unknown>) : undefined;
+
+    // ★ 换绑 Campaign：更新 meta.campaignId / campaignInfo / reportData.campaign
+    // （与 CreateProjectDialog 提交时的字段结构对齐），让副本用新 campaign 的数据。
+    let campaignChanged = false;
+    if (newCampaignId && meta) {
+      const oldCampaignId = meta.campaignId as string | undefined;
+      if (newCampaignId !== oldCampaignId) {
+        const campaign = await prisma.campaign.findUnique({
+          where: { id: newCampaignId },
+          include: { advertiser: { select: { name: true } } },
+        });
+        if (campaign) {
+          meta.campaignId = campaign.id;
+          meta.advertiser = campaign.advertiser?.name ?? null;
+          meta.campaignInfo = {
+            campaignName: campaign.name,
+            platform: campaign.platform,
+            startDate: campaign.startDate,
+            endDate: campaign.endDate,
+            budget: campaign.budget,
+          };
+          const rd = meta.reportData as { campaign?: Record<string, unknown> } | undefined;
+          if (rd?.campaign) {
+            rd.campaign.id = campaign.id;
+            rd.campaign.name = campaign.name;
+            rd.campaign.platform = campaign.platform;
+            rd.campaign.startDate = campaign.startDate;
+            rd.campaign.endDate = campaign.endDate;
+            rd.campaign.budget = campaign.budget;
+          }
+          campaignChanged = true;
+        } else {
+          throw ApiError.notFound('Campaign not found');
+        }
+      }
+    }
+
     if (newPeriod && meta) {
       meta.reportPeriod = newPeriod;
       // 同步更新 reportData.campaign 的 startDate/endDate（驱动页眉 dateLabel / 封面标题周期文案）
@@ -469,12 +507,13 @@ export const projectsService = {
     }
 
     // ★ 复制 AI HTML 内容（若有），使 AI HTML 报告副本保留生成结果
-    // 有新周期 → 三级链刷新（data-field 渲染 → AI 重生成/快照 → 日期替换）
-    const htmlContent = newPeriod
+    // 有新周期或换绑 Campaign → 三级链刷新（data-field 渲染 → AI 重生成/快照 → 日期替换）。
+    // 换绑 Campaign 时用新 campaignId 的数据渲染（meta.campaignId 已更新）。
+    const htmlContent = newPeriod || campaignChanged
       ? await this._refreshHtmlForPeriod(
           src.htmlContent,
-          (src.meta ?? {}) as Record<string, unknown>,
-          newPeriod,
+          (meta ?? (src.meta ?? {})) as Record<string, unknown>,
+          newPeriod ?? { startDate: undefined, endDate: undefined, month: undefined },
         )
       : src.htmlContent;
 

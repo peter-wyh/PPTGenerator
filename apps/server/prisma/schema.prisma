@@ -288,6 +288,7 @@ model Campaign {
 
   campaignCreators CampaignCreator[]
   orders           CampaignOrder[]
+  orderDailyStats  OrderDailyStat[]
 
   @@index([ownerId])
   @@index([businessLineId])
@@ -469,10 +470,88 @@ model CampaignOrder {
   /// 订单状态（paid/shipped/refunded…，来自平台导出）。
   orderStatus       String?
 
+  // ─── Awin transactions 导出字段镜像（订单级；orderId/orderDate/orderStatus
+  //     已分别映射 order_reference/date/commission_status，此处为其余列） ──────
+  /// Awin transaction id（CSV "id"）。
+  awinId             String?
+  /// Awin 广告主 id（CSV "advertiser_id"，如 105925；字符串镜像，非 FK）。
+  advertiserId       String?
+  /// 订单金额（CSV "sale_amount"；Lead 模式为 £1 占位）。
+  saleAmount         Decimal? @db.Decimal(14, 2)
+  /// 佣金（CSV "commission"）。
+  commission         Decimal? @db.Decimal(14, 2)
+  /// 审核通过时间（CSV "validation_date"）。
+  validationDate     DateTime?
+  /// 点击来源引用（CSV "click_ref"，原始未归一化）。
+  clickRef           String?
+  /// 交易类型（CSV "type"，Lead/Sale）。
+  type               String?
+  /// 站点名（CSV "site_name"）。
+  siteName           String?
+  /// 落地页（CSV "URL"）。
+  url                String?  @db.Text
+  /// 拒单原因（CSV "decline_reason"）。
+  declineReason      String?
+  /// 点击时间（CSV "clickThroughTime"）。
+  clickThroughTime   DateTime?
+  /// 是否用券（CSV "voucher_code_used"，yes/no）。
+  voucherCodeUsed    String?
+  /// 点击->转化时滞秒数（CSV "lapse_time"）。
+  lapseTime          Int?
+  /// 是否修改过（CSV "amended"，Yes/No）。
+  amended            String?
+  /// 修改原因（CSV "amend_reason"）。
+  amendReason        String?
+  /// 修改前金额（CSV "old_sale_amount"）。
+  oldSaleAmount      Decimal? @db.Decimal(14, 2)
+  /// 修改前佣金（CSV "old_commission"）。
+  oldCommission      Decimal? @db.Decimal(14, 2)
+  /// 币种差异（CSV "different_currency"）。
+  differentCurrency  String?
+  /// 点击设备（CSV "click_device"）。
+  clickDevice        String?
+  /// 交易设备（CSV "transaction_device"）。
+  transactionDevice  String?
+  /// 发布商跟踪 URL（CSV "publisher_url"，cloak 长链）。
+  publisherUrl       String?  @db.Text
+  /// 佣金构成（CSV "transaction_parts"，如 DEFAULT:1.50）。
+  transactionParts   String?
+  /// 客户国家（CSV "customer_country"）。
+  customerCountry    String?
+  /// 自定义参数（CSV "custom_parameters"）。
+  customParameters   String?  @db.Text
+  /// 是否已付发布商（CSV "paid_to_publisher"，yes/no）。
+  paidToPublisher    String?
+  /// 支付状态（CSV "payment_status"）。
+  paymentStatus      String?
+  /// 支付 ID（CSV "payment_id"）。
+  paymentId          String?
+  /// 查询 ID（CSV "transaction_query_id"）。
+  transactionQueryId String?
+  /// 附加点击引用 2-6（CSV "click_ref2".."click_ref6"）。
+  clickRef2          String?
+  clickRef3          String?
+  clickRef4          String?
+  clickRef5          String?
+  clickRef6          String?
+  /// 券码（CSV "voucher_code"）。
+  voucherCode        String?
+  /// 佣金分成的发布商 id/名/所选分成率发布商 id（CSV 对应三列）。
+  commissionSharingPublisherId             String?
+  commissionSharingPublisher               String?
+  commissionSharingSelectedRatePublisherId String?
+  /// 商品明细原始数据（CSV "products"）。
+  products           String?  @db.Text
+  /// Awin campaign 标签（CSV "campaign"；注意与 campaignId FK 无关）。
+  campaignLabel      String?
+  /// 新客标记（CSV "customer_acquisition"）。
+  customerAcquisition String?
+
   items             CampaignOrderItem[]
 
   @@unique([campaignId, orderId])
   @@index([campaignId])
+  @@index([campaignId, orderDate])
   @@index([campaignCreatorId])
 
   createdAt         DateTime @default(now())
@@ -499,6 +578,48 @@ model CampaignOrderItem {
 
   @@index([campaignOrderId])
   @@index([productName])
+}
+
+/// 订单日级统计中间层（recomputeOrderStats 从 CampaignOrder 物化）。
+/// 报告数字真源：Revenue/Commission/Orders 以本表为准（订单表 SUM 的快照，
+/// 与 CpsPerformance.daily 导入副本解耦）。日期口径 = 订单表已存 UTC 值
+/// DATE_FORMAT 截断，不做二次时区转换。
+model OrderDailyStat {
+  id        String   @id @default(cuid())
+  campaignId String
+  campaign  Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  /// ''（哨兵）= 该日全 campaign 聚合行；非空 = CampaignCreator.id 的 creator×date 行。
+  /// MySQL 唯一索引对 NULL 不去重，故用空串而非 NULL 表示聚合行。
+  campaignCreatorId String @default("")
+
+  /// 统计日（YYYY-MM-DD）。
+  statDate  String
+
+  totalOrders        Int      @default(0)
+  approvedOrders     Int      @default(0)
+  pendingOrders      Int      @default(0)
+  /// declined/deleted 等非 Approved/Pending 状态。
+  otherOrders        Int      @default(0)
+  /// Revenue 真源（Lead 模式佣金口径；saleAmount £1 占位不作为收入）。
+  totalCommission    Decimal  @default(0) @db.Decimal(14, 2)
+  approvedCommission Decimal  @default(0) @db.Decimal(14, 2)
+  pendingCommission  Decimal  @default(0) @db.Decimal(14, 2)
+  /// SUM(saleAmount)，Lead 模式为占位值，存档不用作 Revenue。
+  totalSaleAmount    Decimal  @default(0) @db.Decimal(14, 2)
+  /// customerAcquisition='New' 等标签的单量；标签缺失时恒 0。
+  newCustomerOrders  Int      @default(0)
+  /// 该行统计范围内任一单带 customerAcquisition 标签；false = 概念不适用，渲染 N/A。
+  hasNewCustomerTag  Boolean  @default(false)
+  /// 国家维度 Top5：[{country, orders, commission}]（开放集合，仅展示用）。
+  topCountries       Json?
+  /// 设备维度 Top5：[{device, orders}]（clickDevice 100% 有值；仅聚合行挂）。
+  topDevices         Json?
+
+  recomputedAt DateTime @default(now())
+
+  @@unique([campaignId, statDate, campaignCreatorId])
+  @@index([campaignId, statDate])
+  @@index([campaignCreatorId])
 }
 
 /// CPS 链接效果（一行=一条 CPS 跟踪链接的汇总数据）。

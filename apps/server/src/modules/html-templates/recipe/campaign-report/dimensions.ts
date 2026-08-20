@@ -22,7 +22,7 @@ export type DimInsights = {
 };
 
 /** 固定调色板(第一色对齐默认 brandPrimary #ff099e;不足循环)。 */
-const PALETTE = ['#ff099e', '#4f46e5', '#16a34a', '#d97706', '#0ea5e9', '#8b5cf6'];
+export const PALETTE = ['#ff099e', '#4f46e5', '#16a34a', '#d97706', '#0ea5e9', '#8b5cf6'];
 
 /** promoType → 模板 tag CSS 后缀(对应 template.hbs 的 .tag-xxx)。 */
 function mapTagKind(promoType?: string | null): string {

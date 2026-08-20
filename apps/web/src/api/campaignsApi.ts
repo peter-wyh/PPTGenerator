@@ -287,4 +287,49 @@ export interface OrderRow {
   orderStatus: string | null;
   createdAt: string;
   items: { id: string; productName: string; category?: string | null; sku?: string | null; qty: number; unitPrice: string; lineTotal: string }[];
+  /**
+   * Awin transactions 镜像字段（可空——仅联盟导出导入的订单有值）。
+   * 43 列中 order_reference/date/commission_status 由 orderId/orderDate/orderStatus 承接，
+   * 此处为其余 40 列；Decimal 序列化为 string，DateTime 序列化为 ISO string。
+   */
+  awinId?: string | null;
+  advertiserId?: string | null;
+  saleAmount?: string | null;
+  commission?: string | null;
+  validationDate?: string | null;
+  clickRef?: string | null;
+  type?: string | null;
+  siteName?: string | null;
+  url?: string | null;
+  declineReason?: string | null;
+  clickThroughTime?: string | null;
+  voucherCodeUsed?: string | null;
+  lapseTime?: number | null;
+  amended?: string | null;
+  amendReason?: string | null;
+  oldSaleAmount?: string | null;
+  oldCommission?: string | null;
+  differentCurrency?: string | null;
+  clickDevice?: string | null;
+  transactionDevice?: string | null;
+  publisherUrl?: string | null;
+  transactionParts?: string | null;
+  customerCountry?: string | null;
+  customParameters?: string | null;
+  paidToPublisher?: string | null;
+  paymentStatus?: string | null;
+  paymentId?: string | null;
+  transactionQueryId?: string | null;
+  clickRef2?: string | null;
+  clickRef3?: string | null;
+  clickRef4?: string | null;
+  clickRef5?: string | null;
+  clickRef6?: string | null;
+  voucherCode?: string | null;
+  commissionSharingPublisherId?: string | null;
+  commissionSharingPublisher?: string | null;
+  commissionSharingSelectedRatePublisherId?: string | null;
+  products?: string | null;
+  campaignLabel?: string | null;
+  customerAcquisition?: string | null;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { ProjectSummary, ReportPeriod } from '@mediakit/shared';
+import type { ProjectSummary, ReportPeriod, Campaign } from '@mediakit/shared';
 import { projectsApi } from '@/api/projects';
+import { listCampaigns } from '@/api/campaigns';
 import { Button } from './Button';
 import { toast } from './Toast';
 
@@ -39,6 +40,26 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ★ Campaign 换绑：拉取列表，默认选中源 campaign
+  const isCampaignReport = !!meta.campaignId;
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignId, setCampaignId] = useState<string>(meta.campaignId ?? '');
+
+  useEffect(() => {
+    if (!isCampaignReport) return;
+    let cancelled = false;
+    listCampaigns()
+      .then((list) => {
+        if (!cancelled) setCampaigns(list);
+      })
+      .catch(() => {
+        /* 上游不可用时静默：保持只读回显，不阻塞复制 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCampaignReport]);
+
   // 月份默认取下一个月
   useEffect(() => {
     if (isMonthly && !period.month) {
@@ -68,7 +89,7 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
         finalPeriod = { startDate: period.startDate, endDate: period.endDate };
       }
 
-      const newProject = await projectsApi.duplicate(project.id, finalPeriod);
+      const newProject = await projectsApi.duplicate(project.id, finalPeriod, campaignChanged ? campaignId : undefined);
       toast.success(`已复制为「${newProject.name}」`);
       onDone();
     } catch {
@@ -90,6 +111,9 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
       .catch(() => setError('复制失败，请重试'))
       .finally(() => setSubmitting(false));
   }
+
+  // 是否换了 Campaign（决定提交时是否传 campaignId）
+  const campaignChanged = isCampaignReport && campaignId !== '' && campaignId !== (meta.campaignId ?? '');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -123,6 +147,40 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
             </div>
           )}
         </div>
+
+        {/* ★ Campaign 换绑选择器（campaign-report 才显示；源回显为只读） */}
+        {isCampaignReport && (
+          <div className="mb-4 space-y-2">
+            <label className="text-xs font-medium text-foreground-secondary">关联 Campaign</label>
+            {campaigns.length === 0 ? (
+              <p className="text-[11px] text-foreground-muted">
+                {meta.campaignInfo?.campaignName ?? '—'}
+                {meta.campaignInfo?.startDate && meta.campaignInfo?.endDate
+                  ? ` · ${meta.campaignInfo.startDate} ~ ${meta.campaignInfo.endDate}`
+                  : ''}
+                （Campaign 列表不可用，将保持原关联复制）
+              </p>
+            ) : (
+              <select
+                value={campaignId}
+                onChange={(e) => setCampaignId(e.target.value)}
+                className="w-full rounded border border-border-default bg-surface-primary px-2 py-1.5 text-sm text-foreground-primary"
+              >
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.startDate && c.endDate ? `（${c.startDate} ~ ${c.endDate}）` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {campaignChanged && (
+              <p className="text-[10px] text-foreground-muted">
+                换绑后副本将用新 Campaign 的数据重新渲染 HTML（data-field → AI → 日期替换三级链）。
+              </p>
+            )}
+          </div>
+        )}
 
         {hasPeriod && (
           <div className="mb-4 space-y-2">

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prismaMock = vi.hoisted(() => ({
   campaign: { findUnique: vi.fn() },
+  orderDailyStat: { findMany: vi.fn() },
 }));
 vi.mock('../../../../prisma', () => ({ prisma: prismaMock }));
 
@@ -111,10 +112,26 @@ describe('mapCampaign', () => {
     expect(p.linkUrl).toBe('https://tiktok.com/@miaglowup');
   });
 
-  it('metrics 缺字段 → Metric unavailable(不兜 0)', async () => {
+  it('metrics 全空 → revenue/orders/clicks 回退 CPS 聚合列镜像,其余仍 N/A 不兜 0', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue({ ...campaignRow, metrics: {} });
     const c = await mapCampaign('c1');
-    expect(c.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('Metric unavailable');
+    expect(c.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('$192,000'); // cps.gmv 回退
+    expect(c.kpis.find((k) => k.label === 'Clicks')?.value).toBe('124,678'); // cps 聚合列回退(真源)
+    expect(c.kpis.find((k) => k.label === 'Orders')?.value).toBe('1,016'); // cps.orders 回退
+    expect(c.kpis.find((k) => k.label === 'New Customer Acquisition')?.value).toBe('Metric unavailable'); // daily 无行,不回退
+  });
+
+  it('metrics + CPS 聚合列双源皆无 clicks → Metric unavailable(不兜 0)', async () => {
+    const noSrc = {
+      ...campaignRow,
+      metrics: {},
+      campaignCreators: [{
+        ...campaignRow.campaignCreators[0],
+        cpsPerformances: [{ clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 }],
+      }],
+    };
+    prismaMock.campaign.findUnique.mockResolvedValue(noSrc);
+    const c = await mapCampaign('c1');
     expect(c.kpis.find((k) => k.label === 'Clicks')?.value).toBe('Metric unavailable');
   });
 
@@ -183,11 +200,11 @@ describe('mapCampaign', () => {
     expect(r.dataCoverage?.covered).toBeNull();
   });
 
-  it('无 period(汇总口径)→ metrics 缺字段渲染 Metric unavailable,不兜 0', async () => {
+  it('无 period(汇总口径)→ metrics 缺 clicks 回退聚合列,totalRevenue 正常渲染', async () => {
     const partial = { ...campaignRow, metrics: { totalRevenue: 876360 } };
     prismaMock.campaign.findUnique.mockResolvedValue(partial);
     const r = await mapCampaign('c1');
-    expect(r.kpis.find((k) => k.label === 'Clicks')?.value).toBe('Metric unavailable');
+    expect(r.kpis.find((k) => k.label === 'Clicks')?.value).toBe('124,678'); // cps 聚合列回退
     expect(r.kpis.find((k) => k.label === 'Total Revenues')?.value).toBe('$876,360');
   });
 
@@ -341,5 +358,150 @@ describe('mapCampaign', () => {
     const r = await mapCampaign('c1');
     expect(r.kpis.find((k) => k.label === 'Conversion Rate')?.value).toBe('0%');
     expect(r.kpis.find((k) => k.label === 'Orders')?.value).toBe('0');
+  });
+});
+
+// ─── 订单中间层(OrderDailyStat)口径 ─────────────────────────────────────────
+// mapCampaign 在 hasPeriod 时先查 getRange(prisma.orderDailyStat.findMany);
+// 第一次调用(聚合行 campaignCreatorId='')为 fallback 判定,第二次为 creator 行。
+const dec = (v: string) => ({ toString: () => v });
+
+/** mock getRange 两次 findMany:聚合行 + creator 行。 */
+function mockOrderStats(totalRows: unknown[], creatorRows: unknown[]) {
+  prismaMock.orderDailyStat.findMany
+    .mockResolvedValueOnce(totalRows)
+    .mockResolvedValueOnce(creatorRows);
+}
+
+describe('mapCampaign · 订单中间层口径', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 默认无中间层(空 → null → 走 mapFromDaily 老路)
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
+  });
+
+  it('中间层有数据 → revenue/orders 换订单源,clicks 保持 daily', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    // daily:10-15 clicks 200/orders 20/gmv 2000;中间层:10-15 orders 25/commission 300
+    mockOrderStats(
+      [{ statDate: '2026-10-15', campaignCreatorId: '', totalOrders: 25, approvedOrders: 25, pendingOrders: 0, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('300.00'), pendingCommission: dec('0'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: [{ country: 'Netherlands', orders: 25, commission: '300.00' }] }],
+      [{ statDate: '2026-10-15', campaignCreatorId: 'cc1', totalOrders: 25, approvedOrders: 25, pendingOrders: 0, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('300.00'), pendingCommission: dec('0'), newCustomerOrders: 0, hasNewCustomerTag: false }],
+    );
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-16' });
+    const byLabel = Object.fromEntries(c.kpis.map((k) => [k.label, k.value]));
+    // ★ orders 来自订单表(25)而非 daily(20);revenue = commission 口径(300)而非 daily gmv(2000)
+    expect(byLabel['Orders']).toBe('25');
+    expect(byLabel['Total Revenues']).toBe('$300');
+    // clicks 仍来自 daily(10-15 的 200 + 10-16 的 300)
+    expect(byLabel['Clicks']).toBe('500');
+    // 标签缺失 → Metric unavailable(不编造 0)
+    expect(byLabel['New Customer Acquisition']).toBe('Metric unavailable');
+    // status 拆分新 KPI
+    expect(byLabel['Approved Orders']).toBe('25');
+    // topMarket ← topCountries
+    expect(c.insights?.topMarket?.[0]).toMatchObject({ country: 'Netherlands', revenue: '$300' });
+    // newCustomerRate 不输出(标签不可用)
+    expect(c.insights?.newCustomerRate).toBeUndefined();
+    // trend:orders/revenue 从中间层,clicks 从 daily(10-15+10-16 并集)
+    expect(c.trend.labels).toEqual(['2026-10-15', '2026-10-16']);
+    expect(c.trend.orders).toEqual([25, 0]);
+    expect(c.trend.revenue).toEqual([300, 0]);
+    expect(c.trend.clicks).toEqual([200, 300]);
+  });
+
+  it('新客标签可用 → newCustomerRate 输出真值', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    mockOrderStats(
+      [{ statDate: '2026-10-15', campaignCreatorId: '', totalOrders: 10, approvedOrders: 10, pendingOrders: 0, otherOrders: 0, totalCommission: dec('100.00'), approvedCommission: dec('100.00'), pendingCommission: dec('0'), newCustomerOrders: 4, hasNewCustomerTag: true, topCountries: null }],
+      [],
+    );
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-16' });
+    expect(c.kpis.find((k) => k.label === 'New Customer Acquisition')?.value).toBe('4');
+    expect(c.insights?.newCustomerRate).toMatchObject({ newCount: 4, totalOrders: 10 });
+  });
+
+  it('daily coverage 为空但中间层有数据 → 仍渲染订单侧(不被 coverage 误杀)', async () => {
+    // campaignRow 无 daily → cov.covered=null;中间层有行 → 走 mapFromOrderStats
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRow);
+    mockOrderStats(
+      [{ statDate: '2026-10-13', campaignCreatorId: '', totalOrders: 5, approvedOrders: 5, pendingOrders: 0, otherOrders: 0, totalCommission: dec('50.00'), approvedCommission: dec('50.00'), pendingCommission: dec('0'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: null }],
+      [],
+    );
+    const c = await mapCampaign('c1', { startDate: '2026-10-13', endDate: '2026-10-14' });
+    expect(c.kpis.find((k) => k.label === 'Orders')?.value).toBe('5');
+    expect(c.kpis[0].value).not.toBe('—'); // 非空态
+  });
+
+  it('中间层无数据 → 回落 mapFromDaily(行为不变)', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-17' });
+    const byLabel = Object.fromEntries(c.kpis.map((k) => [k.label, k.value]));
+    expect(byLabel['Orders']).toBe('50');   // daily 口径 20+30
+    expect(byLabel['Total Revenues']).toBe('$5,000');
+  });
+});
+
+describe('mapCampaign · clicks 缺失≠0 与设备维度', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
+  });
+
+  it('daily 无 clicks key → Clicks/CVR = Metric unavailable(不编造 0)', async () => {
+    // daily 记录无 clicks key(Trivago Awin 导入通道的真实形态)
+    const noClicksCamp = {
+      ...campaignRowWithDaily,
+      campaignCreators: [{
+        ...campaignRowWithDaily.campaignCreators[0],
+        cpsPerformances: [{
+          ...campaignRowWithDaily.campaignCreators[0].cpsPerformances[0],
+          daily: [
+            { date: '2026-10-15', orders: '20', gmv: '2000' },
+            { date: '2026-10-16', orders: '30', gmv: '3000' },
+          ],
+        }],
+      }],
+    };
+    prismaMock.campaign.findUnique.mockResolvedValue(noClicksCamp);
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-17' });
+    const byLabel = Object.fromEntries(c.kpis.map((k) => [k.label, k.value]));
+    expect(byLabel['Clicks']).toBe('Metric unavailable');
+    expect(byLabel['Conversion Rate']).toBe('Metric unavailable');
+    expect(byLabel['Orders']).toBe('50'); // orders 仍真实
+  });
+
+  it('daily 有 clicks key 值为 0 → 渲染真实 0(非 unavailable)', async () => {
+    const zeroClicksCamp = {
+      ...campaignRowWithDaily,
+      campaignCreators: [{
+        ...campaignRowWithDaily.campaignCreators[0],
+        cpsPerformances: [{
+          ...campaignRowWithDaily.campaignCreators[0].cpsPerformances[0],
+          daily: [
+            { date: '2026-10-15', clicks: '0', orders: '20', gmv: '2000' },
+            { date: '2026-10-16', clicks: '0', orders: '30', gmv: '3000' },
+          ],
+        }],
+      }],
+    };
+    prismaMock.campaign.findUnique.mockResolvedValue(zeroClicksCamp);
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-17' });
+    const byLabel = Object.fromEntries(c.kpis.map((k) => [k.label, k.value]));
+    expect(byLabel['Clicks']).toBe('0');
+    expect(byLabel['Conversion Rate']).toBe('0%');
+  });
+
+  it('中间层带 topDevices → insights.topDevices 聚合+pct', async () => {
+    prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    mockOrderStats(
+      [{ statDate: '2026-10-15', campaignCreatorId: '', totalOrders: 25, approvedOrders: 25, pendingOrders: 0, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('300.00'), pendingCommission: dec('0'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: null, topDevices: [{ device: 'iPhone', orders: 15 }, { device: 'Android Mobile', orders: 10 }] }],
+      [],
+    );
+    const c = await mapCampaign('c1', { startDate: '2026-10-15', endDate: '2026-10-16' });
+    expect(c.insights?.topDevices).toEqual([
+      { device: 'iPhone', orders: 15, pct: 60 },
+      { device: 'Android Mobile', orders: 10, pct: 40 },
+    ]);
   });
 });

@@ -243,6 +243,9 @@ export function AgentChatPanel({
       const abortCtrl = new AbortController();
       abortRef.current = abortCtrl;
       let finalHtml = '';
+      // ★ 思考过程累积在局部变量（setReasoning 的 state 在闭包中读不到最新值，
+      // 旧代码 `reasoning || undefined` 永远取到初始 ''，导致消息里从未带过思考）
+      let reasoningAcc = '';
 
       try {
         onBusyChange?.(true, handleCancel);
@@ -258,6 +261,7 @@ export function AgentChatPanel({
           (chunk: SSEChunk) => {
             if (chunk.type === 'reasoning') {
               setIsThinking(true);
+              reasoningAcc += chunk.text;
               setReasoning((prev) => prev + chunk.text);
             } else if (chunk.type === 'content') {
               setIsThinking(false);
@@ -278,7 +282,7 @@ export function AgentChatPanel({
             role: 'assistant',
             content: '已更新 ✅',
             action: 'edit',
-            reasoning: reasoning || undefined,
+            reasoning: reasoningAcc || undefined,
             ts: new Date().toISOString(),
           };
           const finalHistory = [...newHistory, aiMsg];
@@ -291,7 +295,15 @@ export function AgentChatPanel({
           name?: string;
           message?: string;
         };
-        if (err.name !== 'AbortError') {
+        if (err.name === 'AbortError') {
+          // ★ 用户主动取消：回填输入框（下次可直接改完再发），历史里补一条「已取消」标记
+          setInput(hasImages ? (text ? `${text}\n📎 ${sentImages.length}张图片` : '') : text);
+          setPendingImages(hasImages ? sentImages : []);
+          onHistoryChange([
+            ...newHistory,
+            { role: 'assistant', content: '已取消本次编辑 ⏹️', action: 'cancelled', ts: new Date().toISOString() },
+          ]);
+        } else {
           setError(
             err.response?.data?.error?.message ||
               err.response?.data?.message ||

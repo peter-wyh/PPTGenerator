@@ -25,6 +25,8 @@ interface SeedPartner {
   engagement: string;  // 内容站=Bounce Rate 补充；社群=Active Rate
   category: string;
   region: string;
+  /** 头像 URL（picsum 占位，与其他 creator 种子一致；空则报告页降级首字母圆圈） */
+  avatar?: string;
 }
 
 const CONTENT_SITES: SeedPartner[] = [
@@ -39,6 +41,7 @@ const CONTENT_SITES: SeedPartner[] = [
     engagement: '42% bounce',
     category: 'Beauty & Skincare',
     region: 'US',
+    avatar: 'https://picsum.photos/seed/Beauty%20Insider/200/200',
   },
   {
     id: 'site-skincarehub',
@@ -51,6 +54,7 @@ const CONTENT_SITES: SeedPartner[] = [
     engagement: '38% bounce',
     category: 'Skincare',
     region: 'US / EU',
+    avatar: 'https://picsum.photos/seed/Skincare%20Hub/200/200',
   },
   {
     id: 'site-glowguide',
@@ -63,6 +67,7 @@ const CONTENT_SITES: SeedPartner[] = [
     engagement: '35% bounce',
     category: 'Beauty',
     region: 'CN',
+    avatar: 'https://picsum.photos/seed/Glow%20Guide/200/200',
   },
   {
     id: 'site-trendreport',
@@ -75,6 +80,7 @@ const CONTENT_SITES: SeedPartner[] = [
     engagement: '45% bounce',
     category: 'Lifestyle',
     region: 'JP',
+    avatar: 'https://picsum.photos/seed/Trend%20Report/200/200',
   },
 ];
 
@@ -90,6 +96,7 @@ const COMMUNITIES: SeedPartner[] = [
     engagement: '23% DAU',
     category: 'Beauty & Skincare',
     region: 'US / UK',
+    avatar: 'https://picsum.photos/seed/Glow%20Gang/200/200',
   },
   {
     id: 'comm-skincareclub',
@@ -102,6 +109,7 @@ const COMMUNITIES: SeedPartner[] = [
     engagement: '31% DAU',
     category: 'Skincare',
     region: 'US',
+    avatar: 'https://picsum.photos/seed/Skincare%20Club/200/200',
   },
   {
     id: 'comm-meishetuan',
@@ -114,6 +122,7 @@ const COMMUNITIES: SeedPartner[] = [
     engagement: '28% DAU',
     category: 'Beauty',
     region: 'CN',
+    avatar: 'https://picsum.photos/seed/美涩团/200/200',
   },
   {
     id: 'comm-glowlabfans',
@@ -172,6 +181,7 @@ async function main() {
         engagement: p.engagement,
         category: p.category,
         region: p.region,
+        ...(p.avatar ? { avatar: p.avatar } : {}),
         ownerId,
       },
       update: {
@@ -184,6 +194,7 @@ async function main() {
         engagement: p.engagement,
         category: p.category,
         region: p.region,
+        ...(p.avatar ? { avatar: p.avatar } : {}),
       },
     });
     count++;
