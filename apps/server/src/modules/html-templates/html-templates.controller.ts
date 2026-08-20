@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { htmlTemplateService } from './html-templates.service';
 import { aiGenerateService, type StreamChunk } from './ai-generate.service';
 import { SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
+import { resolveForCampaign } from '../guides/guide.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
 import type { TemplateStatus } from '@prisma/client';
@@ -156,18 +157,24 @@ export const htmlTemplateController = {
 
   /** Agent 增量编辑：当前 HTML + 用户指令（可选附带图片）→ 修改后的完整 HTML */
   agentEdit: asyncHandler(async (req: Request, res: Response) => {
-    const { currentHtml, instruction, images, campaignId, reportPeriod } = req.body;
+    const { currentHtml, instruction, images, campaignId, reportPeriod, scenario } = req.body;
     // ★ ④ 数据上下文：有 campaignId → 注入真实 DB 数据（AI 数据改动唯一真源），杜绝凭空编造
     const dataContext = campaignId
       ? await aiGenerateService.buildCampaignContext(campaignId, reportPeriod).catch(() => undefined)
       : undefined;
+    // ★ 数据上下文 + 业务线指南：有 campaignId → 注入真实 DB 数据与指南（编辑风格与首稿一致）
+    const { guide, businessLineName } = campaignId
+      ? await resolveForCampaign(campaignId, scenario)
+      : { guide: null, businessLineName: '' };
     const html = await aiGenerateService.editHtml({
       currentHtml,
       instruction,
       images,
       dataContext,
+      guideContent: guide?.content,
+      businessLineName,
     });
-    res.json({ html });
+    res.json({ html, guideUsed: guide ? { id: guide.id, name: guide.name } : null });
   }),
 
   /** SSE 流式生成 HTML 报告 */
@@ -209,7 +216,7 @@ export const htmlTemplateController = {
 
   /** SSE 流式 Agent 增量编辑 */
   agentEditStream: async (req: Request, res: Response) => {
-    const { currentHtml, instruction, images, campaignId, reportPeriod } = req.body;
+    const { currentHtml, instruction, images, campaignId, reportPeriod, scenario } = req.body;
     initSSE(res);
 
     const abortCtrl = new AbortController();
@@ -221,11 +228,17 @@ export const htmlTemplateController = {
       const dataContext = campaignId
         ? await aiGenerateService.buildCampaignContext(campaignId, reportPeriod).catch(() => undefined)
         : undefined;
+      // ★ 业务线指南：编辑风格与首稿一致（resolveForCampaign 静默降级，无指南不阻断）
+      const { guide, businessLineName } = campaignId
+        ? await resolveForCampaign(campaignId, scenario)
+        : { guide: null, businessLineName: '' };
       for await (const chunk of aiGenerateService.editHtmlStream({
         currentHtml,
         instruction,
         images,
         dataContext,
+        guideContent: guide?.content,
+        businessLineName,
         signal: abortCtrl.signal,
       })) {
         sseWrite(res, chunk);

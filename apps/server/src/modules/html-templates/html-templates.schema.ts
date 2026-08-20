@@ -59,6 +59,8 @@ export const agentEditSchema = z.object({
     startDate: z.string().max(40).optional(),
     endDate: z.string().max(40).optional(),
   }).optional(),
+  // 报告场景,匹配业务线指南
+  scenario: z.string().max(64).optional(),
 });
 
 /**

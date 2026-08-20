@@ -220,3 +220,39 @@ describe('buildSystemPrompt · 三层拼装', () => {
     expect(s).toContain('BUSINESS LINE GUIDE');
   });
 });
+
+describe('editHtml · 编辑续写带指南(风格一致)', () => {
+  beforeEach(() => {
+    process.env.DEEPSEEK_API_KEY = 'test-key';
+    aiClientMock.fetchChatCompletionWithRetry.mockReset().mockResolvedValue({
+      response: {
+        ok: true, status: 200,
+        json: async () => ({ choices: [{ message: { content: '<!DOCTYPE html><html><body>edited</body></html>' } }] }),
+      } as any,
+      attempts: 1,
+    });
+  });
+
+  it('传 guideContent+businessLineName → system = EDIT 基座 + 指南 + 业务事实', async () => {
+    const html = await aiGenerateService.editHtml({
+      currentHtml: '<!DOCTYPE html><html><body>x</body></html>',
+      instruction: '改标题',
+      guideContent: '## 语调与术语\n克制',
+      businessLineName: 'DG 好物',
+    });
+    expect(html).toContain('edited');
+    const body = aiClientMock.fetchChatCompletionWithRetry.mock.calls[0][0];
+    const sys = body.messages.find((m: any) => m.role === 'system').content as string;
+    expect(sys).toContain('You are an HTML editor agent'); // EDIT 基座
+    expect(sys).toContain('BUSINESS LINE GUIDE');
+    expect(sys).toContain('克制');
+    expect(sys).toContain('Prepared by DG 好物');
+  });
+
+  it('不传指南 → system 等于 EDIT_SYSTEM_PROMPT 原文', async () => {
+    await aiGenerateService.editHtml({ currentHtml: '<!DOCTYPE html><html></html>', instruction: 'i' });
+    const body = aiClientMock.fetchChatCompletionWithRetry.mock.calls[0][0];
+    const sys = body.messages.find((m: any) => m.role === 'system').content as string;
+    expect(sys).not.toContain('BUSINESS LINE GUIDE');
+  });
+});

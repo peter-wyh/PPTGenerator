@@ -1339,6 +1339,8 @@ export const aiGenerateService = {
     instruction: string;
     images?: string[];
     dataContext?: string;
+    guideContent?: string;
+    businessLineName?: string;
   }): Promise<string> {
     if (!DEEPSEEK_API_KEY) {
       throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
@@ -1384,7 +1386,7 @@ export const aiGenerateService = {
         apiKey: DEEPSEEK_API_KEY,
         model: DEEPSEEK_MODEL,
         messages: [
-          { role: 'system', content: EDIT_SYSTEM_PROMPT },
+          { role: 'system', content: buildSystemPrompt({ base: EDIT_SYSTEM_PROMPT, guideContent: params.guideContent, businessLineName: params.businessLineName }) },
           userMessage,
         ],
         temperature: 0.3, // 编辑用低 temperature 保持精确性
@@ -1615,6 +1617,8 @@ export const aiGenerateService = {
     instruction: string;
     images?: string[];
     dataContext?: string;
+    guideContent?: string;
+    businessLineName?: string;
     signal?: AbortSignal;
   }): AsyncGenerator<StreamChunk> {
     if (!DEEPSEEK_API_KEY) {
@@ -1656,7 +1660,7 @@ export const aiGenerateService = {
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
         messages: [
-          { role: 'system', content: EDIT_SYSTEM_PROMPT },
+          { role: 'system', content: buildSystemPrompt({ base: EDIT_SYSTEM_PROMPT, guideContent: params.guideContent, businessLineName: params.businessLineName }) },
           userMessage,
         ],
         temperature: 0.3,
