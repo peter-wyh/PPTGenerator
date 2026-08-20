@@ -52,3 +52,4 @@ scripts/.db-sync/
 # 工具脚本入库例外（drift 补列/测试库重建）
 !apps/server/scripts/*.mjs
 !apps/server/scripts/*.cjs
+!apps/server/scripts/migrate-designmd-to-guides.ts
