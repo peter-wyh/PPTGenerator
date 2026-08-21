@@ -253,29 +253,14 @@ export function AgentChatPanel({
 
   // ★ 对话即版本历史:恢复到历史快照。
   //  右侧预览立即切换(onHtmlChange) + autoSave 落库 + 历史追加「已恢复」消息(带同一快照,仍是版本点)。
-  const handleRestoreSnapshot = useCallback(
-    (snapshot: string, sourceMsg: AgentChatMessage) => {
-      const label =
-        sourceMsg.action === 'generate'
-          ? '首稿'
-          : sourceMsg.action === 'manual'
-            ? '手动保存版'
-            : sourceMsg.ts
-              ? new Date(sourceMsg.ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-              : '历史版本';
-      const restoreMsg: AgentChatMessage = {
-        role: 'assistant',
-        content: `⟲ 已恢复到 ${label}`,
-        action: 'manual',
-        ts: new Date().toISOString(),
-        htmlSnapshot: snapshot,
-      };
-      const finalHistory = [...agentHistory, restoreMsg];
+  // ★ 消息即产物,画板即即时预览:点击带快照的消息 → 画板立即预览该版本。
+  //  不写库、不追加「已恢复」消息、不改变历史——预览是纯前端行为,
+  //  下一次对话编辑仍从画板当前内容(currentHtml)继续。
+  const handlePreviewSnapshot = useCallback(
+    (snapshot: string) => {
       onHtmlChange(snapshot);
-      onHistoryChange(finalHistory);
-      void htmlTemplatesApi.autoSave(projectId, snapshot, finalHistory);
     },
-    [agentHistory, onHtmlChange, onHistoryChange, projectId],
+    [onHtmlChange],
   );
 
   // ★ handleSend — SSE 流式编辑
@@ -452,14 +437,14 @@ export function AgentChatPanel({
                   defaultCollapsed={false}
                 />
               )}
-              {/* ★ 对话即版本历史:带快照的消息 = 版本点,可恢复到此版本(右侧预览切换) */}
+              {/* ★ 消息即产物:带快照的消息点击即在画板预览(纯预览,不写库不改历史) */}
               {msg.htmlSnapshot && (
                 <div className="mt-1.5 flex items-center gap-2 border-t border-border-default pt-1.5">
                   <button
-                    onClick={() => handleRestoreSnapshot(msg.htmlSnapshot!, msg)}
+                    onClick={() => handlePreviewSnapshot(msg.htmlSnapshot!)}
                     className="text-[10px] text-accent-primary hover:underline"
                   >
-                    ⟲ 恢复到此版本
+                    ▣ 在画板预览
                   </button>
                   <span className="text-[10px] text-foreground-muted">
                     {msg.htmlSnapshot.length >= 1024
