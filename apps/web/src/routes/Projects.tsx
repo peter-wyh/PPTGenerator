@@ -323,7 +323,7 @@ export function Projects() {
                   <tr key={p.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
                     <td className="px-3 py-2">
                       <button
-                        className="font-medium text-foreground-primary hover:text-accent-primary"
+                        className="text-left font-medium text-foreground-primary hover:text-accent-primary"
                         onClick={() => navigate(`/projects/${p.id}`)}
                       >
                         {p.name}
