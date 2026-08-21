@@ -192,6 +192,19 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
 
+   ★ EXPLICIT PLACEHOLDER RULE (STANDARD MODULES — ZERO SILENT DROPS):
+   The dimensions above marked as STANDARD for a performance report — Top-Selling Products
+   (topProducts), Campaign Placements (mediaPlacements), MoM comparison (priorPeriod) —
+   MUST NOT be silently omitted from the report when their data is absent. Instead render
+   an explicit "Data Unavailable" placeholder card in their place:
+     - Grey card, dashed border, centered content, same grid cell size as a normal module card
+     - Module title preserved (e.g. "04 Top-Selling Products") so the section numbering stays continuous
+     - Body: "Data Unavailable — pending data import" + one short line stating what data
+       would fill it (e.g. "Order line items (CampaignOrder) required for product ranking.")
+   This makes missing data VISIBLE to the reader instead of the whole section disappearing.
+   Non-standard optional modules (basket, topCountries, deviceSplit, orderStatusSplit, insights)
+   may still be omitted silently when absent — they are enhancements, not expectations.
+
 3. VISUALIZATION MATCHING: Match chart type to data characteristics — trends get line/area charts, proportions get doughnut charts, rankings get sorted bar charts or tables. Do NOT use a pie chart for time series or a line chart for categorical distribution.
 
 4. If the user's instruction includes specific section requirements (§1, §2, ...), follow those INSTEAD of the default structure above.
@@ -577,7 +590,7 @@ Return the COMPLETE updated HTML. Output ONLY the HTML code.`;
 export type StreamChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage; dataCoverage?: DoneDataCoverage; guideUsed?: { id: string; name: string } | null }
+  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage; dataCoverage?: DoneDataCoverage; missingModules?: { key: string; label: string }[]; guideUsed?: { id: string; name: string } | null }
   | { type: 'error'; message: string };
 
 /** done chunk 携带的周期数据覆盖(前端 toast 提醒用)。 */
@@ -586,6 +599,31 @@ export interface DoneDataCoverage {
   covered: { start: string; end: string } | null;
   missingDays: number;
   complete: boolean;
+}
+
+/**
+ * ★ 模块级数据覆盖预检(生成前)——按报告标准模块清单逐项判定数据可用性。
+ * 与 buildCampaignContext 完全同口径(同真源、同判定),确保「预检显示有数据」
+ * ⟺「AI 上下文确实注入该字段」。缺数据的模块在生成前可见、可补(引导数据管理导入),
+ * 而不是生成后靠客户发现整节缺失。
+ *
+ * 字段名 = buildCampaignContext 顶层注入键(AI 上下文键),前端按 key 映射中文标签。
+ */
+export interface ModuleCoverageItem {
+  /** 模块键(= AI 上下文注入字段名): dailyTrend/periodKpis/priorPeriod/topProducts/basket/mediaPlacements/creators/orderStatusSplit/topCountries/deviceSplit */
+  key: string;
+  /** 模块中文名(前端直接展示) */
+  label: string;
+  /** 'ok' = 有真实数据,模块可正常渲染;'missing' = 无数据 → 生成时渲染 Data Unavailable 占位 */
+  status: 'ok' | 'missing';
+  /** 有数据时的补充说明(如 "4 位达人" / "46 天" / "5 SKU");missing 时说明缺什么 */
+  detail?: string;
+}
+
+export interface ModuleCoverageResult {
+  requested: { start: string; end: string };
+  /** 模块覆盖清单(固定顺序) */
+  modules: ModuleCoverageItem[];
 }
 
 /** token 用量（网关 last chunk 的 usage 字段，供成本统计）。 */
@@ -787,6 +825,183 @@ export const aiGenerateService = {
       },
       ...cov,
     };
+  },
+
+  /**
+   * ★ 模块级数据覆盖预检(生成前)。与 buildCampaignContext 同真源、同判定口径,
+   * 返回标准报告模块清单中每个模块的数据可用性。供 GET /campaigns/:id/module-coverage
+   * (前端 HtmlStudio 配置面板展示)——缺数据的模块在生成前可见、可补。
+   *
+   * 宁缺勿假:只判定「上下文会不会注入该字段」,不猜测、不兜底。
+   * 无 campaign → undefined(前端不渲染预检区块)。
+   */
+  async getModuleCoverage(
+    campaignId: string,
+    reportPeriod?: { startDate?: string; endDate?: string },
+  ): Promise<ModuleCoverageResult | undefined> {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: {
+        campaignCreators: { include: { creator: true, cpsPerformances: true } },
+      },
+    });
+    if (!campaign) return undefined;
+
+    const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
+    const cov = computeCoverage(
+      campaign,
+      hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined,
+      campaign.endDate,
+    );
+    const requested = {
+      start: reportPeriod?.startDate ?? campaign.startDate,
+      end: reportPeriod?.endDate ?? campaign.endDate,
+    };
+    const inPeriod = (d: string) =>
+      (!reportPeriod?.startDate || d >= reportPeriod.startDate!) &&
+      (!reportPeriod?.endDate || d <= reportPeriod.endDate!);
+
+    // ── 与 buildCampaignContext 同口径逐模块判定 ──
+    // 1) CPS daily(趋势/KPI 共用真源):期内切片非空天集合
+    const periodDates = new Set<string>();
+    let clicksKeySeen = false;
+    for (const cc of campaign.campaignCreators) {
+      for (const p of cc.cpsPerformances ?? []) {
+        const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
+        for (const d of daily) {
+          const date = String(d.date ?? '');
+          if (!date) continue;
+          if (!hasPeriod || inPeriod(date)) {
+            periodDates.add(date);
+            if ('clicks' in d) clicksKeySeen = true;
+          }
+        }
+      }
+    }
+
+    // 2) 订单中间层(OrderDailyStat):与 orderStatsService.getRange 同存在性判定
+    let orderStatDays = 0;
+    try {
+      const os = await orderStatsService.getRange(campaignId, reportPeriod?.startDate, reportPeriod?.endDate);
+      orderStatDays = os?.days.length ?? 0;
+    } catch {
+      orderStatDays = 0;
+    }
+
+    // 3) 订单商品聚合(topProducts/basket):与 getOrderInsights 同真源
+    let topProductCount = 0;
+    let hasBasket = false;
+    try {
+      const oi = await campaignService.getOrderInsights(
+        campaignId,
+        '',
+        hasPeriod && reportPeriod
+          ? { start: reportPeriod.startDate, end: reportPeriod.endDate }
+          : undefined,
+        true,
+      );
+      topProductCount = oi.topProducts.length;
+      hasBasket = !!oi.basket;
+    } catch {
+      topProductCount = 0;
+      hasBasket = false;
+    }
+
+    // 4) mediaPlacements:analytics JSON 白名单提取(与 buildCampaignContext L1093 同口径)
+    const mediaPlacements = ((campaign.analytics as Record<string, unknown> | null)?.mediaPlacements as
+      | { name?: string }[]
+      | undefined)
+      ?.filter((m) => m?.name) ?? [];
+
+    // 5) MoM 前一期:报告周期往前推同样长度,期内 daily 非空才 ok
+    let hasPrior = false;
+    if (hasPeriod && reportPeriod?.startDate && reportPeriod.endDate) {
+      const dayMs = 86_400_000;
+      const s = new Date(reportPeriod.startDate).getTime();
+      const e = new Date(reportPeriod.endDate).getTime();
+      const len = Math.max(e - s + dayMs, dayMs);
+      const pStart = new Date(s - len).toISOString().slice(0, 10);
+      const pEnd = new Date(s - dayMs).toISOString().slice(0, 10);
+      for (const cc of campaign.campaignCreators) {
+        for (const p of cc.cpsPerformances ?? []) {
+          const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
+          for (const d of daily) {
+            const date = String(d.date ?? '');
+            if (date && date >= pStart && date <= pEnd) { hasPrior = true; break; }
+          }
+          if (hasPrior) break;
+        }
+        if (hasPrior) break;
+      }
+    }
+
+    const activeCreators = campaign.campaignCreators.length;
+    const modules: ModuleCoverageItem[] = [
+      {
+        key: 'periodKpis',
+        label: 'KPI 总览',
+        status: (hasPeriod ? cov.covered !== null || orderStatDays > 0 : activeCreators > 0) ? 'ok' : 'missing',
+        detail: hasPeriod
+          ? `${periodDates.size} 天 daily${orderStatDays ? ` + ${orderStatDays} 天订单` : ''}${!clicksKeySeen ? '，clicks 无日级源' : ''}`
+          : `${activeCreators} 位达人 CPS 汇总`,
+      },
+      {
+        key: 'dailyTrend',
+        label: '表现趋势',
+        status: periodDates.size > 0 ? 'ok' : 'missing',
+        detail: periodDates.size > 0 ? `${periodDates.size} 天数据点` : '无期内 daily 数据，导入 CPS daily 后可用',
+      },
+      {
+        key: 'creators',
+        label: '达人表现',
+        status: activeCreators > 0 ? 'ok' : 'missing',
+        detail: activeCreators > 0 ? `${activeCreators} 位达人` : '未关联达人',
+      },
+      {
+        key: 'topProducts',
+        label: 'Top-Selling Products',
+        status: topProductCount > 0 ? 'ok' : 'missing',
+        detail: topProductCount > 0 ? `${topProductCount} SKU` : '未导入订单明细（CampaignOrder），模块将缺失',
+      },
+      {
+        key: 'basket',
+        label: '购物篮结构',
+        status: hasBasket ? 'ok' : 'missing',
+        detail: hasBasket ? '多件率/客单件数可用' : '依赖订单明细，导入后可用',
+      },
+      {
+        key: 'priorPeriod',
+        label: 'MoM 环比',
+        status: hasPrior ? 'ok' : 'missing',
+        detail: hasPrior ? '前一期有数据，可计算环比' : '前一期无数据（首期报告属正常）',
+      },
+      {
+        key: 'mediaPlacements',
+        label: 'Campaign Placements',
+        status: mediaPlacements.length > 0 ? 'ok' : 'missing',
+        detail: mediaPlacements.length > 0 ? `${mediaPlacements.length} 个资源位` : '未配置资源位（analytics.mediaPlacements），模块将缺失',
+      },
+      {
+        key: 'orderStatusSplit',
+        label: '订单状态拆分',
+        status: orderStatDays > 0 ? 'ok' : 'missing',
+        detail: orderStatDays > 0 ? 'Approved/Pending 可拆分' : '依赖订单中间层，导入后可用',
+      },
+      {
+        key: 'topCountries',
+        label: '市场分布',
+        status: orderStatDays > 0 ? 'ok' : 'missing',
+        detail: orderStatDays > 0 ? '订单国家分布 Top5' : '依赖订单中间层，导入后可用',
+      },
+      {
+        key: 'deviceSplit',
+        label: '设备分布',
+        status: orderStatDays > 0 ? 'ok' : 'missing',
+        detail: orderStatDays > 0 ? '转化设备分布 Top5' : '依赖订单中间层，导入后可用',
+      },
+    ];
+
+    return { requested, modules };
   },
 
   /**

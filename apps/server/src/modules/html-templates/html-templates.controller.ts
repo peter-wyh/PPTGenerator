@@ -4,6 +4,7 @@ import { aiGenerateService, type StreamChunk } from './ai-generate.service';
 import { SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 import { resolveForCampaign } from '../guides/guide.service';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { ApiError } from '../../utils/ApiError';
 import type { AuthPayload } from '../../types/express';
 import type { TemplateStatus } from '@prisma/client';
 
@@ -292,6 +293,19 @@ export const htmlTemplateController = {
       businessLineName,
       businessLineCode,
     });
+  }),
+
+  /** ★ 模块级数据覆盖预检（生成前）：标准模块清单逐项判定数据可用性，
+   *  与 buildCampaignContext 同口径。query: startDate/endDate（可选，报告周期）。 */
+  getModuleCoverage: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId } = req.params;
+    const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+    const result = await aiGenerateService.getModuleCoverage(campaignId, {
+      startDate,
+      endDate,
+    });
+    if (!result) throw ApiError.notFound('Campaign 不存在');
+    res.json(result);
   }),
 
   /** 返回系统提示词的 Markdown 展示版（仅供前端回显，不影响 AI 生成） */

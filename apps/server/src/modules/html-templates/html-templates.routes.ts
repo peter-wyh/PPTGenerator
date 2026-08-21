@@ -158,6 +158,13 @@ router.get(
   htmlTemplateController.getDesignGuide,
 );
 
+// GET /api/v1/html-templates/campaign/:campaignId/module-coverage — ★ 模块级数据覆盖预检
+//   生成前展示哪些模块有数据/缺数据(query: startDate/endDate 可选,报告周期)
+router.get(
+  '/campaign/:campaignId/module-coverage',
+  htmlTemplateController.getModuleCoverage,
+);
+
 // POST /api/v1/html-templates/recipe/render — 实时重渲染(不保存,编辑器预览用)
 router.post(
   '/recipe/render',

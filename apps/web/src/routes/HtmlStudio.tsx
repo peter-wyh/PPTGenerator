@@ -492,6 +492,7 @@ export function HtmlStudio() {
           )}
           <AiGenerateForm
             campaignId={campaignId}
+            reportPeriod={reportPeriod}
             onGenerate={handleGenerate}
             generating={generating}
             error=""

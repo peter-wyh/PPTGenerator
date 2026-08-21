@@ -65,6 +65,23 @@ export interface RecipeDataCoverage {
   complete: boolean;
 }
 
+/** ★ 模块级数据覆盖预检(生成前)——镜像服务端 ModuleCoverageResult。 */
+export interface ModuleCoverageItem {
+  /** 模块键(= AI 上下文注入字段名) */
+  key: string;
+  /** 模块中文名 */
+  label: string;
+  /** 'ok' = 有数据;'missing' = 缺数据 → 生成时渲染 Data Unavailable 占位 */
+  status: 'ok' | 'missing';
+  /** 补充说明 */
+  detail?: string;
+}
+
+export interface ModuleCoverageResult {
+  requested: { start: string; end: string };
+  modules: ModuleCoverageItem[];
+}
+
 // ─── SSE 流式类型 ───────────────────────────────────────────
 
 /** SSE 事件类型 */
@@ -249,6 +266,20 @@ export const htmlTemplatesApi = {
     api
       .get<{ designMd: string; businessLineName: string; businessLineCode: string; guideName: string; guideId: string | null }>(
         `/html-templates/campaign/${campaignId}/design-guide`,
+      )
+      .then((r) => r.data),
+
+  /** ★ 模块级数据覆盖预检（生成前）：标准模块清单逐项判定数据可用性 */
+  getModuleCoverage: (campaignId: string, reportPeriod?: { startDate?: string; endDate?: string }) =>
+    api
+      .get<ModuleCoverageResult>(
+        `/html-templates/campaign/${campaignId}/module-coverage`,
+        {
+          params: {
+            ...(reportPeriod?.startDate ? { startDate: reportPeriod.startDate } : {}),
+            ...(reportPeriod?.endDate ? { endDate: reportPeriod.endDate } : {}),
+          },
+        },
       )
       .then((r) => r.data),
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { htmlTemplatesApi } from '@/api/htmlTemplates';
+import { htmlTemplatesApi, type ModuleCoverageResult } from '@/api/htmlTemplates';
 import { Button } from '@/components/Button';
 import { MarkdownPreview } from '@/components/MarkdownEditor';
 import { getPresetsForBL } from '@/report-presets';
@@ -8,13 +8,15 @@ type Mode = 'ai' | 'recipe';
 
 interface Props {
   campaignId?: string;
+  /** ★ 报告周期(project.meta.reportPeriod)——模块覆盖预检的判定口径 */
+  reportPeriod?: { startDate?: string; endDate?: string };
   onGenerate: (vals: { mode: Mode; prompt: string; designMd: string; scenario: string }) => void;
   generating?: boolean;
   generateLabel?: string;
   error?: string;
 }
 
-export function AiGenerateForm({ campaignId, onGenerate, generating, generateLabel, error }: Props) {
+export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generating, generateLabel, error }: Props) {
   const [mode, setMode] = useState<Mode>('ai');
   const [prompt, setPrompt] = useState('');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
@@ -30,6 +32,10 @@ export function AiGenerateForm({ campaignId, onGenerate, generating, generateLab
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [promptFullscreen, setPromptFullscreen] = useState(false);
   const [systemPromptFullscreen, setSystemPromptFullscreen] = useState(false);
+
+  // ★ 模块覆盖预检（生成前）——campaignId/reportPeriod 变化时拉取
+  const [moduleCoverage, setModuleCoverage] = useState<ModuleCoverageResult | null>(null);
+  const [coverageLoading, setCoverageLoading] = useState(false);
 
   const presets = useMemo(() => getPresetsForBL(blCode || undefined), [blCode]);
 
@@ -54,6 +60,19 @@ export function AiGenerateForm({ campaignId, onGenerate, generating, generateLab
       .catch(() => {})
       .finally(() => setDesignMdLoading(false));
   }, [campaignId]);
+
+  useEffect(() => {
+    if (!campaignId) {
+      setModuleCoverage(null);
+      return;
+    }
+    setCoverageLoading(true);
+    htmlTemplatesApi
+      .getModuleCoverage(campaignId, reportPeriod)
+      .then(setModuleCoverage)
+      .catch(() => setModuleCoverage(null))
+      .finally(() => setCoverageLoading(false));
+  }, [campaignId, reportPeriod?.startDate, reportPeriod?.endDate]);
 
   useEffect(() => {
     if (!promptFullscreen && !systemPromptFullscreen) return;
@@ -111,6 +130,50 @@ export function AiGenerateForm({ campaignId, onGenerate, generating, generateLab
           </button>
         </div>
       </div>
+
+      {/* ★ 数据覆盖预检——生成前展示哪些模块有数据/缺数据 */}
+      {campaignId && (coverageLoading || moduleCoverage) && (
+        <div className="mb-4 rounded-lg border border-border-default">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-xs font-medium text-foreground-secondary">📊 数据覆盖预检</span>
+            {moduleCoverage && (
+              <span className="text-[10px] text-foreground-muted">
+                {moduleCoverage.modules.filter((m) => m.status === 'ok').length}/{moduleCoverage.modules.length} 模块有数据
+              </span>
+            )}
+          </div>
+          {coverageLoading ? (
+            <p className="px-3 pb-2 text-center text-[11px] text-foreground-muted">检测中…</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border-default px-3 py-2">
+              {moduleCoverage!.modules.map((m) => (
+                <div
+                  key={m.key}
+                  className="flex items-center gap-1.5 text-[11px]"
+                  title={m.detail || m.label}
+                >
+                  <span
+                    className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                      m.status === 'ok' ? 'bg-green-500' : 'bg-red-400'
+                    }`}
+                  />
+                  <span className={m.status === 'ok' ? 'text-foreground-secondary' : 'text-foreground-muted'}>
+                    {m.label}
+                  </span>
+                  {m.status === 'missing' && (
+                    <span className="shrink-0 text-[10px] text-red-400" title={m.detail}>✕</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {moduleCoverage && moduleCoverage.modules.some((m) => m.status === 'missing') && (
+            <p className="border-t border-border-default px-3 py-1.5 text-[10px] leading-relaxed text-amber-500">
+              ⚠️ 红点模块无数据：生成时将渲染 Data Unavailable 占位（不编造）。可在数据管理导入对应数据后重新检测。
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Mode-specific config */}
       {mode === 'ai' ? (

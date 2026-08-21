@@ -4,6 +4,13 @@ import { AiGenerateForm } from './AiGenerateForm';
 
 vi.mock('@/api/htmlTemplates', () => ({
   htmlTemplatesApi: {
+    getModuleCoverage: vi.fn().mockResolvedValue({
+      requested: { start: '2026-07-01', end: '2026-07-31' },
+      modules: [
+        { key: 'dailyTrend', label: '核心趋势', status: 'ok', detail: '31 天' },
+        { key: 'topProducts', label: '热销商品', status: 'missing', detail: '缺订单行项目' },
+      ],
+    }),
     getDesignGuide: vi.fn().mockResolvedValue({
       designMd: '# brand guide',
       businessLineName: 'WANDER',
