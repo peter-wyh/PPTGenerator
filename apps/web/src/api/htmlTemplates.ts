@@ -55,6 +55,13 @@ export interface AgentChatMessage {
   reasoning?: string;
   /** 附件图片的 base64 data URL 列表（vision 多模态编辑用） */
   images?: string[];
+  /**
+   * ★ 对话即版本历史：该消息产生时的完整 HTML 快照。
+   * assistant 消息 = 本次编辑后的成品（可恢复点）；user 消息 = 发送时的原状（编辑前状态）。
+   * 右侧预览跟随「最新 assistant 快照」；点历史消息「恢复到此版本」= onHtmlChange(snapshot) + autoSave。
+   * 大小量级：报告 HTML 20-40KB ≈ base64 图片 1 张，meta JSON 5mb limit 内可存数十轮对话。
+   */
+  htmlSnapshot?: string;
 }
 
 /** 「宁缺勿假」数据覆盖(服务端 recipe reportContent.dataCoverage / SSE done chunk 附带)。 */

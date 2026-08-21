@@ -373,6 +373,8 @@ export function HtmlStudio() {
             action: 'generate',
             reasoning: streamingReasoning || undefined,
             ts: new Date().toISOString(),
+            // ★ 对话即版本历史:首稿快照 = 版本树的根,后续编辑各成版本点
+            htmlSnapshot: streamingHtml,
           };
           setAgentHistory([userMsg, genMsg]);
 
@@ -626,18 +628,21 @@ export function HtmlStudio() {
                     <button
                       onClick={() => {
                         if (id && generatedHtml) {
+                          const manualHistory: AgentChatMessage[] = [
+                            ...agentHistory,
+                            {
+                              role: 'assistant',
+                              content: '📝 源码已手动编辑并保存',
+                              action: 'manual',
+                              ts: new Date().toISOString(),
+                              // ★ 对话即版本历史:手动保存也是版本点
+                              htmlSnapshot: generatedHtml,
+                            },
+                          ];
+                          setAgentHistory(manualHistory);
                           htmlTemplatesApi
-                            .autoSave(id, generatedHtml, agentHistory)
-                            .then(() => {
-                              setSaved(true);
-                              const manualMsg: AgentChatMessage = {
-                                role: 'assistant',
-                                content: '📝 源码已手动编辑并保存',
-                                action: 'manual',
-                                ts: new Date().toISOString(),
-                              };
-                              setAgentHistory([...agentHistory, manualMsg]);
-                            })
+                            .autoSave(id, generatedHtml, manualHistory)
+                            .then(() => setSaved(true))
                             .catch(() => {});
                         }
                       }}

@@ -231,6 +231,8 @@ export function AgentChatPanel({
         role: 'assistant',
         content: 'HTML 已加载到编辑器 ✅ 可以继续对话修改',
         ts: new Date().toISOString(),
+        // ★ 对话即版本历史:导入的 HTML 也是版本点
+        htmlSnapshot: html,
       };
       const newHistory = [...agentHistory, userMsg, aiMsg];
       onHistoryChange(newHistory);
@@ -248,6 +250,33 @@ export function AgentChatPanel({
     setIsThinking(false);
     setReasoning('');
   }, []);
+
+  // ★ 对话即版本历史:恢复到历史快照。
+  //  右侧预览立即切换(onHtmlChange) + autoSave 落库 + 历史追加「已恢复」消息(带同一快照,仍是版本点)。
+  const handleRestoreSnapshot = useCallback(
+    (snapshot: string, sourceMsg: AgentChatMessage) => {
+      const label =
+        sourceMsg.action === 'generate'
+          ? '首稿'
+          : sourceMsg.action === 'manual'
+            ? '手动保存版'
+            : sourceMsg.ts
+              ? new Date(sourceMsg.ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+              : '历史版本';
+      const restoreMsg: AgentChatMessage = {
+        role: 'assistant',
+        content: `⟲ 已恢复到 ${label}`,
+        action: 'manual',
+        ts: new Date().toISOString(),
+        htmlSnapshot: snapshot,
+      };
+      const finalHistory = [...agentHistory, restoreMsg];
+      onHtmlChange(snapshot);
+      onHistoryChange(finalHistory);
+      void htmlTemplatesApi.autoSave(projectId, snapshot, finalHistory);
+    },
+    [agentHistory, onHtmlChange, onHistoryChange, projectId],
+  );
 
   // ★ handleSend — SSE 流式编辑
   const handleSend = useCallback(
@@ -320,6 +349,8 @@ export function AgentChatPanel({
             action: 'edit',
             reasoning: reasoningAcc || undefined,
             ts: new Date().toISOString(),
+            // ★ 对话即版本历史:本次编辑后的成品挂快照,历史消息可「恢复到此版本」
+            htmlSnapshot: finalHtml,
           };
           const finalHistory = [...newHistory, aiMsg];
           onHistoryChange(finalHistory);
@@ -420,6 +451,22 @@ export function AgentChatPanel({
                   text={msg.reasoning}
                   defaultCollapsed={false}
                 />
+              )}
+              {/* ★ 对话即版本历史:带快照的消息 = 版本点,可恢复到此版本(右侧预览切换) */}
+              {msg.htmlSnapshot && (
+                <div className="mt-1.5 flex items-center gap-2 border-t border-border-default pt-1.5">
+                  <button
+                    onClick={() => handleRestoreSnapshot(msg.htmlSnapshot!, msg)}
+                    className="text-[10px] text-accent-primary hover:underline"
+                  >
+                    ⟲ 恢复到此版本
+                  </button>
+                  <span className="text-[10px] text-foreground-muted">
+                    {msg.htmlSnapshot.length >= 1024
+                      ? `${Math.round(msg.htmlSnapshot.length / 1024)} KB`
+                      : `${msg.htmlSnapshot.length} B`}
+                  </span>
+                </div>
               )}
             </div>
           </div>
