@@ -35,7 +35,8 @@ export const globalLimiter = rateLimit({
 export const loginLimiter = rateLimit({
   store: new RedisStore({ sendCommand }),
   windowMs: 5 * 60 * 1000,
-  limit: 10,
+  // ★ dev 放宽到 60 次,生产维持 10——本地调试(冒烟脚本/热重载)频繁登录不再卡限流
+  limit: process.env.NODE_ENV === 'production' ? 10 : 60,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   keyGenerator: (req) => req.ip ?? 'unknown',
