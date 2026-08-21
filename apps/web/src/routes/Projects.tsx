@@ -304,17 +304,17 @@ export function Projects() {
             <table className="w-full min-w-[960px] border-collapse text-sm">
               <thead>
                 <tr className="bg-surface-hover text-left text-xs text-foreground-muted">
-                  <th className="px-3 py-2 font-medium">报告名称</th>
-                  <th className="px-3 py-2 font-medium">业务线</th>
-                  <th className="px-3 py-2 font-medium">场景</th>
-                  <th className="px-3 py-2 font-medium">广告主</th>
-                  <th className="px-3 py-2 font-medium">创建人</th>
-                  <th className="px-3 py-2 font-medium">尺寸</th>
-                  <th className="px-3 py-2 font-medium">页数</th>
+                  <th className="px-3 py-2 text-left font-medium">报告名称</th>
+                  <th className="px-3 py-2 text-left font-medium">业务线</th>
+                  <th className="px-3 py-2 text-left font-medium">场景</th>
+                  <th className="px-3 py-2 text-left font-medium">广告主</th>
+                  <th className="px-3 py-2 text-left font-medium">创建人</th>
+                  <th className="px-3 py-2 text-left font-medium">尺寸</th>
+                  <th className="px-3 py-2 text-left font-medium">页数</th>
                   {activeTab === 'ai-html' && (
-                    <th className="px-3 py-2 font-medium">HTML 状态</th>
+                    <th className="px-3 py-2 text-left font-medium">HTML 状态</th>
                   )}
-                  <th className="px-3 py-2 font-medium">更新时间</th>
+                  <th className="px-3 py-2 text-left font-medium">更新时间</th>
                   <th className="px-3 py-2 text-right font-medium">操作</th>
                 </tr>
               </thead>
