@@ -161,6 +161,15 @@ function BusinessLineFormModal({
 
   async function save() {
     if (!code.trim() || !name.trim()) { setError('编码和名称不能为空'); return; }
+    // ★ 前端预检:base64 logo 是上传失败的残留(旧版静默回退),存库必被 zod max(2048) 拒——提前拦下并给可行动文案
+    if (logo.trim().startsWith('data:')) {
+      setError('logo 未上传成功（当前是本地临时数据），请删除后重新点「上传」');
+      return;
+    }
+    if (logo.trim().length > 2048) {
+      setError(`logo URL 超长（${logo.trim().length} 字符 > 2048），请改用「上传」按钮生成的 /uploads/ 短链接`);
+      return;
+    }
     setBusy(true); setError('');
     try {
       const payload = { code: code.trim(), name: name.trim(), logo: logo.trim() || undefined, color: color.trim() || undefined, designMd: designMd.trim() || undefined, designMdUrl: designMdUrl.trim() || undefined };

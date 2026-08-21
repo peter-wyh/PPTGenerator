@@ -1,34 +1,19 @@
 import { api } from './client';
 
 /**
- * 读取 File/Blob 为 base64 data URL（离线兜底）。
- * 当 /uploads 接口不可用时使用，使图片仍能内联展示。
- */
-function readAsDataURL(file: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
-    reader.readAsDataURL(file);
-  });
-}
-
-/**
  * 上传图片（裁剪后的 blob）→ 返回可访问 URL（本地 /uploads 或 OSS）。
- * 网络失败或接口不可用时，fallback 到 base64 data URL（离线兜底），
- * 保证图片仍能就地渲染。
+ *
+ * ★ 不再静默回退 base64 data URL：
+ *   旧逻辑接口失败时回退 base64 填入表单——预览看似有图，但
+ *   a) base64 动辄上万字符，超出 zod logo.max(2048) → 保存必 400；
+ *   b) 图片从未真正落库/落盘，刷新即丢。
+ *   这正是「上传了但不确定成功」的元凶。现在失败显式抛错，由调用方提示用户重试。
  */
 export async function uploadImage(file: Blob): Promise<string> {
   const form = new FormData();
   form.append('file', file);
   // 不要手动设 Content-Type：FormData 必须由浏览器带上 boundary，
   // 否则 multer 解析不出 multipart 边界 → req.file 为空 → 上传 400。
-  try {
-    const res = await api.post<{ url: string }>('/uploads', form);
-    return res.data.url;
-  } catch (err) {
-    // 离线 / 后端不可用：回退为 base64 data URL，保证图片仍能就地展示。
-    console.warn('[uploads] /uploads 失败，回退 base64 data URL：', err);
-    return readAsDataURL(file);
-  }
+  const res = await api.post<{ url: string }>('/uploads', form);
+  return res.data.url;
 }

@@ -34,8 +34,13 @@ export function ImageInput({ value, onChange, aspect }: Props) {
     try {
       const url = await uploadImage(blob);
       onChange(url);
-    } catch {
-      setError('上传失败，请重试');
+    } catch (e) {
+      // ★ 显式报错(不再静默):区分鉴权/网络/服务端,给出可行动文案
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 401) setError('登录已过期，请刷新页面重新登录后再上传');
+      else if (status === 413) setError('图片超过 10MB 限制，请压缩后重试');
+      else if (status && status >= 500) setError('上传服务异常，请稍后重试');
+      else setError('上传失败，请检查网络后重试');
     } finally {
       setUploading(false);
     }

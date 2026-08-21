@@ -48,9 +48,23 @@ export class OssStorage implements Storage {
     const Ctor = (OSSLib.default ?? OSSLib) as new (o: typeof opts) => OssClient;
     this.client = new Ctor(opts);
     // 公网访问基址：自定义 endpoint 优先，否则 bucket.region 风格。
-    this.baseUrl =
-      opts.endpoint?.replace(/^https?:\/\//, `https://${opts.bucket}.`) ||
-      `https://${opts.bucket}.${opts.region}.aliyuncs.com`;
+    // ★ 两个实测坑的修复：
+    //   1) endpoint 缺协议头（如 "oss-cn-hangzhou.aliyuncs.com"）→ 必须补 https://，
+    //      否则拼出的 URL 无 scheme，存库后 <img src> 被当相对路径 → 图裂；
+    //   2) endpoint 用内网（-internal）→ put 走内网没问题，但对外的 URL 必须替换为
+    //      公网域名，否则浏览器(容器外)永远打不开 → 「上传成功但显示不出来」。
+    const normalized = opts.endpoint
+      ? opts.endpoint.replace(/^-+/, '').replace(/^([^/]+?)\/+$/, '$1') // 去首尾干扰
+      : '';
+    const withScheme = normalized
+      ? normalized.startsWith('http://') || normalized.startsWith('https://')
+        ? normalized
+        : `https://${normalized}`
+      : '';
+    const publicEndpoint = withScheme.replace('-internal.aliyuncs.com', '.aliyuncs.com'); // 内网→公网(仅用于 URL)
+    this.baseUrl = publicEndpoint
+      ? publicEndpoint.replace(/^https?:\/\//, `https://${opts.bucket}.`)
+      : `https://${opts.bucket}.${opts.region}.aliyuncs.com`;
   }
 
   async save(buf: Buffer, ext: string): Promise<SaveResult> {

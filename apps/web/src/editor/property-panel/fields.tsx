@@ -623,6 +623,8 @@ export function TableCellImageInput({ value, onChange }: { value: string; onChan
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  // ★ 上传失败显式提示(不再静默)——title 悬浮展示,不撑表格行高
+  const [error, setError] = useState('');
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -636,8 +638,14 @@ export function TableCellImageInput({ value, onChange }: { value: string; onChan
     try {
       const url = await uploadImage(blob);
       onChange(url);
-    } catch {
-      // 失败静默；按钮可重试
+      setError('');
+    } catch (e) {
+      // ★ 显式报错(不再静默):区分鉴权/网络/服务端,给出可行动文案
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 401) setError('登录已过期，请刷新页面重新登录后再上传');
+      else if (status === 413) setError('图片超过 10MB 限制，请压缩后重试');
+      else if (status && status >= 500) setError('上传服务异常，请稍后重试');
+      else setError('上传失败，请检查网络后重试');
     } finally {
       setUploading(false);
     }
@@ -649,13 +657,15 @@ export function TableCellImageInput({ value, onChange }: { value: string; onChan
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        title={value || '点击上传图片'}
-        className="flex h-6 w-16 items-center justify-center overflow-hidden rounded border border-border-default bg-surface-secondary hover:bg-surface-hover disabled:opacity-40"
+        title={error || value || '点击上传图片'}
+        className={error
+          ? 'flex h-6 w-16 items-center justify-center overflow-hidden rounded border border-red-500 hover:bg-surface-hover disabled:opacity-40'
+          : 'flex h-6 w-16 items-center justify-center overflow-hidden rounded border border-border-default bg-surface-secondary hover:bg-surface-hover disabled:opacity-40'}
       >
         {value ? (
           <img src={value} alt="" className="h-full w-full object-cover" draggable={false} />
         ) : (
-          <span className="text-[10px] text-foreground-muted">{uploading ? '…' : '上传'}</span>
+          <span className="text-[10px] text-foreground-muted">{uploading ? '…' : error ? '!' : '上传'}</span>
         )}
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
