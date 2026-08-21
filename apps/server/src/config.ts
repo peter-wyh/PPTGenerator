@@ -29,6 +29,21 @@ function int(name: string, fallback: number): number {
   return n;
 }
 
+/**
+ * TRUST_PROXY 环境变量 → Express trust proxy 值。
+ * '' / 未设置 → false；'2' 碼数字 → number；其他（'loopback'、CIDR 列表）→ 原样字符串。
+ * 'true' 显式拒绝：等于信任整个可伪造的 XFF 链。
+ */
+function parseTrustProxy(v: string | undefined): boolean | number | string {
+  if (v === undefined || v === '') return false;
+  if (v === 'true') throw new Error('[FATAL] TRUST_PROXY=true trusts the entire spoofable XFF chain — use a hop count (e.g. 2) or CIDRs instead');
+  if (/^\d+$/.test(v)) return Number(v);
+  return v;
+}
+
+/** 单测用：暴露解析函数（config 对象是模块级单例，无法通过重新 import 刷新）。 */
+export const parseTrustProxyForTest = parseTrustProxy;
+
 export const config = {
   env: process.env.NODE_ENV ?? 'development',
   isProd: process.env.NODE_ENV === 'production',
@@ -58,6 +73,16 @@ export const config = {
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()) ?? ['http://localhost:5173'],
   },
+
+  /**
+   * Express trust proxy 设置（影响 req.ip / X-Forwarded-For 解析，限流按 IP 计数的前提）。
+   * - false（默认，无代理直连）：req.ip = socket 对端 IP
+   * - 数字 N：信任最近 N 跳代理。K8s 链路 浏览器→ingress→web nginx→server 应设 2，
+   *   否则 req.ip 恒为 nginx 容器 IP，全站用户共享同一个限流桶（10 次/5 分钟一锁全站）。
+   * - 逗号分隔 CIDR / 'loopback' 等：按 Express 支持的格式原样传入。
+   * 注意：true 等于信任整个 XFF（可伪造），禁止使用。
+   */
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 
   /** 前端 Web 地址（PDF 导出时 puppeteer 访问 /share/:token?print=1 渲染页面）。 */
   webUrl: process.env.WEB_URL ?? 'http://localhost:5173',

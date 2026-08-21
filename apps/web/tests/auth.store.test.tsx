@@ -53,6 +53,35 @@ describe('auth store', () => {
     expect(useAuthStore.getState().status).not.toBe('authed');
   });
 
+  it('login 429 限流 → 提示等待而非「密码错误」（防用户继续重试加重限流）', async () => {
+    loginMock.mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 429'), {
+        response: { status: 429, data: { error: 'TOO_MANY_REQUESTS' } },
+      }),
+    );
+    await useAuthStore.getState().login('a@x.com', 'pw');
+    expect(useAuthStore.getState().loginError).toContain('限流');
+    expect(useAuthStore.getState().loginError).not.toContain('密码错误');
+  });
+
+  it('login 401 凭据错误 → 保持「邮箱或密码错误」文案', async () => {
+    loginMock.mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 401'), {
+        response: { status: 401, data: { error: 'INVALID_CREDENTIALS' } },
+      }),
+    );
+    await useAuthStore.getState().login('a@x.com', 'pw');
+    expect(useAuthStore.getState().loginError).toBe('邮箱或密码错误');
+  });
+
+  it('login 网络错误/5xx → 服务不可用文案，不误导用户改密码', async () => {
+    loginMock.mockRejectedValue(
+      Object.assign(new Error('Network Error'), { response: undefined }),
+    );
+    await useAuthStore.getState().login('a@x.com', 'pw');
+    expect(useAuthStore.getState().loginError).not.toContain('密码');
+  });
+
   it('restore success → authed', async () => {
     meMock.mockResolvedValue(user);
     await useAuthStore.getState().restore();

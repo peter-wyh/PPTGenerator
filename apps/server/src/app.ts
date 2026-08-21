@@ -12,6 +12,8 @@ import { globalLimiter } from './middleware/rate-limit';
 export function createApp(): express.Express {
   const app = express();
 
+  // 限流/日志里的 req.ip 要反映真实客户端 IP（见 config.trustProxy 注释）。
+  app.set('trust proxy', config.trustProxy);
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(
