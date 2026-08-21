@@ -14,11 +14,14 @@ import {
   SCENARIO_SUB_LABELS,
 } from '@/projectsMeta';
 import { useBusinessLineCodes } from '@/editor/useBusinessLineLogo';
+import { useAuthStore } from '@/stores/auth';
 import type { ProjectMeta, ProjectSummary, Scenario } from '@mediakit/shared';
 import { toast } from '../components/Toast';
 
 export function Projects() {
   const navigate = useNavigate();
+  // 当前登录用户（判断报告是否本人所有：非 owner 的同业务线报告只读）
+  const me = useAuthStore((s) => s.user);
   const BUSINESS_LINES = useBusinessLineCodes(); // 数据库唯一来源
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -367,19 +370,32 @@ export function Projects() {
                     )}
                     <td className="px-3 py-2 text-foreground-muted">{new Date(p.updatedAt).toLocaleDateString()}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <button
-                        onClick={() => {
-                          if (p.meta?.styleType === 'ai-html') {
-                            navigate(`/projects/${p.id}/html-studio`);
-                            return;
-                          }
-                          navigate(`/projects/${p.id}`);
-                        }}
-                        className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
-                        title={p.meta?.styleType === 'ai-html' ? '进入 AI HTML 工作台' : '进入可视化编辑器'}
-                      >
-                        {p.meta?.styleType === 'ai-html' ? '⚡ AI生成' : '可视化编辑'}
-                      </button>
+                      {(() => {
+                        const mine = p.ownerId === me?.id;
+                        return mine ? (
+                          <button
+                            onClick={() => {
+                              if (p.meta?.styleType === 'ai-html') {
+                                navigate(`/projects/${p.id}/html-studio`);
+                                return;
+                              }
+                              navigate(`/projects/${p.id}`);
+                            }}
+                            className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
+                            title={p.meta?.styleType === 'ai-html' ? '进入 AI HTML 工作台' : '进入可视化编辑器'}
+                          >
+                            {p.meta?.styleType === 'ai-html' ? '⚡ AI生成' : '可视化编辑'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { if (p.meta?.styleType === 'ai-html') void handlePreviewHtml(p); else navigate(`/projects/${p.id}`); }}
+                            className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
+                            title="同业务线报告 · 只读预览"
+                          >
+                            预览
+                          </button>
+                        );
+                      })()}
                       {p.meta?.styleType === 'ai-html' && (
                         <span className="relative ml-1 inline-block">
                           <button
@@ -424,12 +440,15 @@ export function Projects() {
                           )}
                         </span>
                       )}
+                      {p.ownerId === me?.id && (
                       <button
                         onClick={() => { setEditError(null); setEditing(p); }}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
                       >
                         编辑
                       </button>
+                      )}
+                      {p.ownerId === me?.id && (
                       <button
                         onClick={() => setDupFor(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -437,6 +456,8 @@ export function Projects() {
                       >
                         复制
                       </button>
+                      )}
+                      {p.ownerId === me?.id && (
                       <button
                         onClick={() => setSaveTplFor(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -444,12 +465,15 @@ export function Projects() {
                       >
                         存模版
                       </button>
+                      )}
+                      {p.ownerId === me?.id && (
                       <button
                         onClick={() => setPendingDelete(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-red"
                       >
                         删除
                       </button>
+                      )}
                     </td>
                   </tr>
                 ))}

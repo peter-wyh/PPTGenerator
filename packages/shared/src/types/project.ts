@@ -6,6 +6,8 @@ import type { Page } from './page';
 
 export interface ProjectSummary {
   id: string;
+  /** 属主用户 id（前端判断「我的/同业务线可见」用）。 */
+  ownerId: string;
   name: string;
   width: number;
   height: number;

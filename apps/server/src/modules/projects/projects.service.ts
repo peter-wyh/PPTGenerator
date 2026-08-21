@@ -21,6 +21,7 @@ function metaOf(p: Project): ProjectMeta | undefined {
 function toSummary(p: Project): ProjectSummary {
   return {
     id: p.id,
+    ownerId: p.ownerId,
     name: p.name,
     width: p.width,
     height: p.height,
@@ -186,9 +187,18 @@ async function isAdminUser(userId: string): Promise<boolean> {
 }
 
 export const projectsService = {
-  async list(ownerId: string, admin = false): Promise<ProjectSummary[]> {
+  /**
+   * 报告列表。ADMIN 全量；USER = 自己的 + 同业务线的（meta.businessLine === 用户业务线）。
+   * 业务线归属存于 meta JSON（schema 无独立列），同线可见只影响列表与读，不影响写权限。
+   */
+  async list(ownerId: string, admin = false, businessLineCode: string | null = null): Promise<ProjectSummary[]> {
+    const where = admin
+      ? {}
+      : businessLineCode
+        ? { OR: [{ ownerId }, { meta: { path: '$.businessLine', equals: businessLineCode } }] }
+        : { ownerId };
     const projects = await prisma.project.findMany({
-      where: admin ? {} : { ownerId },
+      where,
       orderBy: { updatedAt: 'desc' },
     });
     return projects.map(toSummary);
@@ -271,17 +281,38 @@ export const projectsService = {
     return toDetail(project);
   },
 
-  /** 属主读取某报告的 HTML 源码(仅供列表预览/下载/复制)。ADMIN 可读取任意。 */
+  /**
+   * 读路径鉴权：owner / ADMIN / 同业务线 USER 可读（列表可见即可预览/下载/复制源码）。
+   * 写路径（update/remove/复制副本）仍走 getOwnedOrThrow —— 同业务线只读。
+   */
+  async getReadableOrThrow(ownerId: string, id: string): Promise<ProjectDetail> {
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project) throw ApiError.notFound('Project not found');
+    if (project.ownerId === ownerId || await isAdminUser(ownerId)) return toDetail(project);
+    const bl = metaOf(project)?.businessLine;
+    const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { role: true, businessLineCode: true } });
+    if (bl && u?.role !== 'ADMIN' && u?.businessLineCode === bl) return toDetail(project);
+    throw ApiError.notFound('Project not found');
+  },
+
+  /** 属主读取某报告的 HTML 源码(仅供列表预览/下载/复制)。ADMIN 可读取任意。
+   *  同业务线 USER 可读（与列表可见性一致）；写路径不受影响。 */
   async getHtml(
     ownerId: string,
     id: string,
   ): Promise<{ id: string; name: string; html: string; updatedAt: string }> {
     const project = await prisma.project.findUnique({
       where: { id },
-      select: { id: true, name: true, ownerId: true, htmlContent: true, updatedAt: true },
+      select: { id: true, name: true, ownerId: true, htmlContent: true, updatedAt: true, meta: true },
     });
-    if (!project || (project.ownerId !== ownerId && !await isAdminUser(ownerId))) {
-      throw ApiError.notFound('Project not found');
+    if (!project) throw ApiError.notFound('Project not found');
+    if (project.ownerId !== ownerId && !await isAdminUser(ownerId)) {
+      // 同业务线只读放行
+      const bl = (project.meta as { businessLine?: string } | null)?.businessLine;
+      const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { role: true, businessLineCode: true } });
+      if (!(bl && u?.role !== 'ADMIN' && u?.businessLineCode === bl)) {
+        throw ApiError.notFound('Project not found');
+      }
     }
     return {
       id: project.id,

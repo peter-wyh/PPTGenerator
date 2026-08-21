@@ -11,7 +11,7 @@ function owner(req: Request): string {
 export const projectsController = {
   list: asyncHandler(async (req: Request, res: Response) => {
     const v = req.user as AuthPayload;
-    res.json({ projects: await projectsService.list(owner(req), v.role === 'ADMIN') });
+    res.json({ projects: await projectsService.list(owner(req), v.role === 'ADMIN', v.businessLineCode ?? null) });
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {
@@ -20,7 +20,7 @@ export const projectsController = {
   }),
 
   get: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ project: await projectsService.getOwnedOrThrow(owner(req), req.params.id) });
+    res.json({ project: await projectsService.getReadableOrThrow(owner(req), req.params.id) });
   }),
 
   getHtml: asyncHandler(async (req: Request, res: Response) => {
