@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOTION Spring Sports Seeding Campaign — Campaign Report</title>
+<script src="http://localhost:5173/vendor/tailwind/play.min.js"></script>
+<link rel="stylesheet" href="http://localhost:5173/vendor/fontawesome/css/all.min.css">
+<script src="http://localhost:5173/vendor/chartjs/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: { colors: {
+  'brand-pink': '#ff099e',
+  'brand-pink-soft': '#fff6f9',
+  'brand-cyan': '#00d5ff',
+  'brand-yellow': '#fff849',
+  'ink': '#1e1c24',
+  'ink-2': '#626166',
+  'ink-3': '#999999',
+  'ink-disabled': '#dddddd',
+  'bg-layout': '#f5f7fa',
+  'bg-card': '#ffffff',
+  'stroke-card': '#ebebeb'
+} } } };
+</script>
+<style>
+  body { background:#f5f7fa; color:#1e1c24; font-family:'Inter',-apple-system,sans-serif; }
+  .num-font { font-family:'Barlow Condensed','Inter',sans-serif; }
+  .card { background:#ffffff; border-radius:12px; border:1px solid #ebebeb; padding:20px; box-shadow:0 1px 3px rgba(30,28,36,0.04); }
+  .module-title { font-size:18px; font-weight:700; position:relative; padding-left:12px; color:#1e1c24; }
+  .module-title::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:4px; height:16px; background:#ff099e; border-radius:2px; }
+  .kpi-value { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:700; line-height:1.1; color:#1e1c24; }
+  .kpi-label { font-size:12px; color:#999999; font-weight:500; letter-spacing:0.02em; text-transform:uppercase; }
+  .data-table { width:100%; border-collapse:collapse; }
+  .data-table th { font-size:12px; color:#626166; font-weight:600; text-align:left; padding:10px 12px; border-bottom:1px solid #ebebeb; white-space:nowrap; vertical-align:middle; background:#fff6f9; }
+  .data-table td { padding:12px; border-bottom:1px solid #f2f2f2; vertical-align:middle; font-size:14px; }
+  .data-table thead tr { border-bottom:1px solid #ebebeb; }
+  .data-table tbody tr:hover { background:rgba(255,9,158,0.04); }
+  .data-table td.num, .data-table th.num { text-align:right; }
+  .tag { padding:2px 8px; border-radius:4px; font-size:12px; font-weight:500; display:inline-block; }
+  .tag-creator { background:#fff6f9; color:#ff099e; border:1px solid rgba(255,9,158,0.25); }
+  .tag-tier { background:#f5f7fa; color:#626166; border:1px solid #ebebeb; }
+  .unavailable-card { background:#fafafa; border:1px dashed #dddddd; border-radius:12px; padding:20px; text-align:center; color:#999999; }
+  .insight-card { border-top:3px solid #ff099e; }
+</style>
+</head>
+<body class="antialiased">
+<div class="max-w-[1136px] mx-auto px-4 py-8 space-y-6">
+
+  <!-- ═══ HERO OVERVIEW ═══ -->
+  <section class="card">
+    <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-[#ebebeb]">
+      <div class="flex items-center gap-3">
+        <img src="http://localhost:5173/uploads/9de9251d05fdbe2c-8bd2e046.png" alt="Digchic" class="h-10 object-contain">
+        <span class="text-[#dddddd] text-xl font-light">×</span>
+        <img src="https://placehold.co/120x120/dc2626/ffffff?text=MO" alt="MOTION" class="h-10 object-contain">
+      </div>
+      <span class="tag bg-[#f5f7fa] border border-[#ebebeb] text-[#626166]"><i class="fa-solid fa-circle-check mr-1 text-[#ff099e]"></i>Completed</span>
+    </div>
+    <div class="pt-5">
+      <h1 class="text-2xl font-bold tracking-tight">MOTION Spring Sports Seeding Campaign</h1>
+      <div class="flex flex-wrap gap-x-6 gap-y-1 mt-2 text-sm text-[#626166]">
+        <span><i class="fa-regular fa-calendar mr-1.5 text-[#999999]"></i>Reporting Period: <span data-field="period.display" class="font-medium text-[#1e1c24]">2026-03-01 ~ 2026-04-15</span></span>
+        <span><i class="fa-brands fa-youtube mr-1.5 text-[#999999]"></i>Platform: <span class="font-medium text-[#1e1c24]">YouTube</span></span>
+        <span><i class="fa-solid fa-sack-dollar mr-1.5 text-[#999999]"></i>Budget: <span class="font-medium text-[#1e1c24]">$260K</span></span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
+        <div class="rounded-lg bg-[#fff6f9] border border-[#ebebeb] p-4">
+          <div class="kpi-label">Total Revenues</div>
+          <div class="kpi-value text-[#ff099e]" data-field="revenue">$53.2K</div>
+        </div>
+        <div class="rounded-lg bg-white border border-[#ebebeb] p-4">
+          <div class="kpi-label">Clicks</div>
+          <div class="kpi-value" data-field="clicks">36.8K</div>
+        </div>
+        <div class="rounded-lg bg-white border border-[#ebebeb] p-4">
+          <div class="kpi-label">Orders</div>
+          <div class="kpi-value" data-field="orders">1.2K</div>
+        </div>
+        <div class="rounded-lg bg-white border border-[#ebebeb] p-4">
+          <div class="kpi-label">New Customer Acquisition</div>
+          <div class="kpi-value" data-field="newCustomers">305</div>
+        </div>
+        <div class="rounded-lg bg-white border border-[#ebebeb] p-4">
+          <div class="kpi-label">AOV</div>
+          <div class="kpi-value" data-field="aov">$45</div>
+        </div>
+        <div class="rounded-lg bg-[#fff6f9] border border-[#ebebeb] p-4">
+          <div class="kpi-label">ROAS</div>
+          <div class="kpi-value text-[#ff099e]" data-field="roas">9.0</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 01 PERFORMANCE TREND ═══ -->
+  <section class="card">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h2 class="module-title">01 · Performance Trend</h2>
+      <div class="flex flex-wrap gap-2 text-xs">
+        <span class="tag bg-[#fff6f9] border border-[#ebebeb] text-[#626166]"><span class="inline-block w-2 h-2 rounded-sm bg-[#ff099e] mr-1.5"></span>Daily Revenue</span>
+        <span class="tag bg-[#f5f7fa] border border-[#ebebeb] text-[#626166]"><span class="inline-block w-2 h-2 rounded-sm bg-[#00d5ff] mr-1.5"></span>Daily Orders</span>
+        <span class="tag bg-[#f5f7fa] border border-[#ebebeb] text-[#626166]">Peak Revenue Day: Mar 22 — $2,181.09</span>
+        <span class="tag bg-[#f5f7fa] border border-[#ebebeb] text-[#626166]">Peak Orders Day: Mar 15 — 47 orders</span>
+      </div>
+    </div>
+    <p class="text-sm text-[#626166] mb-4">Daily revenue (bars, left axis) and attributed orders (line, right axis) across the full flight. A clear step-change begins Mar 15, when daily clicks nearly tripled versus the Mar 1–14 baseline.</p>
+    <div class="h-[340px]"><canvas data-field="dailyTrend" id="trendChart"></canvas></div>
+  </section>
+
+  <!-- ═══ 02 PUBLISHER PERFORMANCE OVERVIEW ═══ -->
+  <section class="card">
+    <h2 class="module-title mb-4">02 · Publisher Performance Overview</h2>
+    <div class="overflow-x-auto">
+      <table class="data-table min-w-[960px]">
+        <thead>
+          <tr>
+            <th>Publisher</th>
+            <th>Type</th>
+            <th class="num">Posts</th>
+            <th class="num">Clicks</th>
+            <th class="num">Impressions</th>
+            <th class="num">Orders</th>
+            <th class="num">Sales</th>
+            <th class="num">Conversion</th>
+            <th class="num">New Customers</th>
+            <th class="num">Commission</th>
+          </tr>
+        </thead>
+        <tbody data-field="creators">
+          <tr data-creator="Leo Sato">
+            <td>
+              <span class="inline-flex items-center gap-2.5 align-middle">
+                <img src="https://picsum.photos/seed/Leo%20Sato/200/200" alt="Leo Sato" class="w-8 h-8 rounded-full object-cover">
+                <span class="leading-tight">
+                  <span class="block font-semibold" data-field="creator.name">Leo Sato</span>
+                  <span class="block text-xs text-[#999999]">YouTube · <span class="tag tag-tier" style="padding:0 6px;">Mega</span></span>
+                </span>
+              </span>
+            </td>
+            <td><span class="tag tag-creator">Creator</span></td>
+            <td class="num" data-field="creator.performance.posts">4</td>
+            <td class="num" data-field="creator.cps.clicks">12,108</td>
+            <td class="num" data-field="creator.cps.impressions">119,174</td>
+            <td class="num" data-field="creator.cps.orders">395</td>
+            <td class="num font-semibold" data-field="creator.cps.gmv">$18,096.84</td>
+            <td class="num font-bold text-[#ff099e]" data-field="creator.cvr">3.26%</td>
+            <td class="num" data-field="creator.cps.newCustomers">103</td>
+            <td class="num" data-field="creator.cps.commission">$1,988.94</td>
+          </tr>
+          <tr data-creator="Marcus Webb">
+            <td>
+              <span class="inline-flex items-center gap-2.5 align-middle">
+                <img src="https://picsum.photos/seed/Marcus%20Bell/200/200" alt="Marcus Webb" class="w-8 h-8 rounded-full object-cover">
+                <span class="leading-tight">
+                  <span class="block font-semibold" data-field="creator.name">Marcus Webb</span>
+                  <span class="block text-xs text-[#999999]">YouTube · <span class="tag tag-tier" style="padding:0 6px;">Macro</span></span>
+                </span>
+              </span>
+            </td>
+            <td><span class="tag tag-creator">Creator</span></td>
+            <td class="num" data-field="creator.performance.posts">3</td>
+            <td class="num" data-field="creator.cps.clicks">9,833</td>
+            <td class="num" data-field="creator.cps.impressions">100,179</td>
+            <td class="num" data-field="creator.cps.orders">315</td>
+            <td class="num font-semibold" data-field="creator.cps.gmv">$14,104.20</td>
+            <td class="num font-bold text-[#ff099e]" data-field="creator.cvr">3.20%</td>
+            <td class="num" data-field="creator.cps.newCustomers">83</td>
+            <td class="num" data-field="creator.cps.commission">$1,543.93</td>
+          </tr>
+          <tr data-creator="Stella Zhou">
+            <td>
+              <span class="inline-flex items-center gap-2.5 align-middle">
+                <img src="https://picsum.photos/seed/Stella%20Zhou/200/200" alt="Stella Zhou" class="w-8 h-8 rounded-full object-cover">
+                <span class="leading-tight">
+                  <span class="block font-semibold" data-field="creator.name">Stella Zhou</span>
+                  <span class="block text-xs text-[#999999]">Douyin · <span class="tag tag-tier" style="padding:0 6px;">Mega</span></span>
+                </span>
+              </span>
+            </td>
+            <td><span class="tag tag-creator">Creator</span></td>
+            <td class="num" data-field="creator.performance.posts">1</td>
+            <td class="num" data-field="creator.cps.clicks">8,158</td>
+            <td class="num" data-field="creator.cps.impressions">81,264</td>
+            <td class="num" data-field="creator.cps.orders">251</td>
+            <td class="num font-semibold" data-field="creator.cps.gmv">$11,348.17</td>
+            <td class="num font-bold text-[#ff099e]" data-field="creator.cvr">3.08%</td>
+            <td class="num" data-field="creator.cps.newCustomers">62</td>
+            <td class="num" data-field="creator.cps.commission">$1,250.29</td>
+          </tr>
+          <tr data-creator="Tom Reyes">
+            <td>
+              <span class="inline-flex items-center gap-2.5 align-middle">
+                <img src="https://picsum.photos/seed/Tom%20Reyes/200/200" alt="Tom Reyes" class="w-8 h-8 rounded-full object-cover">
+                <span class="leading-tight">
+                  <span class="block font-semibold" data-field="creator.name">Tom Reyes</span>
+                  <span class="block text-xs text-[#999999]">TikTok · <span class="tag tag-tier" style="padding:0 6px;">Micro</span></span>
+                </span>
+              </span>
+            </td>
+            <td><span class="tag tag-creator">Creator</span></td>
+            <td class="num" data-field="creator.performance.posts">4</td>
+            <td class="num" data-field="creator.cps.clicks">6,674</td>
+            <td class="num" data-field="creator.cps.impressions">65,380</td>
+            <td class="num" data-field="creator.cps.orders">217</td>
+            <td class="num font-semibold" data-field="creator.cps.gmv">$9,667.62</td>
+            <td class="num font-bold text-[#ff099e]" data-field="creator.cvr">3.25%</td>
+            <td class="num" data-field="creator.cps.newCustomers">57</td>
+            <td class="num" data-field="creator.cps.commission">$1,066.01</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="font-semibold">
+            <td class="text-[#1e1c24]">Totals</td>
+            <td></td>
+            <td class="num">12</td>
+            <td class="num" data-field="clicks.total">36,773</td>
+            <td class="num">365,997</td>
+            <td class="num" data-field="orders.total">1,178</td>
+            <td class="num" data-field="revenue.total">$53,216.83</td>
+            <td class="num text-[#ff099e]" data-field="cvr.total">3.20%</td>
+            <td class="num">305</td>
+            <td class="num">$5,849.17</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ 03 INSIGHT & ANALYSIS ═══ -->
+  <section class="card">
+    <h2 class="module-title mb-5">03 · Insight &amp; Analysis</h2>
+
+    <!-- 3.1–3.3 unavailable dimensions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div class="unavailable-card">
+        <i class="fa-solid fa-layer-group text-xl mb-2 block"></i>
+        <div class="font-semibold text-sm text-[#626166]">Top-Selling Categories</div>
+        <div class="text-xs mt-1">Data Unavailable</div>
+        <div class="text-[11px] mt-1 text-[#dddddd]">Category-level sales not reported for this period.</div>
+      </div>
+      <div class="unavailable-card">
+        <i class="fa-solid fa-globe text-xl mb-2 block"></i>
+        <div class="font-semibold text-sm text-[#626166]">Top Market (By Sales)</div>
+        <div class="text-xs mt-1">Data Unavailable</div>
+        <div class="text-[11px] mt-1 text-[#dddddd]">Country-level revenue split not reported for this period.</div>
+      </div>
+      <div class="unavailable-card">
+        <i class="fa-solid fa-ticket text-xl mb-2 block"></i>
+        <div class="font-semibold text-sm text-[#626166]">Top Promotion Offer</div>
+        <div class="text-xs mt-1">Data Unavailable</div>
+        <div class="text-[11px] mt-1 text-[#dddddd]">Offer usage (Code / Bundle) not reported for this period.</div>
+      </div>
+    </div>
+
+    <!-- 3.5 New Customer Rate -->
+    <div class="rounded-xl bg-[#fff6f9] border border-[#ebebeb] p-5 mb-6">
+      <h3 class="text-sm font-semibold text-[#1e1c24] mb-3">3.5 · New Customer Rate</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+        <div>
+          <div class="kpi-label">New Customers</div>
+          <div class="kpi-value text-[#ff099e]" data-field="newCustomers.rate">305</div>
+        </div>
+        <div>
+          <div class="kpi-label">Share of Total Orders</div>
+          <div class="kpi-value">25.9%</div>
+        </div>
+        <div>
+          <div class="kpi-label">Total Orders</div>
+          <div class="kpi-value">1,178</div>
+        </div>
+        <div>
+          <div class="kpi-label">MoM Change</div>
+          <div class="kpi-value text-[#999999]">N/A</div>
+          <div class="text-[11px] text-[#999999] mt-1">Prior-period baseline not available.</div>
+        </div>
+      </div>
+      <div class="mt-4 h-2.5 rounded-full bg-white border border-[#ebebeb] overflow-hidden">
+        <div class="h-full bg-[#ff099e] rounded-full" style="width:25.9%"></div>
+      </div>
+      <p class="text-sm text-[#626166] mt-3">1 in 4 attributed orders came from first-time buyers. New-customer share was consistent across all four publishers (24.7%–26.3%), indicating broad — not single-channel — acquisition reach.</p>
+    </div>
+
+    <!-- 3.6 Actionable Insights -->
+    <h3 class="text-sm font-semibold text-[#1e1c24] mb-3">3.6 · Actionable Insights</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card insight-card" style="padding:16px;">
+        <div class="text-sm font-bold mb-1"><i class="fa-solid fa-trophy text-[#ff099e] mr-1.5"></i>Top Performers</div>
+        <p class="text-sm text-[#626166]">Leo Sato drove <strong class="text-[#1e1c24]">$18,097 in revenue</strong> (34% of total) on 395 attributed orders — the campaign's revenue anchor. Tom Reyes delivered the strongest efficiency at <strong class="text-[#1e1c24]">ROAS 9.16</strong> with the highest CVR (3.25%); scale his content volume next flight.</p>
+      </div>
+      <div class="card insight-card" style="border-top-color:#00d5ff; padding:16px;">
+        <div class="text-sm font-bold mb-1"><i class="fa-solid fa-arrow-trend-up text-[#00d5ff] mr-1.5"></i>Stable Growth After Ramp</div>
+        <p class="text-sm text-[#626166]">From Mar 15 onward, daily revenue stepped up from a ~$750 baseline to a sustained $1,000–$2,181 band for the remainder of the flight, peaking at <strong class="text-[#1e1c24]">$2,181.09 on Mar 22</strong>. Post-ramp decay was mild — a sign of durable seeding impact.</p>
+      </div>
+      <div class="card insight-card" style="border-top-color:#fff849; padding:16px;">
+        <div class="text-sm font-bold mb-1"><i class="fa-solid fa-users text-[#d4c900] mr-1.5"></i>Platform Mix</div>
+        <p class="text-sm text-[#626166]">YouTube publishers generated <strong class="text-[#1e1c24]">21,941 clicks (59.6%)</strong> and $32,201 in sales — the conversion backbone. Douyin and TikTok added incremental scale at comparable CVR (3.08%–3.25%), validating the cross-platform seeding structure.</p>
+      </div>
+      <div class="card insight-card" style="border-top-color:#1e1c24; padding:16px;">
+        <div class="text-sm font-bold mb-1"><i class="fa-solid fa-magnifying-glass-chart text-[#1e1c24] mr-1.5"></i>Watch: High Traffic, Flat CVR</div>
+        <p class="text-sm text-[#626166]">Click-to-order conversion held within a tight 3.08%–3.26% band across publishers. Stella Zhou's Douyin traffic converted lowest (3.08%) despite a 12.0% engagement rate — review the landing path for that channel to unlock upside.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 04 ATTRIBUTION DEEP-DIVE ═══ -->
+  <section class="card">
+    <h2 class="module-title mb-5">04 · Attribution Deep-Dive</h2>
+
+    <h3 class="text-sm font-semibold text-[#1e1c24] mb-3">Overall KPI</h3>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div class="rounded-lg border border-[#ebebeb] p-3.5 bg-[#fff6f9]">
+        <div class="kpi-label">Tracked Clicks</div>
+        <div class="kpi-value" data-field="trackedClicks">36,773</div>
+      </div>
+      <div class="rounded-lg border border-[#ebebeb] p-3.5">
+        <div class="kpi-label">Attributed Orders</div>
+        <div class="kpi-value" data-field="attributedOrders">1,178</div>
+      </div>
+      <div class="rounded-lg border border-[#ebebeb] p-3.5">
+        <div class="kpi-label">CVR</div>
+        <div class="kpi-value" data-field="cvr">3.20%</div>
+      </div>
+      <div class="rounded-lg border border-[#ebebeb] p-3.5">
+        <div class="kpi-label">Attributed Sales</div>
+        <div class="kpi-value" data-field="attributedSales">$53,217</div>
+      </div>
+      <div class="rounded-lg border border-[#ebebeb] p-3.5">
+        <div class="kpi-label">Spend</div>
+        <div class="kpi-value" data-field="spend">$5,897</div>
+      </div>
+      <div class="rounded-lg border border-[#ebebeb] p-3.5 bg-[#fff6f9]">
+        <div class="kpi-label">ROAS</div>
+        <div class="kpi-value text-[#ff099e]" data-field="roas.deep">9.0</div>
+      </div>
+    </div>
+
+    <h3 class="text-sm font-semibold text-[#1e1c24] mb-3">Order Attribution</h3>
+    <p class="text-sm text-[#626166] mb-5">All 1,178 attributed orders are allocated to the four publishers above — see <strong>06 · Creator Contribution Analysis</strong> for per-creator contribution deep-dive.</p>
+  </section>
+
+  <!-- ═══ 05 TOP-SELLING PRODUCTS ═══ -->
+  <section class="card">
+    <h2 class="module-title mb-4">05 · Top-Selling Products</h2>
+    <p class="text-sm text-[#626166] mb-4">Five best-selling SKUs of the flight, ranked by attributed sales. Multi-packs dominate the top-5 — four of five SKUs are 3-pack or 6-pack formats.</p>
+    <div class="overflow-x-auto">
+      <table class="data-table min-w-[720px]">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th class="num">Orders</th>
+            <th class="num">Qty</th>
+            <th class="num">Sales</th>
+          </tr>
+        </thead>
+        <tbody data-field="topProducts">
+          <tr>
+            <td class="text-[#999999]">1</td>
+            <td class="font-semibold text-[#1e1c24]">Solids 3 Pack - Black</td>
+            <td class="num">25</td>
+            <td class="num">36</td>
+            <td class="num font-semibold">$1,265.74</td>
+          </tr>
+          <tr>
+            <td class="text-[#999999]">2</td>
+            <td class="font-semibold text-[#1e1c24]">6 Pack - Baby Blues</td>
+            <td class="num">19</td>
+            <td class="num">18</td>
+            <td class="num font-semibold">$1,151.54</td>
+          </tr>
+          <tr>
+            <td class="text-[#999999]">3</td>
+            <td class="font-semibold text-[#1e1c24]">Solids 6 Pack - Dark Tones</td>
+            <td class="num">16</td>
+            <td class="num">15</td>
+            <td class="num font-semibold">$1,113.24</td>
+          </tr>
+          <tr>
+            <td class="text-[#999999]">4</td>
+            <td class="font-semibold text-[#1e1c24]">6 Pack - Tropic Rush</td>
+            <td class="num">17</td>
+            <td class="num">16</td>
+            <td class="num font-semibold">$991.35</td>
+          </tr>
+          <tr>
+            <td class="text-[#999999]">5</td>
+            <td class="font-semibold text-[#1e1c24]">3 Pack - Heatwave</td>
+            <td class="num">16</td>
+            <td class="num">17</td>
+            <td class="num font-semibold">$936.40</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="font-semibold">
+            <td class="text-[#1e1c24]" colspan="2">Top-5 Subtotal</td>
+            <td class="num">93</td>
+            <td class="num">102</td>
+            <td class="num text-[#ff099e]">$5,458.27</td>
+          </tr>
+        </tfoot>
+        </table>
+    </div>
+  </section>
+
+  <!-- ═══ 06 CREATOR CONTRIBUTION ANALYSIS ═══ -->
+  <section class="card">
+    <h2 class="module-title mb-4">06 · Creator Contribution Analysis</h2>
+    <p class="text-sm text-[#626166] mb-5">How each publisher's content contributed to the 1,178 attributed orders — content role and conversion drivers per entity.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="rounded-xl border border-[#ebebeb] p-4">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="https://picsum.photos/seed/Leo%20Sato/200/200" alt="Leo Sato" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <div class="font-semibold">Leo Sato</div>
+            <div class="text-xs text-[#999999]">Mega · YouTube · 4 posts</div>
+          </div>
+          <div class="ml-auto text-right">
+            <div class="num-font text-2xl font-bold text-[#ff099e]">395</div>
+            <div class="text-[11px] text-[#999999]">Allocated Orders</div>
+          </div>
+        </div>
+        <p class="text-sm text-[#626166]"><strong class="text-[#1e1c24]">Content role:</strong> Mega-tier YouTube anchor; 228,663 impressions at an 8.0% engagement rate kept the campaign's largest audience warm across four posts.</p>
+        <p class="text-sm text-[#626166] mt-2"><strong class="text-[#1e1c24]">Why it converted:</strong> 12,108 tracked clicks — the deepest traffic pool of the roster — carried a 3.26% CVR into $18,096.84 GMV, the single largest revenue contribution of the flight.</p>
+      </div>
+      <div class="rounded-xl border border-[#ebebeb] p-4">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="https://picsum.photos/seed/Marcus%20Bell/200/200" alt="Marcus Webb" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <div class="font-semibold">Marcus Webb</div>
+            <div class="text-xs text-[#999999]">Macro · YouTube · 3 posts</div>
+          </div>
+          <div class="ml-auto text-right">
+            <div class="num-font text-2xl font-bold text-[#ff099e]">315</div>
+            <div class="text-[11px] text-[#999999]">Allocated Orders</div>
+          </div>
+        </div>
+        <p class="text-sm text-[#626166]"><strong class="text-[#1e1c24]">Content role:</strong> Macro-tier YouTube sustainer; 193,346 impressions across three posts extended reach into a mid-funnel audience.</p>
+        <p class="text-sm text-[#626166] mt-2"><strong class="text-[#1e1c24]">Why it converted:</strong> 9,833 clicks converted at 3.20% for $14,104.20 GMV at the second-best efficiency (ROAS 9.05) — a reliable volume-plus-efficiency balance.</p>
+      </div>
+      <div class="rounded-xl border border-[#ebebeb] p-4">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="https://picsum.photos/seed/Stella%20Zhou/200/200" alt="Stella Zhou" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <div class="font-semibold">Stella Zhou</div>
+            <div class="text-xs text-[#999999]">Mega · Douyin · 1 post</div>
+          </div>
+          <div class="ml-auto text-right">
+            <div class="num-font text-2xl font-bold text-[#ff099e]">251</div>
+            <div class="text-[11px] text-[#999999]">Allocated Orders</div>
+          </div>
+        </div>
+        <p class="text-sm text-[#626166]"><strong class="text-[#1e1c24]">Content role:</strong> Mega-tier Douyin burst; a single post generated 16,346 engagements at a 12.0% engagement rate — the highest single-post resonance in the roster.</p>
+        <p class="text-sm text-[#626166] mt-2"><strong class="text-[#1e1c24]">Why it converted:</strong> that one post moved 8,158 clicks and 251 orders worth $11,348.17 — the strongest per-post output; a second posting window is the obvious scaling lever.</p>
+      </div>
+      <div class="rounded-xl border border-[#ebebeb] p-4">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="https://picsum.photos/seed/Tom%20Reyes/200/200" alt="Tom Reyes" class="w-10 h-10 rounded-full object-cover">
+          <div>
+            <div class="font-semibold">Tom Reyes</div>
+            <div class="text-xs text-[#999999]">Micro · TikTok · 4 posts</div>
+          </div>
+          <div class="ml-auto text-right">
+            <div class="num-font text-2xl font-bold text-[#ff099e]">217</div>
+            <div class="text-[11px] text-[#999999]">Allocated Orders</div>
+          </div>
+        </div>
+        <p class="text-sm text-[#626166]"><strong class="text-[#1e1c24]">Content role:</strong> Micro-tier TikTok seeder; four posts produced the roster's largest engagement volume (28,399) on 236,659 impressions at 12.0% ER.</p>
+        <p class="text-sm text-[#626166] mt-2"><strong class="text-[#1e1c24]">Why it converted:</strong> high-intent short-form traffic converted at the roster-best 3.25% CVR, turning the smallest click pool (6,674) into 217 orders at the top ROAS of 9.16.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 07 CLOSING CTA ═══ -->
+  <section class="card" style="background:#fff6f9;">
+    <div class="text-center py-4">
+      <div class="num-font text-2xl font-bold">Thank you for the partnership.</div>
+      <p class="text-sm text-[#626166] mt-2 max-w-xl mx-auto">$53.2K in attributed revenue, 305 new customers and a 9.0 ROAS make this a strong foundation for the spring-to-summer push. To plan the next flight with MOTION, please reach out to your Digchic account team.</p>
+      <div class="inline-block mt-4 px-6 py-2.5 rounded-full bg-[#ff099e] text-white text-sm font-semibold"><i class="fa-regular fa-paper-plane mr-1.5"></i>Plan the Next Campaign</div>
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="text-center py-6 text-sm text-[#999999]">
+    <div class="font-medium text-[#626166]">Prepared by Digchic</div>
+    <div class="mt-1" data-field="period.display">Reporting Period: 2026-03-01 ~ 2026-04-15</div>
+  </footer>
+
+</div>
+</body>
+</html>

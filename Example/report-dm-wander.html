@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WANDER Summer Travel Content Marketing — Campaign Report | Duomai</title>
+<script src="http://localhost:5173/vendor/tailwind/play.min.js"></script>
+<link rel="stylesheet" href="http://localhost:5173/vendor/fontawesome/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: { colors: {
+  'brand-primary': '#FF7200',
+  'brand-positive': '#FA7315',
+  'brand-hover': '#F98500',
+  'brand-active': '#FF9920',
+  'ink': '#000000',
+  'bg-layout': '#F4F5F7',
+  'bg-card': '#FFFFFF',
+  'stroke-card': '#E8EAED',
+  'grey-primary': '#1A1A1A',
+  'grey-secondary': '#666666',
+  'grey-tertiary': '#999999'
+} } } };
+</script>
+<style>
+  * { font-family: 'Poppins', sans-serif; }
+  body { background: #F4F5F7; color: #1A1A1A; }
+  .card { background: #FFFFFF; border-radius: 12px; border: 1px solid #E8EAED; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .card-dark { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; }
+  .module-title { font-size: 18px; font-weight: 700; position: relative; padding-left: 12px; color: #1A1A1A; }
+  .module-title-light { color: #FFFFFF; }
+  .module-title::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:4px; height:16px; background:#FF7200; border-radius:2px; }
+  .data-table { width:100%; border-collapse:collapse; }
+  .data-table th { font-size:11px; color:#666666; font-weight:600; text-align:left; padding:10px 10px; border-bottom:1px solid #E8EAED; white-space:nowrap; vertical-align:middle; text-transform:uppercase; letter-spacing:0.03em; }
+  .data-table td { padding:12px 10px; border-bottom:1px solid #F0F1F3; vertical-align:middle; font-size:13px; }
+  .data-table thead tr { border-bottom:1px solid #E8EAED; }
+  .data-table tbody tr:hover { background:rgba(255,114,0,0.05); }
+  .data-table tbody tr:last-child td { border-bottom:none; }
+  .data-table td.num, .data-table th.num { text-align:right; }
+  .tag { padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; display:inline-block; }
+  .tier-mega { background:#FF7200; color:#FFFFFF; }
+  .tier-macro { background:#FFFFFF; color:#FF7200; border:1px solid #FF7200; }
+  .tier-micro { background:#F0F1F3; color:#666666; }
+  .kpi-value { font-size:30px; font-weight:700; color:#FF7200; line-height:1.1; letter-spacing:-0.01em; }
+  .kpi-label { font-size:12px; color:rgba(255,255,255,0.72); font-weight:500; }
+  .rank-bar { height:6px; border-radius:3px; background:#F0F1F3; overflow:hidden; }
+  .rank-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#FFBA5B,#FF9517); }
+  .cta-btn { background:linear-gradient(236deg,#FFBA5B 0%,#FF9517 100%); color:#000000; font-weight:600; border-radius:8px; padding:14px 32px; display:inline-block; font-size:15px; }
+  .chip { font-size:12px; color:rgba(255,255,255,0.55); font-weight:500; }
+  .chip-on { color:#FF9920; font-weight:600; }
+  .insight-label { font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- ============ 01 HERO (dark) ============ -->
+<section class="bg-black text-white">
+  <div class="max-w-[1280px] mx-auto px-6 pt-12 pb-14">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+      <div class="flex items-center gap-5">
+        <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center p-2">
+          <img src="http://localhost:5173/uploads/8e6624151be0b09d-7b1221c9.png" alt="Duomai" class="h-10 object-contain">
+        </div>
+        <span class="text-2xl font-light text-white/40">×</span>
+        <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center p-2">
+          <img src="http://localhost:5173/uploads/b26123b4f55b4b29-bfe2f1da.png" alt="WANDER" class="h-10 object-contain">
+        </div>
+        <div class="ml-2 border-l border-white/15 pl-5">
+          <p class="text-xs text-white/50 font-medium tracking-wide">CAMPAIGN WRAP-UP REPORT</p>
+          <p class="text-lg font-semibold mt-0.5">WANDER Summer Travel Content Marketing</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-x-8 gap-y-3 text-sm">
+        <div><p class="text-[11px] text-white/45 uppercase tracking-wider font-medium">Report Period</p>
+          <p class="font-semibold text-[15px] mt-0.5" data-field="period.display">2026-07-01 ~ 2026-08-31</p></div>
+        <div><p class="text-[11px] text-white/45 uppercase tracking-wider font-medium">Platform</p>
+          <p class="font-semibold text-[15px] mt-0.5">YouTube</p></div>
+        <div><p class="text-[11px] text-white/45 uppercase tracking-wider font-medium">Budget</p>
+          <p class="font-semibold text-[15px] mt-0.5">$360K</p></div>
+        <div><p class="text-[11px] text-white/45 uppercase tracking-wider font-medium">Status</p>
+          <p class="font-semibold text-[15px] mt-0.5"><span class="inline-block w-2 h-2 rounded-full bg-brand-primary mr-2 align-middle"></span>Active</p></div>
+      </div>
+    </div>
+    <div class="mt-10 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+      <span class="chip chip-on">01 Performance Overview</span><span class="chip">/</span>
+      <span class="chip">02 Daily Trend</span><span class="chip">/</span>
+      <span class="chip">03 Creator Breakdown</span><span class="chip">/</span>
+      <span class="chip">04 Products & Basket</span><span class="chip">/</span>
+      <span class="chip">05 Key Takeaways</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 KPI OVERVIEW (dark) ============ -->
+<section class="bg-black text-white">
+  <div class="max-w-[1280px] mx-auto px-6 pb-16">
+    <h2 class="module-title module-title-light text-white mb-2">01 &nbsp;Performance Overview</h2>
+    <p class="text-sm text-white/70 mb-6 ml-3">Duomai × WANDER partnership results across creator channels for the summer travel window.</p>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div class="card-dark p-5"><p class="kpi-label">Total Revenues</p><p class="kpi-value mt-2" data-field="revenue">$118.4K</p></div>
+      <div class="card-dark p-5"><p class="kpi-label">Clicks</p><p class="kpi-value mt-2" data-field="clicks">69.2K</p></div>
+      <div class="card-dark p-5"><p class="kpi-label">Orders</p><p class="kpi-value mt-2" data-field="orders">3.4K</p></div>
+      <div class="card-dark p-5"><p class="kpi-label">New Customer Acquisition</p><p class="kpi-value mt-2" data-field="newCustomers">860</p></div>
+      <div class="card-dark p-5"><p class="kpi-label">AOV</p><p class="kpi-value mt-2" data-field="aov">$35</p></div>
+      <div class="card-dark p-5"><p class="kpi-label">ROAS</p><p class="kpi-value mt-2" data-field="roas">8.6</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 DAILY TREND (light) ============ -->
+<section class="bg-bg-layout">
+  <div class="max-w-[1280px] mx-auto px-6 py-12">
+    <h2 class="module-title mb-2">02 &nbsp;Daily Performance Trend</h2>
+    <p class="text-sm text-grey-secondary mb-6 ml-3">Daily revenue (bars) and attributed orders (line) across the full reporting period.</p>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="card lg:col-span-2">
+        <div class="h-[380px]"><canvas id="trendChart" data-field="dailyTrend"></canvas></div>
+      </div>
+      <div class="flex flex-col gap-4">
+        <div class="card border-t-4" style="border-top-color:#FF7200;">
+          <p class="insight-label text-brand-primary"><i class="fa-solid fa-arrow-trend-up mr-1"></i>Insight</p>
+          <p class="text-sm mt-2 leading-relaxed">July delivered <span class="font-bold">$65.4K</span> — 55% of period revenue — peaking at <span class="font-bold">$2,546</span> on Jul 18. August softened to <span class="font-bold">$53.0K</span> (-19% MoM) as the summer booking wave cooled.</p>
+        </div>
+        <div class="card border-t-4" style="border-top-color:#1A1A1A;">
+          <p class="insight-label text-grey-primary"><i class="fa-regular fa-lightbulb mr-1"></i>Opportunity</p>
+          <p class="text-sm mt-2 leading-relaxed">Demand re-accelerated Aug 15–16 ($1,962 → $2,233) and again Aug 29–30. Re-flighting creator content ahead of these late-summer spikes is the clearest lever for the next window.</p>
+        </div>
+        <div class="card">
+          <div class="flex items-center justify-between py-1.5">
+            <span class="text-sm text-grey-secondary">Peak Day Revenue</span>
+            <span class="font-bold text-brand-primary">$2,546.29</span>
+          </div>
+          <div class="flex items-center justify-between py-1.5 border-t border-[#F0F1F3]">
+            <span class="text-sm text-grey-secondary">Lowest Day Revenue</span>
+            <span class="font-bold">$1,426.70</span>
+          </div>
+          <div class="flex items-center justify-between py-1.5 border-t border-[#F0F1F3]">
+            <span class="text-sm text-grey-secondary">Days Tracked</span>
+            <span class="font-bold">62 / 62</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 CREATOR BREAKDOWN (light) ============ -->
+<section class="bg-bg-layout">
+  <div class="max-w-[1280px] mx-auto px-6 pb-12">
+    <h2 class="module-title mb-2">03 &nbsp;Creator Breakdown</h2>
+    <p class="text-sm text-grey-secondary mb-6 ml-3">Attributed performance by publishing partner — ranked by attributed orders.</p>
+    <div class="card p-0 overflow-x-auto">
+      <table class="data-table min-w-[1150px]">
+        <thead>
+          <tr>
+            <th>Creator</th><th>Tier</th>
+            <th class="num">Posts</th><th class="num">Impressions</th><th class="num">Engagement</th><th class="num">Eng. Rate</th>
+            <th class="num">Clicks</th><th class="num">Orders</th><th class="num">GMV</th><th class="num">ROAS</th><th class="num">New Cust.</th><th class="num">Commission</th>
+          </tr>
+        </thead>
+        <tbody data-field="creators">
+          <tr data-creator="GlowLab Fans">
+            <td><span class="inline-flex items-center gap-2.5"><img src="https://picsum.photos/seed/GlowLab%20Fans/200/200" alt="GlowLab Fans" class="w-8 h-8 rounded-full object-cover"><span><span class="font-semibold block leading-tight" data-field="creator.name">GlowLab Fans</span><span class="text-[11px] text-grey-tertiary"><i class="fa-solid fa-users text-[10px] text-grey-tertiary mr-1"></i>Community</span></span></span></td>
+            <td><span class="tag tier-micro">Micro</span></td>
+            <td class="num" data-field="creator.performance.posts">—</td><td class="num" data-field="creator.performance.totalImpressions">—</td><td class="num" data-field="creator.performance.totalEngagement">—</td><td class="num" data-field="creator.performance.avgEngagementRate">—</td>
+            <td class="num" data-field="creator.cps.clicks">15,210</td><td class="num font-bold text-brand-primary" data-field="creator.cps.orders">804</td><td class="num" data-field="creator.cps.gmv">$26,818.93</td><td class="num" data-field="creator.cps.roas">9.1×</td><td class="num" data-field="creator.cps.newCustomers">194</td><td class="num" data-field="creator.cps.commission">$2,678.79</td>
+          </tr>
+          <tr data-creator="Leo Sato">
+            <td><span class="inline-flex items-center gap-2.5"><img src="https://picsum.photos/seed/Leo%20Sato/200/200" alt="Leo Sato" class="w-8 h-8 rounded-full object-cover"><span><span class="font-semibold block leading-tight" data-field="creator.name">Leo Sato</span><span class="text-[11px] text-grey-tertiary"><i class="fa-brands fa-youtube text-[10px] text-grey-tertiary mr-1"></i>YouTube</span></span></span></td>
+            <td><span class="tag tier-mega">Mega</span></td>
+            <td class="num" data-field="creator.performance.posts">1</td><td class="num" data-field="creator.performance.totalImpressions">61,972</td><td class="num" data-field="creator.performance.totalEngagement">3,099</td><td class="num" data-field="creator.performance.avgEngagementRate">5.0%</td>
+            <td class="num" data-field="creator.cps.clicks">13,025</td><td class="num font-bold" data-field="creator.cps.orders">651</td><td class="num" data-field="creator.cps.gmv">$22,908.16</td><td class="num" data-field="creator.cps.roas">8.6×</td><td class="num" data-field="creator.cps.newCustomers">164</td><td class="num" data-field="creator.cps.commission">$2,297.98</td>
+          </tr>
+          <tr data-creator="Marcus Webb">
+            <td><span class="inline-flex items-center gap-2.5"><img src="https://picsum.photos/seed/Marcus%20Bell/200/200" alt="Marcus Webb" class="w-8 h-8 rounded-full object-cover"><span><span class="font-semibold block leading-tight" data-field="creator.name">Marcus Webb</span><span class="text-[11px] text-grey-tertiary"><i class="fa-brands fa-youtube text-[10px] text-grey-tertiary mr-1"></i>YouTube</span></span></span></td>
+            <td><span class="tag tier-macro">Macro</span></td>
+            <td class="num" data-field="creator.performance.posts">4</td><td class="num" data-field="creator.performance.totalImpressions">236,499</td><td class="num" data-field="creator.performance.totalEngagement">16,555</td><td class="num" data-field="creator.performance.avgEngagementRate">7.0%</td>
+            <td class="num" data-field="creator.cps.clicks">10,644</td><td class="num font-bold" data-field="creator.cps.orders">553</td><td class="num" data-field="creator.cps.gmv">$18,458.36</td><td class="num" data-field="creator.cps.roas">8.9×</td><td class="num" data-field="creator.cps.newCustomers">143</td><td class="num" data-field="creator.cps.commission">$1,838.07</td>
+          </tr>
+          <tr data-creator="Nora Kim">
+            <td><span class="inline-flex items-center gap-2.5"><img src="https://picsum.photos/seed/Nora%20Kim/200/200" alt="Nora Kim" class="w-8 h-8 rounded-full object-cover"><span><span class="font-semibold block leading-tight" data-field="creator.name">Nora Kim</span><span class="text-[11px] text-grey-tertiary"><i class="fa-brands fa-instagram text-[10px] text-grey-tertiary mr-1"></i>Instagram</span></span></span></td>
+            <td><span class="tag tier-macro">Macro</span></td>
+            <td class="num" data-field="creator.performance.posts">3</td><td class="num" data-field="creator.performance.totalImpressions">155,802</td><td class="num" data-field="creator.performance.totalEngagement">6,232</td><td class="num" data-field="creator.performance.avgEngagementRate">4.0%</td>
+            <td class="num" data-field="creator.cps.clicks">9,353</td><td class="num font-bold" data-field="creator.cps.orders">417</td><td class="num" data-field="creator.cps.gmv">$15,627.34</td><td class="num" data-field="creator.cps.roas">8.5×</td><td class="num" data-field="creator.cps.newCustomers">100</td><td class="num" data-field="creator.cps.commission">$1,562.29</td>
+          </tr>
+          <tr data-creator="Stella Zhou">
+            <td><span class="inline-flex items-center gap-2.5"><img src="https://picsum.photos/seed/Stella%20Zhou/200/200" alt="Stella Zhou" class="w-8 h-8 rounded-full object-cover"><span><span class="font-semibold block leading-tight" data-field="creator.name">Stella Zhou</span><span class="text-[11px] text-grey-tertiary"><i class="fa-solid fa-video text-[10px] text-grey-tertiary mr-1"></i>Douyin</span></span></span></td>
+            <td><span class="tag tier-mega">Mega</span></td>
+            <td class="num" data-field="creator.performance.posts">4</td><td class="num" data-field="creator.performance.totalImpressions">206,375</td><td class="num" data-field="creator.performance.totalEngagement">14,446</td><td class="num" data-field="creator.performance.avgEngagementRate">7.0%</td>
+            <td class="num" data-field="creator.cps.clicks">8,176</td><td class="num font-bold" data-field="creator.cps.orders">406</td><td class="num" data-field="creator.cps.gmv">$13,703.71</td><td class="num" data-field="creator.cps.roas">8.2×</td><td class="num" data-field="creator.cps.newCustomers">107</td><td class="num" data-field="creator.cps.commission">$1,377.41</td>
+          </tr>
+          <tr data-creator="Yuki Tanaka">
+            <td><span class="inline-flex items-center gap-2.5"><img src="https://picsum.photos/seed/Yuki%20Tanaka/200/200" alt="Yuki Tanaka" class="w-8 h-8 rounded-full object-cover"><span><span class="font-semibold block leading-tight" data-field="creator.name">Yuki Tanaka</span><span class="text-[11px] text-grey-tertiary"><i class="fa-brands fa-instagram text-[10px] text-grey-tertiary mr-1"></i>Instagram</span></span></span></td>
+            <td><span class="tag tier-mega">Mega</span></td>
+            <td class="num" data-field="creator.performance.posts">1</td><td class="num" data-field="creator.performance.totalImpressions">89,060</td><td class="num" data-field="creator.performance.totalEngagement">8,906</td><td class="num" data-field="creator.performance.avgEngagementRate">10.0%</td>
+            <td class="num" data-field="creator.cps.clicks">6,922</td><td class="num font-bold" data-field="creator.cps.orders">287</td><td class="num" data-field="creator.cps.gmv">$11,388.59</td><td class="num" data-field="creator.cps.roas">8.2×</td><td class="num" data-field="creator.cps.newCustomers">67</td><td class="num" data-field="creator.cps.commission">$1,141.58</td>
+          </tr>
+          <tr data-creator="Trend Report">
+            <td><span class="inline-flex items-center gap-2.5"><img src="https://picsum.photos/seed/Trend%20Report/200/200" alt="Trend Report" class="w-8 h-8 rounded-full object-cover"><span><span class="font-semibold block leading-tight" data-field="creator.name">Trend Report</span><span class="text-[11px] text-grey-tertiary"><i class="fa-solid fa-globe text-[10px] text-grey-tertiary mr-1"></i>Web</span></span></span></td>
+            <td><span class="tag tier-micro">Micro</span></td>
+            <td class="num" data-field="creator.performance.posts">—</td><td class="num" data-field="creator.performance.totalImpressions">—</td><td class="num" data-field="creator.performance.totalEngagement">—</td><td class="num" data-field="creator.performance.avgEngagementRate">—</td>
+            <td class="num" data-field="creator.cps.clicks">5,914</td><td class="num font-bold" data-field="creator.cps.orders">280</td><td class="num" data-field="creator.cps.gmv">$9,544.21</td><td class="num" data-field="creator.cps.roas">7.7×</td><td class="num" data-field="creator.cps.newCustomers">85</td><td class="num" data-field="creator.cps.commission">$956.76</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Creator contribution narratives -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+      <div class="card p-5">
+        <div class="flex items-center gap-3 mb-2"><img src="https://picsum.photos/seed/GlowLab%20Fans/200/200" class="w-9 h-9 rounded-full object-cover" alt="GlowLab Fans"><p class="font-semibold text-sm">GlowLab Fans <span class="text-grey-tertiary font-normal">· Community</span></p></div>
+        <p class="text-[13px] text-grey-secondary leading-relaxed">Community-led micro channel with always-on advocacy. It converted <span class="font-semibold text-grey-primary">804 attributed orders</span> ($26.8K GMV) and the roster's highest new-customer contribution (<span class="font-semibold text-grey-primary">194</span>) — repeat exposure sustains the deepest conversion funnel in the mix.</p>
+      </div>
+      <div class="card p-5">
+        <div class="flex items-center gap-3 mb-2"><img src="https://picsum.photos/seed/Leo%20Sato/200/200" class="w-9 h-9 rounded-full object-cover" alt="Leo Sato"><p class="font-semibold text-sm">Leo Sato <span class="text-grey-tertiary font-normal">· YouTube</span></p></div>
+        <p class="text-[13px] text-grey-secondary leading-relaxed">Mega-tier long-form concentration: a single YouTube feature (61,972 impressions, 5.0% ER) drove <span class="font-semibold text-grey-primary">651 orders</span> ($22.9K GMV). One high-fit video proves mega reach converts when paired with a strong offer.</p>
+      </div>
+      <div class="card p-5">
+        <div class="flex items-center gap-3 mb-2"><img src="https://picsum.photos/seed/Marcus%20Bell/200/200" class="w-9 h-9 rounded-full object-cover" alt="Marcus Webb"><p class="font-semibold text-sm">Marcus Webb <span class="text-grey-tertiary font-normal">· YouTube</span></p></div>
+        <p class="text-[13px] text-grey-secondary leading-relaxed">Macro creator with the highest total engagement of the roster (16,555 across 4 posts, 7.0% ER). His sustained publishing cadence kept click flow stable, converting <span class="font-semibold text-grey-primary">553 orders</span> ($18.5K GMV).</p>
+      </div>
+      <div class="card p-5">
+        <div class="flex items-center gap-3 mb-2"><img src="https://picsum.photos/seed/Nora%20Kim/200/200" class="w-9 h-9 rounded-full object-cover" alt="Nora Kim"><p class="font-semibold text-sm">Nora Kim <span class="text-grey-tertiary font-normal">· Instagram</span></p></div>
+        <p class="text-[13px] text-grey-secondary leading-relaxed">Lifestyle framing on Instagram (3 posts, 4.0% ER) delivered efficient lower-funnel volume — <span class="font-semibold text-grey-primary">417 orders</span> and $15.6K GMV — anchored by her 100 new customers for the period.</p>
+      </div>
+      <div class="card p-5">
+        <div class="flex items-center gap-3 mb-2"><img src="https://picsum.photos/seed/Stella%20Zhou/200/200" class="w-9 h-9 rounded-full object-cover" alt="Stella Zhou"><p class="font-semibold text-sm">Stella Zhou <span class="text-grey-tertiary font-normal">· Douyin</span></p></div>
+        <p class="text-[13px] text-grey-secondary leading-relaxed">Short-video velocity on Douyin: 4 posts at a 7.0% ER mirrored strong repeat engagement and converted <span class="font-semibold text-grey-primary">406 orders</span> ($13.7K GMV), keeping momentum through August.</p>
+      </div>
+      <div class="card p-5">
+        <div class="flex items-center gap-3 mb-2"><img src="https://picsum.photos/seed/Yuki%20Tanaka/200/200" class="w-9 h-9 rounded-full object-cover" alt="Yuki Tanaka"><p class="font-semibold text-sm">Yuki Tanaka <span class="text-grey-tertiary font-normal">· Instagram</span></p></div>
+        <p class="text-[13px] text-grey-secondary leading-relaxed">The roster's best engagement rate — <span class="font-semibold text-grey-primary">10.0%</span> on a single post — converted <span class="font-semibold text-grey-primary">287 orders</span> ($11.4K GMV). Precision-fit creative outperformed frequency on engagement quality.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 PRODUCTS & BASKET (light) ============ -->
+<section class="bg-bg-layout">
+  <div class="max-w-[1280px] mx-auto px-6 pb-12">
+    <h2 class="module-title mb-2">04 &nbsp;Products & Basket</
+</body>
+</html>
