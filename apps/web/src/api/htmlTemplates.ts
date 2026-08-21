@@ -49,7 +49,7 @@ export interface HtmlVersionDetail extends HtmlVersionSummary {
 export interface AgentChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  action?: 'generate' | 'edit' | 'fix' | 'manual' | 'cancelled';
+  action?: 'generate' | 'edit' | 'fix' | 'manual' | 'qa' | 'cancelled';
   ts: string;
   /** AI 思考过程（chain-of-thought），流式结束后保存到聊天记录 */
   reasoning?: string;
@@ -394,10 +394,21 @@ export const htmlTemplatesApi = {
       signal,
     ),
 
+  /** Agent 数据问答:问题 → 纯文本回答(不产出 HTML),服务端限死在数据上下文内 */
+  agentQa: (input: {
+    question: string;
+    campaignId?: string;
+    reportPeriod?: { startDate?: string; endDate?: string };
+    history?: { role: 'user' | 'assistant'; content: string }[];
+  }) =>
+    api
+      .post<{ answer: string; hasDataContext: boolean }>('/html-templates/agent-qa', input)
+      .then((r) => r.data),
+
   /** Agent 模式自动保存（直接覆盖 htmlContent） */
   autoSave: (
     projectId: string,
-    html: string,
+    html?: string,
     agentHistory?: AgentChatMessage[],
     genParams?: { prompt: string; designMd: string },
   ) =>

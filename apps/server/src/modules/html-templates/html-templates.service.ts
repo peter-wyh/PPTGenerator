@@ -158,7 +158,7 @@ export const htmlTemplateService = {
    */
   async autoSaveHtml(
     projectId: string,
-    html: string,
+    html?: string,
     agentHistory?: unknown[],
     aiPrompt?: string,
     designMd?: string,
@@ -186,7 +186,8 @@ export const htmlTemplateService = {
     await prisma.project.update({
       where: { id: projectId },
       data: {
-        htmlContent: html,
+        // ★ html 未传(undefined)时不动 htmlContent——QA 轮次只存对话历史
+        ...(html !== undefined ? { htmlContent: html } : {}),
         meta: newMeta as any,
       },
     });

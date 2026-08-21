@@ -178,6 +178,16 @@ export const htmlTemplateController = {
     res.json({ html, guideUsed: guide ? { id: guide.id, name: guide.name } : null });
   }),
 
+  /** Agent 数据问答:问题 → 纯文本回答(不产出 HTML)。同一数据真源,防编造。 */
+  agentQa: asyncHandler(async (req: Request, res: Response) => {
+    const { question, campaignId, reportPeriod, history } = req.body;
+    const dataContext = campaignId
+      ? await aiGenerateService.buildCampaignContext(campaignId, reportPeriod).catch(() => undefined)
+      : undefined;
+    const answer = await aiGenerateService.answerDataQuestion({ question, dataContext, history });
+    res.json({ answer, hasDataContext: Boolean(dataContext) });
+  }),
+
   /** SSE 流式生成 HTML 报告 */
   generateStream: async (req: Request, res: Response) => {
     const { prompt, campaignId, scenario, reportPeriod } = req.body;

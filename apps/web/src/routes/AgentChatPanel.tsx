@@ -150,6 +150,8 @@ export function AgentChatPanel({
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   // ★ HTML 代码区块展开态:null=全部折叠,数字=展开第 idx 条消息的源码
   const [expandedCodeIdx, setExpandedCodeIdx] = useState<number | null>(null);
+  // ★ QA 模式标记:当前 loading 来自数据问答(加载文案区分)
+  const [qaMode, setQaMode] = useState(false);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -266,10 +268,79 @@ export function AgentChatPanel({
   );
 
   // ★ handleSend — SSE 流式编辑
+  // ★ 意图路由:问题类消息走数据问答(不产出 HTML),编辑类走 SSE 编辑。
+  //  判定保守——明确的问题形态才走 QA,拿不准一律走编辑(编辑是既有主链路,误伤成本低)。
+  const isQuestionOnly = useCallback((text: string): boolean => {
+    // 带图片 = 参考素材,必然是编辑
+    if (pendingImages.length > 0) return false;
+    const t = text.trim();
+    if (!t) return false;
+    // 疑问词/问号开头或整句只有一个问号结尾
+    const questionStart = /^(这|那|哪个|哪些|什么|为什|怎么|如何|多少|几|是不是|有没有|能不能|可不可以|可否|是否|帮我看|帮我查|查一下|看一下|tell|what|which|why|how|how many|how much|is |are |does |do )/i.test(t);
+    const endsWithQuestion = /[?？]$/.test(t);
+    // 排除:明确的编辑动词开头(即使带问号也是命令式,如"把标题改成XX?")
+    const editVerb = /^(把|将|请|帮我把|帮我改|改|加|删|换|调|生成|重新|更新|插入|去掉|移除|修改|统一|全部)/.test(t);
+    return !editVerb && (questionStart || endsWithQuestion);
+  }, [pendingImages.length]);
+
+  // ★ 数据问答:走 agent-qa 端点,纯文本回答进对话,不动 HTML 不写库
+  const handleQuestion = useCallback(
+    async (text: string, historyAfterUser: AgentChatMessage[]) => {
+      // 取最近几轮纯文本对话作上下文(截断防超长)
+      const recent = historyAfterUser
+        .filter((m) => !m.images?.length)
+        .slice(-6)
+        .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
+      const { answer, hasDataContext } = await htmlTemplatesApi.agentQa({
+        question: text,
+        campaignId,
+        history: recent,
+      });
+      const qaMsg: AgentChatMessage = {
+        role: 'assistant',
+        content: answer,
+        action: 'qa',
+        ts: new Date().toISOString(),
+        // 问答无快照;hasDataContext=false 时提示未绑定 campaign
+        ...(hasDataContext ? {} : {}),
+      };
+      onHistoryChange([...historyAfterUser, qaMsg]);
+      void htmlTemplatesApi.autoSave(projectId, currentHtml ?? undefined, [
+        ...historyAfterUser,
+        qaMsg,
+      ] as AgentChatMessage[]);
+    },
+    [campaignId, currentHtml, onHistoryChange, projectId],
+  );
+
   const handleSend = useCallback(
     async (instruction?: string) => {
       const text = (instruction ?? input).trim();
       if ((!text && pendingImages.length === 0) || loading || !currentHtml) return;
+
+      // ★ 意图分流:问题类 → QA 端点(不进 SSE 编辑流)
+      if (isQuestionOnly(text)) {
+        const userMsg: AgentChatMessage = {
+          role: 'user',
+          content: text,
+          ts: new Date().toISOString(),
+        };
+        const newHistory = [...agentHistory, userMsg];
+        onHistoryChange(newHistory);
+        setInput('');
+        setLoading(true);
+        setQaMode(true);
+        setError('');
+        try {
+          await handleQuestion(text, newHistory);
+        } catch (e: any) {
+          setError(e?.response?.data?.error?.message || e?.message || '问答失败,请重试');
+        } finally {
+          setLoading(false);
+          setQaMode(false);
+        }
+        return;
+      }
 
       const hasImages = pendingImages.length > 0;
       const displayContent = hasImages
@@ -485,7 +556,7 @@ export function AgentChatPanel({
               <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-1 font-medium text-foreground-secondary">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-primary" />
-                  {isThinking || reasoning ? 'AI 思考中…' : 'AI 正在编辑…'}
+                  {isThinking || reasoning ? 'AI 思考中…' : qaMode ? '查询数据中…' : 'AI 正在编辑…'}
                 </span>
                 <button
                   onClick={handleCancel}

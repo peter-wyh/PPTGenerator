@@ -10,6 +10,7 @@ import {
   generateHtmlSchema,
   saveHtmlAsProjectSchema,
   agentEditSchema,
+  agentQaSchema,
   saveRecipeConfigSchema,
   reRenderSchema,
   createRecipeVersionSchema,
@@ -78,6 +79,15 @@ router.post(
   '/agent-edit-stream',
   aiGenerateLimiter,
   htmlTemplateController.agentEditStream,
+);
+
+// POST /api/v1/html-templates/agent-qa — Agent 数据问答（只回答，不产出 HTML）
+// 与编辑链路同一数据真源(buildCampaignContext),回答限定在数据上下文内,不编造。
+router.post(
+  '/agent-qa',
+  aiGenerateLimiter,
+  validate({ body: agentQaSchema }),
+  htmlTemplateController.agentQa,
 );
 
 // PATCH /api/v1/html-templates/projects/:projectId/html — 保存生成的 HTML（覆盖/新增版本）

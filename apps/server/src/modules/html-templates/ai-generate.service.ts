@@ -1,7 +1,7 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import { config } from '../../config';
-import { fetchChatCompletionWithRetry } from './ai-client';
+import { fetchChatCompletionWithRetry, type ChatMessage } from './ai-client';
 import { resolveForCampaign } from '../guides/guide.service';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { campaignService } from '../campaigns/campaigns.service';
@@ -1778,6 +1778,61 @@ export const aiGenerateService = {
   },
 
   /**
+   * Agent 数据问答:question → 纯文本回答(不产出 HTML)。
+   * 与编辑链路同一数据真源(buildCampaignContext),回答限定在数据上下文内。
+   * 红线:数据上下文之外的问题 → 明确说没有数据,不编造。
+   */
+  async answerDataQuestion(params: {
+    question: string;
+    dataContext?: string;
+    history?: { role: 'user' | 'assistant'; content: string }[];
+  }): Promise<string> {
+    if (!DEEPSEEK_API_KEY) {
+      throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
+    }
+
+    const QA_SYSTEM_PROMPT = `You are a campaign data analyst embedded in a report editor chat.
+Answer the user's question about campaign performance using ONLY the DATA CONTEXT provided.
+Rules:
+1. Use numbers exactly as they appear in the data context. NEVER invent, estimate, or extrapolate values.
+2. If the data context does not contain the answer, say plainly: "这部分数据不在当前报告数据范围内" and suggest what data would be needed. Do NOT guess.
+3. Answer in the user's language (Chinese in, Chinese out; English in, English out).
+4. Be concise and structured: short paragraphs or bullet points, cite the exact metric names.
+5. This is a Q&A about data — do NOT output HTML, do NOT offer to edit the report unless asked.
+6. Simple math on context numbers (shares, deltas, sums) is allowed; state the formula briefly when non-trivial.`;
+
+    const historyMessages: ChatMessage[] = (params.history ?? []).map((h) => ({
+      role: h.role,
+      content: h.content,
+    }));
+
+    const userPrompt = params.dataContext
+      ? `═══ DATA CONTEXT (authoritative, JSON) ═══\n${params.dataContext}\n\n═══ QUESTION ═══\n${params.question}`
+      : `No data context is attached (no campaign bound). Answer only if the question is generic; otherwise explain that a campaign must be bound first.\n\n═══ QUESTION ═══\n${params.question}`;
+
+    const messages: ChatMessage[] = [
+      { role: 'system', content: QA_SYSTEM_PROMPT },
+      ...historyMessages,
+      { role: 'user', content: userPrompt },
+    ];
+
+    const { response } = await fetchChatCompletionWithRetry({
+      apiUrl: DEEPSEEK_API_URL,
+      apiKey: DEEPSEEK_API_KEY,
+      model: DEEPSEEK_MODEL,
+      messages,
+      temperature: 0.2,
+      maxTokens: 1500,
+      timeoutMs: 60_000,
+      logPrefix: '[Agent QA]',
+    });
+    const body: any = await response.json();
+    const answer: string = body?.choices?.[0]?.message?.content ?? '';
+    if (!answer) throw ApiError.internal('AI 返回空回答');
+    return answer;
+  },
+
+  /**
    * Incremental edit: modify existing HTML based on user instruction.
    * Returns the complete updated HTML.
    */
@@ -1805,6 +1860,7 @@ export const aiGenerateService = {
     userPrompt += THINKING_LANGUAGE_SUFFIX;
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
+    // ★ 32K：GLM reasoning 吃满 16K 致 content 为空（见 generateHtml 注释）
     const maxTokens = isReasoningModel ? 32768 : 8192;
 
     // 构建 messages：如果有图片，user message 使用 OpenAI vision 多模态格式
@@ -1961,6 +2017,7 @@ export const aiGenerateService = {
       .replace('{{CAMPAIGN_DATA}}', campaignData);
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
+    // ★ 32K：GLM reasoning 吃满 16K 致 content 为空（见 generateHtml 注释）
     const maxTokens = isReasoningModel ? 32768 : 8192;
 
     const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
@@ -2086,6 +2143,7 @@ export const aiGenerateService = {
     userPrompt += THINKING_LANGUAGE_SUFFIX;
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
+    // ★ 32K：GLM reasoning 吃满 16K 致 content 为空（见 generateHtml 注释）
     const maxTokens = isReasoningModel ? 32768 : 8192;
 
     const userMessage: any = params.images && params.images.length > 0

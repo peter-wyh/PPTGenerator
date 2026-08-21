@@ -63,6 +63,21 @@ export const agentEditSchema = z.object({
   scenario: z.string().max(64).optional(),
 });
 
+/** Agent 数据问答:问题 → 纯文本回答(不产出 HTML)。与编辑链路同一数据真源。 */
+export const agentQaSchema = z.object({
+  question: z.string().min(1).max(2000),
+  campaignId: z.string().max(120).optional(),
+  reportPeriod: z.object({
+    startDate: z.string().max(40).optional(),
+    endDate: z.string().max(40).optional(),
+  }).optional(),
+  // 近几轮问答上下文(可选,多轮追问用):[{role,content}],最多 10 条
+  history: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string().max(8000),
+  })).max(10).optional(),
+});
+
 /**
  * 保存 recipe 配置到 HtmlVersion(reportContent/tokenOverrides/manifestOverrides),
  * 触发重渲染并写回 html。所有字段 optional — 未传则沿用 version 现值。
