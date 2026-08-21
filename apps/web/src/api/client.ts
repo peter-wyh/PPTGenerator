@@ -43,6 +43,11 @@ async function refresh(): Promise<string> {
   return refreshPromise;
 }
 
+/** ★ 供非 axios 通道（SSE fetch 流）复用的 refresh 入口——同去重、同写回 accessToken。 */
+export async function refreshAccessToken(): Promise<string> {
+  return refresh();
+}
+
 // refresh 失败时通知 auth store 清会话（用回调打破 client ↔ store 循环依赖）。
 const unauthorizedListeners = new Set<() => void>();
 export function onUnauthorized(fn: () => void): () => void {

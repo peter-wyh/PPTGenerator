@@ -126,7 +126,14 @@ export async function recomputeOrderStats(campaignId: string): Promise<{ rows: n
   for (const g of grouped) {
     const date = String(g.statDate);
     const creatorId = g.campaignCreatorId ?? ''; // 无归因的单只进聚合行
-    const status = (g.orderStatus ?? '').trim();
+    // 状态归一化:AWIN 词表(Approved/Pending)与种子/其他源词表(paid/refunded 等)统一到桶。
+    const raw = (g.orderStatus ?? '').trim().toLowerCase();
+    const status =
+      raw === 'approved' || raw === 'paid' || raw === 'confirmed'
+        ? 'Approved'
+        : raw === 'pending'
+          ? 'Pending'
+          : raw; // refunded/declined/... → other 桶
     const newCust = Number(g.newCustomers);
 
     const addInto = (b: StatBucket) => {

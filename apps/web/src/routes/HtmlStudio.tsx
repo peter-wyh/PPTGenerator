@@ -71,6 +71,8 @@ export function HtmlStudio() {
   const [isThinking, setIsThinking] = useState(false);
   const [truncated, setTruncated] = useState(false);
   const [genStage, setGenStage] = useState(0);
+  // ★ 首次生成思考流（state 版,供 AgentChatPanel 生成气泡实时平铺;局部变量 streamingReasoning 供完成后落历史）
+  const [genReasoning, setGenReasoning] = useState('');
   const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastGenParams = useRef<{ mode: 'ai' | 'recipe'; prompt: string; designMd: string; scenario: string } | null>(null);
@@ -337,6 +339,7 @@ export function HtmlStudio() {
             if (chunk.type === 'reasoning') {
               setIsThinking(true);
               streamingReasoning += chunk.text;
+              setGenReasoning(streamingReasoning); // ★ 思考流平铺:同步 state 供生成气泡实时展示
             } else if (chunk.type === 'content') {
               setIsThinking(false);
               streamingHtml += chunk.text;
@@ -411,6 +414,8 @@ export function HtmlStudio() {
         setIsThinking(false);
         stopStageTimer();
         abortRef.current = null;
+        // ★ 思考流已落历史消息(genMsg.reasoning),清 state 避免残留到下次生成
+        setGenReasoning('');
       }
     },
     [campaignId, reportPeriod, updateAiHtmlStatus, id, startStageTimer, stopStageTimer, truncated],
@@ -522,6 +527,7 @@ export function HtmlStudio() {
           generating={generating}
           genStageText={GEN_STAGES[genStage]}
           onCancelGenerate={handleCancel}
+          generateReasoning={genReasoning}
         />
       )}
     </aside>

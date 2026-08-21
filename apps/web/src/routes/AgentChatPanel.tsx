@@ -7,6 +7,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/Button';
+import { toast } from '@/components/Toast';
 import { htmlTemplatesApi, type SSEChunk } from '@/api/htmlTemplates';
 import type { AgentChatMessage } from '@/api/htmlTemplates';
 
@@ -105,6 +106,8 @@ interface AgentChatPanelProps {
   generating?: boolean;
   genStageText?: string;
   onCancelGenerate?: () => void;
+  /** ★ 首次生成的实时思考流（HtmlStudio streamingReasoning → state），平铺展示在生成气泡内 */
+  generateReasoning?: string;
 }
 
 const QUICK_ACTIONS = [
@@ -129,6 +132,7 @@ export function AgentChatPanel({
   generating = false,
   genStageText = '',
   onCancelGenerate,
+  generateReasoning,
 }: AgentChatPanelProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -153,26 +157,58 @@ export function AgentChatPanel({
   }, [agentHistory, loading, pendingImages, reasoning]);
 
   // ── 图片上传处理 ──
+  // ★ 修复:旧逻辑「超限文件被拒后,完成判定 newImages.length === Math.min(files.length,5)
+  //   永远凑不齐」→ 其余合法图片静默丢失。改为成功/失败分别计数,全部 settle 后一次性入列 + toast 反馈。
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
     const newImages: string[] = [];
+    let done = 0;
+    let failed = 0;
+    const rejected: string[] = [];
+    const total = files.length;
+
+    const settle = () => {
+      if (done + failed < total) return;
+      if (newImages.length > 0) {
+        const space = Math.max(0, 5 - pendingImages.length);
+        const kept = Math.min(newImages.length, space);
+        setPendingImages((prev) => [...prev, ...newImages].slice(0, 5));
+        if (kept < newImages.length) {
+          toast.success(`已添加 ${kept} 张图片（待发送上限 5 张，${newImages.length - kept} 张未添加）`);
+        } else {
+          toast.success(`已添加 ${kept}/${total} 张图片，发送时随消息附带`);
+        }
+      }
+      if (rejected.length > 0) {
+        toast.error(`超 4MB 未添加: ${[...new Set(rejected)].join('、')}`);
+      }
+      if (failed > rejected.length) {
+        toast.error('部分文件读取失败，请重试');
+      }
+    };
+
     Array.from(files).forEach((file) => {
       if (file.size > MAX_IMAGE_SIZE) {
-        setError(`图片 "${file.name}" 超过 4MB 限制`);
+        rejected.push(file.name);
+        failed++;
+        settle();
         return;
       }
       const reader = new FileReader();
       reader.onload = () => {
         newImages.push(reader.result as string);
-        if (newImages.length === Math.min(files.length, 5)) {
-          setPendingImages((prev) => [...prev, ...newImages].slice(0, 5));
-        }
+        done++;
+        settle();
+      };
+      reader.onerror = () => {
+        failed++;
+        settle();
       };
       reader.readAsDataURL(file);
     });
     e.target.value = '';
-  }, []);
+  }, [pendingImages]);
 
   const removePendingImage = useCallback((idx: number) => {
     setPendingImages((prev) => prev.filter((_, i) => i !== idx));
@@ -379,10 +415,10 @@ export function AgentChatPanel({
               )}
               {msg.content}
               {msg.reasoning && (
-                /* 思考原文改默认折叠（中文入口「AI 思考过程」），不自动展开 */
+                /* ★ 思考过程平铺：默认展开（defaultCollapsed=false），可手动收起 */
                 <CollapsibleReasoning
                   text={msg.reasoning}
-                  defaultCollapsed={true}
+                  defaultCollapsed={false}
                 />
               )}
             </div>
@@ -404,11 +440,17 @@ export function AgentChatPanel({
                   取消
                 </button>
               </div>
-              {/* ★ 思考过程不再展示原文——仅保留中文状态描述（思考中/编辑中） */}
+              {/* ★ 思考过程平铺：实时流式展示原文（折叠入口改为收起） */}
+              {isThinking || reasoning ? (
+                <CollapsibleReasoning
+                  text={reasoning}
+                  defaultCollapsed={false}
+                />
+              ) : null}
             </div>
           </div>
         )}
-        {/* ★ ③-1 首次生成进行时气泡：阶段轮播（中文）+ 取消；不展示思考原文 */}
+        {/* ★ ③-1 首次生成进行时气泡：阶段提示 + 思考流平铺 + 取消 */}
         {generating && !loading && (
           <div className="flex justify-start">
             <div className="max-w-[85%] rounded-lg bg-surface-hover px-3 py-2 text-xs text-foreground-muted">
@@ -424,6 +466,13 @@ export function AgentChatPanel({
                   取消
                 </button>
               </div>
+              {/* ★ 思考过程平铺：生成思考流实时展示（HtmlStudio 通过 generateReasoning 传入） */}
+              {generateReasoning ? (
+                <CollapsibleReasoning
+                  text={generateReasoning}
+                  defaultCollapsed={false}
+                />
+              ) : null}
             </div>
           </div>
         )}
@@ -440,9 +489,12 @@ export function AgentChatPanel({
         )}
       </div>
 
-      {/* 待发送图片预览条 */}
+      {/* 待发送图片预览条 ★ 带张数徽标(n/5)——上传成功与否一眼可见 */}
       {pendingImages.length > 0 && (
         <div className="flex items-center gap-1.5 border-t border-border-default px-3 pt-2">
+          <span className="shrink-0 rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">
+            📎 {pendingImages.length}/5
+          </span>
           {pendingImages.map((img, idx) => (
             <div key={idx} className="relative">
               <img

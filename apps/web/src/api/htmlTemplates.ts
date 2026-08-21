@@ -1,4 +1,4 @@
-import { api, getAccessToken } from './client';
+import { api, getAccessToken, refreshAccessToken } from './client';
 
 export interface HtmlTemplateSummary {
   id: string;
@@ -91,24 +91,40 @@ export type SSEChunk =
   | { type: 'done'; html: string; truncated: boolean; dataCoverage?: RecipeDataCoverage; guideUsed?: { id: string; name: string } | null }
   | { type: 'error'; message: string };
 
-/** 通用 SSE 流式消费者（fetch + ReadableStream，绕过 axios 不支持 SSE） */
+/** 通用 SSE 流式消费者（fetch + ReadableStream，绕过 axios 不支持 SSE）
+ *  ★ 401 自动 refresh + 重试一次：fetch 通道不走 axios interceptor，须自带。
+ *    token 过期(15min)不再炸出 HTTP 401 中断对话——与普通请求同体验。 */
 async function consumeSSEStream(
   url: string,
   body: Record<string, unknown>,
   onChunk: (chunk: SSEChunk) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const token = getAccessToken();
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
-    credentials: 'include',
-    signal,
-  });
+  const doFetch = () => {
+    const token = getAccessToken();
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+      credentials: 'include',
+      signal,
+    });
+  };
+
+  let response = await doFetch();
+
+  // ★ 401 → refresh → 重试一次（refresh 失败则原样抛错）
+  if (response.status === 401) {
+    try {
+      await refreshAccessToken();
+      response = await doFetch();
+    } catch {
+      // refresh 失败（会话真失效）：走下面的 !ok 抛错路径
+    }
+  }
 
   if (!response.ok) {
     const text = await response.text().catch(() => 'Unknown error');
