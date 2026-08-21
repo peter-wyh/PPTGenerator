@@ -148,6 +148,8 @@ export function AgentChatPanel({
 
   // 已选择的图片（base64 data URL 数组），随消息一起发送
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  // ★ HTML 代码区块展开态:null=全部折叠,数字=展开第 idx 条消息的源码
+  const [expandedCodeIdx, setExpandedCodeIdx] = useState<number | null>(null);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -437,20 +439,40 @@ export function AgentChatPanel({
                   defaultCollapsed={false}
                 />
               )}
-              {/* ★ 消息即产物:带快照的消息点击即在画板预览(纯预览,不写库不改历史) */}
+              {/* ★ 消息即产物:HTML 代码区块——头部(文件名+大小+预览按钮)+可折叠源码
+                  预览=画板即时切换到该版本(纯预览,不写库不改历史);源码默认折叠,点开可查真 */}
               {msg.htmlSnapshot && (
-                <div className="mt-1.5 flex items-center gap-2 border-t border-border-default pt-1.5">
+                <div className="mt-1.5 overflow-hidden rounded-md border border-border-default bg-surface-default">
+                  <div className="flex items-center justify-between gap-2 border-b border-border-subtle bg-surface-hover px-2 py-1">
+                    <span className="inline-flex items-center gap-1 truncate font-mono text-[10px] text-foreground-muted">
+                      <span>📄</span>
+                      report.html
+                    </span>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <span className="text-[10px] text-foreground-muted">
+                        {msg.htmlSnapshot.length >= 1024
+                          ? `${Math.round(msg.htmlSnapshot.length / 1024)} KB`
+                          : `${msg.htmlSnapshot.length} B`}
+                      </span>
+                      <button
+                        onClick={() => handlePreviewSnapshot(msg.htmlSnapshot!)}
+                        className="rounded bg-accent-primary px-2 py-0.5 text-[10px] font-medium text-foreground-inverse hover:bg-accent-secondary"
+                      >
+                        ▣ 预览
+                      </button>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => handlePreviewSnapshot(msg.htmlSnapshot!)}
-                    className="text-[10px] text-accent-primary hover:underline"
+                    onClick={() => setExpandedCodeIdx(expandedCodeIdx === idx ? null : idx)}
+                    className="flex w-full items-center justify-center gap-1 px-2 py-1 text-[10px] text-foreground-muted hover:bg-surface-hover hover:text-foreground-secondary"
                   >
-                    ▣ 在画板预览
+                    {expandedCodeIdx === idx ? '▲ 收起源码' : '▼ 查看源码'}
                   </button>
-                  <span className="text-[10px] text-foreground-muted">
-                    {msg.htmlSnapshot.length >= 1024
-                      ? `${Math.round(msg.htmlSnapshot.length / 1024)} KB`
-                      : `${msg.htmlSnapshot.length} B`}
-                  </span>
+                  {expandedCodeIdx === idx && (
+                    <pre className="max-h-64 overflow-auto border-t border-border-subtle bg-surface-hover px-2 py-1.5 font-mono text-[10px] leading-relaxed text-foreground-secondary">
+                      {msg.htmlSnapshot}
+                    </pre>
+                  )}
                 </div>
               )}
             </div>
