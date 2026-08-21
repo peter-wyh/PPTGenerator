@@ -2,8 +2,8 @@
  * 上游数据接口文档 —— 单一事实源（Single Source of Truth）。
  *
  * 维护约定：
- * 1. 本文件如实描述 /api/v1/campaigns/import/* 7 个导入接口的当前契约，
- *    内容以 apps/server/src/modules/campaigns/campaigns.service.ts 的 importService 实现为准。
+ * 1. 本文件如实描述 /api/v1/campaigns 下导入接口与数据管理接口的当前契约，
+ *    内容以 apps/server/src/modules/campaigns/ 下的 service / controller / routes 实现为准。
  * 2. 每次接口变更（加字段/改语义/新接口），同步修改本文件对应区块，
  *    并在 API_DOC_CHANGELOG 顶部追加一条变更记录（升 API_DOC_VERSION）。
  * 3. 页面 /data/api-docs 直接渲染本文件，无需其他操作。
@@ -18,7 +18,7 @@ export interface DocField {
 
 export interface DocEndpoint {
   id: string;
-  method: 'POST';
+  method: 'POST' | 'GET';
   path: string;
   title: string;
   purpose: string;
@@ -38,8 +38,8 @@ export interface ChangelogEntry {
   changes: { kind: '新增' | '变更' | '修复' | '下线'; text: string }[];
 }
 
-export const API_DOC_VERSION = '1.0.0';
-export const API_DOC_UPDATED = '2026-08-19';
+export const API_DOC_VERSION = '1.1.0';
+export const API_DOC_UPDATED = '2026-08-21';
 
 export const API_DOC_CONVENTIONS = [
   'Base URL：http://<server>:4000/api/v1（生产环境以部署域名为准）。',
@@ -396,6 +396,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       '幂等：重导同一订单先清空旧商品行再重建，不产生重复。',
       'lineTotal 缺省时自动按 unitPrice × qty 计算。',
       'creatorId 归因键是达人主档 ID（Creator.id），非合作链接 ID。',
+      'Awin 镜像字段：ORDER_MIRROR_FIELDS 字典处理 40 个可选字段，空串统一转 null；saleAmount/commission/oldSaleAmount/oldCommission 自动转 Decimal，validationDate/clickThroughTime 自动转 DateTime。',
     ],
     fields: [
       { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
@@ -409,6 +410,47 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       { name: 'qty', type: 'number', required: false, desc: '件数（缺省 1）' },
       { name: 'unitPrice', type: 'string | number', required: false, desc: '单价（支持 $ 千分位）' },
       { name: 'lineTotal', type: 'string | number', required: false, desc: '行小计（缺省按单价×件数）' },
+      // ── Awin transactions 镜像字段（全部可选，空串→null） ──
+      { name: 'awinId', type: 'string', required: false, desc: 'Awin 交易 ID' },
+      { name: 'advertiserId', type: 'string', required: false, desc: '广告商 ID' },
+      { name: 'saleAmount', type: 'string | number', required: false, desc: 'Awin 销售额（Decimal 自动转换）' },
+      { name: 'commission', type: 'string | number', required: false, desc: 'Awin 佣金（Decimal 自动转换）' },
+      { name: 'validationDate', type: 'string', required: false, desc: '验证日期（DateTime 自动转换）' },
+      { name: 'clickRef', type: 'string', required: false, desc: '点击引用' },
+      { name: 'type', type: 'string', required: false, desc: '交易类型（Awin 原始值，如 sale/lead）' },
+      { name: 'siteName', type: 'string', required: false, desc: '发布商站点名' },
+      { name: 'url', type: 'string', required: false, desc: '落地页 URL' },
+      { name: 'declineReason', type: 'string', required: false, desc: '拒绝原因' },
+      { name: 'clickThroughTime', type: 'string', required: false, desc: '点击时间（DateTime 自动转换）' },
+      { name: 'voucherCodeUsed', type: 'string', required: false, desc: '使用的优惠券码' },
+      { name: 'lapseTime', type: 'number', required: false, desc: '滞后时间（秒，parseInt）' },
+      { name: 'amended', type: 'string', required: false, desc: '是否修改（yes/no）' },
+      { name: 'amendReason', type: 'string', required: false, desc: '修改原因' },
+      { name: 'oldSaleAmount', type: 'string | number', required: false, desc: '原销售额（Decimal 自动转换）' },
+      { name: 'oldCommission', type: 'string | number', required: false, desc: '原佣金（Decimal 自动转换）' },
+      { name: 'differentCurrency', type: 'string', required: false, desc: '是否不同币种' },
+      { name: 'clickDevice', type: 'string', required: false, desc: '点击设备' },
+      { name: 'transactionDevice', type: 'string', required: false, desc: '交易设备' },
+      { name: 'publisherUrl', type: 'string', required: false, desc: '发布商 URL' },
+      { name: 'transactionParts', type: 'string', required: false, desc: '交易分账' },
+      { name: 'customerCountry', type: 'string', required: false, desc: '客户国家' },
+      { name: 'customParameters', type: 'string', required: false, desc: '自定义参数' },
+      { name: 'paidToPublisher', type: 'string', required: false, desc: '是否已支付给发布商' },
+      { name: 'paymentStatus', type: 'string', required: false, desc: '支付状态' },
+      { name: 'paymentId', type: 'string', required: false, desc: '支付 ID' },
+      { name: 'transactionQueryId', type: 'string', required: false, desc: '交易查询 ID' },
+      { name: 'clickRef2', type: 'string', required: false, desc: '点击引用 2' },
+      { name: 'clickRef3', type: 'string', required: false, desc: '点击引用 3' },
+      { name: 'clickRef4', type: 'string', required: false, desc: '点击引用 4' },
+      { name: 'clickRef5', type: 'string', required: false, desc: '点击引用 5' },
+      { name: 'clickRef6', type: 'string', required: false, desc: '点击引用 6' },
+      { name: 'voucherCode', type: 'string', required: false, desc: '优惠券码' },
+      { name: 'commissionSharingPublisherId', type: 'string', required: false, desc: '佣金分成发布商 ID' },
+      { name: 'commissionSharingPublisher', type: 'string', required: false, desc: '佣金分成发布商' },
+      { name: 'commissionSharingSelectedRatePublisherId', type: 'string', required: false, desc: '佣金分成选中费率发布商 ID' },
+      { name: 'products', type: 'string', required: false, desc: '商品信息（JSON）' },
+      { name: 'campaignLabel', type: 'string', required: false, desc: '活动标签' },
+      { name: 'customerAcquisition', type: 'string', required: false, desc: '客户获取标识' },
     ],
     requestExample: `{
   "items": [
@@ -423,7 +465,12 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       "sku": "BFGIFT-01",
       "qty": 2,
       "unitPrice": "$59.99",
-      "lineTotal": "$119.98"
+      "lineTotal": "$119.98",
+      "awinId": "36954321",
+      "commission": "17.99",
+      "clickDevice": "iOS",
+      "customerCountry": "JP",
+      "voucherCode": "BFCM26"
     },
     {
       "campaignId": "camp-everyday-bf",
@@ -437,9 +484,114 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
 }`,
     response: '{ "updated": 1, "skipped": 0 }（updated 计订单数，非商品行数）',
   },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'orders-list',
+    method: 'GET',
+    path: '/campaigns/orders/list',
+    title: '订单明细列表',
+    purpose: '订单明细列表查询（数据管理页）：分页返回订单及商品行展开——admin 全局可见，非 admin 限本人 campaign。',
+    source: '系统内数据（orders 导入接口写入），无需上游提供。',
+    prerequisites: ['无前置——已有订单数据即可查询。'],
+    prerequisiteSummary: null,
+    semantics: [
+      '权限：admin 全局可见所有订单；非 admin 仅可见本人拥有的 campaign 下的订单。',
+      '分页：page 默认 1，pageSize 默认 20；orderDate 倒序排列。',
+      'campaignId 筛选可选；订单行内展开商品明细（QTY/单价/小计）。',
+    ],
+    fields: [
+      { name: 'campaignId', type: 'string', required: false, desc: 'Query 参数：按 Campaign 筛选（缺省=全部可见订单）' },
+      { name: 'page', type: 'number', required: false, desc: 'Query 参数：页码（默认 1）' },
+      { name: 'pageSize', type: 'number', required: false, desc: 'Query 参数：每页条数（默认 20）' },
+    ],
+    requestExample: `GET /api/v1/campaigns/orders/list?campaignId=camp-everyday-bf&page=1&pageSize=20`,
+    response: `{
+  "orders": [
+    {
+      "orderId": "BF-88231742",
+      "campaignId": "camp-everyday-bf",
+      "creatorId": "creator-leo-sato",
+      "orderDate": "2026-11-28",
+      "orderStatus": "paid",
+      "commission": "17.99",
+      "items": [
+        { "productName": "BF Gift Box", "sku": "BFGIFT-01", "qty": 2, "unitPrice": "59.99", "lineTotal": "119.98" },
+        { "productName": "Winter Hand Cream Trio", "sku": null, "qty": 1, "unitPrice": "18.50", "lineTotal": "18.50" }
+      ]
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "pageSize": 20
+}`,
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'order-insights',
+    method: 'GET',
+    path: '/campaigns/:id/order-insights',
+    title: '订单商品聚合（Top-Sales + 购物篮）',
+    purpose: '订单商品聚合分析——Top-Sales 商品排行（含 QTY）与购物篮结构指标，供报告引用。',
+    source: '系统内数据（orders 导入接口写入的订单商品行聚合），无需上游提供。',
+    prerequisites: ['Campaign 已创建。'],
+    prerequisiteSummary: 'Campaign',
+    semantics: [
+      '按 Campaign 维度聚合订单商品行，输出 Top-Sales 排行（含件数 QTY）与购物篮指标（basketAnalysis）。',
+      'start / end 均为可选（YYYY-MM-DD），用于限定订单日期窗口；缺省聚合全部订单。',
+      '非本人 campaign 且非 admin 时返回错误。',
+    ],
+    fields: [
+      { name: 'id', type: 'string', required: true, desc: '路径参数：Campaign ID' },
+      { name: 'start', type: 'YYYY-MM-DD', required: false, desc: 'Query 参数：起始订单日期（含）' },
+      { name: 'end', type: 'YYYY-MM-DD', required: false, desc: 'Query 参数：截止订单日期（含）' },
+    ],
+    requestExample: `GET /api/v1/campaigns/camp-everyday-bf/order-insights?start=2026-11-01&end=2026-11-30`,
+    response: `{
+  "topProducts": [
+    { "productName": "BF Gift Box", "qty": 428, "revenue": "25,675.72" },
+    { "productName": "Winter Hand Cream Trio", "qty": 193, "revenue": "3,570.50" }
+  ],
+  "basketAnalysis": {
+    "avgItemsPerOrder": 1.9,
+    "avgOrderValue": "76.31",
+    "topCombination": "BF Gift Box + Winter Hand Cream Trio"
+  }
+}`,
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'order-stats-recompute',
+    method: 'POST',
+    path: '/campaigns/:id/order-stats/recompute',
+    title: '订单日级统计重算',
+    purpose: '手动重算 OrderDailyStat 中间层（订单表真源日级聚合）——数据迁移后回填或统计异常排查用。',
+    source: '系统内数据（orders 导入接口写入的订单），无需上游提供。',
+    prerequisites: ['Campaign 已创建。'],
+    prerequisiteSummary: 'Campaign',
+    semantics: [
+      '以订单表为真源，按日聚合 revenue / orders / newCustomer 标签 / device 维度，重建 OrderDailyStat 中间层。',
+      '幂等：重复调用结果一致（全量重建该 campaign 的日级统计）。',
+      '运维接口：常规数据链路无需调用；仅在迁移回填或排查统计偏差时使用。',
+    ],
+    fields: [{ name: 'id', type: 'string', required: true, desc: '路径参数：Campaign ID' }],
+    requestExample: `POST /api/v1/campaigns/camp-everyday-bf/order-stats/recompute`,
+    response: `{
+  "recomputed": 30,
+  "dateRange": { "start": "2026-11-01", "end": "2026-11-30" }
+}`,
+  },
 ];
 
 export const API_DOC_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.1.0',
+    date: '2026-08-21',
+    changes: [
+      { kind: '新增', text: '订单导入接口扩展 Awin transactions 全列镜像（40 字段：awinId/commission/clickDevice/customerCountry/voucherCode 等；空串→null，Decimal/DateTime 自动转换）。' },
+      { kind: '新增', text: '3 个数据管理接口——订单列表（orders/list）、商品聚合（order-insights）、日级统计重算（order-stats/recompute）。' },
+      { kind: '变更', text: '接口文档支持 GET 方法标签（此前仅 POST）。' },
+    ],
+  },
   {
     version: '1.0.0',
     date: '2026-08-19',

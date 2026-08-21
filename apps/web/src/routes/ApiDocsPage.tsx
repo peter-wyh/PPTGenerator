@@ -50,7 +50,7 @@ export function ApiDocsPage() {
               className={navBtn(section === 'endpoint' && activeEndpoint === e.id)}
             >
               <span>{e.title}</span>
-              <span className="ml-2 shrink-0 text-[10px] text-foreground-tertiary">POST</span>
+              <span className={`ml-2 shrink-0 text-[10px] ${e.method === 'GET' ? 'text-blue-500' : 'text-foreground-tertiary'}`}>{e.method}</span>
             </button>
           ))}
           <div className="mt-1 border-t border-border-subtle pt-1" />
@@ -72,7 +72,7 @@ export function ApiDocsPage() {
           <div className="max-w-3xl">
             <h1 className="font-headings text-2xl font-semibold text-foreground-primary">上游数据接口文档</h1>
             <p className="mt-2 text-sm text-foreground-secondary">
-              构造 Campaign 报告所需的全部上游数据，通过以下 7 个批量导入接口提供。本文档即数据交付契约——
+              构造 Campaign 报告所需的全部上游数据，通过以下批量导入接口与数据管理接口提供。本文档即数据交付契约——
               字段、格式、合并语义以本页为准；接口迭代时同步更新并记录变更日志。
             </p>
             <div className="mt-6 rounded-lg border border-border-default bg-surface-secondary px-4 py-3">
@@ -125,7 +125,7 @@ export function ApiDocsPage() {
         {section === 'endpoint' && endpoint && (
           <div className="max-w-3xl">
             <div className="flex items-center gap-3">
-              <span className="rounded bg-green/10 px-2 py-0.5 font-mono text-xs font-semibold text-green">POST</span>
+              <span className={`rounded px-2 py-0.5 font-mono text-xs font-semibold ${endpoint.method === 'GET' ? 'bg-blue-500/10 text-blue-500' : 'bg-green/10 text-green'}`}>{endpoint.method}</span>
               <h1 className="font-headings text-xl font-semibold text-foreground-primary">{endpoint.title}</h1>
             </div>
             <p className="mt-2 font-mono text-xs text-foreground-secondary">{endpoint.path}</p>
