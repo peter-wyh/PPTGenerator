@@ -371,7 +371,7 @@ export function Projects() {
                     <td className="px-3 py-2 text-foreground-muted">{new Date(p.updatedAt).toLocaleDateString()}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       {(() => {
-                        const mine = p.ownerId === me?.id;
+                        const mine = p.ownerId === me?.id || me?.role === 'ADMIN';
                         return mine ? (
                           <button
                             onClick={() => {
@@ -440,7 +440,7 @@ export function Projects() {
                           )}
                         </span>
                       )}
-                      {p.ownerId === me?.id && (
+                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
                       <button
                         onClick={() => { setEditError(null); setEditing(p); }}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -448,7 +448,7 @@ export function Projects() {
                         编辑
                       </button>
                       )}
-                      {p.ownerId === me?.id && (
+                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
                       <button
                         onClick={() => setDupFor(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -457,7 +457,7 @@ export function Projects() {
                         复制
                       </button>
                       )}
-                      {p.ownerId === me?.id && (
+                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
                       <button
                         onClick={() => setSaveTplFor(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -466,7 +466,7 @@ export function Projects() {
                         存模版
                       </button>
                       )}
-                      {p.ownerId === me?.id && (
+                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
                       <button
                         onClick={() => setPendingDelete(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-red"
