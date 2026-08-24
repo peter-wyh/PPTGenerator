@@ -96,6 +96,7 @@ The output is a STANDALONE CLIENT-FACING REPORT document — NOT an application,
 7. BRAND LOGO: If campaign.businessLine.logoUrl is provided, you MUST display it as a VISIBLE <img> in the report header — do NOT set display:none, do NOT use onerror to hide it, do NOT use a text/initials fallback when a logo URL exists. The logo image MUST be visible by default. Only if logoUrl is null, use a text fallback with the brand/advertiser name.
 8. The report header should show BOTH the business line logo (left) and the advertiser logo (right or nearby), establishing the partnership visually. DO NOT create text/initials placeholder spans alongside the <img> tags — use ONLY the <img> when a logoUrl is provided.
 9. CREATOR DATA: For each creator in the JSON, display their name, avatar (img if avatarUrl exists, else initials circle), platform, tier, and ALL available performance metrics (posts, engagement, impressions, engagement rate). If a creator's performance is null, display "—" for their metrics — do NOT omit the row.
+9b. CREATOR CONTENT SHOWCASE: Each creator object MAY contain "contentShowcase": an array of deliverables, each with contentType, postUrl, contentFormat and screenshots[] ({url, caption}). When present, render a Creator Content Showcase section: group by creator (name + platform + screenshot count), display each screenshot as an <img src="url"> image card in a responsive grid (2-4 per row, object-fit:cover, ~16:9 ratio). Use caption as the card caption when provided. When postUrl exists, make the card a clickable link. When a creator's contentShowcase is null or missing, render dashed-border placeholder frames labeled "Screenshot Unavailable" for that creator — do NOT silently drop the creator from the showcase. NEVER invent screenshot URLs.
 10. CROSS-SECTION DATA CONSISTENCY (CRITICAL): All data in the report MUST be internally consistent — every number must be derivable from the same source of truth.
     a. TOTALS: The KPI summary (Total GMV, Total Orders, Total Spend, Total ROAS) MUST equal the sum of all creators' CPS data.
     b. TREND SUM = TOTALS: If the report shows a weekly or daily trend chart (W1—W7, D1—D46, etc.), the SUM of all data points in that chart MUST exactly equal the corresponding KPI total. For example, if Total Orders = 1,736, then W1+W2+...+W7 orders MUST also = 1,736.
@@ -1032,6 +1033,8 @@ export const aiGenerateService = {
             creator: true,
             performance: true,
             cpsPerformances: true,
+            // ★ 作品截图数据源（08 Creator Content Showcase）：Collaboration.deliverables[].screenshots
+            collaboration: true,
           },
         },
         businessLine: true,
@@ -1519,8 +1522,32 @@ export const aiGenerateService = {
             totalPrice: cc.totalPrice,
             currency: cc.currency,
             // ★ performance may be null for non-creator partners (community, content site)
-            //   Display "—" for their metrics — do NOT omit them from the table
+            //   Display "—" for their metrics — do NOT omit the row
             performance: summary,
+            // ★ 作品展示数据（08 Creator Content Showcase）：来自 Collaboration.deliverables。
+            //   含 screenshots（图片 URL 数组）/ postUrl / contentType / contentFormat。
+            //   宁缺勿假：无 collaboration 或无有效截图时置 null，AI 渲染占位框。
+            contentShowcase: (() => {
+              const dels = (cc.collaboration?.deliverables ?? []) as Array<{
+                contentType?: string; postUrl?: string; contentFormat?: string;
+                screenshots?: Array<{ src?: string; caption?: string }>;
+              }>;
+              const items = dels
+                .map((d) => ({
+                  contentType: d.contentType ?? null,
+                  postUrl: d.postUrl ?? null,
+                  contentFormat: d.contentFormat ?? null,
+                  // 过滤空 src（脏数据），转绝对 URL（/uploads/* 同 logo 口径）
+                  screenshots: (d.screenshots ?? [])
+                    .filter((s) => s?.src && String(s.src).trim())
+                    .map((s) => ({
+                      url: resolveUrl(String(s.src)) ?? String(s.src),
+                      caption: s.caption ?? null,
+                    })),
+                }))
+                .filter((d) => d.screenshots.length > 0);
+              return items.length ? items : null;
+            })(),
             cps: Object.keys(cpsTotal).length > 0 ? cpsTotal : null,
             // ★ 期内数据标记（非零说明该达人在此周期有活动）
             _periodActive: periodKpis
