@@ -7,7 +7,6 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
 import { DuplicateProjectDialog } from '@/components/DuplicateProjectDialog';
-import { SaveAsTemplateDialog } from '@/components/SaveAsTemplateDialog';
 import {
   SCENARIOS,
   SCENARIO_LABELS,
@@ -51,9 +50,6 @@ export function Projects() {
   const [editing, setEditing] = useState<ProjectSummary | null>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-
-  // 存为模版
-  const [saveTplFor, setSaveTplFor] = useState<ProjectSummary | null>(null);
 
   // 复制报告（带周期）
   const [dupFor, setDupFor] = useState<ProjectSummary | null>(null);
@@ -368,7 +364,7 @@ export function Projects() {
                         })()}
                       </td>
                     )}
-                    <td className="px-3 py-2 text-foreground-muted">{new Date(p.updatedAt).toLocaleDateString()}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-foreground-muted">{new Date(p.updatedAt).toLocaleString('zh-CN', { hour12: false })}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       {(() => {
                         const mine = p.ownerId === me?.id || me?.role === 'ADMIN';
@@ -459,15 +455,6 @@ export function Projects() {
                       )}
                       {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
                       <button
-                        onClick={() => setSaveTplFor(p)}
-                        className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
-                        title="将报告保存为可复用模板"
-                      >
-                        存模版
-                      </button>
-                      )}
-                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
-                      <button
                         onClick={() => setPendingDelete(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-red"
                       >
@@ -521,14 +508,6 @@ export function Projects() {
         onCancel={() => !editSubmitting && setEditing(null)}
         onSubmit={handleEdit}
       />
-
-      {/* 存为模版对话框 */}
-      {saveTplFor && (
-        <SaveAsTemplateDialog
-          project={saveTplFor}
-          onClose={() => setSaveTplFor(null)}
-        />
-      )}
 
       {/* 复制报告对话框 */}
       {dupFor && (
