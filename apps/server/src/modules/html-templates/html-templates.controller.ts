@@ -13,13 +13,23 @@ function sseWrite(res: Response, event: StreamChunk) {
   res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
 
-/** SSE helper: set up SSE response headers */
-function initSSE(res: Response) {
+/** SSE helper: set up SSE response headers + 15s 心跳保活
+ *  ★ 根因(network error)：首字延迟期(25k 订单聚合 + DeepSeek 网关首字 10-60s)连接零字节流动，
+ *    Vite proxy/浏览器可能掐断空闲连接 → 前端 fetch 抛 TypeError: network error。
+ *    心跳发 SSE 注释帧(: ping)——不产生 data 事件，前端 onChunk 不会收到，纯保活。
+ *    返回 stop 函数，请求结束时清理定时器。 */
+function initSSE(res: Response): () => void {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no'); // nginx: disable buffering
   res.flushHeaders?.();
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) res.write(': ping\n\n');
+  }, 15_000);
+  // res close 时清心跳（close 在 end 后必然触发）
+  res.on('close', () => clearInterval(heartbeat));
+  return () => clearInterval(heartbeat);
 }
 
 export const htmlTemplateController = {
