@@ -9,7 +9,7 @@ export function Login() {
   const navigate = useNavigate();
   const { login, status, loginError } = useAuthStore();
   const [email, setEmail] = useState(import.meta.env.DEV ? 'admin@mediakit.local' : '');
-  const [password, setPassword] = useState(import.meta.env.DEV ? 'admin123' : '');
+  const [password, setPassword] = useState(import.meta.env.DEV ? 'mediakit123' : '');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
