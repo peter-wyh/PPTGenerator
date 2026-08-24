@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { redis } from '../redis';
 import type { Request } from 'express';
@@ -9,9 +9,9 @@ import type { Request } from 'express';
  */
 const sendCommand: any = (...args: string[]) => redis.call(...(args as [string, ...string[]]));
 
-/** keyBy：登录用户优先（防单账号刷），否则 IP。 */
+/** keyBy：登录用户优先（防单账号刷），否则 IP（★必须走 ipKeyGenerator 做 IPv6 归一化，否则 v8 启动报 ERR_ERL_KEY_GEN_IPV6）。 */
 function keyByUser(req: Request): string {
-  return req.user?.id ?? req.ip ?? 'unknown';
+  return req.user?.id ?? ipKeyGenerator(req.ip ?? '');
 }
 
 /**
@@ -39,7 +39,7 @@ export const loginLimiter = rateLimit({
   limit: process.env.NODE_ENV === 'production' ? 10 : 60,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip ?? 'unknown',
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ''),
   message: { error: 'TOO_MANY_REQUESTS', message: '尝试次数过多，请 5 分钟后再试' },
 });
 
@@ -66,6 +66,6 @@ export const shareLimiter = rateLimit({
   limit: 120,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip ?? 'unknown',
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ''),
   message: { error: 'TOO_MANY_REQUESTS', message: '访问过于频繁，请稍后再试' },
 });
