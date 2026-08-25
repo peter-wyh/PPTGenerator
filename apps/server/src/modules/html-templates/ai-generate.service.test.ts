@@ -160,7 +160,7 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
     ]);
     const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p', scenario: '月报' });
     expect(out.html).toContain('<!DOCTYPE html>');
-    expect(out.guideUsed).toEqual({ id: 'g-mo', name: 'DG 月报指南' });
+    expect(out.guideUsed).toEqual([{ id: 'g-mo', name: 'DG 月报指南' }]); // 双层:数组承载(视觉+结构)
     const body = aiClientMock.fetchChatCompletionWithRetry.mock.calls[0][0];
     const sys = body.messages.find((m: any) => m.role === 'system').content as string;
     expect(sys).toContain('BUSINESS LINE GUIDE');
@@ -169,12 +169,12 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
     expect(sys).not.toContain('{{GUIDE}}'); // 占位符已替换
   });
 
-  it('无匹配指南 → system 等于 CORE,guideUsed=null,user prompt 不再拼设计指南', async () => {
+  it('无匹配指南 → system 等于 CORE,guideUsed 空数组,user prompt 不再拼设计指南', async () => {
     // 无业务线名(businessLine 缺失 → businessLineName='') → system 严格等于 CORE
     prismaMock.campaign.findUnique.mockResolvedValue({ ...camp, businessLine: null });
     prismaMock.guide.findMany.mockResolvedValue([]);
     const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p' });
-    expect(out.guideUsed).toBeNull();
+    expect(out.guideUsed).toEqual([]); // 双层:无匹配=空数组
     const body = aiClientMock.fetchChatCompletionWithRetry.mock.calls[0][0];
     const sys = body.messages.find((m: any) => m.role === 'system').content as string;
     expect(sys).toBe(SYSTEM_PROMPT);
@@ -186,7 +186,7 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
     prismaMock.campaign.findUnique.mockResolvedValue(camp);
     prismaMock.guide.findMany.mockRejectedValue(new Error('db down'));
     const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p' });
-    expect(out.guideUsed).toBeNull();
+    expect(out.guideUsed).toEqual([]); // 双层:无指南=空数组
     expect(out.html).toContain('<!DOCTYPE html>');
   });
 });
@@ -202,7 +202,8 @@ describe('buildSystemPrompt · 三层拼装', () => {
     expect(s).toContain(SYSTEM_PROMPT);
     expect(s).toContain('BUSINESS LINE GUIDE');
     expect(s).toContain('#ff099e');
-    expect(s.indexOf('BUSINESS LINE GUIDE')).toBeGreaterThan(SYSTEM_PROMPT.length); // 拼在 CORE 之后
+    // ★ CORE 导航豁免段也含 "BUSINESS LINE GUIDE" 字样,须用注入段独有标记断言位置
+    expect(s.indexOf('★★★ BUSINESS LINE GUIDE (MANDATORY')).toBeGreaterThan(SYSTEM_PROMPT.length); // 拼在 CORE 之后
   });
   it('指南空串 → 视同无指南', () => {
     expect(buildSystemPrompt({ guideContent: '   ' })).toBe(SYSTEM_PROMPT);

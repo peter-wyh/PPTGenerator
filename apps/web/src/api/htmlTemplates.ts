@@ -95,7 +95,7 @@ export interface ModuleCoverageResult {
 export type SSEChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean; dataCoverage?: RecipeDataCoverage; guideUsed?: { id: string; name: string } | null }
+  | { type: 'done'; html: string; truncated: boolean; dataCoverage?: RecipeDataCoverage; guideUsed?: { id: string; name: string }[] }
   | { type: 'error'; message: string };
 
 /** 通用 SSE 流式消费者（fetch + ReadableStream，绕过 axios 不支持 SSE）
@@ -285,12 +285,23 @@ export const htmlTemplatesApi = {
       .then((r) => r.data),
 
   /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
-  getDesignGuide: (campaignId: string) =>
+  getDesignGuide: (campaignId: string, scenario?: string) =>
     api
-      .get<{ designMd: string; businessLineName: string; businessLineCode: string; guideName: string; guideId: string | null }>(
+      .get<{
+        designMd: string; businessLineName: string; businessLineCode: string;
+        guideName: string; guideId: string | null;
+        guides?: { id: string; name: string; layer: 'visual' | 'structural' }[];
+      }>(
         `/html-templates/campaign/${campaignId}/design-guide`,
+        { params: scenario ? { scenario } : undefined },
       )
       .then((r) => r.data),
+
+  /** ★ 该 campaign 业务线实际存在的指南场景列表（报告场景下拉动态化） */
+  getGuideScenarios: (campaignId: string) =>
+    api
+      .get<{ scenarios: string[] }>(`/html-templates/campaign/${campaignId}/guide-scenarios`)
+      .then((r) => r.data.scenarios),
 
   /** ★ 模块级数据覆盖预检（生成前）：标准模块清单逐项判定数据可用性 */
   getModuleCoverage: (campaignId: string, reportPeriod?: { startDate?: string; endDate?: string }) =>

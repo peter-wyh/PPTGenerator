@@ -2,7 +2,7 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import { config } from '../../config';
 import { fetchChatCompletionWithRetry, type ChatMessage } from './ai-client';
-import { resolveForCampaign } from '../guides/guide.service';
+import { resolvePairForCampaign, mergeGuideLayers } from '../guides/guide.service';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { campaignService } from '../campaigns/campaigns.service';
 import { orderStatsService } from '../campaigns/order-stats.service';
@@ -97,6 +97,7 @@ The output is a STANDALONE CLIENT-FACING REPORT document — NOT an application,
 8. The report header should show BOTH the business line logo (left) and the advertiser logo (right or nearby), establishing the partnership visually. DO NOT create text/initials placeholder spans alongside the <img> tags — use ONLY the <img> when a logoUrl is provided.
 9. CREATOR DATA: For each creator in the JSON, display their name, avatar (img if avatarUrl exists, else initials circle), platform, tier, and ALL available performance metrics (posts, engagement, impressions, engagement rate). If a creator's performance is null, display "—" for their metrics — do NOT omit the row.
 9b. CREATOR CONTENT SHOWCASE: Each creator object MAY contain "contentShowcase": an array of deliverables, each with contentType, postUrl, contentFormat and screenshots[] ({url, caption}). When present, render a Creator Content Showcase section: group by creator (name + platform + screenshot count), display each screenshot as an <img src="url"> image card in a responsive grid (2-4 per row, object-fit:cover, ~16:9 ratio). Use caption as the card caption when provided. When postUrl exists, make the card a clickable link. When a creator's contentShowcase is null or missing, render dashed-border placeholder frames labeled "Screenshot Unavailable" for that creator — do NOT silently drop the creator from the showcase. NEVER invent screenshot URLs.
+9c. MARKETING EVENTS: The context MAY contain "marketingEvents": an array of the business line's marketing activities overlapping the report period, each with name, period, and optional type (Festival / Event Day / Special Promo), info, region. When present, render a "Marketing Activities" section listing each event as a card or table row (event name + date range + type badge + region/info). When "marketingEvents" is absent from the context, OMIT the section entirely — do NOT fabricate events, do NOT render an empty placeholder.
 10. CROSS-SECTION DATA CONSISTENCY (CRITICAL): All data in the report MUST be internally consistent — every number must be derivable from the same source of truth.
     a. TOTALS: The KPI summary (Total GMV, Total Orders, Total Spend, Total ROAS) MUST equal the sum of all creators' CPS data.
     b. TREND SUM = TOTALS: If the report shows a weekly or daily trend chart (W1—W7, D1—D46, etc.), the SUM of all data points in that chart MUST exactly equal the corresponding KPI total. For example, if Total Orders = 1,736, then W1+W2+...+W7 orders MUST also = 1,736.
@@ -126,7 +127,7 @@ If the design guide is not provided or is empty, use a neutral light theme (#f5f
 1. HTML5 + Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 2. FontAwesome 6 CDN: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 3. Chart.js CDN (for line/bar/doughnut charts): <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-   NOTE: If the brand design guide explicitly says "use inline canvas, no external library" (e.g., dark settlement dashboards), follow that instruction instead.
+   NOTE: If the brand design guide explicitly says "use inline canvas" OR "use inline SVG" (no external chart library, e.g., dark settlement dashboards), follow that instruction instead.
 4. Google Fonts: import the font families specified in the brand design guide.
 5. All CSS inline in a single <style> tag in <head>. No external CSS files.
 6. All JS inline in a single <script> tag at end of <body>. No external JS files.
@@ -235,6 +236,8 @@ The following are STRICTLY FORBIDDEN. If your output contains ANY of these, it w
 5. ❌ NEVER output hamburger menus, dropdown menus, tab bars, or "Back to top" buttons
 6. ❌ NEVER output footers with internal links — only show brand attribution + generation date
 
+⚠ EXCEPTION — guide-specified section index: If the BUSINESS LINE GUIDE explicitly requires a top "section index / navigation bar" (e.g. a Hero nav listing Overview / Trend / Channels), render it as a NON-FUNCTIONAL static strip: plain <span> text items separated by dividers — NO <nav>, NO <a href>, NO clickable behavior, NO sticky positioning. It is a decorative label row, not navigation. If the guide does not explicitly require it, the prohibition above applies in full.
+
 CORRECT PATTERN: The report is a single continuous scroll:
   Header → KPI → Charts → Tables → Insights → Footer
 Each section starts with a numbered heading (<h2>01 Overall KPI</h2>) but has NO navigation links pointing to it.
@@ -318,9 +321,9 @@ export const SYSTEM_PROMPT_DISPLAY = `# 系统提示词 (SYSTEM_PROMPT)
 
 > 以下为后端 \`ai-generate.service.ts\` 中完整的系统提示词，AI 生成时自动注入到 system role。
 
-## 📎 业务线指南（Guide）
+## 📎 业务线指南（Guide · 双层注入）
 
-系统提示词按请求拼装：\`SYSTEM_PROMPT\`（下方通用规则）+ **业务线指南**（Guide 表按 campaign 的业务线+报告场景匹配一份，含品牌视觉/章节结构/展示形式偏好/语调与术语四节，指南冲突时以指南为准）+ 业务事实（署名 Prepared by {业务线名}）。指南在数据管理 → 指南 维护。
+系统提示词按请求拼装：\`SYSTEM_PROMPT\`（下方通用规则）+ **双层业务线指南**（Guide 表按 campaign 业务线匹配：**视觉层** = isDefault 设计规范，管品牌色/字体/组件/动效，恒注入；**结构层** = 报告场景（scenario）精确匹配的指南，管章节结构/展示偏好/语调，命中即叠加）+ 业务事实（署名 Prepared by {业务线名}）。同一份指南可兼两职。指南在数据管理 → 指南 维护。
 
 ---
 
@@ -603,7 +606,7 @@ Return the COMPLETE updated HTML. Output ONLY the HTML code.`;
 export type StreamChunk =
   | { type: 'reasoning'; text: string }
   | { type: 'content'; text: string }
-  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage; dataCoverage?: DoneDataCoverage; missingModules?: { key: string; label: string }[]; guideUsed?: { id: string; name: string } | null }
+  | { type: 'done'; html: string; truncated: boolean; usage?: StreamUsage; dataCoverage?: DoneDataCoverage; missingModules?: { key: string; label: string }[]; guideUsed?: { id: string; name: string }[] }
   | { type: 'error'; message: string };
 
 /** done chunk 携带的周期数据覆盖(前端 toast 提醒用)。 */
@@ -926,6 +929,26 @@ export const aiGenerateService = {
       | undefined)
       ?.filter((m) => m?.name) ?? [];
 
+    // 4b) 营销活动(MarketingEvent):与 buildCampaignContext marketingEvents 注入同口径
+    //     —— 业务线内与报告周期重叠(label≠'1' 废弃)的活动数。
+    let marketingEventCount = 0;
+    try {
+      const evPeriodStart = reportPeriod?.startDate || campaign.startDate;
+      const evPeriodEnd = reportPeriod?.endDate || campaign.endDate;
+      if (campaign.businessLineId && evPeriodStart && evPeriodEnd) {
+        marketingEventCount = await prisma.marketingEvent.count({
+          where: {
+            businessLineId: campaign.businessLineId,
+            label: { not: '1' },
+            startTime: { lte: new Date(`${evPeriodEnd}T23:59:59Z`) },
+            endTime: { gte: new Date(`${evPeriodStart}T00:00:00Z`) },
+          },
+        });
+      }
+    } catch {
+      marketingEventCount = 0;
+    }
+
     // 5) MoM 前一期:报告周期往前推同样长度,期内 daily 非空才 ok
     let hasPrior = false;
     if (hasPeriod && reportPeriod?.startDate && reportPeriod.endDate) {
@@ -993,6 +1016,12 @@ export const aiGenerateService = {
         label: 'Campaign Placements',
         status: mediaPlacements.length > 0 ? 'ok' : 'missing',
         detail: mediaPlacements.length > 0 ? `${mediaPlacements.length} 个资源位` : '未配置资源位（analytics.mediaPlacements），模块将缺失',
+      },
+      {
+        key: 'marketingEvents',
+        label: '营销活动',
+        status: marketingEventCount > 0 ? 'ok' : 'missing',
+        detail: marketingEventCount > 0 ? `${marketingEventCount} 个期内营销活动` : '该业务线报告期内无营销活动（MarketingEvent），模块将省略',
       },
       {
         key: 'orderStatusSplit',
@@ -1330,6 +1359,38 @@ export const aiGenerateService = {
         ...(m.description ? { description: m.description } : {}),
       })) ?? [];
 
+    // ★ 营销活动（MarketingEvent，营销系统同步）：该业务线与报告周期重叠的活动。
+    //   宁缺勿假：label='1' 废弃过滤；1970 哨兵日期自然被重叠判定排除；无有效活动不注入。
+    const eventPeriodStart = reportPeriod?.startDate || campaign.startDate;
+    const eventPeriodEnd = reportPeriod?.endDate || campaign.endDate;
+    let marketingEvents: {
+      name: string; period: string; type?: string; info?: string; region?: string;
+    }[] = [];
+    try {
+      if (campaign.businessLineId && eventPeriodStart && eventPeriodEnd) {
+        const evs = await prisma.marketingEvent.findMany({
+          where: {
+            businessLineId: campaign.businessLineId,
+            label: { not: '1' },
+            startTime: { lte: new Date(`${eventPeriodEnd}T23:59:59Z`) },
+            endTime: { gte: new Date(`${eventPeriodStart}T00:00:00Z`) },
+          },
+          orderBy: { startTime: 'asc' },
+          take: 20,
+        });
+        const TYPE_LABEL: Record<number, string> = { 1: 'Festival', 2: 'Event Day', 3: 'Special Promo' };
+        marketingEvents = evs.map((e) => ({
+          name: e.name,
+          period: `${e.startTime.toISOString().slice(0, 10)} ~ ${e.endTime.toISOString().slice(0, 10)}`,
+          ...(e.type && TYPE_LABEL[e.type] ? { type: TYPE_LABEL[e.type] } : {}),
+          ...(e.info ? { info: e.info } : {}),
+          ...(e.region || e.continent ? { region: [e.continent, e.region].filter(Boolean).join(' / ') } : {}),
+        }));
+      }
+    } catch {
+      marketingEvents = []; // 表缺失等异常 → 不注入
+    }
+
     const context = {
       campaign: {
         name: campaign.name,
@@ -1415,6 +1476,8 @@ export const aiGenerateService = {
       ...(priorPeriod ? { priorPeriod } : {}),
       // ★ 缺口④ 媒体资源位（定性）。
       ...(mediaPlacements.length ? { mediaPlacements } : {}),
+      // ★ 营销活动（MarketingEvent）：业务线内与报告周期重叠的活动，注入后 AI 渲染 Marketing Activities 模块。
+      ...(marketingEvents.length ? { marketingEvents } : {}),
       // ★ 订单中间层新增维度（宁缺勿假：有数据才注入）。
       //   orderStatusSplit = Approved/Pending 单量拆分；topCountries = 订单客户国家分布（区间合并 Top5）。
       ...(orderStats ? {
@@ -1571,7 +1634,7 @@ export const aiGenerateService = {
     /** 报告场景(月报/结案/复盘…),决定匹配哪份业务线指南 */
     scenario?: string;
     reportPeriod?: { startDate?: string; endDate?: string };
-  }): Promise<{ html: string; guideUsed: { id: string; name: string } | null }> {
+  }): Promise<{ html: string; guideUsed: { id: string; name: string }[] }> {
     if (!DEEPSEEK_API_KEY) {
       throw ApiError.internal('AI API key 未配置（DEEPSEEK_API_KEY）');
     }
@@ -1580,12 +1643,13 @@ export const aiGenerateService = {
       ? await this.buildCampaignContext(params.campaignId, params.reportPeriod)
       : 'No campaign data provided.';
 
-    // 业务线指南:Guide 表按 businessLine+scenario 匹配,拼进 system prompt(替代 designMd 用户提示词注入)
-    const { guide, businessLineName } = params.campaignId
-      ? await resolveForCampaign(params.campaignId, params.scenario)
-      : { guide: null, businessLineName: '' };
-    const guideUsed = guide ? { id: guide.id, name: guide.name } : null;
-    const systemPrompt = buildSystemPrompt({ businessLineName, guideContent: guide?.content });
+    // 业务线指南·双层注入:视觉层(isDefault 规范)恒注入 + 结构层(scenario 精确匹配)叠加
+    const pair = params.campaignId
+      ? await resolvePairForCampaign(params.campaignId, params.scenario)
+      : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
+    const { content: guideContent, used: guidesUsed } = mergeGuideLayers(pair.visual, pair.structural);
+    const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));
+    const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent });
 
     let userPrompt = USER_PROMPT_TEMPLATE
       .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')
@@ -2032,12 +2096,13 @@ Rules:
     // done chunk 附带数据覆盖(与 context 同口径,前端 toast 提醒用)
     const dataCoverage = await this.getDataCoverage(params.campaignId, params.reportPeriod);
 
-    // 业务线指南:Guide 表按 businessLine+scenario 匹配,拼进 system prompt(替代 designMd 用户提示词注入)
-    const { guide, businessLineName } = params.campaignId
-      ? await resolveForCampaign(params.campaignId, params.scenario)
-      : { guide: null, businessLineName: '' };
-    const guideUsed = guide ? { id: guide.id, name: guide.name } : null;
-    const systemPrompt = buildSystemPrompt({ businessLineName, guideContent: guide?.content });
+    // 业务线指南·双层注入:视觉层(isDefault 规范)恒注入 + 结构层(scenario 精确匹配)叠加
+    const pair = params.campaignId
+      ? await resolvePairForCampaign(params.campaignId, params.scenario)
+      : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
+    const { content: guideContent, used: guidesUsed } = mergeGuideLayers(pair.visual, pair.structural);
+    const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));
+    const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent });
 
     let userPrompt = USER_PROMPT_TEMPLATE
       .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')

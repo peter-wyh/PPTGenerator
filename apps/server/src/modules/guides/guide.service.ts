@@ -26,6 +26,44 @@ export const guideService = {
     return usable.find((r) => r.isDefault) ?? null;
   },
 
+  /**
+   * ★ 双层匹配（视觉层 + 结构层，可同命中）:
+   *   - visual  = isDefault 指南（设计规范:品牌色/字体/组件/动效,恒注入）
+   *   - structural = scenario 精确匹配指南（章节结构/展示偏好/语调,命中即叠加）
+   * 同一份指南可同时承担两职(返回同一引用两处)。保持 pick() 单选行为不变(voice/recipe 链路仍用)。
+   */
+  async pickPair(businessLineId: string, scenario?: string): Promise<{ visual: Guide | null; structural: Guide | null }> {
+    if (!businessLineId) return { visual: null, structural: null };
+    const rows = await prisma.guide.findMany({
+      where: { businessLineId, isActive: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const usable = rows
+      .filter((r) => (r.content ?? '').trim())
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    const visual = usable.find((r) => r.isDefault) ?? null;
+    let structural: Guide | null = null;
+    if (scenario) {
+      structural = usable.find((r) => r.scenario === scenario) ?? null;
+      if (structural && visual && structural.id === visual.id) structural = visual; // 同一份两职
+    }
+    return { visual, structural };
+  },
+
+  /**
+   * ★ 该业务线实际存在的 scenario 精确匹配值(去重,updatedAt desc)——
+   * 前端「报告场景」下拉动态化用,消灭与 DB 脱节的死选项。
+   */
+  async listScenarios(businessLineId: string): Promise<string[]> {
+    if (!businessLineId) return [];
+    const rows = await prisma.guide.findMany({
+      where: { businessLineId, isActive: true, scenario: { not: null } },
+      select: { scenario: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return [...new Set(rows.map((r) => r.scenario!).filter(Boolean))];
+  },
+
   async list(opts?: { businessLineId?: string }) {
     const where: Prisma.GuideWhereInput = {};
     if (opts?.businessLineId) where.businessLineId = opts.businessLineId;
@@ -94,6 +132,71 @@ export async function resolveForCampaign(
   } catch (e) {
     console.warn('[guide] resolveForCampaign 失败,降级为无指南:', (e as Error)?.message ?? e);
     return { guide: null, businessLineName: '', businessLineCode: '' };
+  }
+}
+
+/** 双层匹配结果:视觉规范 + 结构指南 + 业务线信息(生成链路新入口)。 */
+export interface GuidePair {
+  visual: Guide | null;
+  structural: Guide | null;
+  businessLineName: string;
+  businessLineCode: string;
+}
+
+/**
+ * ★ 双层版 resolveForCampaign:视觉层(isDefault 规范)恒取,结构层(scenario 精确)命中即叠加。
+ * 与 resolveForCampaign 同静默降级语义。供 generate/edit + getDesignGuide 回显共用,
+ * 保证「表单回显的两份」⟺「生成时注入的两份」。
+ */
+export async function resolvePairForCampaign(campaignId: string, scenario?: string): Promise<GuidePair> {
+  try {
+    const camp = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { businessLine: true },
+    });
+    const businessLineName = camp?.businessLine?.title || camp?.businessLine?.code || '';
+    const businessLineCode = camp?.businessLine?.code ?? '';
+    if (!camp?.businessLineId) return { visual: null, structural: null, businessLineName, businessLineCode };
+    const pair = await guideService.pickPair(camp.businessLineId, scenario).catch(() => ({ visual: null, structural: null }));
+    return { ...pair, businessLineName, businessLineCode };
+  } catch (e) {
+    console.warn('[guide] resolvePairForCampaign 失败,降级为无指南:', (e as Error)?.message ?? e);
+    return { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
+  }
+}
+
+/**
+ * ★ 两份指南叠为单一注入文本。分层标注职责,消除双头指挥:
+ *   视觉层管长相(色/字/组件/动效) — 结构层只管骨架(章节/展示/语调),不含视觉。
+ * 同一份指南两职时只注入一次。structural 为空 → 仅视觉层。
+ */
+export function mergeGuideLayers(visual: Guide | null, structural: Guide | null): { content: string; used: Guide[] } {
+  const parts: string[] = [];
+  const used: Guide[] = [];
+  if (visual && (visual.content ?? '').trim()) {
+    parts.push(`# ═══ LAYER 1 · VISUAL SPEC (design system — colors/fonts/components/motion) ═══\n${visual.content.trim()}`);
+    used.push(visual);
+  }
+  if (structural && (!visual || structural.id !== visual.id) && (structural.content ?? '').trim()) {
+    parts.push(`# ═══ LAYER 2 · REPORT STRUCTURE GUIDE (sections/presentation/voice — NOT visual) ═══\n${structural.content.trim()}`);
+    used.push(structural);
+  }
+  return { content: parts.join('\n\n'), used };
+}
+
+/**
+ * ★ campaign → 业务线 → scenario 列表。任何失败降级空数组(前端隐藏场景字段)。
+ */
+export async function resolveScenariosForCampaign(campaignId: string): Promise<string[]> {
+  try {
+    const camp = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { businessLineId: true },
+    });
+    if (!camp?.businessLineId) return [];
+    return await guideService.listScenarios(camp.businessLineId).catch(() => []);
+  } catch {
+    return [];
   }
 }
 

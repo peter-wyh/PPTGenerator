@@ -512,13 +512,13 @@ export function VisualEditor({
               // 图标编辑：把 class 同步到组件属性
               comp.setAttributes({ class: edited.className });
             } else {
-              // 文本编辑：把 innerHTML 同步到组件
-              comp.set('content', edited.innerHTML);
+              // ★ 文本编辑：用 components() 整体替换子组件（含 textnode）
+              //   set('content') 只写叶子 content 属性——组件已有 textnode 子模型时
+              //   getHtml() 仍输出旧模型树，且视图重渲会把 DOM 上的新文案冲掉（文案消失根因）
+              comp.components(edited.innerHTML);
             }
-            comp.trigger('change:content');
             comp.trigger('change:attributes');
           }
-          selected.trigger('change:content');
         }
 
         // 直接触发 debouncedChange（确保保存）

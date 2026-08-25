@@ -168,6 +168,12 @@ router.get(
   htmlTemplateController.getDesignGuide,
 );
 
+// GET /api/v1/html-templates/campaign/:campaignId/guide-scenarios — 该业务线实际存在的指南场景列表
+router.get(
+  '/campaign/:campaignId/guide-scenarios',
+  htmlTemplateController.listGuideScenarios,
+);
+
 // GET /api/v1/html-templates/campaign/:campaignId/module-coverage — ★ 模块级数据覆盖预检
 //   生成前展示哪些模块有数据/缺数据(query: startDate/endDate 可选,报告周期)
 router.get(
