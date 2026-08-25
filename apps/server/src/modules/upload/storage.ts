@@ -31,7 +31,13 @@ export class LocalStorage implements Storage {
     const abs = resolve(this.uploadDir, file);
     await fs.writeFile(abs, buf);
     // 自行归一化尾部斜杠，避免 config 之外的调用方传入带斜杠的 base 产生 //uploads。
-    const base = this.publicBase.replace(/\/$/, '');
+    let base = this.publicBase.replace(/\/$/, '');
+    // ★ 防御:PUBLIC_BASE 若被误配为 localhost/127.0.0.1(照 .env.example 抄到部署环境),
+    //   存库 URL 会指向访客本机 → 图片永远裂。非本机调试场景强制归一化为相对路径,
+    //   浏览器经同源 /uploads 反代访问,任意域名下都通。
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(base)) {
+      base = '';
+    }
     return { url: `${base}/uploads/${file}`, key: file };
   }
 }

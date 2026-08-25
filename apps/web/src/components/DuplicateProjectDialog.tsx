@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ProjectSummary, ReportPeriod, Campaign } from '@mediakit/shared';
 import { projectsApi } from '@/api/projects';
 import { listCampaigns } from '@/api/campaigns';
@@ -9,6 +9,20 @@ interface Props {
   project: ProjectSummary;
   onClose: () => void;
   onDone: () => void;
+}
+
+/** 日期字符串 +n 天(YYYY-MM-DD)。 */
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  const fmt = (x: Date) =>
+    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  return fmt(d);
+}
+
+/** 两段 YYYY-MM-DD 区间是否有交集(字典序比较)。 */
+function rangesOverlap(aS: string, aE: string, bS: string, bE: string): boolean {
+  return aS <= bE && bS <= aE;
 }
 
 /** 从 month 字符串推导 startDate/endDate。 */
@@ -60,23 +74,50 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
     };
   }, [isCampaignReport]);
 
-  // 月份默认取下一个月
+  // ★ 默认周期从所选 Campaign 投放期推导(而非"当前月"):
+  //   monthly/wrap-up → 源月份(在投放期内时),否则投放首月
+  //   weekly/biweekly → 源区间(与投放期有交集时),否则投放首周/首双周
+  //   换绑 Campaign 时重新推导。
   useEffect(() => {
-    if (isMonthly && !period.month) {
-      const existing = currentPeriod.month;
-      if (existing) {
-        setPeriod({ ...period, month: existing });
-      } else {
+    if (!hasPeriod) return;
+    if (isMonthly) {
+      const src = currentPeriod.month;
+      let month = src ?? '';
+      if (campRange) {
+        if (src) {
+          const r = monthToRange(src);
+          if (!rangesOverlap(r.startDate, r.endDate, campRange.s, campRange.e)) month = '';
+        }
+        if (!month) month = campRange.s.slice(0, 7);
+      }
+      if (!month) {
         const now = new Date();
-        const next = new Date(now.getFullYear(), now.getMonth(), 1);
-        const fmt = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
-        setPeriod({ ...period, month: fmt });
+        month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      }
+      setPeriod((p) => ({ ...p, month }));
+    } else {
+      const s0 = currentPeriod.startDate ?? '';
+      const e0 = currentPeriod.endDate ?? '';
+      const srcOk = s0 && e0 && (!campRange || rangesOverlap(s0, e0, campRange.s, campRange.e));
+      if (srcOk) {
+        setPeriod((p) => ({ ...p, startDate: s0, endDate: e0 }));
+      } else if (campRange) {
+        const span = scenarioSub === 'biweekly' ? 13 : 6;
+        const end = addDays(campRange.s, span);
+        setPeriod((p) => ({ ...p, startDate: campRange.s, endDate: end < campRange.e ? end : campRange.e }));
+      } else {
+        setPeriod((p) => ({ ...p, startDate: s0, endDate: e0 }));
       }
     }
+    // currentPeriod/campRange 随 campaigns 加载与换绑变化时重推导
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [campaigns, campaignId]);
 
   async function handleConfirm() {
+    if (periodError) {
+      setError(periodError);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -114,6 +155,36 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
 
   // 是否换了 Campaign（决定提交时是否传 campaignId）
   const campaignChanged = isCampaignReport && campaignId !== '' && campaignId !== (meta.campaignId ?? '');
+
+  // ★ 当前生效 Campaign 的投放期(优先列表实数据,列表不可用时回退源 meta 回显)
+  const campRange = useMemo(() => {
+    if (!isCampaignReport) return null;
+    const c = campaigns.find((x) => x.id === campaignId);
+    if (c?.startDate && c?.endDate) return { s: c.startDate, e: c.endDate };
+    const info = meta.campaignInfo;
+    if (info?.startDate && info?.endDate) return { s: info.startDate, e: info.endDate };
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaigns, campaignId, isCampaignReport]);
+
+  // ★ 周期校验:与 Campaign 投放期必须有交集(完全越界 = 报告无数据,必须拦截)
+  const periodError = useMemo(() => {
+    if (!isCampaignReport || !campRange) return null;
+    if (isMonthly && period.month) {
+      const r = monthToRange(period.month);
+      if (!rangesOverlap(r.startDate, r.endDate, campRange.s, campRange.e)) {
+        return `所选月份不在 Campaign 投放期（${campRange.s} ~ ${campRange.e}）内`;
+      }
+    }
+    if (isDateRange && period.startDate && period.endDate) {
+      if (period.startDate > period.endDate) return '结束日期不能早于开始日期';
+      if (!rangesOverlap(period.startDate, period.endDate, campRange.s, campRange.e)) {
+        return `所选周期与 Campaign 投放期（${campRange.s} ~ ${campRange.e}）无交集`;
+      }
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, campRange, isMonthly, isDateRange, isCampaignReport]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -218,9 +289,18 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
                 />
               </div>
             )}
-            <p className="text-[10px] text-foreground-muted">
-              复制后报告中的周期文案、页眉日期将自动更新为新周期。
-            </p>
+            {campRange && (
+              <p className="text-[10px] text-foreground-muted">
+                Campaign 投放期：{campRange.s} ~ {campRange.e}，报告周期需与之有交集。
+              </p>
+            )}
+            {periodError ? (
+              <p className="text-[11px] text-red">{periodError}</p>
+            ) : (
+              <p className="text-[10px] text-foreground-muted">
+                复制后报告中的周期文案、页眉日期将自动更新为新周期。
+              </p>
+            )}
           </div>
         )}
 
@@ -235,7 +315,7 @@ export function DuplicateProjectDialog({ project, onClose, onDone }: Props) {
           <Button variant="ghost" onClick={onClose} disabled={submitting}>
             取消
           </Button>
-          <Button onClick={handleConfirm} disabled={submitting}>
+          <Button onClick={handleConfirm} disabled={submitting || !!periodError}>
             {submitting ? '复制中…' : hasPeriod ? '复制并更新周期' : '复制'}
           </Button>
         </div>
