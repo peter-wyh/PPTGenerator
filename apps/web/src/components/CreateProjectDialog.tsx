@@ -202,7 +202,7 @@ export function CreateProjectDialog({
     ]).then(([blRes, advRes]) => {
       if (cancelled) return;
       if (blRes.status === 'fulfilled' && blRes.value.length > 0) {
-        setBlOptions(blRes.value.map((b) => ({ code: b.code, name: `${b.code} · ${b.name}` })));
+        setBlOptions(blRes.value.map((b) => ({ code: b.code, name: `${b.code} · ${b.title || b.code}` })));
       }
       if (advRes.status === 'fulfilled' && advRes.value.length > 0) {
         setAdvOptions(advRes.value.map((a) => ({ name: a.name })));

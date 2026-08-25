@@ -1,0 +1,4 @@
+
+# shadow database url (prisma migrate diff)
+.env.shadow
+.shadow.env.tmp

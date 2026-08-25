@@ -56,7 +56,7 @@ export function Canvas() {
 
   // 业务线 Logo（右上角渲染）— 位置/尺寸可由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
-  const blName = useBusinessLineInfo(businessLine)?.name;
+  const blName = useBusinessLineInfo(businessLine)?.title || useBusinessLineInfo(businessLine)?.code;
   const blBadge = theme.branding?.blBadge;
   const blLogoFromDb = useBusinessLineLogo(businessLine);
   const blLogoSrc = blBadge?.logo || blLogoFromDb;

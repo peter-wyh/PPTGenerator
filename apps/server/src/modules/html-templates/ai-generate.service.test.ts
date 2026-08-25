@@ -90,7 +90,7 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
     id: 'c1', name: 'T', platform: 'TikTok', startDate: '2026-10-01', endDate: '2026-10-31',
     budget: 1, status: 'x', businessLineCode: 'FT', metrics: { clicks: 1 },
     analytics: { trend: [{ date: '2026-10-01', revenue: 999 }], summary: { totalRevenue: 999 }, topProducts: [{ n: 1 }], weeklyTrend: [{ w: 1 }], topMarkets: [{ m: 1 }], insights: [{ i: 1 }], customerSplit: { newCustomers: 1, returningCustomers: 2 } },
-    businessLine: { name: 'FT' }, advertiser: { name: 'A' },
+    businessLine: { title: 'FT' }, advertiser: { name: 'A' },
     campaignCreators: [{
       creator: { name: 'M', platform: 'TikTok', partnerType: 'creator' },
       cpsPerformances: [{ clicks: 0, orders: 0, gmv: 0, spend: 0, commission: 0, impressions: 0,
@@ -139,7 +139,7 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
   const camp = {
     name: 'T', platform: 'x', startDate: '2026-07-01', endDate: '2026-07-31',
     budget: 0, status: 'x', businessLineCode: 'DG', metrics: null, analytics: null,
-    businessLineId: 'bl1', businessLine: { name: 'DG 好物', code: 'DG' },
+    businessLineId: 'bl1', businessLine: { title: 'DG 好物', code: 'DG' },
     advertiser: null, campaignCreators: [],
   };
   const okResp = {
@@ -271,7 +271,7 @@ describe('ai-generate.service · buildCampaignContext 订单中间层口径', ()
     id: 'c1', name: 'T', platform: 'TikTok', startDate: '2026-10-01', endDate: '2026-10-31',
     budget: 1, status: 'x', businessLineCode: 'FT', metrics: { clicks: 1 },
     analytics: {},
-    businessLine: { name: 'FT' }, advertiser: { name: 'A' },
+    businessLine: { title: 'FT' }, advertiser: { name: 'A' },
     campaignCreators: [{
       id: 'cc1',
       creator: { name: 'M', platform: 'TikTok', partnerType: 'creator' },

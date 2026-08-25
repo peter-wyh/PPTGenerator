@@ -1343,7 +1343,7 @@ export const aiGenerateService = {
         status: campaign.status,
         businessLine: {
           code: campaign.businessLineCode ?? '',
-          name: campaign.businessLine?.name ?? campaign.businessLineCode,
+          name: campaign.businessLine?.title || campaign.businessLine?.code || campaign.businessLineCode,
           // ★ MUST use this exact URL in <img src>. It is an absolute URL.
           logoUrl: resolveUrl(campaign.businessLine?.logo),
         },

@@ -302,7 +302,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
                 <option value="">（请选择）</option>
                 {blOptions.map((b) => (
                   <option key={b.code} value={b.code}>
-                    {b.code} · {b.name}
+                    {b.code} · {b.title || b.code}
                   </option>
                 ))}
               </select>

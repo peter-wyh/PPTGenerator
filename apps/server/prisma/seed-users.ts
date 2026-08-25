@@ -26,7 +26,7 @@ export async function seedBusinessLineUsers(): Promise<void> {
     if (existing) {
       await prisma.user.update({
         where: { id: existing.id },
-        data: { name: bl.name, businessLineCode: bl.code },
+        data: { name: bl.title || bl.code, businessLineCode: bl.code },
       });
       console.log(`[seed-users] updated: ${email} (${bl.code})`);
     } else {
@@ -34,7 +34,7 @@ export async function seedBusinessLineUsers(): Promise<void> {
         data: {
           email,
           passwordHash: hashPassword(PASSWORD),
-          name: bl.name,
+          name: bl.title || bl.code,
           role: 'USER',
           businessLineCode: bl.code,
         },

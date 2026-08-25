@@ -365,7 +365,7 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   if (!campaign) throw ApiError.notFound('Campaign 不存在');
 
   const header = {
-    brand: { name: campaign.businessLine?.name ?? campaign.businessLineCode ?? 'Brand', logoText: (campaign.businessLine?.name ?? campaign.businessLineCode ?? 'brand').toLowerCase() },
+    brand: { name: campaign.businessLine?.title || campaign.businessLine?.code || campaign.businessLineCode || 'Brand', logoText: (campaign.businessLine?.title || campaign.businessLine?.code || campaign.businessLineCode || 'brand').toLowerCase() },
     merchant: { name: campaign.advertiser?.name ?? campaign.advertiserName ?? 'Merchant', logoText: (campaign.advertiser?.name ?? campaign.advertiserName ?? 'M').slice(0, 2).toUpperCase() },
   };
 

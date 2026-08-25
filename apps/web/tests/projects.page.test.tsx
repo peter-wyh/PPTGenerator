@@ -36,8 +36,8 @@ vi.mock('@/api/campaigns', () => ({
 vi.mock('@/api/lookup', () => ({
   lookupApi: {
     listBusinessLines: vi.fn().mockResolvedValue([
-      { id: 'bl-ft', code: 'FT', name: 'Fanstoshop' },
-      { id: 'bl-sm', code: 'SM', name: 'SmileKOLs' },
+      { id: 'bl-ft', code: 'FT', title: 'Fanstoshop' },
+      { id: 'bl-sm', code: 'SM', title: 'SmileKOLs' },
     ]),
     listAdvertisers: vi.fn().mockResolvedValue([]),
     listMerchants: vi.fn().mockResolvedValue([]),

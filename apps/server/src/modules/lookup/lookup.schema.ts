@@ -12,12 +12,23 @@ export const updateMerchantSchema = createMerchantSchema.partial();
 
 export const createBusinessLineSchema = z.object({
   code: z.string().min(1).max(20),
-  name: z.string().min(1).max(100),
+  title: z.string().max(50).optional(),
   logo: z.string().max(2048).optional(),
   color: z.string().max(20).optional(),
   merchantId: z.string().optional(),
   designMd: z.string().optional(),
   designMdUrl: z.string().max(2048).optional(),
+  // 源侧字段（dm_union_business_lines）
+  directorId: z.string().max(500).optional(),
+  members: z.string().optional(),
+  extra: z.string().optional(),
+  status: z.number().int().optional(),
+  companyIds: z.string().max(500).optional(),
+  departmentIds: z.string().max(2000).optional(),
+  specifyMembers: z.string().optional(),
+  cptWithdraw: z.boolean().optional(),
+  relatedProject: z.string().max(255).optional(),
+  calendarAdminIds: z.string().max(1000).optional(),
 });
 
 export const updateBusinessLineSchema = createBusinessLineSchema.partial();
@@ -42,21 +53,34 @@ export const listBusinessLinesQuerySchema = z.object({
   merchantId: z.string().optional(),
 });
 
-// ─── MarketingEvent（营销活动）────────────────────────────────────────────────
+// ─── MarketingEvent（营销活动，对齐 sales_activity）───────────────────────────
+
+/** datetime 字符串（ISO 8601 或 YYYY-MM-DD HH:mm[:ss]），转 Date 由 service 层完成。 */
+const datetimeString = z.string().min(4);
 
 export const createMarketingEventSchema = z.object({
-  name: z.string().min(1).max(191),
-  description: z.string().max(2000).optional(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate 须为 YYYY-MM-DD'),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate 须为 YYYY-MM-DD'),
-  advertiserId: z.string().min(1),
+  name: z.string().min(1).max(255),
+  startTime: datetimeString,
+  endTime: datetimeString,
+  label: z.string().max(255).optional(),
+  type: z.number().int().min(0).max(3).optional(),
+  info: z.string().max(2000).optional(),
+  continent: z.string().max(255).optional(),
+  region: z.string().max(255).optional(),
+  level: z.number().int().min(0).max(3).optional(),
+  adsId: z.string().optional(),
+  businessLineId: z.string().optional(),
+  isShowMember: z.number().int().min(0).max(2).optional(),
+  source: z.number().int().min(0).max(3).optional(),
+  createId: z.string().optional(),
+  updateId: z.string().optional(),
 });
 
-export const updateMarketingEventSchema = createMarketingEventSchema.partial();
+export const updateMarketingEventSchema = createMarketingEventSchema.partial().omit({ name: true }).extend({ name: z.string().min(1).max(255) });
 
-/** GET /api/v1/marketing-events?advertiserId= */
+/** GET /api/v1/marketing-events?businessLineId= */
 export const listMarketingEventsQuerySchema = z.object({
-  advertiserId: z.string().optional(),
+  businessLineId: z.string().optional(),
 });
 
 export { idParamSchema };

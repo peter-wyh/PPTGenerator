@@ -18,7 +18,7 @@ interface MerchantSeed {
 
 interface BusinessLineSeed {
   code: string;
-  name: string;
+  title: string;
   logo?: string;
   color?: string;
   merchantId?: string;
@@ -41,12 +41,12 @@ const MERCHANTS: MerchantSeed[] = [
 ];
 
 const BUSINESS_LINES: BusinessLineSeed[] = [
-  { code: 'FT', name: 'FineTech',    logo: 'https://placehold.co/120x120/2563eb/ffffff?text=FT', color: '#2563eb' },
-  { code: 'SM', name: 'SocialMove',  logo: 'https://placehold.co/120x120/16a34a/ffffff?text=SM', color: '#16a34a' },
-  { code: 'CX', name: 'CosmeX',      logo: 'https://placehold.co/120x120/db2777/ffffff?text=CX', color: '#db2777' },
-  { code: 'DG', name: 'DigitalGo',   logo: 'https://placehold.co/120x120/ea580c/ffffff?text=DG', color: '#ea580c' },
-  { code: 'KN', name: 'KitchenNest', logo: 'https://placehold.co/120x120/9333ea/ffffff?text=KN', color: '#9333ea' },
-  { code: 'DM', name: 'DreamMart',   logo: 'https://placehold.co/120x120/0891b2/ffffff?text=DM', color: '#0891b2' },
+  { code: 'FT', title: 'FineTech',    logo: 'https://placehold.co/120x120/2563eb/ffffff?text=FT', color: '#2563eb' },
+  { code: 'SM', title: 'SocialMove',  logo: 'https://placehold.co/120x120/16a34a/ffffff?text=SM', color: '#16a34a' },
+  { code: 'CX', title: 'CosmeX',      logo: 'https://placehold.co/120x120/db2777/ffffff?text=CX', color: '#db2777' },
+  { code: 'DG', title: 'DigitalGo',   logo: 'https://placehold.co/120x120/ea580c/ffffff?text=DG', color: '#ea580c' },
+  { code: 'KN', title: 'KitchenNest', logo: 'https://placehold.co/120x120/9333ea/ffffff?text=KN', color: '#9333ea' },
+  { code: 'DM', title: 'DreamMart',   logo: 'https://placehold.co/120x120/0891b2/ffffff?text=DM', color: '#0891b2' },
 ];
 
 const ADVERTISERS: AdvertiserSeed[] = [
@@ -78,10 +78,10 @@ async function main() {
   for (const bl of BUSINESS_LINES) {
     await prisma.businessLine.upsert({
       where: { code: bl.code },
-      update: { name: bl.name, logo: bl.logo, color: bl.color, merchantId: bl.merchantId ?? null },
-      create: { code: bl.code, name: bl.name, logo: bl.logo, color: bl.color, merchantId: bl.merchantId ?? null },
+      update: { title: bl.title, logo: bl.logo, color: bl.color, merchantId: bl.merchantId ?? null },
+      create: { code: bl.code, title: bl.title, logo: bl.logo, color: bl.color, merchantId: bl.merchantId ?? null, status: 1 },
     });
-    console.log(`  ✓ BusinessLine: ${bl.code} (${bl.name})`);
+    console.log(`  ✓ BusinessLine: ${bl.code} (${bl.title})`);
   }
 
   // 3. Advertisers（upsert by name）

@@ -838,7 +838,7 @@ export function PageHeader({ data }: { data: PageHeaderData }) {
   };
   const rightLogo: PageHeaderLogo = {
     ...data.rightLogo,
-    text: data.rightLogo.text && data.rightLogo.text !== '业务线' ? data.rightLogo.text : (blInfo?.name || data.rightLogo.text || '业务线'),
+    text: data.rightLogo.text && data.rightLogo.text !== '业务线' ? data.rightLogo.text : (blInfo?.title || blInfo?.code || data.rightLogo.text || '业务线'),
   };
   // 业务线颜色仅用于用户已上传图片的配色辅助——无图片时不再渲染占位符
   // (rightLogo auto-fill removed: no default business line placeholder)

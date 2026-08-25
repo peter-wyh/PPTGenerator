@@ -97,7 +97,7 @@ describe('resolveForCampaign · 静默降级', () => {
   it('campaign 带 businessLine → 返回指南+名称+code', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue({
       businessLineId: 'bl1',
-      businessLine: { name: 'DG 好物', code: 'DG' },
+      businessLine: { title: 'DG 好物', code: 'DG' },
     });
     prismaMock.guide.findMany.mockResolvedValue([mkGuide({ id: 'def', isDefault: true })]);
     const r = await resolveForCampaign('c1', '月报');
@@ -106,7 +106,7 @@ describe('resolveForCampaign · 静默降级', () => {
     expect(r.businessLineCode).toBe('DG');
   });
   it('Guide 查询抛错 → guide=null 不抛(生成永不因指南失败)', async () => {
-    prismaMock.campaign.findUnique.mockResolvedValue({ businessLineId: 'bl1', businessLine: { name: 'X', code: 'X' } });
+    prismaMock.campaign.findUnique.mockResolvedValue({ businessLineId: 'bl1', businessLine: { title: 'X', code: 'X' } });
     prismaMock.guide.findMany.mockRejectedValue(new Error('db down'));
     const r = await resolveForCampaign('c1');
     expect(r.guide).toBeNull();
@@ -136,7 +136,7 @@ describe('extractVoiceSection · 语调与术语截取', () => {
 
 describe('pickVoiceForCampaign', () => {
   it('campaign → 指南 → 语调节字符串;失败降级空串', async () => {
-    prismaMock.campaign.findUnique.mockResolvedValue({ businessLineId: 'bl1', businessLine: { name: 'X', code: 'X' } });
+    prismaMock.campaign.findUnique.mockResolvedValue({ businessLineId: 'bl1', businessLine: { title: 'X', code: 'X' } });
     prismaMock.guide.findMany.mockResolvedValue([
       mkGuide({ isDefault: true, content: '## 语调与术语\n用「创作者」' }),
     ]);

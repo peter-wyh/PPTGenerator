@@ -160,25 +160,68 @@ model Merchant {
   advertisers  Advertiser[]
 }
 
-/// 业务线（FT / SM / CX / DG / KN / DM）。
+/// 业务线（对齐营销系统 dm_union_business_lines）。
+/// 源侧字段区命名/类型/默认值与 DDL 一致；本地扩展字段（code/logo/color/designMd 等）单独分区，同步时不覆盖。
 model BusinessLine {
-  id         String         @id @default(cuid())
-  code       String         @unique
-  name       String
+  /// 本地 cuid 主键（源为 bigint unsigned 自增；本地 FK 链均为 String，保留 cuid，同步映射时转换）。
+  id         String   @id @default(cuid())
+  /// 名称（源 title varchar(50) NOT NULL DEFAULT ''）。
+  title      String   @default("") @db.VarChar(50)
+  /// 负责人 ids（源 director_id varchar(500) NOT NULL DEFAULT ''，逗号分隔）。
+  directorId String   @default("") @db.VarChar(500) @map("director_id")
+  /// 负责成员 ids（源 members text NULL）。
+  members    String?  @db.Text
+  /// 额外信息（源 extra text NULL）。
+  extra      String?  @db.Text
+  /// 创建人 ID（源 creator_id bigint unsigned NOT NULL DEFAULT 0，关联 dm_admin；本地存原始 id 字符串，不建 FK——源/本地用户体系不同）。
+  creatorId  String?  @map("creator_id")
+  /// 更新人 ID（源 updator_id，关联 dm_admin；同上不建 FK）。
+  updatorId  String?  @map("updator_id")
+  /// 创建时间（源 create_time datetime NULL）。
+  createTime DateTime? @map("create_time")
+  /// 更新时间（源 update_time datetime NULL）。
+  updateTime DateTime? @map("update_time")
+  /// 删除时间（源 delete_time datetime NULL；软删标记，NULL=未删）。
+  deleteTime DateTime? @map("delete_time")
+  /// 业务线状态（源 status tinyint(1) NOT NULL DEFAULT 1）。
+  status     Int      @default(1) @db.TinyInt
+  /// 作品提及（源 expert_work_mention json NULL，字符串数组）。
+  expertWorkMention Json? @map("expert_work_mention")
+  /// 作品标签（源 expert_work_label json NULL，字符串数组）。
+  expertWorkLabel   Json? @map("expert_work_label")
+  /// 所属公司（源 company_ids varchar(500) NOT NULL DEFAULT '0'）。
+  companyIds String   @default("0") @db.VarChar(500) @map("company_ids")
+  /// 部门 ids（源 department_ids varchar(2000) NOT NULL DEFAULT ''）。
+  departmentIds String @default("") @db.VarChar(2000) @map("department_ids")
+  /// 指定成员（源 specify_members text NULL）。
+  specifyMembers String? @db.Text @map("specify_members")
+  /// cpt 余额提现 0否1是（源 cpt_withdraw tinyint(1) NOT NULL DEFAULT 0）。
+  cptWithdraw Boolean @default(false) @map("cpt_withdraw")
+  /// 关联应用（源 related_project varchar(255) NOT NULL DEFAULT ''）。
+  relatedProject String @default("") @db.VarChar(255) @map("related_project")
+  /// 日历管理员 ids（源 calendar_admin_ids varchar(1000) NOT NULL DEFAULT ''）。
+  calendarAdminIds String @default("") @db.VarChar(1000) @map("calendar_admin_ids")
+
+  // ─── 本地扩展（报告侧配置；源表无，同步时不覆盖）─────────────────────────
+  /// 简称（唯一短码），例如 'FT'。报告/权限链路主标识。
+  code       String   @unique
+  /// Logo URL。
   logo       String?
+  /// 品牌色 hex。
   color      String?
   /// design.md 文档内容（Markdown 原文）。
-  designMd   String?        @db.Text
+  designMd   String?  @db.Text
   /// design.md 上传附件 URL（如有）。
   designMdUrl String?
   merchantId String?
-  merchant   Merchant?       @relation(fields: [merchantId], references: [id])
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  merchant   Merchant? @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   advertisers Advertiser[]
   campaigns   Campaign[]
-  guides       Guide[]
+  guides      Guide[]
+  marketingEvents MarketingEvent[]
 
   @@index([merchantId])
 }
@@ -198,32 +241,53 @@ model Advertiser {
   @@index([businessLineId])
   @@index([merchantId])
   campaigns   Campaign[]
-  marketingEvents MarketingEvent[]
 }
 
 // ─── Phase 2: Campaign / Creator / CampaignCreator ──────────────────────────
 // 核心业务实体独立成表,支持结构化查询 + 外键关联。
 // DataRecord 保留作为扩展/兼容层,旧数据迁移后可废弃。
 
-/// 营销活动（广告主维度的市场活动记录：名称/简介/时间跨度）。
+/// 营销活动（对齐营销系统 sales_activity）。
 model MarketingEvent {
-  id           String     @id @default(cuid())
-  /// 活动名称。
-  name         String
-  /// 活动简介。
-  description  String?
-  /// 开始日期 YYYY-MM-DD。
-  startDate    String
-  /// 结束日期 YYYY-MM-DD。
-  endDate      String
-  /// 关联广告主。
-  advertiserId String
-  advertiser   Advertiser @relation(fields: [advertiserId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id          String   @id @default(cuid())
+  /// 活动名称（源 name varchar(255) NOT NULL DEFAULT ''）。
+  name        String   @default("") @db.VarChar(255)
+  /// 开始时间（源 start_time datetime NOT NULL DEFAULT '0000-00-00 00:00:00'）。
+  startTime   DateTime @default("1970-01-01T00:00:00Z") @map("start_time")
+  /// 结束时间（源 end_time datetime NOT NULL DEFAULT '0000-00-00 00:00:00'）。
+  endTime     DateTime @default("1970-01-01T00:00:00Z") @map("end_time")
+  /// 标识 1废弃（源 label varchar(255) NOT NULL DEFAULT ''）。
+  label       String   @default("") @db.VarChar(255)
+  /// 类型 1节日 2活动日 3特别促销（源 type tinyint(1) NOT NULL DEFAULT 0）。
+  type        Int      @default(0) @db.TinyInt
+  /// 简介（源 info text NULL）。
+  info        String?  @db.Text
+  /// 适用州（源 continent varchar(255) NOT NULL DEFAULT ''）。
+  continent   String   @default("") @db.VarChar(255)
+  /// 适用地区（源 region varchar(255) NOT NULL DEFAULT ''）。
+  region      String   @default("") @db.VarChar(255)
+  /// 平台评级 3高 2中 1低（源 level tinyint(1) NOT NULL DEFAULT 0）。
+  level       Int      @default(0) @db.TinyInt
+  /// 申请人（源 ads_id int(11) NOT NULL DEFAULT 0，关联 dm_admin.id；本地存原始 id 字符串，不建 FK——源/本地用户体系不同）。
+  adsId       String   @default("0") @map("ads_id")
+  /// 业务线 id（源 business_line_id int(11) NOT NULL DEFAULT 0；本地指向 BusinessLine.id，cuid 字符串）。
+  businessLineId String? @map("business_line_id")
+  businessLine   BusinessLine? @relation(fields: [businessLineId], references: [id])
+  /// 展示给流量主 1是 2否（源 is_show_member tinyint(1) NOT NULL DEFAULT 0）。
+  isShowMember Int     @default(0) @db.TinyInt @map("is_show_member")
+  /// 入库来源 1管理员录入 2邮件解析 3AI 解析（源 source tinyint(1) NOT NULL DEFAULT 0）。
+  source      Int      @default(0) @db.TinyInt
+  /// 添加人 id（源 create_id int(11) NOT NULL DEFAULT 0，关联 dm_admin.id；存原始 id 字符串）。
+  createId    String   @default("0") @map("create_id")
+  /// 修改人 id（源 update_id int(11) NOT NULL DEFAULT 0，关联 dm_admin.id；存原始 id 字符串）。
+  updateId    String   @default("0") @db.VarChar(255) @map("update_id")
+  /// 创建时间（源 create_time datetime NOT NULL DEFAULT '0000-00-00 00:00:00'）。
+  createTime  DateTime @default("1970-01-01T00:00:00Z") @map("create_time")
+  /// 修改时间（源 update_time datetime NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP）。
+  updateTime  DateTime @default("1970-01-01T00:00:00Z") @map("update_time") @updatedAt
 
-  @@index([advertiserId])
-  @@index([startDate])
+  @@index([businessLineId])
+  @@index([startTime])
 }
 
 /// 业务线报告指南(AI 提示词层配置:品牌视觉/章节结构/展示形式/语调术语)。

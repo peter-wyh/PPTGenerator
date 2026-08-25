@@ -35,6 +35,28 @@ export const merchantService = {
 
 // ─── BusinessLine ─────────────────────────────────────────────────────────────
 
+/** BusinessLine 可写字段（源侧 dm_union_business_lines 对齐 + 本地扩展）。 */
+export type BusinessLineInput = {
+  code: string;
+  title?: string;
+  logo?: string;
+  color?: string;
+  merchantId?: string;
+  designMd?: string;
+  designMdUrl?: string;
+  // 源侧字段
+  directorId?: string;
+  members?: string;
+  extra?: string;
+  status?: number;
+  companyIds?: string;
+  departmentIds?: string;
+  specifyMembers?: string;
+  cptWithdraw?: boolean;
+  relatedProject?: string;
+  calendarAdminIds?: string;
+};
+
 export const businessLineService = {
   async list(opts?: { merchantId?: string }) {
     const where: Prisma.BusinessLineWhereInput = {};
@@ -44,7 +66,7 @@ export const businessLineService = {
       orderBy: { code: 'asc' },
       include: {
         merchant: { select: { id: true, name: true } },
-        _count: { select: { advertisers: true } },
+        _count: { select: { advertisers: true, marketingEvents: true } },
       },
     });
   },
@@ -59,11 +81,11 @@ export const businessLineService = {
     return prisma.businessLine.findUnique({ where: { code } });
   },
 
-  async create(data: { code: string; name: string; logo?: string; color?: string; merchantId?: string; designMd?: string; designMdUrl?: string }) {
+  async create(data: BusinessLineInput) {
     return prisma.businessLine.create({ data });
   },
 
-  async update(id: string, data: Partial<{ code: string; name: string; logo: string; color: string; merchantId: string; designMd: string; designMdUrl: string }>) {
+  async update(id: string, data: Partial<BusinessLineInput>) {
     await this.getOrThrow(id);
     return prisma.businessLine.update({ where: { id }, data });
   },
@@ -90,7 +112,7 @@ export const advertiserService = {
       where,
       orderBy: { name: 'asc' },
       include: {
-        businessLine: { select: { id: true, code: true, name: true } },
+        businessLine: { select: { id: true, code: true, title: true } },
         merchant: { select: { id: true, name: true } },
       },
     });
@@ -121,17 +143,44 @@ export const advertiserService = {
   },
 };
 
-// ─── MarketingEvent（营销活动）────────────────────────────────────────────────
+// ─── MarketingEvent（营销活动，对齐 sales_activity）───────────────────────────
+
+/** MarketingEvent 可写字段（源 sales_activity 对齐；时间统一接受 ISO/datetime 字符串）。 */
+export type MarketingEventInput = {
+  name: string;
+  startTime?: Date | string;
+  endTime?: Date | string;
+  label?: string;
+  type?: number;
+  info?: string;
+  continent?: string;
+  region?: string;
+  level?: number;
+  adsId?: string;
+  businessLineId?: string;
+  isShowMember?: number;
+  source?: number;
+  createId?: string;
+  updateId?: string;
+};
+
+/** startTime/endTime 字符串 → Date（Prisma datetime 列）。 */
+function coerceMarketingEventTimes<T extends { startTime?: Date | string; endTime?: Date | string }>(data: T): T {
+  const out = { ...data };
+  if (out.startTime != null && !(out.startTime instanceof Date)) out.startTime = new Date(out.startTime);
+  if (out.endTime != null && !(out.endTime instanceof Date)) out.endTime = new Date(out.endTime);
+  return out;
+}
 
 export const marketingEventService = {
-  async list(opts?: { advertiserId?: string }) {
+  async list(opts?: { businessLineId?: string }) {
     const where: Prisma.MarketingEventWhereInput = {};
-    if (opts?.advertiserId) where.advertiserId = opts.advertiserId;
+    if (opts?.businessLineId) where.businessLineId = opts.businessLineId;
     return prisma.marketingEvent.findMany({
       where,
-      orderBy: [{ startDate: 'desc' }],
+      orderBy: [{ startTime: 'desc' }],
       include: {
-        advertiser: { select: { id: true, name: true, businessLine: { select: { code: true, name: true } } } },
+        businessLine: { select: { id: true, code: true, title: true } },
       },
     });
   },
@@ -142,13 +191,13 @@ export const marketingEventService = {
     return rec;
   },
 
-  async create(data: { name: string; description?: string; startDate: string; endDate: string; advertiserId: string }) {
-    return prisma.marketingEvent.create({ data });
+  async create(data: MarketingEventInput) {
+    return prisma.marketingEvent.create({ data: coerceMarketingEventTimes(data) });
   },
 
-  async update(id: string, data: Partial<{ name: string; description: string; startDate: string; endDate: string; advertiserId: string }>) {
+  async update(id: string, data: Partial<MarketingEventInput>) {
     await this.getOrThrow(id);
-    return prisma.marketingEvent.update({ where: { id }, data });
+    return prisma.marketingEvent.update({ where: { id }, data: coerceMarketingEventTimes(data) });
   },
 
   async remove(id: string) {

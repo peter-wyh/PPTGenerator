@@ -32,7 +32,7 @@ export const guideService = {
     return prisma.guide.findMany({
       where,
       orderBy: [{ businessLineId: 'asc' }, { updatedAt: 'desc' }],
-      include: { businessLine: { select: { code: true, name: true } } },
+      include: { businessLine: { select: { code: true, title: true } } },
     });
   },
 
@@ -86,7 +86,7 @@ export async function resolveForCampaign(
       where: { id: campaignId },
       include: { businessLine: true },
     });
-    const businessLineName = camp?.businessLine?.name ?? '';
+    const businessLineName = camp?.businessLine?.title || camp?.businessLine?.code || '';
     const businessLineCode = camp?.businessLine?.code ?? '';
     if (!camp?.businessLineId) return { guide: null, businessLineName, businessLineCode };
     const guide = await guideService.pick(camp.businessLineId, scenario).catch(() => null);

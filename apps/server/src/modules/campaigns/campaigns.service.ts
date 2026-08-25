@@ -30,7 +30,7 @@ export const campaignService = {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        businessLine: { select: { id: true, code: true, name: true } },
+        businessLine: { select: { id: true, code: true, title: true } },
         advertiser: { select: { id: true, name: true } },
         _count: { select: { campaignCreators: true } },
       },

@@ -43,7 +43,7 @@ export function GuidePage() {
         <button onClick={() => setAdding(true)} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary">新增指南</button>
         <select value={filterBl} onChange={(e) => setFilterBl(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-xs text-foreground-primary">
           <option value="">全部业务线</option>
-          {businessLines.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          {businessLines.map((b) => <option key={b.id} value={b.id}>{b.title || b.code}</option>)}
         </select>
       </div>
       <div className="overflow-auto rounded-lg border border-border-default">
@@ -58,7 +58,7 @@ export function GuidePage() {
               <tr key={g.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
                 <td className="px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted">{idx + 1}</td>
                 <td className="px-3 py-2 font-medium text-foreground-primary">{g.name}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{g.businessLine?.name ?? '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{g.businessLine?.title || g.businessLine?.code || '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{g.scenario || '通用'}</td>
                 <td className="px-3 py-2 text-foreground-secondary">{g.isDefault ? '⭐ 默认' : '—'}</td>
                 <td className="px-3 py-2 text-foreground-secondary">{g.isActive ? '启用' : '已停用'}</td>
@@ -149,7 +149,7 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
             业务线
             <select value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
               <option value="">请选择业务线…</option>
-              {businessLines.map((b) => <option key={b.id} value={b.id}>{b.name}（{b.code}）</option>)}
+              {businessLines.map((b) => <option key={b.id} value={b.id}>{b.title || b.code}（{b.code}）</option>)}
             </select>
           </label>
           <label className="flex flex-1 flex-col gap-1 text-xs text-foreground-secondary">

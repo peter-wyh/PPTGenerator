@@ -571,20 +571,57 @@ export interface CreatorCampaignPerformance {
   cps: CreatorCps;
 }
 
-/** 业务线（查找表 BusinessLine 表的条目）。 */
+/** 业务线（对齐营销系统 dm_union_business_lines；源侧字段 + 本地报告侧扩展）。 */
 export interface BusinessLine {
-  /** 简称（唯一短码），例如 'FT'。 */
+  /** 本地 cuid 主键。 */
+  id?: string;
+  /** 简称（唯一短码，本地扩展），例如 'FT'。 */
   code: string;
-  /** 全称，例如 'FineTech 芯科'。 */
-  name: string;
-  /** Logo URL。 */
+  /** 名称（源 title）。 */
+  title: string;
+  /** Logo URL（本地扩展）。 */
   logo?: string;
-  /** 品牌色 hex。 */
+  /** 品牌色 hex（本地扩展）。 */
   color?: string;
-  /** design.md 文档内容（Markdown 原文）。 */
+  /** design.md 文档内容（本地扩展）。 */
   designMd?: string;
-  /** design.md 上传附件 URL（如有）。 */
+  /** design.md 上传附件 URL（本地扩展）。 */
   designMdUrl?: string;
+  // ─── 源侧字段（dm_union_business_lines）────────────────────────────────────
+  /** 负责人 ids（逗号分隔）。 */
+  directorId?: string;
+  /** 负责成员 ids。 */
+  members?: string;
+  /** 额外信息。 */
+  extra?: string;
+  /** 创建人 ID（源 dm_admin id）。 */
+  creatorId?: string;
+  /** 更新人 ID（源 dm_admin id）。 */
+  updatorId?: string;
+  /** 创建时间。 */
+  createTime?: Date | string;
+  /** 更新时间。 */
+  updateTime?: Date | string;
+  /** 删除时间（软删标记）。 */
+  deleteTime?: Date | string;
+  /** 业务线状态（默认 1）。 */
+  status?: number;
+  /** 作品提及（字符串数组）。 */
+  expertWorkMention?: string[];
+  /** 作品标签（字符串数组）。 */
+  expertWorkLabel?: string[];
+  /** 所属公司。 */
+  companyIds?: string;
+  /** 部门 ids。 */
+  departmentIds?: string;
+  /** 指定成员。 */
+  specifyMembers?: string;
+  /** cpt 余额提现 0否1是。 */
+  cptWithdraw?: boolean;
+  /** 关联应用。 */
+  relatedProject?: string;
+  /** 日历管理员 ids。 */
+  calendarAdminIds?: string;
 }
 
 /** 业务线报告指南(AI 提示词层配置:品牌视觉/章节结构/展示形式偏好/语调与术语)。 */
@@ -623,18 +660,42 @@ export interface Advertiser {
   logo?: string;
 }
 
-/** 营销活动（广告主维度的市场活动记录：名称/简介/时间跨度）。 */
+/** 营销活动（对齐营销系统 sales_activity；归属业务线）。 */
 export interface MarketingEvent {
   /** 活动名称。 */
   name: string;
-  /** 活动简介。 */
-  description?: string;
-  /** 开始日期 YYYY-MM-DD。 */
-  startDate: string;
-  /** 结束日期 YYYY-MM-DD。 */
-  endDate: string;
-  /** 关联广告主 id。 */
-  advertiserId: string;
+  /** 开始时间。 */
+  startTime: Date | string;
+  /** 结束时间。 */
+  endTime: Date | string;
+  /** 标识（'1'=废弃）。 */
+  label?: string;
+  /** 类型 1节日 2活动日 3特别促销。 */
+  type?: number;
+  /** 简介。 */
+  info?: string;
+  /** 适用州。 */
+  continent?: string;
+  /** 适用地区。 */
+  region?: string;
+  /** 平台评级 3高 2中 1低。 */
+  level?: number;
+  /** 申请人（源 dm_admin id）。 */
+  adsId?: string;
+  /** 归属业务线 id。 */
+  businessLineId?: string;
+  /** 展示给流量主 1是 2否。 */
+  isShowMember?: number;
+  /** 入库来源 1管理员录入 2邮件解析 3AI 解析。 */
+  source?: number;
+  /** 添加人 id。 */
+  createId?: string;
+  /** 修改人 id。 */
+  updateId?: string;
+  /** 创建时间。 */
+  createTime?: Date | string;
+  /** 修改时间。 */
+  updateTime?: Date | string;
 }
 
 /** 商品（campaign 关联的带货商品）。 */

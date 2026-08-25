@@ -8,9 +8,9 @@ const { listCampaignsMock, lookupApiMock, authStateMock } = vi.hoisted(() => ({
   listCampaignsMock: vi.fn<() => Promise<Campaign[]>>(async () => []),
   lookupApiMock: {
     listBusinessLines: vi.fn().mockResolvedValue([
-      { id: 'bl-ft', code: 'FT', name: 'Fanstoshop' },
-      { id: 'bl-sm', code: 'SM', name: 'SmileKOLs' },
-      { id: 'bl-dg', code: 'DG', name: 'Digchic' },
+      { id: 'bl-ft', code: 'FT', title: 'Fanstoshop' },
+      { id: 'bl-sm', code: 'SM', title: 'SmileKOLs' },
+      { id: 'bl-dg', code: 'DG', title: 'Digchic' },
     ]),
     listAdvertisers: vi.fn().mockResolvedValue([]),
     listMerchants: vi.fn().mockResolvedValue([]),

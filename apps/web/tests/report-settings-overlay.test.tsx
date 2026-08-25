@@ -8,13 +8,13 @@ void _lookupApi;
 
 // 业务线查找表(数据库唯一来源;测试中 mock lookupApi 返回 DB 快照)
 const BUSINESS_LINE_META: Record<string, { code: string; name: string; logo?: string; color?: string }> = {
-  FT: { code: 'FT', name: 'Fanstoshop', logo: '/uploads/ft-logo.png', color: '#2563eb' },
+  FT: { code: 'FT', title: 'Fanstoshop', logo: '/uploads/ft-logo.png', color: '#2563eb' },
 };
 
 vi.mock('@/api/lookup', () => ({
   lookupApi: {
     listBusinessLines: vi.fn().mockResolvedValue([
-      { code: 'FT', name: 'Fanstoshop', logo: '/uploads/ft-logo.png', color: '#2563eb', id: 'bl-ft' },
+      { code: 'FT', title: 'Fanstoshop', logo: '/uploads/ft-logo.png', color: '#2563eb', id: 'bl-ft' },
     ]),
     listAdvertisers: vi.fn().mockResolvedValue([]),
     listMerchants: vi.fn().mockResolvedValue([]),
@@ -53,13 +53,13 @@ describe('ReportSettingsOverlay 左导航 + 业务线 Logo', () => {
   it('标题栏右上角渲染当前业务线 Logo + 名称', () => {
     useEditorStore.setState({ projectMeta: { businessLine: 'FT', theme: DEFAULT_THEME } } as never);
     render(<ReportSettingsOverlay onClose={noop} />);
-    const logo = screen.getByAltText(BUSINESS_LINE_META.FT.name);
+    const logo = screen.getByAltText(BUSINESS_LINE_META.FT.title);
     expect(logo).toHaveAttribute('src', BUSINESS_LINE_META.FT.logo);
   });
 
   it('无业务线时不渲染 Logo', () => {
     useEditorStore.setState({ projectMeta: { theme: DEFAULT_THEME } } as never);
     render(<ReportSettingsOverlay onClose={noop} />);
-    expect(screen.queryByAltText(BUSINESS_LINE_META.FT.name)).toBeNull();
+    expect(screen.queryByAltText(BUSINESS_LINE_META.FT.title)).toBeNull();
   });
 });

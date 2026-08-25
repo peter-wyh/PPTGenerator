@@ -63,7 +63,7 @@ export function BusinessLinePage() {
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {bl.logo ? (
-                    <img src={bl.logo} alt={bl.name} className="max-h-8 max-w-24 rounded-md border border-border-subtle object-contain" />
+                    <img src={bl.logo} alt={bl.title || bl.code} className="max-h-8 max-w-24 rounded-md border border-border-subtle object-contain" />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface-hover text-[10px] font-bold text-foreground-muted">
                       {bl.code.toUpperCase()}
@@ -71,7 +71,7 @@ export function BusinessLinePage() {
                   )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{bl.code}</td>
-                <td className="px-3 py-2 font-medium text-foreground-primary">{bl.name}</td>
+                <td className="px-3 py-2 font-medium text-foreground-primary">{bl.title || bl.code}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   {bl.color ? (
                     <span className="inline-flex items-center gap-1.5">
@@ -86,8 +86,8 @@ export function BusinessLinePage() {
                 <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 text-right hover:bg-surface-hover/50">
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setEditingId(bl.id)} className="text-xs text-accent-primary hover:underline">编辑</button>
-                    <Link to={`/templates?businessLine=${bl.code}`} className="text-xs text-accent-secondary hover:underline">模板管理</Link>
-                    <button onClick={() => void removeBusinessLine(bl.id, bl.name)} className="text-xs text-red hover:underline">删除</button>
+                    <Link to={`/data/guides?businessLine=${bl.code}`} className="text-xs text-accent-secondary hover:underline">指南管理</Link>
+                    <button onClick={() => void removeBusinessLine(bl.id, bl.title || bl.code)} className="text-xs text-red hover:underline">删除</button>
                   </div>
                 </td>
               </tr>
@@ -128,11 +128,19 @@ function BusinessLineFormModal({
 }) {
   const isEdit = !!businessLineId;
   const [code, setCode] = useState('');
-  const [name, setName] = useState('');
+  const [title, setTitle] = useState('');
   const [logo, setLogo] = useState('');
   const [color, setColor] = useState('');
   const [designMd, setDesignMd] = useState('');
   const [designMdUrl, setDesignMdUrl] = useState('');
+  // 源侧字段（dm_union_business_lines）
+  const [directorId, setDirectorId] = useState('');
+  const [members, setMembers] = useState('');
+  const [extra, setExtra] = useState('');
+  const [status, setStatus] = useState(1);
+  const [companyIds, setCompanyIds] = useState('');
+  const [departmentIds, setDepartmentIds] = useState('');
+  const [relatedProject, setRelatedProject] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const mdFileRef = useRef<HTMLInputElement>(null);
@@ -141,11 +149,18 @@ function BusinessLineFormModal({
     if (!businessLineId) return;
     lookupApi.getBusinessLine(businessLineId).then((bl) => {
       setCode(bl.code);
-      setName(bl.name);
+      setTitle(bl.title ?? '');
       setLogo(bl.logo ?? '');
       setColor(bl.color ?? '');
       setDesignMd(bl.designMd ?? '');
       setDesignMdUrl(bl.designMdUrl ?? '');
+      setDirectorId(bl.directorId ?? '');
+      setMembers(bl.members ?? '');
+      setExtra(bl.extra ?? '');
+      setStatus(bl.status ?? 1);
+      setCompanyIds(bl.companyIds ?? '');
+      setDepartmentIds(bl.departmentIds ?? '');
+      setRelatedProject(bl.relatedProject ?? '');
     }).catch(() => setError('加载失败'));
   }, [businessLineId]);
 
@@ -160,7 +175,7 @@ function BusinessLineFormModal({
   }
 
   async function save() {
-    if (!code.trim() || !name.trim()) { setError('编码和名称不能为空'); return; }
+    if (!code.trim() || !title.trim()) { setError('编码和名称不能为空'); return; }
     // ★ 前端预检:base64 logo 是上传失败的残留(旧版静默回退),存库必被 zod max(2048) 拒——提前拦下并给可行动文案
     if (logo.trim().startsWith('data:')) {
       setError('logo 未上传成功（当前是本地临时数据），请删除后重新点「上传」');
@@ -172,7 +187,22 @@ function BusinessLineFormModal({
     }
     setBusy(true); setError('');
     try {
-      const payload = { code: code.trim(), name: name.trim(), logo: logo.trim() || undefined, color: color.trim() || undefined, designMd: designMd.trim() || undefined, designMdUrl: designMdUrl.trim() || undefined };
+      const payload = {
+        code: code.trim(),
+        title: title.trim(),
+        logo: logo.trim() || undefined,
+        color: color.trim() || undefined,
+        designMd: designMd.trim() || undefined,
+        designMdUrl: designMdUrl.trim() || undefined,
+        // 源侧字段
+        directorId: directorId.trim() || undefined,
+        members: members.trim() || undefined,
+        extra: extra.trim() || undefined,
+        status,
+        companyIds: companyIds.trim() || undefined,
+        departmentIds: departmentIds.trim() || undefined,
+        relatedProject: relatedProject.trim() || undefined,
+      };
       if (isEdit) {
         await lookupApi.updateBusinessLine(businessLineId!, payload);
       } else {
@@ -198,8 +228,46 @@ function BusinessLineFormModal({
             <input value={code} onChange={(e) => setCode(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
           </label>
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            名称
-            <input value={name} onChange={(e) => setName(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
+            名称（title）
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
+          </label>
+        </div>
+
+        {/* 源侧字段（dm_union_business_lines） */}
+        <div className="rounded border border-border-subtle bg-surface-hover/30 p-2">
+          <div className="mb-1.5 text-[11px] font-medium text-foreground-muted">源系统字段（营销系统 dm_union_business_lines，同步时以源为准）</div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+              负责人 ID（director_id）
+              <input value={directorId} onChange={(e) => setDirectorId(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+              成员 IDs（members，逗号分隔）
+              <input value={members} onChange={(e) => setMembers(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+              主体 IDs（company_ids，逗号分隔）
+              <input value={companyIds} onChange={(e) => setCompanyIds(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+              部门 IDs（department_ids，逗号分隔）
+              <input value={departmentIds} onChange={(e) => setDepartmentIds(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+              状态（status）
+              <select value={status} onChange={(e) => setStatus(Number(e.target.value))} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
+                <option value={1}>1 · 启用</option>
+                <option value={2}>2 · 停用</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+              关联项目（related_project）
+              <input value={relatedProject} onChange={(e) => setRelatedProject(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary font-mono" />
+            </label>
+          </div>
+          <label className="mt-3 flex flex-col gap-1 text-xs text-foreground-secondary">
+            备注（extra）
+            <input value={extra} onChange={(e) => setExtra(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
           </label>
         </div>
         <div className="grid grid-cols-2 gap-3">

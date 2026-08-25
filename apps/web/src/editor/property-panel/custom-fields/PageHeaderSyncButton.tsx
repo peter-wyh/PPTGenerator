@@ -42,7 +42,7 @@ export function PageHeaderSyncButton({ comp }: Props) {
       // 右侧 = 业务线
       data.rightLogo = {
         src: bl.logo || '',
-        text: bl.name,
+        text: bl.title || bl.code,
         initials: bl.code,
       };
       // 左侧 = 第一个广告主（如果有）

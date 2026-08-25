@@ -405,7 +405,7 @@ export const htmlTemplateService = {
     if (input.businessLine) {
       meta.businessLine = input.businessLine;
     } else if (campaign) {
-      meta.businessLine = campaign.businessLine?.name ?? campaign.businessLineCode;
+      meta.businessLine = campaign.businessLine?.title || campaign.businessLine?.code || campaign.businessLineCode;
     }
     if (input.advertiser) {
       meta.advertiser = input.advertiser;

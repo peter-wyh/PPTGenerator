@@ -17,7 +17,7 @@ export interface GuideDTO {
   businessLineId: string;
   isDefault?: boolean;
   isActive?: boolean;
-  businessLine?: { code: string; name: string };
+  businessLine?: { code: string; title: string };
   createdAt?: string;
   updatedAt?: string;
 }

@@ -78,8 +78,8 @@ export const lookupController = {
 
   // ─── MarketingEvent（营销活动）──────────────────────────────────────────────
   listMarketingEvents: asyncHandler(async (req: Request, res: Response) => {
-    const { advertiserId } = req.query as { advertiserId?: string };
-    res.json({ marketingEvents: await marketingEventService.list({ advertiserId }) });
+    const { businessLineId } = req.query as { businessLineId?: string };
+    res.json({ marketingEvents: await marketingEventService.list({ businessLineId }) });
   }),
 
   getMarketingEvent: asyncHandler(async (req: Request, res: Response) => {

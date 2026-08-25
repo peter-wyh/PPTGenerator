@@ -312,11 +312,11 @@ export function ReportSettingsOverlay({ onClose }: Props) {
               <div className="flex items-center skin-gap-sm">
                 <img
                   src={bl.logo}
-                  alt={bl.name}
+                  alt={bl.title || bl.code}
                   className="h-8 w-8 rounded-lg object-contain"
                   draggable={false}
                 />
-                <span className="text-xs text-foreground-secondary">{bl.name}</span>
+                <span className="text-xs text-foreground-secondary">{bl.title || bl.code}</span>
               </div>
             )}
             <button onClick={onClose} className="text-foreground-muted hover:text-foreground-primary">✕</button>
@@ -1056,7 +1056,7 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                         const firstAdv = advertisers[0];
                         setHfHeader((prev) => ({
                           ...prev,
-                          rightLogo: { src: bl.logo || '', text: bl.name, initials: bl.code },
+                          rightLogo: { src: bl.logo || '', text: bl.title || bl.code, initials: bl.code },
                           leftLogo: firstAdv
                             ? { src: firstAdv.logo || '', text: firstAdv.name, initials: firstAdv.name.slice(0, 2).toUpperCase() }
                             : prev.leftLogo,
