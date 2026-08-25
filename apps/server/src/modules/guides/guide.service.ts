@@ -181,6 +181,23 @@ export function mergeGuideLayers(visual: Guide | null, structural: Guide | null)
     parts.push(`# ═══ LAYER 2 · REPORT STRUCTURE GUIDE (sections/presentation/voice — NOT visual) ═══\n${structural.content.trim()}`);
     used.push(structural);
   }
+  // 双层并存时的裁决声明:两份指南同时注入时,模型须知道冲突时谁赢。
+  // LAYER 2 中显式声明的「报告场景专用视觉变量」允许覆盖 LAYER 1(如 DG 报告高亮粉),
+  // 其余视觉规则冲突一律 LAYER 1 胜出。
+  if (visual && structural && structural.id !== visual.id) {
+    return {
+      content: [
+        '# ═══ CONFLICT RULE ═══',
+        'LAYER 1 (visual spec) is the default authority for colors/fonts/components/motion.',
+        'LAYER 2 may OVERRIDE LAYER 1 only where it explicitly declares a report-specific visual variable',
+        '(e.g. a "report-specific visual variables" section). For any other visual conflict, LAYER 1 WINS.',
+        'LAYER 2 governs sections/structure/presentation/voice only.',
+        '',
+        parts.join('\n\n'),
+      ].join('\n'),
+      used,
+    };
+  }
   return { content: parts.join('\n\n'), used };
 }
 
