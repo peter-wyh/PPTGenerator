@@ -353,6 +353,8 @@ model Campaign {
   campaignCreators CampaignCreator[]
   orders           CampaignOrder[]
   orderDailyStats  OrderDailyStat[]
+  linkPerformances LinkPerformance[]
+  publisherDailyStats PublisherDailyStat[]
 
   @@index([ownerId])
   @@index([businessLineId])
@@ -397,6 +399,7 @@ model Creator {
   updatedAt  DateTime @updatedAt
 
   campaignCreators CampaignCreator[]
+  publishers       Publisher[]
 
   @@index([ownerId])
   @@index([platform])
@@ -613,10 +616,18 @@ model CampaignOrder {
 
   items             CampaignOrderItem[]
 
+  /// 归因媒体（publisher 维度；导入时按 publisherUrl 域名归一化解析）。
+  publisherId       String?
+  publisher         Publisher? @relation(fields: [publisherId], references: [id])
+  /// 归因链接（publisher_url 对应的 LinkPerformance 行；导入时自动挂）。
+  linkPerformanceId String?
+  linkPerformance   LinkPerformance? @relation(fields: [linkPerformanceId], references: [id])
+
   @@unique([campaignId, orderId])
   @@index([campaignId])
   @@index([campaignId, orderDate])
   @@index([campaignCreatorId])
+  @@index([publisherId])
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -627,6 +638,9 @@ model CampaignOrderItem {
   id          String         @id @default(cuid())
   order       CampaignOrder  @relation(fields: [campaignOrderId], references: [id], onDelete: Cascade)
   campaignOrderId String
+  /// 商品主档 FK（导入时自动 upsert Product 匹配；旧行未匹配可空）。
+  productId   String?
+  product     Product?       @relation(fields: [productId], references: [id])
   /// 商品名（平台导出原名）。
   productName String
   /// 品类标签（可选，来自商品库或人工标注）。
@@ -720,6 +734,125 @@ model CpsPerformance {
 
   @@unique([campaignCreatorId, contentType])
   @@index([campaignCreatorId])
+}
+
+// ─── 媒体维度 / 链接效果 / 商品主档（2026-08-25 数据结构升级） ────────────────
+// 概念澄清：订单先归因到「链接（publisher_url）」，链接属于「媒体（publisher）」，
+// 达人只是媒体的一种类型。clicks/impressions/ctr/cvr/epc 全部是链接维度指标。
+
+/// 媒体主档：推广渠道的载体（达人 / 社群 / 内容站 / 媒体站…）。
+/// 与 Creator 的关系：partnerType=creator 的媒体可挂 creatorId；其余类型独立存在。
+model Publisher {
+  id        String   @id @default(cuid())
+  /// 媒体名称（site_name 或人工维护）。
+  name      String
+  /// 媒体类型：creator(达人) / community(社群) / content_site(内容站) / media_site(媒体站)。
+  type      String   @default("media_site")
+  /// 归一化域名（小写、去 www；publisher_url 解析键）。唯一。
+  domain    String   @unique
+  /// 平台（TikTok/Instagram/…，达人型媒体适用）。
+  platform  String?
+  /// 媒体主页 URL。
+  url       String?
+  /// 达人型媒体关联的达人主档（非达人型为空）。
+  creatorId String?
+  creator   Creator? @relation(fields: [creatorId], references: [id])
+  /// 备注。
+  note      String?
+
+  links    LinkPerformance[]
+  orders   CampaignOrder[]
+  dailyStats PublisherDailyStat[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// 链接效果表：一条推广链接的全周期汇总（Click_References.csv 口径）。
+/// clicks/impressions 是链接维度指标（联盟平台导出）；orders/gmv/commission
+/// 同时保留（导入快照）——页面实时聚合以订单表为准，两者互为校验。
+model LinkPerformance {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  /// 归属媒体。
+  publisherId String
+  publisher   Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  /// 原始链接 URL（cloak 长链）。
+  linkUrl     String?  @db.Text
+  /// 归一化链接键（click_ref 原值或域名；同一链接多渠道拆分时的唯一业务键组成）。
+  linkKey     String
+
+  /// 链接维度指标（联盟平台导出真源）。
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  orders      Int      @default(0)
+  gmv         Decimal  @default(0) @db.Decimal(14, 2)
+  commission  Decimal  @default(0) @db.Decimal(14, 2)
+  spend       Decimal  @default(0) @db.Decimal(14, 2)
+
+  /// 每日明细 [{date, clicks, impressions, orders, gmv, commission}]。
+  daily       Json?
+
+  /// 溯源：本行由哪条 CpsPerformance 迁移而来（存量迁移用，可空）。
+  migratedFromCpsId String?
+
+  attributedOrders CampaignOrder[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([campaignId, publisherId, linkKey])
+  @@index([campaignId])
+  @@index([publisherId])
+}
+
+/// 媒体日统计中间表（campaign × publisher × 日）：达人数据统计 / campaign 数据统计的直查源。
+/// 成交侧从 CampaignOrder 按 publisherId 聚合；流量侧从 LinkPerformance.daily 合并。
+model PublisherDailyStat {
+  id          String    @id @default(cuid())
+  campaignId  String
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  publisherId String
+  publisher   Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+
+  /// 统计日（YYYY-MM-DD）。
+  statDate    String
+
+  /// 流量侧（链接维度，来自 LinkPerformance.daily 合并；无导入则 0）。
+  clicks      Int       @default(0)
+  impressions Int       @default(0)
+  /// 成交侧（订单表逐单聚合真源）。
+  orders      Int       @default(0)
+  gmv         Decimal   @default(0) @db.Decimal(14, 2)
+  commission  Decimal   @default(0) @db.Decimal(14, 2)
+
+  recomputedAt DateTime @default(now())
+
+  @@unique([campaignId, publisherId, statDate])
+  @@index([campaignId, statDate])
+  @@index([publisherId])
+}
+
+/// 商品主档：订单商品行的结构化归集（Top-Sales 排行 / 购物篮分析的基础）。
+model Product {
+  id         String   @id @default(cuid())
+  /// 商品名（导入原名；幂等键之一）。
+  name       String
+  /// SKU（幂等键之一；两者都有时 (name, sku) 联合匹配）。
+  sku        String?
+  /// 品类。
+  category   String?
+  /// 商品图（可选）。
+  imageUrl   String?  @db.Text
+
+  items      CampaignOrderItem[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([name])
+  @@index([sku])
 }
 
 // ─── Phase 5: HTML Report Templates & AI Generation ──────────────────────────

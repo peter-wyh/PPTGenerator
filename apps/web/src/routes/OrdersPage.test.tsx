@@ -74,30 +74,28 @@ beforeEach(() => {
 });
 
 describe('OrdersPage', () => {
-  it('渲染订单基础列：订单号/campaign/下单时间/状态/佣金', async () => {
+  it('渲染订单基础列：订单号/campaign/下单时间/状态/佣金（全字段主表）', async () => {
     render(<OrdersPage />);
     await waitFor(() => expect(screen.getByText('REF-1001')).toBeTruthy());
     expect(screen.getByText('Trivago UK 2026-07')).toBeTruthy();
     expect(screen.getByText('2026-07-15')).toBeTruthy();
     expect(screen.getByText('approved')).toBeTruthy();
-    expect(screen.getByText('$1.50')).toBeTruthy();
+    // fmtMoney 统一 £ 口径（佣金 1.50 → £1.50）
+    expect(screen.getByText('£1.50')).toBeTruthy();
   });
 
-  it('展开行显示「Awin 明细」面板与镜像字段值（有值与空值占位）', async () => {
+  it('主表罗列 Awin 镜像字段列（点击引用/客户国家/交易ID，空值占位 —）', async () => {
     render(<OrdersPage />);
     await waitFor(() => expect(screen.getByText('REF-1001')).toBeTruthy());
-    fireEvent.click(screen.getByText('商品'));
 
-    // 面板标题（整句为「Awin 明细（transactions 导出全字段）」）
-    expect(screen.getByText(/Awin 明细/)).toBeTruthy();
-    // 有值字段（label + value 都在）
-    expect(screen.getByText('Awin 交易 ID')).toBeTruthy();
-    expect(screen.getByText('7100001')).toBeTruthy();
-    expect(screen.getByText('点击引用')).toBeTruthy();
+    // 有值字段直接在主表行内
     expect(screen.getByText('creator_a')).toBeTruthy();
-    expect(screen.getByText('客户国家')).toBeTruthy();
     expect(screen.getByText('GB')).toBeTruthy();
-    // 空值字段占位 —（decline_reason 为 null）
+    expect(screen.getByText('7100001')).toBeTruthy();
+    // 列头（全字段罗列）
+    expect(screen.getByText('点击引用')).toBeTruthy();
+    expect(screen.getByText('客户国家')).toBeTruthy();
+    expect(screen.getByText('Awin交易ID')).toBeTruthy();
     expect(screen.getByText('拒单原因')).toBeTruthy();
   });
 });

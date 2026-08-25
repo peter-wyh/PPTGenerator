@@ -1,6 +1,6 @@
 /**
  * 订单明细页（/data/orders）——数据管理独立菜单。
- * 展示导入的订单（CampaignOrder）：campaign 筛选 + 分页 + 商品行展开。
+ * 全字段罗列：CampaignOrder 所有列并入主表（横向滚动），Awin 明细面板保留商品行展开。
  * 数据源：GET /campaigns/orders/list（admin 全局视角）。
  */
 import { Fragment, useCallback, useEffect, useState } from 'react';
@@ -9,114 +9,28 @@ import { campaignsApi, type OrderRow, type OrdersPage } from '@/api/campaignsApi
 function fmtDate(v: string | null) {
   return v ? v.slice(0, 10) : '—';
 }
-function fmtMoney(v: string | number) {
+function fmtDateTime(v: string | null | undefined) {
+  if (!v) return '—';
+  return /^\d{4}-\d{2}-\d{2}T/.test(v) ? v.slice(0, 19).replace('T', ' ') : v;
+}
+function fmtMoney(v: string | number | null | undefined) {
+  if (v === null || v === undefined || v === '') return '—';
   const n = typeof v === 'string' ? parseFloat(v) : v;
-  return Number.isFinite(n) ? `$${n.toFixed(2)}` : '—';
+  return Number.isFinite(n) ? `${n < 0 ? '-' : ''}£${Math.abs(n).toFixed(2)}` : '—';
 }
 function orderTotal(row: OrderRow) {
   return row.items.reduce((s, it) => s + parseFloat(it.lineTotal) * it.qty, 0);
 }
-
-// ─── Awin 镜像字段面板（数据管理-订单明细：展示全部未列入主表的字段） ──────────
-// label 按 Awin transactions 导出列语义命名；row 上不存在的 key 渲染 —。
-const AWIN_FIELD_GROUPS: { title: string; fields: [keyof OrderRow, string][] }[] = [
-  {
-    title: '转化归因',
-    fields: [
-      ['clickRef', '点击引用'],
-      ['clickThroughTime', '点击时间'],
-      ['lapseTime', '转化时滞(秒)'],
-      ['clickDevice', '点击设备'],
-      ['transactionDevice', '交易设备'],
-      ['customerCountry', '客户国家'],
-      ['type', '交易类型'],
-      ['siteName', '发布商站点'],
-      ['campaignLabel', 'Campaign 标签'],
-    ],
-  },
-  {
-    title: '审核与支付',
-    fields: [
-      ['validationDate', '审核通过时间'],
-      ['paidToPublisher', '已付发布商'],
-      ['paymentStatus', '支付状态'],
-      ['paymentId', '支付 ID'],
-      ['transactionQueryId', '查询 ID'],
-    ],
-  },
-  {
-    title: '修改与风控',
-    fields: [
-      ['amended', '是否修改'],
-      ['amendReason', '修改原因'],
-      ['oldSaleAmount', '修改前金额'],
-      ['oldCommission', '修改前佣金'],
-      ['declineReason', '拒单原因'],
-    ],
-  },
-  {
-    title: '佣金与用券',
-    fields: [
-      ['transactionParts', '佣金构成'],
-      ['commissionSharingPublisherId', '分成发布商 ID'],
-      ['commissionSharingPublisher', '分成发布商'],
-      ['commissionSharingSelectedRatePublisherId', '所选分成率发布商 ID'],
-      ['voucherCodeUsed', '是否用券'],
-      ['voucherCode', '券码'],
-    ],
-  },
-  {
-    title: '其他',
-    fields: [
-      ['awinId', 'Awin 交易 ID'],
-      ['advertiserId', '广告主 ID'],
-      ['saleAmount', '订单金额(原始)'],
-      ['url', '落地页'],
-      ['publisherUrl', '发布商跟踪 URL'],
-      ['customParameters', '自定义参数'],
-      ['products', '商品明细(原始)'],
-      ['customerAcquisition', '新客标记'],
-      ['differentCurrency', '币种差异'],
-      ['clickRef2', '点击引用2'],
-      ['clickRef3', '点击引用3'],
-      ['clickRef4', '点击引用4'],
-      ['clickRef5', '点击引用5'],
-      ['clickRef6', '点击引用6'],
-    ],
-  },
-];
-
-/** 单个字段值：null/undefined/空串 → —；ISO 时间取前 19 位（本地显示去 Z）；其余原样。 */
-function fmtAwinValue(row: OrderRow, key: keyof OrderRow): string {
-  const v = row[key];
+/** Lead 单（Awin type=lead）金额恒 £1 占位——金额列显示占位标注，佣金才是真实收益。 */
+function isLead(row: OrderRow) {
+  return String(row.type ?? '').toLowerCase() === 'lead';
+}
+function cellText(v: unknown): string {
   if (v === null || v === undefined || v === '') return '—';
-  const s = String(v);
-  // ISO datetime（含 T）截到秒，避免长串毫秒+Z 噪音
-  return /^\d{4}-\d{2}-\d{2}T/.test(s) ? s.slice(0, 19).replace('T', ' ') : s;
+  return String(v);
 }
 
-function AwinDetailPanel({ row }: { row: OrderRow }) {
-  return (
-    <div className="mt-3 space-y-3">
-      <p className="text-[11px] font-medium text-foreground-secondary">Awin 明细（transactions 导出全字段）</p>
-      {AWIN_FIELD_GROUPS.map((g) => (
-        <div key={g.title}>
-          <p className="mb-1 text-[11px] text-foreground-muted">{g.title}</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 md:grid-cols-3 lg:grid-cols-4">
-            {g.fields.map(([key, label]) => (
-              <div key={String(key)} className="flex gap-2 text-[11px]">
-                <span className="shrink-0 text-foreground-muted">{label}</span>
-                <span className="min-w-0 break-all font-mono text-foreground-primary">
-                  {fmtAwinValue(row, key)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// ─── Awin 全字段已并入主表（AWIN_FIELD_GROUPS/AwinDetailPanel 于全字段改造后移除） ──
 
 export default function OrdersPage() {
   const [data, setData] = useState<OrdersPage | null>(null);
@@ -189,38 +103,122 @@ export default function OrdersPage() {
       ) : (
         <>
           <div className="overflow-x-auto rounded-lg border border-border-default">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs whitespace-nowrap">
               <thead>
                 <tr className="border-b border-border-default bg-surface-secondary text-left text-foreground-secondary">
+                  {/* 核心区 */}
                   <th className="px-3 py-2">订单号</th>
                   <th className="px-3 py-2">Campaign</th>
+                  <th className="px-3 py-2">媒体</th>
                   <th className="px-3 py-2">达人</th>
                   <th className="px-3 py-2">下单时间</th>
                   <th className="px-3 py-2">状态</th>
+                  <th className="px-3 py-2">类型</th>
                   <th className="px-3 py-2 text-right">商品数</th>
                   <th className="px-3 py-2 text-right">订单金额</th>
                   <th className="px-3 py-2 text-right">佣金</th>
+                  {/* 转化归因区 */}
+                  <th className="px-3 py-2 border-l border-border-subtle">点击引用</th>
+                  <th className="px-3 py-2">点击时间</th>
+                  <th className="px-3 py-2 text-right">转化时滞(s)</th>
+                  <th className="px-3 py-2">点击设备</th>
+                  <th className="px-3 py-2">交易设备</th>
+                  <th className="px-3 py-2">客户国家</th>
+                  <th className="px-3 py-2">发布商站点</th>
+                  <th className="px-3 py-2">发布商跟踪URL</th>
+                  <th className="px-3 py-2">落地页</th>
+                  <th className="px-3 py-2">Awin活动标签</th>
+                  {/* 审核支付区 */}
+                  <th className="px-3 py-2 border-l border-border-subtle">审核通过</th>
+                  <th className="px-3 py-2">已付发布商</th>
+                  <th className="px-3 py-2">支付状态</th>
+                  <th className="px-3 py-2">支付ID</th>
+                  <th className="px-3 py-2">查询ID</th>
+                  {/* 修改风控区 */}
+                  <th className="px-3 py-2 border-l border-border-subtle">是否修改</th>
+                  <th className="px-3 py-2">修改原因</th>
+                  <th className="px-3 py-2 text-right">原金额</th>
+                  <th className="px-3 py-2 text-right">原佣金</th>
+                  <th className="px-3 py-2">拒单原因</th>
+                  {/* 佣金用券区 */}
+                  <th className="px-3 py-2 border-l border-border-subtle">佣金构成</th>
+                  <th className="px-3 py-2">分成发布商</th>
+                  <th className="px-3 py-2">是否用券</th>
+                  <th className="px-3 py-2">券码</th>
+                  {/* 其他区 */}
+                  <th className="px-3 py-2 border-l border-border-subtle">Awin交易ID</th>
+                  <th className="px-3 py-2">广告主ID</th>
+                  <th className="px-3 py-2">新客标记</th>
+                  <th className="px-3 py-2">币种差异</th>
+                  <th className="px-3 py-2">自定义参数</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle">
                 {rows.map((row) => {
                   const isOpen = !!expanded[row.id];
+                  const lead = isLead(row);
                   return (
                     <Fragment key={row.id}>
                       <tr className="hover:bg-surface-hover/50">
                         <td className="px-3 py-2 font-mono text-[11px]">{row.orderId}</td>
                         <td className="px-3 py-2">{row.campaign?.name ?? '—'}</td>
+                        <td className="px-3 py-2" title={row.publisher?.domain}>
+                          {row.publisher ? `${row.publisher.name}` : <span className="text-foreground-muted">—</span>}
+                        </td>
                         <td className="px-3 py-2">
                           {row.campaignCreator?.creator?.name ?? <span className="text-foreground-muted">未归因</span>}
                         </td>
                         <td className="px-3 py-2">{fmtDate(row.orderDate)}</td>
                         <td className="px-3 py-2">{row.orderStatus ?? '—'}</td>
+                        <td className="px-3 py-2">{cellText(row.type)}</td>
                         <td className="px-3 py-2 text-right">{row.items.length}</td>
-                        <td className="px-3 py-2 text-right font-medium">{fmtMoney(orderTotal(row))}</td>
-                        <td className="px-3 py-2 text-right font-medium text-accent-primary">
-                          {row.commission != null ? fmtMoney(row.commission) : <span className="text-foreground-muted">—</span>}
+                        <td className="px-3 py-2 text-right font-medium">
+                          {lead ? (
+                            <span title="Lead 单金额为平台占位值，佣金才是真实收益">
+                              {fmtMoney(row.saleAmount)}<span className="ml-0.5 text-[10px] text-orange-500">占位</span>
+                            </span>
+                          ) : (
+                            fmtMoney(row.saleAmount ?? orderTotal(row))
+                          )}
                         </td>
+                        <td className="px-3 py-2 text-right font-medium text-accent-primary">
+                          {fmtMoney(row.commission)}
+                        </td>
+                        {/* 转化归因 */}
+                        <td className="px-3 py-2 border-l border-border-subtle font-mono text-[11px] max-w-[180px] truncate" title={cellText(row.clickRef)}>{cellText(row.clickRef)}</td>
+                        <td className="px-3 py-2">{fmtDateTime(row.clickThroughTime)}</td>
+                        <td className="px-3 py-2 text-right">{cellText(row.lapseTime)}</td>
+                        <td className="px-3 py-2">{cellText(row.clickDevice)}</td>
+                        <td className="px-3 py-2">{cellText(row.transactionDevice)}</td>
+                        <td className="px-3 py-2">{cellText(row.customerCountry)}</td>
+                        <td className="px-3 py-2">{cellText(row.siteName)}</td>
+                        <td className="px-3 py-2 font-mono text-[11px] max-w-[180px] truncate" title={cellText(row.publisherUrl)}>{cellText(row.publisherUrl)}</td>
+                        <td className="px-3 py-2 font-mono text-[11px] max-w-[180px] truncate" title={cellText(row.url)}>{cellText(row.url)}</td>
+                        <td className="px-3 py-2">{cellText(row.campaignLabel)}</td>
+                        {/* 审核支付 */}
+                        <td className="px-3 py-2 border-l border-border-subtle">{fmtDateTime(row.validationDate)}</td>
+                        <td className="px-3 py-2">{cellText(row.paidToPublisher)}</td>
+                        <td className="px-3 py-2">{cellText(row.paymentStatus)}</td>
+                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.paymentId)}</td>
+                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.transactionQueryId)}</td>
+                        {/* 修改风控 */}
+                        <td className="px-3 py-2 border-l border-border-subtle">{cellText(row.amended)}</td>
+                        <td className="px-3 py-2">{cellText(row.amendReason)}</td>
+                        <td className="px-3 py-2 text-right">{fmtMoney(row.oldSaleAmount)}</td>
+                        <td className="px-3 py-2 text-right">{fmtMoney(row.oldCommission)}</td>
+                        <td className="px-3 py-2">{cellText(row.declineReason)}</td>
+                        {/* 佣金用券 */}
+                        <td className="px-3 py-2 border-l border-border-subtle font-mono text-[11px]">{cellText(row.transactionParts)}</td>
+                        <td className="px-3 py-2">{cellText(row.commissionSharingPublisher)}</td>
+                        <td className="px-3 py-2">{cellText(row.voucherCodeUsed)}</td>
+                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.voucherCode)}</td>
+                        {/* 其他 */}
+                        <td className="px-3 py-2 border-l border-border-subtle font-mono text-[11px]">{cellText(row.awinId)}</td>
+                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.advertiserId)}</td>
+                        <td className="px-3 py-2">{cellText(row.customerAcquisition)}</td>
+                        <td className="px-3 py-2">{cellText(row.differentCurrency)}</td>
+                        <td className="px-3 py-2 font-mono text-[11px] max-w-[140px] truncate" title={cellText(row.customParameters)}>{cellText(row.customParameters)}</td>
                         <td className="px-3 py-2 text-right">
                           {row.items.length > 0 && (
                             <button
@@ -234,7 +232,7 @@ export default function OrdersPage() {
                       </tr>
                       {isOpen && (
                         <tr>
-                          <td colSpan={9} className="bg-surface-secondary/50 px-3 py-2">
+                          <td colSpan={40} className="bg-surface-secondary/50 px-3 py-2">
                             <table className="w-full text-[11px]">
                               <thead>
                                 <tr className="text-left text-foreground-muted">
@@ -259,7 +257,6 @@ export default function OrdersPage() {
                                 ))}
                               </tbody>
                             </table>
-                            <AwinDetailPanel row={row} />
                           </td>
                         </tr>
                       )}

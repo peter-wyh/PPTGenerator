@@ -2,6 +2,31 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import { Prisma } from '@prisma/client';
 import { recomputeOrderStats } from './order-stats.service';
+import { recomputePublisherStats } from './publisher-stats.service';
+
+// ─── 导入链帮手（媒体归因 / 商品主档） ────────────────────────────────────────
+
+/** 域名归一化：小写、去协议/www、截取主域。null = 解析不出。 */
+export function normPublisherDomain(raw: unknown): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '');
+  const m = s.match(/^([a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})/);
+  if (m) return m[1];
+  // 非域名形态（如 facebook 群组标识）——原样去路径作键
+  const first = s.split('/')[0];
+  return first || null;
+}
+
+/** 商品主档 upsert：(name, sku) 匹配；命中补 category，未命中建行。 */
+export async function ensureProduct(name: string, sku: string | null, category: string | null): Promise<string> {
+  const existing = await prisma.product.findFirst({ where: { name, sku }, select: { id: true, category: true } });
+  if (existing) {
+    if (category && !existing.category) await prisma.product.update({ where: { id: existing.id }, data: { category } });
+    return existing.id;
+  }
+  const created = await prisma.product.create({ data: { name, sku, category } });
+  return created.id;
+}
 
 // ─── Campaign ────────────────────────────────────────────────────────────────
 
@@ -175,6 +200,7 @@ export const campaignService = {
           items: { orderBy: { lineTotal: 'desc' } },
           campaign: { select: { id: true, name: true } },
           campaignCreator: { select: { id: true, creator: { select: { name: true, avatar: true } } } },
+          publisher: { select: { id: true, name: true, domain: true, type: true } },
         },
       }),
       prisma.campaignOrder.count({ where }),
@@ -749,7 +775,19 @@ export const importService = {
         const orderStatus = String(rows[0].orderStatus ?? '').trim() || null;
         const mirrored = mirrorOrderFields(rows[0]);
 
-        // 商品行
+        // 媒体归因（publisher 维度）：publisherUrl/siteName 域名归一化 → Publisher upsert
+        let publisherId: string | null = null;
+        const pubDomain = normPublisherDomain(mirrored.publisherUrl) || normPublisherDomain(mirrored.siteName);
+        if (pubDomain) {
+          const pub = await prisma.publisher.upsert({
+            where: { domain: pubDomain },
+            create: { name: String(mirrored.siteName || pubDomain).slice(0, 190), domain: pubDomain, type: 'media_site' },
+            update: {},
+          });
+          publisherId = pub.id;
+        }
+
+        // 商品行（挂 Product 主档：name+sku 匹配自动 upsert）
         const itemRows = rows
           .map((r) => {
             const productName = String(r.productName ?? '').trim();
@@ -770,6 +808,10 @@ export const importService = {
           .filter((x): x is NonNullable<typeof x> => x !== null);
         if (!itemRows.length) { skipped += rows.length; continue; }
 
+        const productIds = await Promise.all(
+          itemRows.map((r) => ensureProduct(r.productName, r.sku, r.category)),
+        );
+
         // 幂等 upsert：重导同单先清空 items 再重建（先查再分支，避免 create+update 双写翻倍）
         const existing = await prisma.campaignOrder.findUnique({
           where: { campaignId_orderId: { campaignId, orderId } },
@@ -779,20 +821,20 @@ export const importService = {
           await prisma.campaignOrder.update({
             where: { id: existing.id },
             data: {
-              campaignCreatorId, orderDate, orderStatus,
+              campaignCreatorId, orderDate, orderStatus, publisherId,
               ...mirrored,
               items: { deleteMany: {} },   // 清空旧商品行
             },
           });
           await prisma.campaignOrderItem.createMany({
-            data: itemRows.map((r) => ({ ...r, campaignOrderId: existing.id })),
+            data: itemRows.map((r, i) => ({ ...r, productId: productIds[i], campaignOrderId: existing.id })),
           });
         } else {
           await prisma.campaignOrder.create({
             data: {
-              campaignId, orderId, campaignCreatorId, orderDate, orderStatus,
+              campaignId, orderId, campaignCreatorId, orderDate, orderStatus, publisherId,
               ...mirrored,
-              items: { create: itemRows },
+              items: { create: itemRows.map((r, i) => ({ ...r, productId: productIds[i] })) },
             },
           });
         }
@@ -813,6 +855,12 @@ export const importService = {
         console.log(`[importOrders] order stats recomputed: campaign=${cid} rows=${r.rows} dropped=${r.dropped}`);
       } catch (err) {
         console.warn(`[importOrders] order stats recompute failed for campaign=${cid}:`, err);
+      }
+      try {
+        const r2 = await recomputePublisherStats(cid);
+        console.log(`[importOrders] publisher stats recomputed: campaign=${cid} rows=${r2.rows}`);
+      } catch (err) {
+        console.warn(`[importOrders] publisher stats recompute failed for campaign=${cid}:`, err);
       }
     }
     return { updated, skipped };

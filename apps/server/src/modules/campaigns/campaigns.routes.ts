@@ -62,5 +62,6 @@ router.get('/:id/cps-overview', campaignController.cpsOverview);
 router.get('/orders/list', campaignController.listOrders);
 router.get('/:id/order-insights', campaignController.getOrderInsights);
 router.post('/:id/order-stats/recompute', campaignController.recomputeOrderStats);
+router.post('/:id/publisher-stats/recompute', campaignController.recomputePublisherStats);
 
 export const campaignsRoutes = router;

@@ -306,6 +306,8 @@ export interface OrderRow {
   campaignId: string;
   campaign: { id: string; name: string };
   campaignCreator?: { id: string; creator: { name: string; avatar?: string | null } } | null;
+  /** 媒体归因（2026-08-25 数据结构升级：订单先归因链接/媒体，达人只是媒体类型之一）。 */
+  publisher?: { id: string; name: string; domain: string; type: string } | null;
   orderId: string;
   orderDate: string | null;
   orderStatus: string | null;

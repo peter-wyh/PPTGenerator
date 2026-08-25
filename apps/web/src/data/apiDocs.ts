@@ -38,8 +38,8 @@ export interface ChangelogEntry {
   changes: { kind: '新增' | '变更' | '修复' | '下线'; text: string }[];
 }
 
-export const API_DOC_VERSION = '1.1.0';
-export const API_DOC_UPDATED = '2026-08-21';
+export const API_DOC_VERSION = '1.2.0';
+export const API_DOC_UPDATED = '2026-08-25';
 
 export const API_DOC_CONVENTIONS = [
   'Base URL：http://<server>:4000/api/v1（生产环境以部署域名为准）。',
@@ -396,6 +396,8 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       '幂等：重导同一订单先清空旧商品行再重建，不产生重复。',
       'lineTotal 缺省时自动按 unitPrice × qty 计算。',
       'creatorId 归因键是达人主档 ID（Creator.id），非合作链接 ID。',
+      '媒体归因（2026-08-25 起）：publisherUrl/siteName 域名归一化 → 自动 upsert Publisher（媒体主档）→ 挂 publisherId；订单先归因到媒体维度，达人只是媒体类型之一。',
+      '商品主档（2026-08-25 起）：每商品行按 (productName, sku) 自动 upsert Product 主档并挂 productId。',
       'Awin 镜像字段：ORDER_MIRROR_FIELDS 字典处理 40 个可选字段，空串统一转 null；saleAmount/commission/oldSaleAmount/oldCommission 自动转 Decimal，validationDate/clickThroughTime 自动转 DateTime。',
     ],
     fields: [
@@ -580,9 +582,40 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
   "dateRange": { "start": "2026-11-01", "end": "2026-11-30" }
 }`,
   },
+  {
+    id: 'publisher-stats-recompute',
+    method: 'POST',
+    path: '/campaigns/:id/publisher-stats/recompute',
+    title: '媒体日统计重算',
+    purpose: '手动重算 PublisherDailyStat 中间层（媒体 × 日聚合：成交侧订单 + 流量侧链接）——数据迁移回填或媒体维度统计排查用。',
+    source: '系统内数据（订单表 + LinkPerformance.daily），无需上游提供。',
+    prerequisites: ['Campaign 已创建（订单已导入并完成媒体归因更佳）。'],
+    prerequisiteSummary: 'Campaign',
+    semantics: [
+      '成交侧：CampaignOrder 按 (publisherId, 日) 聚合 orders / gmv / commission；订单导入时自动执行，也可手动调用。',
+      '流量侧：LinkPerformance.daily 的 clicks / impressions 并入同一 (publisherId, 日) 格——链接效果导入后才有值，缺失时该侧为 0（不编造）。',
+      '派生指标（ctr / cvr / epc）不入库，由消费侧按 clicks/orders/gmv 现算。',
+      '幂等：重复调用结果一致（全量重建该 campaign 的媒体日统计；残留孤儿行自动清理）。',
+    ],
+    fields: [{ name: 'id', type: 'string', required: true, desc: '路径参数：Campaign ID' }],
+    requestExample: `POST /api/v1/campaigns/cmszwk2dw000y8edagyejkj3f/publisher-stats/recompute`,
+    response: `{
+  "rows": 195,
+  "dropped": 0
+}`,
+  },
 ];
 
 export const API_DOC_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.2.0',
+    date: '2026-08-25',
+    changes: [
+      { kind: '新增', text: '媒体维度数据结构：Publisher（媒体主档）/ LinkPerformance（链接效果）/ PublisherDailyStat（媒体日统计中间表）——订单先归因到链接与媒体，达人只是媒体类型之一；clicks/impressions/ctr/cvr/epc 归集到链接维度。' },
+      { kind: '变更', text: '订单导入接口自动媒体归因（publisherUrl/siteName 域名归一化 → upsert Publisher）+ 商品主档自动维护（(productName, sku) → upsert Product）。' },
+      { kind: '新增', text: '媒体日统计重算接口（publisher-stats/recompute）：成交侧订单聚合 + 流量侧链接点击并入 (媒体 × 日) 格，幂等重建。' },
+    ],
+  },
   {
     version: '1.1.0',
     date: '2026-08-21',
