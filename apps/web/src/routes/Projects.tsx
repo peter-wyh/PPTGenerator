@@ -367,7 +367,8 @@ export function Projects() {
                     <td className="whitespace-nowrap px-3 py-2 text-foreground-muted">{new Date(p.updatedAt).toLocaleString('zh-CN', { hour12: false })}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       {(() => {
-                        const mine = p.ownerId === me?.id || me?.role === 'ADMIN';
+                        // ★ 0825: 同业务线可管理(owner/ADMIN/同业务线 USER 均显示全套操作)
+                        const mine = p.ownerId === me?.id || me?.role === 'ADMIN' || (!!me?.businessLineCode && p.meta?.businessLine === me.businessLineCode);
                         return mine ? (
                           <button
                             onClick={() => {
@@ -436,7 +437,7 @@ export function Projects() {
                           )}
                         </span>
                       )}
-                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
+                      {(p.ownerId === me?.id || me?.role === 'ADMIN' || (!!me?.businessLineCode && p.meta?.businessLine === me.businessLineCode)) && (
                       <button
                         onClick={() => { setEditError(null); setEditing(p); }}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -444,7 +445,7 @@ export function Projects() {
                         编辑
                       </button>
                       )}
-                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
+                      {(p.ownerId === me?.id || me?.role === 'ADMIN' || (!!me?.businessLineCode && p.meta?.businessLine === me.businessLineCode)) && (
                       <button
                         onClick={() => setDupFor(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary"
@@ -453,7 +454,7 @@ export function Projects() {
                         复制
                       </button>
                       )}
-                      {(p.ownerId === me?.id || me?.role === 'ADMIN') && (
+                      {(p.ownerId === me?.id || me?.role === 'ADMIN' || (!!me?.businessLineCode && p.meta?.businessLine === me.businessLineCode)) && (
                       <button
                         onClick={() => setPendingDelete(p)}
                         className="rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover hover:text-red"

@@ -180,11 +180,7 @@ function replacePeriodInHtml(
   return result;
 }
 
-/** 查用户是否 ADMIN（供 projects.service 内部用）。 */
-async function isAdminUser(userId: string): Promise<boolean> {
-  const u = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  return u?.role === 'ADMIN';
-}
+// isAdminUser 已被 canManageProject 统一取代（0825：owner/ADMIN/同业务线 三态判定）
 
 export const projectsService = {
   /**
@@ -272,10 +268,20 @@ export const projectsService = {
     return { detail: toDetail(project), seeded };
   },
 
-  /** 取得 owner 自己的项目，ADMIN 可查看任意项目。否则 404（不泄露存在性）。 */
+  /** 提取「用户是否可管理该项目」：owner / ADMIN / 同业务线 USER（0825 起：同业务线从只读升级为可管理）。 */
+  async canManageProject(ownerId: string, project: Project): Promise<boolean> {
+    if (project.ownerId === ownerId) return true;
+    const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { role: true, businessLineCode: true } });
+    if (!u) return false;
+    if (u.role === 'ADMIN') return true;
+    const bl = metaOf(project)?.businessLine;
+    return !!(bl && u.businessLineCode === bl);
+  },
+
+  /** 取得用户可管理的项目（owner / ADMIN / 同业务线）。否则 404（不泄露存在性）。 */
   async getOwnedOrThrow(ownerId: string, id: string): Promise<ProjectDetail> {
     const project = await prisma.project.findUnique({ where: { id } });
-    if (!project || (project.ownerId !== ownerId && !await isAdminUser(ownerId))) {
+    if (!project || !(await this.canManageProject(ownerId, project))) {
       throw ApiError.notFound('Project not found');
     }
     return toDetail(project);
@@ -283,20 +289,17 @@ export const projectsService = {
 
   /**
    * 读路径鉴权：owner / ADMIN / 同业务线 USER 可读（列表可见即可预览/下载/复制源码）。
-   * 写路径（update/remove/复制副本）仍走 getOwnedOrThrow —— 同业务线只读。
+   * 写路径（update/remove/复制副本/分享）同样允许同业务线（0825：同业务线可管理）。
    */
   async getReadableOrThrow(ownerId: string, id: string): Promise<ProjectDetail> {
     const project = await prisma.project.findUnique({ where: { id } });
-    if (!project) throw ApiError.notFound('Project not found');
-    if (project.ownerId === ownerId || await isAdminUser(ownerId)) return toDetail(project);
-    const bl = metaOf(project)?.businessLine;
-    const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { role: true, businessLineCode: true } });
-    if (bl && u?.role !== 'ADMIN' && u?.businessLineCode === bl) return toDetail(project);
-    throw ApiError.notFound('Project not found');
+    if (!project || !(await this.canManageProject(ownerId, project))) {
+      throw ApiError.notFound('Project not found');
+    }
+    return toDetail(project);
   },
 
-  /** 属主读取某报告的 HTML 源码(仅供列表预览/下载/复制)。ADMIN 可读取任意。
-   *  同业务线 USER 可读（与列表可见性一致）；写路径不受影响。 */
+  /** 属主读取某报告的 HTML 源码(仅供列表预览/下载/复制)。ADMIN / 同业务线可读。 */
   async getHtml(
     ownerId: string,
     id: string,
@@ -305,14 +308,8 @@ export const projectsService = {
       where: { id },
       select: { id: true, name: true, ownerId: true, htmlContent: true, updatedAt: true, meta: true },
     });
-    if (!project) throw ApiError.notFound('Project not found');
-    if (project.ownerId !== ownerId && !await isAdminUser(ownerId)) {
-      // 同业务线只读放行
-      const bl = (project.meta as { businessLine?: string } | null)?.businessLine;
-      const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { role: true, businessLineCode: true } });
-      if (!(bl && u?.role !== 'ADMIN' && u?.businessLineCode === bl)) {
-        throw ApiError.notFound('Project not found');
-      }
+    if (!project || !(await this.canManageProject(ownerId, project as Project))) {
+      throw ApiError.notFound('Project not found');
     }
     return {
       id: project.id,
@@ -463,9 +460,8 @@ export const projectsService = {
   ): Promise<ProjectDetail> {
     // 直接查 Prisma 获取完整原始记录（toDetail 会剥离 htmlContent 等字段）
     const src = await prisma.project.findUnique({ where: { id } });
-    // ADMIN 可复制任意报告(对齐 getOwnedOrThrow/getHtml 的 admin 豁免):
-    // 列表对 ADMIN 展示全部项目,若无豁免,超管复制他人报告会 404 → 前端「复制失败」。
-    if (!src || (src.ownerId !== ownerId && !await isAdminUser(ownerId))) {
+    // owner / ADMIN / 同业务线 可复制（0825 对齐 canManageProject；副本归属操作者）
+    if (!src || !(await this.canManageProject(ownerId, src))) {
       throw ApiError.notFound('Project not found');
     }
     // 生成唯一副本名:「X 副本」、「X 副本 2」…(对齐 templates.service.duplicate)
