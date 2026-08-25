@@ -55,14 +55,6 @@ export function Layout({ children }: LayoutProps) {
           >
             数据管理
           </button>
-          {user?.role === 'ADMIN' && (
-            <button
-              onClick={() => navigate('/templates')}
-              className={navBtn(location.pathname === '/templates')}
-            >
-              模板管理
-            </button>
-          )}
         </div>
         <div className="flex items-center gap-3">
           {user && (

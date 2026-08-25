@@ -6,9 +6,7 @@ import { ToastContainer } from './components/Toast';
 
 // 路由级 lazy load —— 编辑器(ProjectShell)是最大模块，延迟到进入 /projects/:id 才加载
 const Projects = lazy(() => import('./routes/Projects').then((m) => ({ default: m.Projects })));
-const Templates = lazy(() => import('./routes/Templates').then((m) => ({ default: m.Templates })));
 const ProjectShell = lazy(() => import('./routes/ProjectShell').then((m) => ({ default: m.ProjectShell })));
-const TemplateShell = lazy(() => import('./routes/TemplateShell').then((m) => ({ default: m.TemplateShell })));
 const SharePage = lazy(() => import('./routes/SharePage').then((m) => ({ default: m.SharePage })));
 const DataManagement = lazy(() => import('./routes/DataManagement').then((m) => ({ default: m.DataManagement })));
 const CampaignPage = lazy(() => import('./routes/CampaignPage').then((m) => ({ default: m.CampaignPage })));
@@ -22,7 +20,6 @@ const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m)
 const CampaignCollabPage = lazy(() => import('./routes/CampaignCollabPage').then((m) => ({ default: m.CampaignCollabPage })));
 const SchemesPage = lazy(() => import('./routes/SchemesPage').then((m) => ({ default: m.SchemesPage })));
 const HtmlStudio = lazy(() => import('./routes/HtmlStudio').then((m) => ({ default: m.HtmlStudio })));
-const TemplateHtmlStudio = lazy(() => import('./routes/TemplateHtmlStudio').then((m) => ({ default: m.TemplateHtmlStudio })));
 
 function RouteFallback() {
   return (
@@ -46,7 +43,6 @@ export function App() {
             <Route path="/projects" element={<Navigate to="/projects/ppt" replace />} />
             <Route path="/projects/ppt" element={<Projects />} />
             <Route path="/projects/ai-html" element={<Projects />} />
-            <Route path="/templates" element={<Templates />} />
             <Route path="/schemes" element={<SchemesPage />} />
             <Route path="/data" element={<DataManagement />}>
               <Route index element={<CampaignPage />} />
@@ -65,8 +61,6 @@ export function App() {
           <Route element={<ProtectedLayout bare />}>
             <Route path="/projects/:id" element={<ProjectShell />} />
             <Route path="/projects/:id/html-studio" element={<HtmlStudio />} />
-            <Route path="/templates/:id" element={<TemplateShell />} />
-            <Route path="/templates/:id/html-studio" element={<TemplateHtmlStudio />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>

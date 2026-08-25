@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { projectsApi } from '@/api/projects';
-import { createProjectFromTemplate } from '@/api/templates';
 import { Button } from '@/components/Button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
-import { CreateFromTemplateDialog } from '@/components/CreateFromTemplateDialog';
 import { DuplicateProjectDialog } from '@/components/DuplicateProjectDialog';
 import {
   SCENARIOS,
@@ -111,11 +109,6 @@ export function Projects() {
   const [filterBL, setFilterBL] = useState<string>('');
   const [filterScenario, setFilterScenario] = useState<Scenario | ''>('');
 
-  // 从模板新建
-  const [showFromTemplate, setShowFromTemplate] = useState(false);
-  const [fromTplLoading, setFromTplLoading] = useState(false);
-  const [fromTplError, setFromTplError] = useState<string | null>(null);
-
   const filtered = projects.filter(
     (p) =>
       styleOf(p) === activeTab &&
@@ -140,13 +133,6 @@ export function Projects() {
     setCreating(true);
     setCreateError(null);
     try {
-      // 模版模式：走 createProjectFromTemplate
-      if (values.templateId) {
-        const p = await createProjectFromTemplate(values.templateId, values.name);
-        setShowCreate(false);
-        navigate(`/projects/${p.id}`);
-        return;
-      }
       const { project: p, seeded } = await projectsApi.create(values.name, values.width, values.height, values.meta);
       setShowCreate(false);
       // AI 生成 HTML：直接进入沉浸式 AI HTML 工作台（原 ⚡生成 overlay 已废弃）。
@@ -160,25 +146,6 @@ export function Projects() {
       setCreateError(e.response?.data?.error?.message ?? '创建失败，请重试');
     } finally {
       setCreating(false);
-    }
-  }
-
-  async function handleCreateFromTemplate(values: {
-    templateId: string;
-    name: string;
-    reportPeriod?: { startDate?: string; endDate?: string };
-  }) {
-    setFromTplLoading(true);
-    setFromTplError(null);
-    try {
-      const p = await createProjectFromTemplate(values.templateId, values.name, values.reportPeriod);
-      setShowFromTemplate(false);
-      // html 模板建出的报告是 AI HTML 类型：直接进 HTML 工作台，而不是可视化编辑器。
-      navigate(p.meta?.styleType === 'ai-html' ? `/projects/${p.id}/html-studio` : `/projects/${p.id}`);
-    } catch {
-      setFromTplError('创建失败，模板可能已下架，请重试');
-    } finally {
-      setFromTplLoading(false);
     }
   }
 
@@ -254,9 +221,6 @@ export function Projects() {
       <main className="min-w-0 flex-1 overflow-auto p-6">
         {/* ★ 工具条：新建 + 筛选都放表格上方 */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={() => setShowFromTemplate(true)}>
-            从模板新建
-          </Button>
           <Button onClick={() => setShowCreate(true)}>+ 新建报告</Button>
           <span className="mx-1 h-5 w-px bg-border-default" />
           <select
@@ -488,14 +452,6 @@ export function Projects() {
         error={createError}
         onCancel={() => !creating && setShowCreate(false)}
         onSubmit={handleCreate}
-      />
-
-      <CreateFromTemplateDialog
-        open={showFromTemplate}
-        loading={fromTplLoading}
-        error={fromTplError}
-        onCancel={() => !fromTplLoading && setShowFromTemplate(false)}
-        onSubmit={handleCreateFromTemplate}
       />
 
       <CreateProjectDialog

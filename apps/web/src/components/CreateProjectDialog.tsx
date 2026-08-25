@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
-import type { Campaign, ProjectMeta, ReportPeriod, Scenario, ScenarioSub, TemplateSummary } from '@mediakit/shared';
+import type { Campaign, ProjectMeta, ReportPeriod, Scenario, ScenarioSub } from '@mediakit/shared';
 import { Button } from './Button';
 import { Input } from './Input';
 import {
   isCampaignScenario,
-  SCENARIO_LABELS,
   SCENARIOS,
   TEMPLATE_TYPES,
 } from '@/projectsMeta';
 import { listCampaigns } from '@/api/campaigns';
 import { lookupApi } from '@/api/lookup';
-import { templatesApi } from '@/api/templates';
 import { useAuthStore } from '@/stores/auth';
 
 /** PPT 多页固定 16:9（1920×1080），不支持自定义。 */
@@ -105,12 +103,6 @@ export function CreateProjectDialog({
   const [creator, setCreator] = useState('');
   const [styleType, setStyleType] = useState<'ppt' | 'ai-html'>('ppt');
 
-  // 创建模式：'blank' = 从空白创建，'template' = 从模版创建
-  const [createMode, setCreateMode] = useState<'blank' | 'template'>('blank');
-  // 已发布模版列表
-  const [publishedTemplates, setPublishedTemplates] = useState<TemplateSummary[]>([]);
-  const [templatesFetching, setTemplatesFetching] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   // campaign（上游 mock）
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -147,28 +139,6 @@ export function CreateProjectDialog({
   // 提交尝试标记：仅在用户点过「创建」后才显示校验错误（避免边填边报错）
   const [submitted, setSubmitted] = useState(false);
 
-  // 拉取已发布模版列表（模版模式下展示）
-  useEffect(() => {
-    if (!open || createMode !== 'template') return;
-    let cancelled = false;
-    setTemplatesFetching(true);
-    templatesApi
-      .list({ status: 'PUBLISHED' })
-      .then((list) => {
-        if (cancelled) return;
-        setPublishedTemplates(list);
-        setSelectedTemplateId(list[0]?.id ?? '');
-      })
-      .catch(() => {
-        if (!cancelled) setPublishedTemplates([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTemplatesFetching(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, createMode]);
 
   const isCampaign = isCampaignScenario(scenario as Scenario);
   const selectedCampaign = campaigns.find((c) => c.id === campaignId) ?? null;
@@ -253,32 +223,17 @@ export function CreateProjectDialog({
     selectedCampaign,
   );
 
-  const canSubmit = createMode === 'template'
-    ? !!name.trim() && !!selectedTemplateId
-    : !!name.trim() && !!businessLine && !dateRangeError;
+  const canSubmit = !!name.trim() && !!businessLine && !dateRangeError;
 
   // 校验错误文案：提交后逐项显示（name/业务线/模版选择）
   const nameError = submitted && !name.trim() ? '请输入报告名称' : null;
-  const businessLineError = submitted && createMode === 'blank' && !businessLine ? '请选择业务线' : null;
-  const templateError = submitted && createMode === 'template' && !selectedTemplateId ? '请选择模版' : null;
+  const businessLineError = submitted && !businessLine ? '请选择业务线' : null;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitted(true);
     const trimmed = name.trim();
     if (!trimmed || !canSubmit) return;
-
-    // 模版模式：直接传 templateId，由父组件调用 createProjectFromTemplate
-    if (createMode === 'template' && selectedTemplateId) {
-      onSubmit({
-        name: trimmed,
-        width: PPT_SIZE.w,
-        height: PPT_SIZE.h,
-        meta: {} as ProjectMeta,
-        templateId: selectedTemplateId,
-      });
-      return;
-    }
 
     // PPT 多页：使用实际值（不再强制覆写为 1920×1080）；single 类型已废弃
     const w = singleW || PPT_SIZE.w;
@@ -348,100 +303,7 @@ export function CreateProjectDialog({
       >
         <h3 className="font-headings text-base font-semibold text-foreground-primary">{title}</h3>
 
-        {/* 创建模式切换：从空白 / 从模版（编辑模式不显示） */}
-        {!lockScenario && (
-          <div className="mt-3 flex gap-1 rounded-lg bg-surface-hover p-1">
-            <button
-              type="button"
-              onClick={() => setCreateMode('blank')}
-              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                createMode === 'blank'
-                  ? 'bg-surface-primary text-foreground-primary shadow-sm'
-                  : 'text-foreground-secondary hover:text-foreground-primary'
-              }`}
-            >
-              从空白创建
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreateMode('template')}
-              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                createMode === 'template'
-                  ? 'bg-surface-primary text-foreground-primary shadow-sm'
-                  : 'text-foreground-secondary hover:text-foreground-primary'
-              }`}
-            >
-              从模版创建
-            </button>
-          </div>
-        )}
-
-        {/* ========== 模版模式：选择已发布模版 ========== */}
-        {createMode === 'template' && !lockScenario ? (
-          <div className="mt-4 space-y-4">
-            <Input
-              label="报告名称"
-              name="name"
-              placeholder="输入报告名称"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              error={nameError ?? undefined}
-              autoFocus
-            />
-            <div>
-              <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">选择模版</span>
-              {templatesFetching ? (
-                <p className="py-8 text-center text-sm text-foreground-muted">加载模版…</p>
-              ) : publishedTemplates.length === 0 ? (
-                <div className="rounded-lg border border-border-subtle bg-surface-hover/40 p-4 text-center">
-                  <p className="text-sm text-foreground-muted">暂无已发布模版</p>
-                  <p className="mt-1 text-xs text-foreground-muted">请在「模版管理」中创建并发布模版</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {publishedTemplates.map((t) => {
-                    const active = t.id === selectedTemplateId;
-                    const bl = t.meta?.businessLine ?? '';
-                    const sc = t.meta?.scenario ? SCENARIO_LABELS[t.meta.scenario as Scenario] : '';
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setSelectedTemplateId(t.id)}
-                        className={`overflow-hidden rounded-lg border text-left transition ${
-                          active
-                            ? 'border-accent-primary ring-2 ring-accent-primary/20'
-                            : 'border-border-default hover:border-border-hover hover:bg-surface-hover'
-                        }`}
-                      >
-                        <div
-                          className="flex aspect-video items-center justify-center text-xl font-bold"
-                          style={{
-                            background: active
-                              ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary, #6366f1))'
-                              : 'linear-gradient(135deg, #f0f0f0, #e8e8e8)',
-                            color: active ? '#fff' : '#bbb',
-                          }}
-                        >
-                          {(bl || 'TPL').slice(0, 3).toUpperCase()}
-                        </div>
-                        <div className="p-2">
-                          <div className="line-clamp-1 text-xs font-medium text-foreground-primary">{t.name}</div>
-                          <div className="mt-0.5 flex flex-wrap gap-1">
-                            {bl && <span className="rounded bg-surface-hover px-1 text-[10px] text-foreground-secondary">{bl}</span>}
-                            {sc && <span className="rounded bg-surface-hover px-1 text-[10px] text-foreground-secondary">{sc}</span>}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {templateError && <span className="block text-xs text-red">{templateError}</span>}
-            </div>
-          </div>
-        ) : (
-        /* ========== 空白模式：原有表单 ========== */
+        {/* ========== 空白模式：原有表单 ========== */}
         <div className="mt-4 space-y-4">
           <Input
             label="报告名称"
@@ -758,7 +620,6 @@ export function CreateProjectDialog({
 
           {error && <p className="text-sm text-red">{error}</p>}
         </div>
-        )}
 
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
