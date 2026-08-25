@@ -14,7 +14,7 @@ export const campaignController = {
   list: asyncHandler(async (req: Request, res: Response) => {
     const q = req.query as { businessLineId?: string; advertiserId?: string; businessLineCode?: string; status?: string };
     const v = req.user as AuthPayload;
-    res.json({ campaigns: await campaignService.list({ ownerId: v.id, admin: v.role === 'ADMIN', ...q }) });
+    res.json({ campaigns: await campaignService.list({ ownerId: v.id, admin: v.role === 'ADMIN', viewerBusinessLineCode: v.businessLineCode, ...q }) });
   }),
 
   get: asyncHandler(async (req: Request, res: Response) => {

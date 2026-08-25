@@ -9,12 +9,19 @@ export const campaignService = {
   async list(opts: {
     ownerId: string;
     admin?: boolean;
+    /** 业务线账号归属 code：传入则可见本线全部 campaign（含他人创建）。 */
+    viewerBusinessLineCode?: string | null;
     businessLineId?: string;
     advertiserId?: string;
     businessLineCode?: string;
     status?: string;
   }) {
-    const where: Prisma.CampaignWhereInput = opts.admin ? {} : { ownerId: opts.ownerId };
+    // 三态可见性（与 projects canManageProject 对齐）：ADMIN 全局；业务线账号看本线全部；其余只看自己
+    const where: Prisma.CampaignWhereInput = opts.admin
+      ? {}
+      : opts.viewerBusinessLineCode
+        ? { businessLine: { code: opts.viewerBusinessLineCode } }
+        : { ownerId: opts.ownerId };
     if (opts.businessLineId) where.businessLineId = opts.businessLineId;
     if (opts.advertiserId) where.advertiserId = opts.advertiserId;
     if (opts.businessLineCode) where.businessLineCode = opts.businessLineCode;
@@ -30,12 +37,22 @@ export const campaignService = {
     });
   },
 
+  /**
+   * Campaign 访问判定（0825 三态，与 projects canManageProject 对齐）：
+   * owner / ADMIN / 同业务线账号（FK businessLine.code 或冗余 businessLineCode 匹配）。
+   * 不可见时 404（不泄露存在性）。
+   */
   async getOrThrow(id: string, ownerId: string, admin = false) {
-    const where: Prisma.CampaignWhereUniqueInput = { id };
-    if (!admin) where.ownerId = ownerId;
-    const rec = await prisma.campaign.findFirst({ where });
+    const rec = await prisma.campaign.findUnique({
+      where: { id },
+      include: { businessLine: { select: { code: true } } },
+    });
     if (!rec) throw ApiError.notFound('Campaign not found');
-    return rec;
+    if (admin || rec.ownerId === ownerId) return rec;
+    const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { businessLineCode: true } });
+    const campBl = rec.businessLine?.code ?? rec.businessLineCode;
+    if (u?.businessLineCode && campBl && campBl === u.businessLineCode) return rec;
+    throw ApiError.notFound('Campaign not found');
   },
 
   async create(ownerId: string, data: Prisma.CampaignUncheckedCreateInput) {
