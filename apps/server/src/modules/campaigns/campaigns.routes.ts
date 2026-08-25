@@ -58,6 +58,7 @@ router.post('/import/collaboration-daily', campaignController.importCollaboratio
 router.post('/import/cps', campaignController.importCps);
 router.post('/import/cps-daily', campaignController.importCpsDaily);
 router.post('/import/orders', campaignController.importOrders);
+router.get('/:id/cps-overview', campaignController.cpsOverview);
 router.get('/orders/list', campaignController.listOrders);
 router.get('/:id/order-insights', campaignController.getOrderInsights);
 router.post('/:id/order-stats/recompute', campaignController.recomputeOrderStats);

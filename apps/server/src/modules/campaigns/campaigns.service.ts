@@ -889,3 +889,151 @@ export const importService = {
     return { updated, skipped };
   },
 };
+
+// ─── CPS Overview（合作列表浮窗只读聚合） ────────────────────────────────────
+// 口径与 ai-generate.service 的 creators[].cps 一致：
+//   成交类（orders/gmv/commission/spend/roas）← CampaignOrder 按 campaignCreatorId × orderDate 聚合（真源：逐单）
+//   流量类（clicks/impressions）← CpsPerformance 聚合列 + daily 期内切片（真源：联盟平台链接导出）
+//   ctr/cvr/epc 为派生值：ctr=clicks/impressions、cvr=orders/clicks、epc=gmv/clicks
+export const cpsOverviewService = {
+  /**
+   * campaign × creator 的 CPS 概览（浮窗只读）。
+   * @param opts.campaignCreatorId 可选，限定单个合作行
+   * @param opts.creatorId 可选，按 (campaignId, creatorId) 解析到合作行（浮窗行主键是 creatorId）
+   */
+  async getForCampaign(campaignId: string, opts?: { campaignCreatorId?: string; creatorId?: string }) {
+    let campaignCreatorId = opts?.campaignCreatorId;
+    if (!campaignCreatorId && opts?.creatorId) {
+      const cc = await prisma.campaignCreator.findFirst({
+        where: { campaignId, creatorId: opts.creatorId },
+        select: { id: true },
+      });
+      campaignCreatorId = cc?.id ?? '__none__'; // 无合作行 → 空结果（不视为全 campaign）
+    }
+
+    // 1) 订单层：逐单聚合（全周期，无日期的单归入 "(无日期)" 桶）
+    const orderRows = await prisma.$queryRaw<{
+      campaignCreatorId: string | null;
+      d: string | null;
+      cnt: bigint;
+      sale: unknown;
+      comm: unknown;
+    }[]>(Prisma.sql`
+      SELECT campaignCreatorId,
+             DATE_FORMAT(orderDate, '%Y-%m-%d') AS d,
+             COUNT(*) AS cnt,
+             SUM(saleAmount) AS sale,
+             SUM(commission) AS comm
+      FROM CampaignOrder
+      WHERE campaignId = ${campaignId}
+      GROUP BY campaignCreatorId, d`);
+
+    // 2) 链接层：CpsPerformance（聚合列 + daily）
+    const links = await prisma.campaignCreator.findMany({
+      where: { campaignId, ...(campaignCreatorId ? { id: campaignCreatorId } : {}) },
+      select: {
+        id: true,
+        creator: { select: { name: true, avatar: true } },
+        cpsPerformances: {
+          select: { contentType: true, linkUrl: true, clicks: true, impressions: true, orders: true, gmv: true, commission: true, spend: true, daily: true },
+        },
+      },
+    });
+
+    // 归并：byCampaignCreator map
+    const byCc = new Map<string, {
+      creatorName: string;
+      /** 订单层聚合（真源）。 */
+      orders: { orders: number; gmv: number; commission: number; daily: Map<string, { orders: number; gmv: number; commission: number }> };
+      /** 链接层聚合（真源）。 */
+      traffic: { clicks: number; impressions: number; daily: Map<string, { clicks: number; impressions: number }> };
+      links: { contentType: string; linkUrl: string | null; clicks: number; impressions: number; orders: number; gmv: number; commission: number; spend: number }[];
+    }>();
+    for (const l of links) {
+      byCc.set(l.id, {
+        creatorName: l.creator?.name ?? l.id,
+        orders: { orders: 0, gmv: 0, commission: 0, daily: new Map() },
+        traffic: { clicks: 0, impressions: 0, daily: new Map() },
+        links: [],
+      });
+    }
+    const ensure = (ccId: string) => {
+      let e = byCc.get(ccId);
+      if (!e) {
+        e = { creatorName: ccId, orders: { orders: 0, gmv: 0, commission: 0, daily: new Map() }, traffic: { clicks: 0, impressions: 0, daily: new Map() }, links: [] };
+        byCc.set(ccId, e);
+      }
+      return e;
+    };
+
+    const dec = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+    for (const r of orderRows) {
+      const ccId = r.campaignCreatorId ?? '';
+      if (campaignCreatorId && ccId !== campaignCreatorId) continue;
+      if (!ccId) continue; // 未归因订单不进 creator 行（避免张冠李戴）
+      const e = ensure(ccId);
+      const sale = dec(r.sale), comm = dec(r.comm), cnt = Number(r.cnt);
+      e.orders.orders += cnt; e.orders.gmv += sale; e.orders.commission += comm;
+      const date = r.d ?? '(无日期)';
+      const day = e.orders.daily.get(date) ?? { orders: 0, gmv: 0, commission: 0 };
+      day.orders += cnt; day.gmv += sale; day.commission += comm;
+      e.orders.daily.set(date, day);
+    }
+    for (const l of links) {
+      const e = byCc.get(l.id)!;
+      for (const p of l.cpsPerformances) {
+        e.traffic.clicks += p.clicks; e.traffic.impressions += p.impressions;
+        e.links.push({ contentType: p.contentType, linkUrl: p.linkUrl, clicks: p.clicks, impressions: p.impressions, orders: p.orders, gmv: Number(p.gmv), commission: Number(p.commission), spend: Number(p.spend) });
+        for (const d of ((p.daily as Record<string, unknown>[] | null) ?? [])) {
+          const date = String(d.date ?? '');
+          if (!date) continue;
+          const day = e.traffic.daily.get(date) ?? { clicks: 0, impressions: 0 };
+          day.clicks += Number(d.clicks) || 0;
+          day.impressions += Number(d.impressions) || 0;
+          e.traffic.daily.set(date, day);
+        }
+      }
+    }
+
+    // 组装输出（含派生率）
+    const pct = (a: number, b: number) => (b > 0 ? `${((a / b) * 100).toFixed(2)}%` : '—');
+    const usd = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
+    return {
+      campaignId,
+      rows: [...byCc.entries()].map(([ccId, e]) => {
+        const spend = e.orders.commission * 1.08;
+        const roas = spend > 0 ? e.orders.gmv / spend : 0;
+        const epc = e.traffic.clicks > 0 ? e.orders.gmv / e.traffic.clicks : 0;
+        return {
+          campaignCreatorId: ccId,
+          creatorName: e.creatorName,
+          /** 订单实绩（CampaignOrder 逐单聚合） */
+          orders: e.orders.orders,
+          gmv: usd(e.orders.gmv),
+          commission: usd(e.orders.commission),
+          spend: usd(spend),
+          roas: roas.toFixed(2),
+          /** 链接流量（CpsPerformance） */
+          clicks: e.traffic.clicks,
+          impressions: e.traffic.impressions,
+          ctr: pct(e.traffic.clicks, e.traffic.impressions),
+          cvr: pct(e.orders.orders, e.traffic.clicks),
+          epc: `$${epc.toFixed(2)}`,
+          /** 按日：订单层 gmv/orders/comm + 链接层 clicks/impressions 按日期 join */
+          daily: (() => {
+            const byDate = new Map<string, Record<string, string | number>>();
+            for (const [date, o] of e.orders.daily) byDate.set(date, { date, orders: o.orders, gmv: usd(o.gmv), commission: usd(o.commission) });
+            for (const [date, t] of e.traffic.daily) {
+              const row = byDate.get(date) ?? { date };
+              row.clicks = t.clicks; row.impressions = t.impressions;
+              byDate.set(date, row);
+            }
+            return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+          })(),
+          /** 链接明细（contentType × 链接） */
+          links: e.links,
+        };
+      }),
+    };
+  },
+};

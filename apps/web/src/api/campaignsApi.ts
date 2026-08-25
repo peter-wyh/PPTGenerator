@@ -266,7 +266,31 @@ export const campaignsApi = {
   /** 订单明细列表（数据管理页）：campaign 筛选 + 分页，含 items/campaign/creator 展开。 */
   listOrders: (params: { campaignId?: string; page?: number; pageSize?: number }) =>
     api.get<OrdersPage>('/campaigns/orders/list', { params }).then((r) => r.data),
+  /** CPS 概览（合作浮窗只读聚合）：成交←订单表逐单，流量←CpsPerformance。creatorId/ccId 可选限定单个合作行。 */
+  cpsOverview: (campaignId: string, opts?: { ccId?: string; creatorId?: string }) =>
+    api.get<CpsOverview>(`/campaigns/${campaignId}/cps-overview`, { params: { ...(opts?.ccId ? { ccId: opts.ccId } : {}), ...(opts?.creatorId ? { creatorId: opts.creatorId } : {}) } }).then((r) => r.data),
 };
+
+/** /campaigns/:id/cps-overview 响应。 */
+export interface CpsOverview {
+  campaignId: string;
+  rows: Array<{
+    campaignCreatorId: string;
+    creatorName: string;
+    orders: number;
+    gmv: string;
+    commission: string;
+    spend: string;
+    roas: string;
+    clicks: number;
+    impressions: number;
+    ctr: string;
+    cvr: string;
+    epc: string;
+    daily: Array<{ date: string; orders?: number; gmv?: string; commission?: string; clicks?: number; impressions?: number }>;
+    links: Array<{ contentType: string; linkUrl: string | null; clicks: number; impressions: number; orders: number; gmv: number; commission: number; spend: number }>;
+  }>;
+}
 
 /** /campaigns/orders/list 响应（listOrders）。 */
 export interface OrdersPage {

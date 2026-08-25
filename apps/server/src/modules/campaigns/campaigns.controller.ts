@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService, importService } from './campaigns.service';
+import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService, importService, cpsOverviewService } from './campaigns.service';
 import { orderStatsService } from './order-stats.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import type { AuthPayload } from '../../types/express';
@@ -212,6 +212,17 @@ export const campaignController = {
       pageSize,
       admin: v.role === 'ADMIN',
     });
+    res.json(result);
+  }),
+
+  /** CPS 概览（合作列表浮窗只读聚合）：params: id=campaignId, query: ccId/creatorId 可选。权限同 getOrThrow 三态。 */
+  cpsOverview: asyncHandler(async (req: Request, res: Response) => {
+    const id = String(req.params.id ?? '');
+    const v = req.user as AuthPayload;
+    await campaignService.getOrThrow(id, v.id, v.role === 'ADMIN');
+    const ccId = String(req.query.ccId ?? '') || undefined;
+    const creatorId = String(req.query.creatorId ?? '') || undefined;
+    const result = await cpsOverviewService.getForCampaign(id, { campaignCreatorId: ccId, creatorId });
     res.json(result);
   }),
 };

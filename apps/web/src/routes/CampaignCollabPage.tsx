@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
-import { campaignsApi, dtoToCampaign, dtoToCreator } from '@/api/campaignsApi';
+import { campaignsApi, dtoToCampaign, dtoToCreator, type CpsOverview } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediakit/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
 import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData, type PartnerType } from '@mediakit/shared';
@@ -758,6 +758,15 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
   const [collabData, setCollabData] = useState<CollaborationData>(row.collabData ?? buildSeedCollaboration(row.campaignId, row.creatorId));
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  // CPS 实绩（只读聚合）：成交←订单表逐单，流量←CpsPerformance。与报告 AI 上下文同口径。
+  const [cpsOv, setCpsOv] = useState<CpsOverview['rows'][number] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    campaignsApi.cpsOverview(row.campaignId, { creatorId: row.creatorId })
+      .then((r) => { if (alive) setCpsOv(r.rows[0] ?? null); })
+      .catch(() => { if (alive) setCpsOv(null); });
+    return () => { alive = false; };
+  }, [row.campaignId, row.creatorId]);
 
   const creator = row.creator;
   const metrics = creator.metrics ?? [];
@@ -865,6 +874,44 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* CPS 实绩（只读聚合：成交←订单表，流量←CpsPerformance；编辑模式隐藏避免与手填混淆） */}
+          {cpsOv && (cpsOv.orders > 0 || cpsOv.clicks > 0) && !editing && (
+            <div className="mb-4">
+              <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">
+                <span>CPS 实绩</span>
+                <span className="font-normal normal-case text-foreground-muted/70">订单表 + 链接导出聚合 · 只读</span>
+              </div>
+              <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-border-subtle">
+                {([
+                  ['订单', String(cpsOv.orders), 'CampaignOrder 逐单计数'],
+                  ['GMV', cpsOv.gmv, 'Σ saleAmount（订单表）'],
+                  ['佣金', cpsOv.commission, 'Σ commission（订单表）'],
+                  ['花费', cpsOv.spend, '佣金 × 1.08'],
+                  ['ROAS', cpsOv.roas, 'GMV ÷ 花费'],
+                  ['点击', cpsOv.clicks.toLocaleString('en-US'), 'CpsPerformance 链接层'],
+                  ['曝光', cpsOv.impressions.toLocaleString('en-US'), 'CpsPerformance 链接层'],
+                  ['CTR', cpsOv.ctr, '点击 ÷ 曝光'],
+                  ['CVR', cpsOv.cvr, '订单 ÷ 点击'],
+                  ['EPC', cpsOv.epc, 'GMV ÷ 点击'],
+                ] as const).map(([label, value, hint]) => (
+                  <div key={label} className="bg-surface-primary p-2" title={hint}>
+                    <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{label}</div>
+                    <div className="text-xs font-medium text-foreground-primary tabular-nums truncate">{value}</div>
+                  </div>
+                ))}
+              </div>
+              {cpsOv.links.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {cpsOv.links.map((l, i) => (
+                    <span key={i} className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary" title={l.linkUrl ?? ''}>
+                      {l.contentType} · 点击 {l.clicks.toLocaleString('en-US')}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1160,7 +1207,7 @@ function DeliverableCard({
             <button onClick={() => setMetrics([...metrics, { label: '', value: '' }])} className="text-accent-primary hover:underline">+ 添加</button>
           )}
         </div>
-        {metrics.length === 0 && !deliverable.cps ? (
+        {metrics.length === 0 ? (
           <span className="text-foreground-muted">—</span>
         ) : (
           <>
@@ -1200,33 +1247,8 @@ function DeliverableCard({
               </div>
             )}
 
-            {/* CPS 挂链汇总指标 */}
-            {deliverable.cps && (
-              <div className={metrics.length > 0 ? 'mt-1.5' : ''}>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
-                  {([
-                    ['GMV', deliverable.cps.gmv, 'Gross Merchandise Volume，挂链链接产生的总成交金额'],
-                    ['佣金', deliverable.cps.commission, '根据成交订单计算出的佣金收入'],
-                    ['ROAS', deliverable.cps.roas, 'Return On Ad Spend，GMV ÷ 花费，衡量投放回报'],
-                    ['订单', deliverable.cps.orders, '挂链链接产生的总下单数量'],
-                    ['CVR', deliverable.cps.cvr, 'Conversion Rate，订单数 ÷ 点击数 × 100%，衡量转化效率'],
-                    ['点击', deliverable.cps.clicks, '挂链链接被点击的总次数'],
-                    ['CTR', deliverable.cps.ctr, 'Click-Through Rate，点击数 ÷ 曝光数 × 100%，衡量内容吸引力'],
-                    ['EPC', deliverable.cps.epc, 'Earnings Per Click，GMV ÷ 点击数，单次点击平均产出'],
-                    ['花费', deliverable.cps.spend, '佣金 × 1.08（含税费及服务费），总投放成本'],
-                    ['曝光', deliverable.cps.impressions, '挂链链接相关内容的总展示次数'],
-                  ] as const).map(([label, value, hint]) => (
-                    <div key={label} className="rounded bg-surface-hover px-2 py-1.5" title={hint}>
-                      <div className="text-[10px] text-foreground-muted flex items-center gap-0.5">
-                        <InfoDot />
-                        {label}
-                      </div>
-                      <div className="text-xs font-medium text-foreground-primary tabular-nums">{value}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* CPS 挂链汇总指标：已迁移至浮窗顶部「CPS 实绩」只读聚合（cps-overview 端点）。
+                Collaboration.deliverables[].cps 手填 JSON 不再渲染（伪造来源已切断）。 */}
           </>
         )}
       </div>
