@@ -21,6 +21,10 @@ router.use(authenticate);
 
 // ─── Campaign ────────────────────────────────────────────────────────────────
 router.get('/', validate({ query: listCampaignsQuerySchema }), campaignController.list);
+// ★ 字面量路由必须先于 /:id 注册，否则被 :id 吞掉（orders/list 同理在下方集中放行前）
+router.get('/order-daily-stats', campaignController.listOrderDailyStats);
+router.get('/publisher-daily-stats', campaignController.listPublisherDailyStats);
+router.get('/links/list', campaignController.listLinkPerformances);
 router.get('/:id', validate({ params: idParamSchema }), campaignController.get);
 router.post('/', validate({ body: createCampaignSchema }), campaignController.create);
 router.patch('/:id', validate({ params: idParamSchema, body: updateCampaignSchema }), campaignController.update);
@@ -57,6 +61,7 @@ router.post('/import/creator-works', campaignController.importCreatorWorks);
 router.post('/import/collaboration-daily', campaignController.importCollaborationDaily);
 router.post('/import/cps', campaignController.importCps);
 router.post('/import/cps-daily', campaignController.importCpsDaily);
+router.post('/import/link-performance', campaignController.importLinkPerformance);
 router.post('/import/orders', campaignController.importOrders);
 router.get('/:id/cps-overview', campaignController.cpsOverview);
 router.get('/orders/list', campaignController.listOrders);

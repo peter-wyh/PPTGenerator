@@ -207,8 +207,142 @@ export const campaignService = {
     ]);
     return { rows, total, page, pageSize };
   },
+
+  /** 链接效果列表（数据管理-链接数据页）：trackingUrl 视角，含 Publisher 归属与日明细天数。 */
+  async listLinkPerformances(
+    _ownerId: string,
+    opts: { campaignId?: string; page?: number; pageSize?: number; admin?: boolean } = {},
+  ) {
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, opts.pageSize ?? 20));
+    const where: Prisma.LinkPerformanceWhereInput = {
+      ...(opts.campaignId ? { campaignId: opts.campaignId } : {}),
+    };
+    const [rows, total] = await Promise.all([
+      prisma.linkPerformance.findMany({
+        where,
+        orderBy: [{ clicks: 'desc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          publisher: { select: { id: true, name: true, domain: true, type: true, creatorId: true } },
+          campaign: { select: { id: true, name: true } },
+        },
+      }),
+      prisma.linkPerformance.count({ where }),
+    ]);
+    return {
+      rows: rows.map((r) => ({
+        id: r.id,
+        campaignId: r.campaignId,
+        campaignName: r.campaign?.name ?? '',
+        trackingUrl: r.linkUrl,
+        linkKey: r.linkKey,
+        publisher: r.publisher,
+        clicks: r.clicks,
+        impressions: r.impressions,
+        orders: r.orders,
+        gmv: Number(r.gmv),
+        commission: Number(r.commission),
+        spend: Number(r.spend),
+        dailyDays: Array.isArray(r.daily) ? r.daily.length : 0,
+        updatedAt: r.updatedAt,
+      })),
+      total, page, pageSize,
+    };
+  },
+
+  /** 订单日统计列表（OrderDailyStat 透出）：campaign 聚合行 + creator×date 行分页。 */
+  async listOrderDailyStats(
+    opts: { campaignId?: string; page?: number; pageSize?: number; creatorBreakdown?: boolean } = {},
+  ) {
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(200, Math.max(1, opts.pageSize ?? 50));
+    if (!opts.campaignId) return { rows: [], total: 0, page, pageSize };
+    const where: Prisma.OrderDailyStatWhereInput = {
+      campaignId: opts.campaignId,
+      ...(opts.creatorBreakdown === true
+        ? { campaignCreatorId: { not: '' } }
+        : { campaignCreatorId: '' }),
+    };
+    const [rows, total] = await Promise.all([
+      prisma.orderDailyStat.findMany({
+        where,
+        orderBy: { statDate: 'asc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.orderDailyStat.count({ where }),
+    ]);
+    // creator 名补充：OrderDailyStat 无 Prisma 关系，按 campaignCreatorId 反查 CampaignCreator
+    const ccIds = [...new Set(rows.map((r) => r.campaignCreatorId).filter((x) => x && x !== ''))];
+    const ccMap = new Map<string, string>();
+    if (ccIds.length) {
+      const ccs = await prisma.campaignCreator.findMany({
+        where: { id: { in: ccIds } },
+        include: { creator: { select: { name: true } } },
+      });
+      for (const cc of ccs) ccMap.set(cc.id, cc.creator?.name ?? '');
+    }
+    return {
+      rows: rows.map((r) => ({
+        statDate: r.statDate,
+        campaignCreatorId: r.campaignCreatorId,
+        creatorName: ccMap.get(r.campaignCreatorId) ?? null,
+        orders: r.totalOrders,
+        approvedOrders: r.approvedOrders,
+        pendingOrders: r.pendingOrders,
+        otherOrders: r.otherOrders,
+        commission: Number(r.totalCommission),
+        approvedCommission: Number(r.approvedCommission),
+        pendingCommission: Number(r.pendingCommission),
+        newCustomerOrders: r.newCustomerOrders,
+        hasNewCustomerTag: r.hasNewCustomerTag,
+        topCountries: r.topCountries ?? [],
+        topDevices: r.topDevices ?? [],
+        recomputedAt: r.recomputedAt,
+      })),
+      total, page, pageSize,
+    };
+  },
+
+  /** 媒体日统计列表（PublisherDailyStat 透出）：publisher × 日，成交+流量双口径。 */
+  async listPublisherDailyStats(
+    opts: { campaignId?: string; publisherId?: string; page?: number; pageSize?: number } = {},
+  ) {
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(200, Math.max(1, opts.pageSize ?? 50));
+    if (!opts.campaignId) return { rows: [], total: 0, page, pageSize };
+    const where: Prisma.PublisherDailyStatWhereInput = {
+      campaignId: opts.campaignId,
+      ...(opts.publisherId ? { publisherId: opts.publisherId } : {}),
+    };
+    const [rows, total] = await Promise.all([
+      prisma.publisherDailyStat.findMany({
+        where,
+        orderBy: [{ statDate: 'asc' }, { publisherId: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { publisher: { select: { id: true, name: true, domain: true, type: true, creatorId: true } } },
+      }),
+      prisma.publisherDailyStat.count({ where }),
+    ]);
+    return {
+      rows: rows.map((r) => ({
+        statDate: r.statDate,
+        publisherId: r.publisherId,
+        publisher: r.publisher,
+        clicks: r.clicks,
+        impressions: r.impressions,
+        orders: r.orders,
+        gmv: Number(r.gmv),
+        commission: Number(r.commission),
+        recomputedAt: r.recomputedAt,
+      })),
+      total, page, pageSize,
+    };
+  },
 };
-// ─── Creator ─────────────────────────────────────────────────────────────────
 
 export const creatorService = {
   /** 共享字典：所有登录用户可读（无 ownerId 过滤）。写操作仍校验 owner。 */
@@ -459,6 +593,77 @@ function mirrorOrderFields(row: Record<string, unknown>): Record<string, unknown
 }
 
 export const importService = {
+  /**
+   * 导入链接效果（Click References CSV 口径）：一行 = 一条跟踪链接 × campaign 的周期汇总。
+   * 链接维度流量/成交数据的唯一入口——替代 cps-daily 的流量侧职责。
+   * 字段：campaignId, trackingUrl（必填，linkUrl 为兼容别名）+ clicks/impressions/orders/gmv/commission/spend/sales（可选）。
+   * 归因：trackingUrl 域名归一化 → upsert Publisher（siteName 可选补充命名）→ linkKey 唯一。
+   */
+  async importLinkPerformance(_ownerId: string, items: Record<string, unknown>[]) {
+    let upserted = 0;
+    let skipped = 0;
+    for (const item of items) {
+      try {
+        const campaignId = String(item.campaignId ?? '');
+        const trackingUrl = String(item.trackingUrl ?? item.linkUrl ?? '').trim();
+        if (!campaignId || !trackingUrl) { skipped++; continue; }
+        const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+        if (!campaign) { skipped++; continue; }
+
+        const linkKey = normPublisherDomain(trackingUrl);
+        if (!linkKey) { skipped++; continue; }
+
+        // 媒体主档 upsert（域名归一化；siteName 有值时补充命名）
+        const siteName = String(item.siteName ?? '').trim();
+        const publisher = await prisma.publisher.upsert({
+          where: { domain: linkKey },
+          update: siteName ? { name: siteName } : {},
+          create: { name: siteName || linkKey, domain: linkKey },
+        });
+
+        const num = (v: unknown) => {
+          const n = parseFloat(String(v ?? '').replace(/^[$£]/, '').replace(/,/g, ''));
+          return Number.isFinite(n) ? n : null;
+        };
+        const clicks = num(item.clicks) ?? num(item.allClicks);
+        const impressions = num(item.impressions);
+        const orders = num(item.orders) ?? num(item.sales);
+        const gmv = num(item.gmv) ?? num(item.saleAmount);
+        const commission = num(item.commission);
+        const spend = num(item.spend);
+
+        await prisma.linkPerformance.upsert({
+          where: { campaignId_publisherId_linkKey: { campaignId, publisherId: publisher.id, linkKey } },
+          update: {
+            ...(clicks != null ? { clicks: Math.round(clicks) } : {}),
+            ...(impressions != null ? { impressions: Math.round(impressions) } : {}),
+            ...(orders != null ? { orders: Math.round(orders) } : {}),
+            ...(gmv != null ? { gmv: new Prisma.Decimal(gmv) } : {}),
+            ...(commission != null ? { commission: new Prisma.Decimal(commission) } : {}),
+            ...(spend != null ? { spend: new Prisma.Decimal(spend) } : {}),
+            publisherId: publisher.id,
+          },
+          create: {
+            campaignId,
+            publisherId: publisher.id,
+            linkUrl: trackingUrl,
+            linkKey,
+            ...(clicks != null ? { clicks: Math.round(clicks) } : {}),
+            ...(impressions != null ? { impressions: Math.round(impressions) } : {}),
+            ...(orders != null ? { orders: Math.round(orders) } : {}),
+            ...(gmv != null ? { gmv: new Prisma.Decimal(gmv) } : {}),
+            ...(commission != null ? { commission: new Prisma.Decimal(commission) } : {}),
+            ...(spend != null ? { spend: new Prisma.Decimal(spend) } : {}),
+          },
+        });
+        upserted++;
+      } catch {
+        skipped++;
+      }
+    }
+    return { upserted, skipped };
+  },
+
   /** 批量导入达人基础数据：按 id upsert Creator。 */
   async importCreators(ownerId: string, items: Record<string, unknown>[]) {
     let created = 0;

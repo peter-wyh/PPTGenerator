@@ -3,8 +3,13 @@
  * 全字段罗列：CampaignOrder 所有列并入主表（横向滚动），Awin 明细面板保留商品行展开。
  * 数据源：GET /campaigns/orders/list（admin 全局视角）。
  */
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { campaignsApi, type OrderRow, type OrdersPage } from '@/api/campaignsApi';
+import { buildPreviewFromRows, downloadTemplate, type ImportKind, type PreviewItem } from '@/editor/dataImport';
+import { parseFile } from '@/editor/datasource/parse';
+import { toast } from '@/components/Toast';
+import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 
 function fmtDate(v: string | null) {
   return v ? v.slice(0, 10) : '—';
@@ -41,6 +46,30 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const pageSize = 20;
+
+  // ── 订单导入（自 CampaignCollabPage 迁入——数据在哪个页面看，就在哪个页面导入）──
+  const ordersCsvRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<PreviewItem[] | null>(null);
+
+  function onCsvOrders(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    parseFile(f)
+      .then((sheets) => setPreview(buildPreviewFromRows('orders', sheets[0]?.rows ?? [])))
+      .catch(() => toast.error('文件解析失败'));
+  }
+
+  async function confirmOrdersImport(validItems: Record<string, unknown>[]) {
+    setPreview(null);
+    try {
+      const r = await campaignsApi.importOrders(validItems);
+      toast.success(`订单明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      load();
+    } catch {
+      toast.error('订单明细导入失败');
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,17 +110,35 @@ export default function OrdersPage() {
             已导入的订单（订单号 · 商品行 · 归因达人）— Top-Sales / 购物篮分析的数据底座
           </p>
         </div>
-        <select
-          value={campaignId}
-          onChange={(e) => { setCampaignId(e.target.value); setPage(1); }}
-          className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary min-w-[220px]"
-        >
-          <option value="">全部 Campaign</option>
-          {campaigns.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            onChange={(e) => { if (e.target.value) downloadTemplate(e.target.value as ImportKind); e.target.value = ''; }}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-secondary hover:bg-surface-hover"
+            defaultValue=""
+          >
+            <option value="" disabled>下载模板</option>
+            <option value="orders">订单明细模板</option>
+          </select>
+          <button
+            onClick={() => ordersCsvRef.current?.click()}
+            className="rounded bg-accent-primary px-3 py-1.5 text-xs text-foreground-inverse hover:bg-accent-secondary"
+          >
+            导入订单明细 CSV
+          </button>
+          <select
+            value={campaignId}
+            onChange={(e) => { setCampaignId(e.target.value); setPage(1); }}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary min-w-[220px]"
+          >
+            <option value="">全部 Campaign</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      <input ref={ordersCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvOrders} />
 
       {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
       {loading ? (
@@ -284,6 +331,16 @@ export default function OrdersPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* 导入预览弹窗（订单明细） */}
+      {preview && (
+        <ImportPreviewModal
+          kind="orders"
+          items={preview}
+          onConfirm={confirmOrdersImport}
+          onCancel={() => setPreview(null)}
+        />
       )}
     </div>
   );

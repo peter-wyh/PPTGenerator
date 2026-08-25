@@ -266,6 +266,21 @@ export const campaignsApi = {
   /** 订单明细列表（数据管理页）：campaign 筛选 + 分页，含 items/campaign/creator 展开。 */
   listOrders: (params: { campaignId?: string; page?: number; pageSize?: number }) =>
     api.get<OrdersPage>('/campaigns/orders/list', { params }).then((r) => r.data),
+  /** 导入链接效果（Click References CSV 口径）：trackingUrl 必填，域名归一化归因媒体。 */
+  importLinkPerformance: (items: Record<string, unknown>[]) =>
+    api.post<{ upserted: number; skipped: number }>('/campaigns/import/link-performance', { items }).then((r) => r.data),
+  /** 链接效果列表（数据管理-链接数据页）。 */
+  listLinkPerformances: (params: { campaignId?: string; page?: number; pageSize?: number }) =>
+    api.get<LinksPageResp>('/campaigns/links/list', { params }).then((r) => r.data),
+  /** 订单日统计（OrderDailyStat 透出）：campaign 必填；creatorBreakdown=true 看 creator×date 行。 */
+  listOrderDailyStats: (params: { campaignId: string; creatorBreakdown?: boolean; page?: number; pageSize?: number }) =>
+    api.get<StatsPageResp<OrderDailyRow>>('/campaigns/order-daily-stats', { params }).then((r) => r.data),
+  /** 媒体日统计（PublisherDailyStat 透出）：campaign 必填；publisherId 可选过滤。 */
+  listPublisherDailyStats: (params: { campaignId: string; publisherId?: string; page?: number; pageSize?: number }) =>
+    api.get<StatsPageResp<PublisherDailyRow>>('/campaigns/publisher-daily-stats', { params }).then((r) => r.data),
+  /** 重算中间层统计：kind=order（OrderDailyStat）/ publisher（PublisherDailyStat）。 */
+  recomputeStats: (campaignId: string, kind: 'order' | 'publisher') =>
+    api.post<{ rows: number; dropped?: number }>(`/campaigns/${campaignId}/${kind}-stats/recompute`).then((r) => r.data),
   /** CPS 概览（合作浮窗只读聚合）：成交←订单表逐单，流量←CpsPerformance。creatorId/ccId 可选限定单个合作行。 */
   cpsOverview: (campaignId: string, opts?: { ccId?: string; creatorId?: string }) =>
     api.get<CpsOverview>(`/campaigns/${campaignId}/cps-overview`, { params: { ...(opts?.ccId ? { ccId: opts.ccId } : {}), ...(opts?.creatorId ? { creatorId: opts.creatorId } : {}) } }).then((r) => r.data),
@@ -298,6 +313,72 @@ export interface OrdersPage {
   total: number;
   page: number;
   pageSize: number;
+}
+
+/** /campaigns/links/list 响应（listLinkPerformances）。 */
+export interface LinksPageResp {
+  rows: LinkRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** 链接效果行（trackingUrl 视角，含媒体归属）。 */
+export interface LinkRow {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  trackingUrl: string | null;
+  linkKey: string;
+  publisher: { id: string; name: string; domain: string; type: string; creatorId: string | null } | null;
+  clicks: number;
+  impressions: number;
+  orders: number;
+  gmv: number;
+  commission: number;
+  spend: number;
+  dailyDays: number;
+  updatedAt: string;
+}
+
+/** 日统计分页响应（OrderDailyStat / PublisherDailyStat 共用）。 */
+export interface StatsPageResp<T> {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** 订单日统计行（campaign 聚合或 creator×date）。 */
+export interface OrderDailyRow {
+  statDate: string;
+  campaignCreatorId: string;
+  creatorName: string | null;
+  orders: number;
+  approvedOrders: number;
+  pendingOrders: number;
+  otherOrders: number;
+  commission: number;
+  approvedCommission: number;
+  pendingCommission: number;
+  newCustomerOrders: number;
+  hasNewCustomerTag: boolean;
+  topCountries: Array<{ country: string; orders: number; commission: number }>;
+  topDevices: Array<{ device: string; orders: number }>;
+  recomputedAt: string;
+}
+
+/** 媒体日统计行（publisher × 日，成交+流量双口径）。 */
+export interface PublisherDailyRow {
+  statDate: string;
+  publisherId: string;
+  publisher: { id: string; name: string; domain: string; type: string; creatorId: string | null } | null;
+  clicks: number;
+  impressions: number;
+  orders: number;
+  gmv: number;
+  commission: number;
+  recomputedAt: string;
 }
 
 /** 订单行（含商品明细展开）。 */

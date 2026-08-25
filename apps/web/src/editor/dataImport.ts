@@ -102,10 +102,19 @@ export const ORDERS_FIELDS = [
 ] as const;
 export const ORDERS_REQUIRED = ['campaignId', 'orderId', 'productName'];
 
+// ─── 链接效果（Click References CSV 口径，一条跟踪链接一行）────────────────
+// 流量/成交数据的链接维度入口——替代 cps-daily 的流量侧职责。
+export const LINK_PERFORMANCE_FIELDS = [
+  'campaignId', 'trackingUrl', 'siteName',
+  'clicks', 'impressions', 'orders', 'sales',
+  'gmv', 'saleAmount', 'commission', 'spend',
+] as const;
+export const LINK_PERFORMANCE_REQUIRED = ['campaignId', 'trackingUrl'];
+
 // ─── 类型定义 ──────────────────────────────────────────────────────────────
 
 export type DataKind = 'campaign' | 'creator' | 'collaboration';
-export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily' | 'cps' | 'cpsDaily' | 'orders';
+export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily' | 'cps' | 'cpsDaily' | 'orders' | 'linkPerformance';
 
 export interface PreviewItem {
   data: Record<string, unknown>;
@@ -123,6 +132,7 @@ const FIELDS: Record<ImportKind, readonly string[]> = {
   cps: CPS_FIELDS,
   cpsDaily: CPS_DAILY_FIELDS,
   orders: ORDERS_FIELDS,
+  linkPerformance: LINK_PERFORMANCE_FIELDS,
 };
 const REQUIRED: Record<ImportKind, string[]> = {
   campaign: [...CAMPAIGN_REQUIRED],
@@ -134,6 +144,7 @@ const REQUIRED: Record<ImportKind, string[]> = {
   cps: [...CPS_REQUIRED],
   cpsDaily: [...CPS_DAILY_REQUIRED],
   orders: [...ORDERS_REQUIRED],
+  linkPerformance: [...LINK_PERFORMANCE_REQUIRED],
 };
 
 /** 预览表格展示的列。 */
@@ -147,6 +158,7 @@ export const PREVIEW_COLUMNS: Record<ImportKind, string[]> = {
   cps: ['campaignId', 'creatorId', 'collabId', 'contentType', 'linkUrl', 'clicks', 'orders', 'gmv', 'commission', 'productName', 'category', 'market', 'promoName', 'promoType'],
   cpsDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'date', 'dailyClicks', 'dailyOrders', 'dailyGmv', 'dailySpend', 'dailyNewCustomers'],
   orders: ['campaignId', 'creatorId', 'orderId', 'orderDate', 'orderStatus', 'productName', 'category', 'sku', 'qty', 'unitPrice', 'lineTotal'],
+  linkPerformance: ['campaignId', 'trackingUrl', 'siteName', 'clicks', 'impressions', 'orders', 'gmv', 'commission', 'spend'],
 };
 
 function checkRequired(kind: ImportKind, data: Record<string, unknown>): string[] {
@@ -395,6 +407,20 @@ export function downloadTemplate(kind: ImportKind): void {
       '# 每行=一条 CPS 链接在某天的归因数据',
       '# 关联键: campaignId+creatorId+contentType+date → 合并到 CpsPerformance.daily JSON',
       '# 必填字段: campaignId,creatorId,contentType,date',
+    ].join('\n');
+  } else if (kind === 'linkPerformance') {
+    example = [
+      'camp-001,https://track.awin.com/click.php?ref=gb-1442864,Timelynews,12500,,380,,45000,4500,',
+      'camp-001,https://track.awin.com/click.php?ref=gb-1442865,DealHub,8900,,215,,28000,2800,',
+    ].join('\n');
+    note = [
+      '# 每行=一条跟踪链接×campaign 的周期汇总（Awin Click References 口径）',
+      '# 幂等键: campaignId+trackingUrl 域名归一化(linkKey)+媒体 归属',
+      '# trackingUrl 域名自动 upsert 媒体主档（siteName 可选补充命名）',
+      '# clicks/impressions: 点击/曝光（流量侧——订单表无此维度）',
+      '# orders/sales: 订单数（sales 为 Awin 列名别名）',
+      '# gmv/saleAmount: GMV（saleAmount 为 Awin 列名别名）',
+      '# 必填字段: campaignId,trackingUrl',
     ].join('\n');
   } else { // orders
     example = [

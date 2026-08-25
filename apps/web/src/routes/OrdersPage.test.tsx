@@ -3,7 +3,7 @@
  * 「Awin 明细」面板显示全部镜像字段（含空值占位 —）。
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { campaignsApi, type OrdersPage as OrdersPageData } from '@/api/campaignsApi';
 import OrdersPage from './OrdersPage';
 

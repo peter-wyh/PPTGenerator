@@ -172,8 +172,15 @@ export const campaignController = {
   }),
 
   importCpsDaily: asyncHandler(async (req: Request, res: Response) => {
-    const items = (req.body.items ?? []) as Record<string, unknown>[];
+    const { items } = req.body as { items: Record<string, unknown>[] };
     const result = await importService.importCpsDaily(userId(req), items);
+    res.json(result);
+  }),
+
+  /** 导入链接效果（Click References 口径）——链接维度流量/成交数据唯一入口。 */
+  importLinkPerformance: asyncHandler(async (req: Request, res: Response) => {
+    const { items } = req.body as { items: Record<string, unknown>[] };
+    const result = await importService.importLinkPerformance(userId(req), items);
     res.json(result);
   }),
 
@@ -233,6 +240,49 @@ export const campaignController = {
     const ccId = String(req.query.ccId ?? '') || undefined;
     const creatorId = String(req.query.creatorId ?? '') || undefined;
     const result = await cpsOverviewService.getForCampaign(id, { campaignCreatorId: ccId, creatorId });
+    res.json(result);
+  }),
+
+  /** 链接效果列表（数据管理-链接数据页）：query: campaignId/page/pageSize。admin 全局视角。 */
+  listLinkPerformances: asyncHandler(async (req: Request, res: Response) => {
+    const v = req.user as AuthPayload;
+    const { campaignId } = req.query as { campaignId?: string };
+    const page = parseInt(String(req.query.page ?? '1'), 10) || 1;
+    const pageSize = parseInt(String(req.query.pageSize ?? '20'), 10) || 20;
+    const result = await campaignService.listLinkPerformances(v.id, {
+      campaignId: campaignId || undefined,
+      page,
+      pageSize,
+      admin: v.role === 'ADMIN',
+    });
+    res.json(result);
+  }),
+
+  /** 订单日统计列表（OrderDailyStat 透出）：query: campaignId(必填)/creatorBreakdown/page/pageSize。 */
+  listOrderDailyStats: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId, creatorBreakdown } = req.query as { campaignId?: string; creatorBreakdown?: string };
+    const page = parseInt(String(req.query.page ?? '1'), 10) || 1;
+    const pageSize = parseInt(String(req.query.pageSize ?? '50'), 10) || 50;
+    const result = await campaignService.listOrderDailyStats({
+      campaignId: campaignId || undefined,
+      creatorBreakdown: creatorBreakdown === 'true',
+      page,
+      pageSize,
+    });
+    res.json(result);
+  }),
+
+  /** 媒体日统计列表（PublisherDailyStat 透出）：query: campaignId(必填)/publisherId/page/pageSize。 */
+  listPublisherDailyStats: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId, publisherId } = req.query as { campaignId?: string; publisherId?: string };
+    const page = parseInt(String(req.query.page ?? '1'), 10) || 1;
+    const pageSize = parseInt(String(req.query.pageSize ?? '50'), 10) || 50;
+    const result = await campaignService.listPublisherDailyStats({
+      campaignId: campaignId || undefined,
+      publisherId: publisherId || undefined,
+      page,
+      pageSize,
+    });
     res.json(result);
   }),
 };

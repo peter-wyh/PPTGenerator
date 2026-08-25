@@ -12,6 +12,8 @@ const DataManagement = lazy(() => import('./routes/DataManagement').then((m) => 
 const CampaignPage = lazy(() => import('./routes/CampaignPage').then((m) => ({ default: m.CampaignPage })));
 const CreatorPage = lazy(() => import('./routes/CreatorPage').then((m) => ({ default: m.CreatorPage })));
 const OrdersPage = lazy(() => import('./routes/OrdersPage'));
+const LinksPage = lazy(() => import('./routes/LinksPage'));
+const StatsPage = lazy(() => import('./routes/StatsPage'));
 const AdvertiserPage = lazy(() => import('./routes/AdvertiserPage').then((m) => ({ default: m.AdvertiserPage })));
 const MarketingEventPage = lazy(() => import('./routes/MarketingEventPage').then((m) => ({ default: m.MarketingEventPage })));
 const GuidePage = lazy(() => import('./routes/GuidePage').then((m) => ({ default: m.GuidePage })));
@@ -49,6 +51,8 @@ export function App() {
               <Route path="campaigns" element={<CampaignPage />} />
               <Route path="campaign-collabs" element={<CampaignCollabPage />} />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="links" element={<LinksPage />} />
+              <Route path="stats" element={<StatsPage />} />
               <Route path="creators" element={<CreatorPage />} />
               <Route path="advertisers" element={<AdvertiserPage />} />
               <Route path="marketing-events" element={<MarketingEventPage />} />

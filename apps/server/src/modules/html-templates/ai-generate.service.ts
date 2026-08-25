@@ -859,6 +859,8 @@ export const aiGenerateService = {
       where: { id: campaignId },
       include: {
         campaignCreators: { include: { creator: true, cpsPerformances: true } },
+        // ★ 链接效果真源（LinkPerformance）：链接维度流量/成交——与 cpsPerformances 双读合并（去重）
+        linkPerformances: { include: { publisher: { select: { id: true, creatorId: true } } } },
       },
     });
     if (!campaign) return undefined;
@@ -879,6 +881,9 @@ export const aiGenerateService = {
 
     // ── 与 buildCampaignContext 同口径逐模块判定 ──
     // 1) CPS daily(趋势/KPI 共用真源):期内切片非空天集合
+    //    双读:CpsPerformance.daily(旧,达人维度) + LinkPerformance.daily(新,链接维度)——
+    //    迁移期两处并存(迁移是复制非移动),先扫旧再扫新,linkKey 已迁移的行在旧处继续计
+    //    (数据相同不丢);全新链接只在 LinkPerformance。
     const periodDates = new Set<string>();
     let clicksKeySeen = false;
     for (const cc of campaign.campaignCreators) {
@@ -891,6 +896,19 @@ export const aiGenerateService = {
             periodDates.add(date);
             if ('clicks' in d) clicksKeySeen = true;
           }
+        }
+      }
+    }
+    // 新真源补充扫描（LinkPerformance.daily——链接维度日数据；旧 CpsPerformance 已扫过，
+    // 迁移复制行的 daily 内容相同，periodDates 是 Set 天然去重，不双计）
+    for (const lp of campaign.linkPerformances ?? []) {
+      const daily = (lp.daily as Record<string, unknown>[] | null | undefined) ?? [];
+      for (const d of daily) {
+        const date = String(d.date ?? '');
+        if (!date) continue;
+        if (!hasPeriod || inPeriod(date)) {
+          periodDates.add(date);
+          if ('clicks' in d) clicksKeySeen = true;
         }
       }
     }
@@ -1066,6 +1084,8 @@ export const aiGenerateService = {
             collaboration: true,
           },
         },
+        // ★ 链接效果真源（LinkPerformance）：链接维度流量/成交——clicks 回退与 daily 双读合并
+        linkPerformances: { include: { publisher: { select: { id: true, creatorId: true } } } },
         businessLine: true,
         advertiser: true,
       },
@@ -1165,18 +1185,40 @@ export const aiGenerateService = {
       // ★ clicks 聚合列回退注入:daily 无 clicks 键 + 报告周期完整覆盖 campaign 生命周期。
       //   将链接全周期汇总(Awin Click References 真源)注入 total/perCreatorSums——
       //   KPI Clicks/CVR、MoM、creators CPS 全链路生效;trend 日级分布仍不注入(无日级源,不编造)。
+      //   双读:CpsPerformance(旧)优先,已迁移链接(migratedFromCpsId)跳过防双计;
+      //   LinkPerformance(新)聚合补充未迁移的链接。
       if (!clicksKeySeen) {
         const coversAll = (!reportPeriod?.startDate || !campaign.startDate || reportPeriod.startDate <= campaign.startDate)
           && (!reportPeriod?.endDate || !campaign.endDate || reportPeriod.endDate >= campaign.endDate);
         if (coversAll) {
+          const migratedIds = new Set(
+            (campaign.linkPerformances ?? [])
+              .filter((lp) => lp.migratedFromCpsId)
+              .map((lp) => lp.migratedFromCpsId as string),
+          );
           let aggTotal = 0;
           for (const cc of campaign.campaignCreators) {
-            const agg = (cc.cpsPerformances ?? []).reduce((s, p) => s + num(p.clicks), 0);
+            // 旧表:跳过已迁移到 LinkPerformance 的行(数据已复制过去,防双计)
+            const agg = (cc.cpsPerformances ?? [])
+              .filter((p) => !migratedIds.has(p.id))
+              .reduce((s, p) => s + num(p.clicks), 0);
             if (agg > 0) {
               const cur = perCreatorSums.get(cc.id);
               if (cur) cur.clicks = agg;
               aggTotal += agg;
             }
+          }
+          // 新表:链接维度聚合(达人型媒体经 publisher.creatorId 归到达人行,非达人型只进 total)
+          for (const lp of campaign.linkPerformances ?? []) {
+            if (num(lp.clicks) <= 0) continue;
+            const ccEntry = lp.publisher?.creatorId
+              ? campaign.campaignCreators.find((cc) => cc.creatorId === lp.publisher?.creatorId)
+              : undefined;
+            if (ccEntry) {
+              const cur = perCreatorSums.get(ccEntry.id);
+              if (cur) cur.clicks += num(lp.clicks);
+            }
+            aggTotal += num(lp.clicks);
           }
           if (aggTotal > 0) { total.clicks = aggTotal; clicksFallback = true; }
         }
