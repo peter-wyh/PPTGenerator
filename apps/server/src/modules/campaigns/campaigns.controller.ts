@@ -243,17 +243,34 @@ export const campaignController = {
     res.json(result);
   }),
 
-  /** 链接效果列表（数据管理-链接数据页）：query: campaignId/page/pageSize。admin 全局视角。 */
+  /** TrackingLink 列表（数据管理-链接数据页·链接统计）：query: campaignId/page/pageSize。admin 全局视角。 */
   listLinkPerformances: asyncHandler(async (req: Request, res: Response) => {
     const v = req.user as AuthPayload;
-    const { campaignId } = req.query as { campaignId?: string };
+    const { campaignId, creatorId } = req.query as { campaignId?: string; creatorId?: string };
     const page = parseInt(String(req.query.page ?? '1'), 10) || 1;
     const pageSize = parseInt(String(req.query.pageSize ?? '20'), 10) || 20;
     const result = await campaignService.listLinkPerformances(v.id, {
       campaignId: campaignId || undefined,
+      creatorId: creatorId || undefined,
       page,
       pageSize,
       admin: v.role === 'ADMIN',
+    });
+    res.json(result);
+  }),
+
+  /** TrackingLink 按日明细（数据管理-链接数据页·按日明细）：query: campaignId(必填)/date/page/pageSize。 */
+  listLinkDailyStats: asyncHandler(async (req: Request, res: Response) => {
+    const v = req.user as AuthPayload;
+    const { campaignId, creatorId, date } = req.query as { campaignId?: string; creatorId?: string; date?: string };
+    const page = parseInt(String(req.query.page ?? '1'), 10) || 1;
+    const pageSize = parseInt(String(req.query.pageSize ?? '50'), 10) || 50;
+    const result = await campaignService.listLinkDailyStats(v.id, {
+      campaignId: campaignId || undefined,
+      creatorId: creatorId || undefined,
+      date: date || undefined,
+      page,
+      pageSize,
     });
     res.json(result);
   }),

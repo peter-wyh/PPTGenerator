@@ -269,9 +269,12 @@ export const campaignsApi = {
   /** 导入链接效果（Click References CSV 口径）：trackingUrl 必填，域名归一化归因媒体。 */
   importLinkPerformance: (items: Record<string, unknown>[]) =>
     api.post<{ upserted: number; skipped: number }>('/campaigns/import/link-performance', { items }).then((r) => r.data),
-  /** 链接效果列表（数据管理-链接数据页）。 */
-  listLinkPerformances: (params: { campaignId?: string; page?: number; pageSize?: number }) =>
+  /** TrackingLink 列表（数据管理-链接数据页·链接统计）：真源=订单表 publisherUrl 聚合。creatorId 可选（按达人筛选）。 */
+  listLinkPerformances: (params: { campaignId?: string; creatorId?: string; page?: number; pageSize?: number }) =>
     api.get<LinksPageResp>('/campaigns/links/list', { params }).then((r) => r.data),
+  /** TrackingLink 按日明细（数据管理-链接数据页·按日明细）：campaignId 必填，creatorId/date 可选。 */
+  listLinkDailyStats: (params: { campaignId: string; creatorId?: string; date?: string; page?: number; pageSize?: number }) =>
+    api.get<{ rows: LinkDailyRow[]; total: number; page: number; pageSize: number }>('/campaigns/links/daily', { params }).then((r) => r.data),
   /** 订单日统计（OrderDailyStat 透出）：campaign 必填；creatorBreakdown=true 看 creator×date 行。 */
   listOrderDailyStats: (params: { campaignId: string; creatorBreakdown?: boolean; page?: number; pageSize?: number }) =>
     api.get<StatsPageResp<OrderDailyRow>>('/campaigns/order-daily-stats', { params }).then((r) => r.data),
@@ -323,22 +326,33 @@ export interface LinksPageResp {
   pageSize: number;
 }
 
-/** 链接效果行（trackingUrl 视角，含媒体归属）。 */
+/** TrackingLink 行（链接统计页签）：真源=订单表 publisherUrl 逐单聚合。 */
 export interface LinkRow {
   id: string;
   campaignId: string;
   campaignName: string;
+  /** 跟踪链接（=订单表「发布商跟踪URL」，带业务线域名+跟踪标识）。 */
   trackingUrl: string | null;
   linkKey: string;
   publisher: { id: string; name: string; domain: string; type: string; creatorId: string | null } | null;
-  clicks: number;
-  impressions: number;
   orders: number;
   gmv: number;
   commission: number;
-  spend: number;
-  dailyDays: number;
-  updatedAt: string;
+  firstOrderAt: string | null;
+  lastOrderAt: string | null;
+  updatedAt: string | null;
+}
+
+/** TrackingLink 按日明细行（按日明细页签）：publisherUrl × date。 */
+export interface LinkDailyRow {
+  id: string;
+  campaignId: string;
+  trackingUrl: string;
+  statDate: string;
+  publisher: { id: string; name: string; domain: string; type: string; creatorId: string | null } | null;
+  orders: number;
+  gmv: number;
+  commission: number;
 }
 
 /** 日统计分页响应（OrderDailyStat / PublisherDailyStat 共用）。 */

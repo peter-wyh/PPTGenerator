@@ -25,6 +25,7 @@ router.get('/', validate({ query: listCampaignsQuerySchema }), campaignControlle
 router.get('/order-daily-stats', campaignController.listOrderDailyStats);
 router.get('/publisher-daily-stats', campaignController.listPublisherDailyStats);
 router.get('/links/list', campaignController.listLinkPerformances);
+router.get('/links/daily', campaignController.listLinkDailyStats);
 router.get('/:id', validate({ params: idParamSchema }), campaignController.get);
 router.post('/', validate({ body: createCampaignSchema }), campaignController.create);
 router.patch('/:id', validate({ params: idParamSchema, body: updateCampaignSchema }), campaignController.update);

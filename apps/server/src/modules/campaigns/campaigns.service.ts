@@ -208,48 +208,72 @@ export const campaignService = {
     return { rows, total, page, pageSize };
   },
 
-  /** 链接效果列表（数据管理-链接数据页）：trackingUrl 视角，含 Publisher 归属与日明细天数。 */
+  /**
+   * TrackingLink 列表（数据管理-链接数据页·链接统计页签）。
+   * ★ 真源 = CampaignOrder.publisherUrl（=订单表「发布商跟踪URL」，带业务线域名+跟踪标识）。
+   *   每条唯一 publisherUrl 聚合一行：orders=单数、GMV=Σ saleAmount、Commission=Σ 订单佣金。
+   *   clicks/impressions 属媒体链接口径（Click References），订单表无此维度，不在此页展示。
+   * 媒体归因：clickRef 域名（媒体实际投放链接）→ Publisher；publisherUrl 域名(dc.digchic.com)只是
+   * 业务线跟踪域名，不归因媒体。
+   */
   async listLinkPerformances(
     _ownerId: string,
-    opts: { campaignId?: string; page?: number; pageSize?: number; admin?: boolean } = {},
+    opts: { campaignId?: string; creatorId?: string; page?: number; pageSize?: number; admin?: boolean } = {},
   ) {
     const page = Math.max(1, opts.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, opts.pageSize ?? 20));
-    const where: Prisma.LinkPerformanceWhereInput = {
-      ...(opts.campaignId ? { campaignId: opts.campaignId } : {}),
-    };
-    const [rows, total] = await Promise.all([
-      prisma.linkPerformance.findMany({
-        where,
-        orderBy: [{ clicks: 'desc' }, { createdAt: 'desc' }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          publisher: { select: { id: true, name: true, domain: true, type: true, creatorId: true } },
-          campaign: { select: { id: true, name: true } },
-        },
-      }),
-      prisma.linkPerformance.count({ where }),
-    ]);
-    return {
-      rows: rows.map((r) => ({
-        id: r.id,
-        campaignId: r.campaignId,
-        campaignName: r.campaign?.name ?? '',
-        trackingUrl: r.linkUrl,
-        linkKey: r.linkKey,
-        publisher: r.publisher,
-        clicks: r.clicks,
-        impressions: r.impressions,
-        orders: r.orders,
-        gmv: Number(r.gmv),
-        commission: Number(r.commission),
-        spend: Number(r.spend),
-        dailyDays: Array.isArray(r.daily) ? r.daily.length : 0,
-        updatedAt: r.updatedAt,
-      })),
-      total, page, pageSize,
-    };
+    const r = await aggregateTrackingLinks({ campaignId: opts.campaignId, creatorId: opts.creatorId });
+    const total = r.rows.length;
+    const pageRows = r.rows.slice((page - 1) * pageSize, page * pageSize);
+    return { rows: pageRows, total, page, pageSize };
+  },
+
+  /**
+   * TrackingLink 按日明细（数据管理-链接数据页·按日明细页签）。
+   * 每 (publisherUrl × DATE(orderDate)) 一行，媒体归因口径同上。
+   */
+  async listLinkDailyStats(
+    _ownerId: string,
+    opts: { campaignId?: string; creatorId?: string; date?: string; page?: number; pageSize?: number } = {},
+  ) {
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(200, Math.max(1, opts.pageSize ?? 50));
+    if (!opts.campaignId) return { rows: [], total: 0, page, pageSize };
+    const campaignId = opts.campaignId;
+    let ccFilter = Prisma.empty;
+    if (opts.creatorId) {
+      const cc = await prisma.campaignCreator.findFirst({ where: { campaignId, creatorId: opts.creatorId }, select: { id: true } });
+      ccFilter = cc
+        ? Prisma.sql` AND campaignCreatorId = ${cc.id}`
+        : Prisma.sql` AND 1 = 0`;
+    }
+    const rows = await prisma.$queryRaw<Array<{
+      trackingUrl: string; d: string; cnt: bigint; sale: unknown; comm: unknown;
+    }>>(Prisma.sql`
+      SELECT publisherUrl AS trackingUrl,
+             DATE_FORMAT(orderDate, '%Y-%m-%d') AS d,
+             COUNT(*) AS cnt,
+             COALESCE(SUM(saleAmount), 0) AS sale,
+             COALESCE(SUM(commission), 0) AS comm
+      FROM CampaignOrder
+      WHERE campaignId = ${campaignId} AND publisherUrl IS NOT NULL AND publisherUrl != ''
+        AND orderDate IS NOT NULL${ccFilter}
+        ${opts.date ? Prisma.sql`AND DATE_FORMAT(orderDate, '%Y-%m-%d') = ${opts.date}` : Prisma.empty}
+      GROUP BY publisherUrl, d`);
+    // 媒体归因：clickRef 域名众数（每 URL 一查，行数=页大小级别）
+    const detail = await Promise.all(rows.map(async (r) => ({
+      id: `${campaignId}:${r.trackingUrl}:${r.d}`,
+      campaignId,
+      trackingUrl: r.trackingUrl,
+      statDate: r.d,
+      publisher: await mediaOfUrl(campaignId, r.trackingUrl),
+      orders: Number(r.cnt),
+      gmv: decNum(r.sale),
+      commission: decNum(r.comm),
+    })));
+    detail.sort((a, b) => b.statDate.localeCompare(a.statDate) || b.orders - a.orders);
+    const total = detail.length;
+    return { rows: detail.slice((page - 1) * pageSize, page * pageSize), total, page, pageSize };
   },
 
   /** 订单日统计列表（OrderDailyStat 透出）：campaign 聚合行 + creator×date 行分页。 */
@@ -590,6 +614,119 @@ function mirrorOrderFields(row: Record<string, unknown>): Record<string, unknown
     out[key] = v === '' ? null : coerce(v);
   }
   return out;
+}
+
+// ─── TrackingLink 聚合帮手（真源 = CampaignOrder.publisherUrl） ────────────────
+// 口径（用户定稿 0826）：「链接」数据表 = TrackingLink。
+//   trackingUrl = 订单表「发布商跟踪URL」（publisherUrl，带业务线域名+跟踪标识）；
+//   统计按 trackingUrl 关联订单：Orders=单数、GMV=Σ saleAmount、Commission=Σ 订单佣金。
+//   clicks/impressions 属媒体链接口径（Click References / LinkPerformance），不混入本表。
+
+/** SQL SUM 结果（string/Decimal/null）→ number。 */
+function decNum(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * 聚合 campaign（可省=全部）的 TrackingLink 行：每条唯一 publisherUrl 一行。
+ * 媒体归因：该 URL 下订单 clickRef 域名的众数 → Publisher 主档（实测每条跟踪 URL 严格
+ * 对应单一媒体域名，众数即稳定值；未命中主档时按域名现场归一，不虚构名字）。
+ */
+async function aggregateTrackingLinks(opts: { campaignId?: string; creatorId?: string }): Promise<{
+  rows: Array<{
+    id: string; campaignId: string; campaignName: string; trackingUrl: string; linkKey: string;
+    publisher: { id: string; name: string; domain: string; type: string; creatorId: string | null } | null;
+    orders: number; gmv: number; commission: number;
+    firstOrderAt: Date | null; lastOrderAt: Date | null; updatedAt: Date | null;
+  }>;
+}> {
+  // creatorId → campaignCreatorId 过滤（合作详情浮窗跳转按达人筛选 tracking link）
+  let ccFilter = '';
+  if (opts.creatorId) {
+    const cc = await prisma.campaignCreator.findFirst({
+      where: { campaignId: opts.campaignId ?? undefined, creatorId: opts.creatorId },
+      select: { id: true },
+    });
+    ccFilter = cc
+      ? ` AND o.campaignCreatorId = '${cc.id.replace(/'/g, "''")}'`
+      : ` AND 1 = 0`; // 无合作行 → 空结果
+  }
+  const campFilter = opts.campaignId
+    ? `WHERE o.campaignId = '${opts.campaignId.replace(/'/g, "''")}' AND `
+    : 'WHERE ';
+  const agg = await prisma.$queryRawUnsafe<Array<{
+    campaignId: string; trackingUrl: string; cnt: bigint; sale: unknown; comm: unknown;
+    mediaHost: string | null; firstOrderAt: Date | null; lastOrderAt: Date | null;
+  }>>(`
+    SELECT o.campaignId,
+           o.publisherUrl AS trackingUrl,
+           COUNT(*) AS cnt,
+           COALESCE(SUM(o.saleAmount), 0) AS sale,
+           COALESCE(SUM(o.commission), 0) AS comm,
+           (SELECT LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(t.clickRef, '//', -1), '/', 1))
+              FROM CampaignOrder t
+             WHERE t.campaignId = o.campaignId AND t.publisherUrl = o.publisherUrl AND t.clickRef IS NOT NULL AND t.clickRef != ''
+             GROUP BY t.clickRef ORDER BY COUNT(*) DESC LIMIT 1) AS mediaHost,
+           MIN(o.orderDate) AS firstOrderAt,
+           MAX(o.orderDate) AS lastOrderAt
+    FROM CampaignOrder o
+    ${campFilter}
+    o.publisherUrl IS NOT NULL AND o.publisherUrl != ''${ccFilter}
+    GROUP BY o.campaignId, o.publisherUrl`);
+
+  // publisher 主档：按域名批量反查
+  const hosts = [...new Set(agg.map((r) => r.mediaHost).filter((x): x is string => !!x))];
+  const pubs = hosts.length
+    ? await prisma.publisher.findMany({ where: { domain: { in: hosts } }, select: { id: true, name: true, domain: true, type: true, creatorId: true } })
+    : [];
+  const pubByDomain = new Map(pubs.map((x) => [x.domain, x]));
+  // campaign 名
+  const campIds = [...new Set(agg.map((r) => r.campaignId))];
+  const camps = campIds.length
+    ? await prisma.campaign.findMany({ where: { id: { in: campIds } }, select: { id: true, name: true } })
+    : [];
+  const campMap = new Map(camps.map((c) => [c.id, c.name]));
+
+  const rows = agg.map((r) => {
+    // clickRef 可能带 www. 前缀——归一化后再查一次
+    let pub = r.mediaHost ? pubByDomain.get(r.mediaHost) : undefined;
+    if (!pub && r.mediaHost) pub = pubByDomain.get(r.mediaHost.replace(/^www\./, ''));
+    const domain = pub?.domain ?? r.mediaHost?.replace(/^www\./, '') ?? null;
+    return {
+      id: `${r.campaignId}:${r.trackingUrl}`,
+      campaignId: r.campaignId,
+      campaignName: campMap.get(r.campaignId) ?? r.campaignId,
+      trackingUrl: r.trackingUrl,
+      linkKey: domain ?? '',
+      publisher: pub
+        ? { id: pub.id, name: pub.name, domain: pub.domain, type: pub.type, creatorId: pub.creatorId }
+        : domain ? { id: '', name: domain, domain, type: 'media_site', creatorId: null } : null,
+      orders: Number(r.cnt),
+      gmv: decNum(r.sale),
+      commission: decNum(r.comm),
+      firstOrderAt: r.firstOrderAt,
+      lastOrderAt: r.lastOrderAt,
+      updatedAt: r.lastOrderAt,
+    };
+  });
+  rows.sort((a, b) => b.orders - a.orders || a.campaignId.localeCompare(b.campaignId));
+  return { rows };
+}
+
+/** 单条跟踪 URL 的媒体归因（clickRef 域名众数 → Publisher；口径同 aggregateTrackingLinks）。 */
+async function mediaOfUrl(campaignId: string, trackingUrl: string) {
+  const rows = await prisma.$queryRaw<Array<{ host: string; n: bigint }>>(Prisma.sql`
+    SELECT LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(clickRef, '//', -1), '/', 1)) AS host, COUNT(*) AS n
+    FROM CampaignOrder
+    WHERE campaignId = ${campaignId} AND publisherUrl = ${trackingUrl}
+      AND clickRef IS NOT NULL AND clickRef != ''
+    GROUP BY host ORDER BY n DESC LIMIT 1`);
+  const host = rows[0]?.host ?? null;
+  if (!host) return null;
+  const norm = host.replace(/^www\./, '');
+  const pub = await prisma.publisher.findFirst({ where: { domain: norm }, select: { id: true, name: true, domain: true, type: true, creatorId: true } });
+  return pub ?? { id: '', name: norm, domain: norm, type: 'media_site', creatorId: null };
 }
 
 export const importService = {
@@ -980,13 +1117,16 @@ export const importService = {
         const orderStatus = String(rows[0].orderStatus ?? '').trim() || null;
         const mirrored = mirrorOrderFields(rows[0]);
 
-        // 媒体归因（publisher 维度）：publisherUrl/siteName 域名归一化 → Publisher upsert
+        // 媒体归因（publisher 维度）：★ clickRef（媒体实际投放链接）域名归一化 → Publisher upsert。
+        // 不用 publisherUrl 域名——那是业务线跟踪域名（如 dc.digchic.com），全部订单同域，不区分媒体。
         let publisherId: string | null = null;
-        const pubDomain = normPublisherDomain(mirrored.publisherUrl) || normPublisherDomain(mirrored.siteName);
-        if (pubDomain) {
+        const refDomain = normPublisherDomain(mirrored.clickRef)
+          || normPublisherDomain(mirrored.publisherUrl)  // clickRef 缺失时退回（宁可挂跟踪域名也不空）
+          || normPublisherDomain(mirrored.siteName);
+        if (refDomain) {
           const pub = await prisma.publisher.upsert({
-            where: { domain: pubDomain },
-            create: { name: String(mirrored.siteName || pubDomain).slice(0, 190), domain: pubDomain, type: 'media_site' },
+            where: { domain: refDomain },
+            create: { name: String(mirrored.siteName || refDomain).slice(0, 190), domain: refDomain, type: 'media_site' },
             update: {},
           });
           publisherId = pub.id;

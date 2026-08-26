@@ -80,7 +80,7 @@ export default function StatsPage() {
         <div>
           <h1 className="font-headings text-lg font-semibold text-foreground-primary">数据统计</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
-            中间层统计表透出——订单按日（OrderDailyStat）与媒体×日（PublisherDailyStat），从订单真源/链接效果物化
+            中间层统计表透出——订单按日（OrderDailyStat）与媒体×日（PublisherDailyStat），从订单真源/TrackingLink 物化
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function StatsPage() {
         )
       ) : pubRows.length === 0 ? (
         <div className="py-12 text-center text-sm text-foreground-secondary">
-          无媒体日统计——点右上「重算媒体日统计」从订单表+链接效果物化。
+          无媒体日统计——点右上「重算媒体日统计」从订单表+TrackingLink 物化。
         </div>
       ) : (
         <div className="overflow-auto rounded-lg border border-border-default">
