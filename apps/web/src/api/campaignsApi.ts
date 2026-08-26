@@ -257,10 +257,6 @@ export const campaignsApi = {
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/creator-works', { items }).then((r) => r.data),
   importCollaborationDaily: (items: Record<string, unknown>[]) =>
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/collaboration-daily', { items }).then((r) => r.data),
-  importCps: (items: Record<string, unknown>[]) =>
-    api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/cps', { items }).then((r) => r.data),
-  importCpsDaily: (items: Record<string, unknown>[]) =>
-    api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/cps-daily', { items }).then((r) => r.data),
   importOrders: (items: Record<string, unknown>[]) =>
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/orders', { items }).then((r) => r.data),
   /** 订单明细列表（数据管理页）：campaign 筛选 + 分页，含 items/campaign/creator 展开。 */

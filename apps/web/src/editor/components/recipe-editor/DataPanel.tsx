@@ -131,7 +131,7 @@ export function DataPanel({ campaignId: initialCampaignId, reportPeriod: initial
         >
           {coverage.covered
             ? `实际数据区间 ${coverage.covered.start} ~ ${coverage.covered.end},缺 ${coverage.missingDays} 天`
-            : '所选周期无数据,请先导入 Click References(数据管理→TrackingLink,POST /campaigns/import/link-performance)或 CPS daily(旧口径,POST /campaigns/import/cps-daily)'}
+            : '所选周期无数据,请先导入 Click References 每日行(数据管理→TrackingLink,POST /campaigns/import/link-performance,带 date 列)'}
         </p>
       )}
     </fieldset>

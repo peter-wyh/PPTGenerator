@@ -32,13 +32,14 @@ export function computeCoverage(
   campaignEndFallback?: string,
 ): DailyCoverage {
   // 1) 收集全部 daily 日期集合(仅匹配 ISO YYYY-MM-DD;非 ISO 日期视为缺失(计入 missingDays))
+  //    ★ 真源切换(cps-daily 废弃)：日期集合来自 LinkPerformance.daily（旧 CpsPerformance.daily
+  //      已全部复制/重建进 LP——migratedFromCpsId 溯源，无遗漏);成交侧日期不进覆盖判定
+  //      (报告 trend 的 revenue/orders 由订单表现算，与流量覆盖正交)。
   const dailyDates = new Set<string>();
-  for (const cc of campaign?.campaignCreators ?? []) {
-    for (const p of cc?.cpsPerformances ?? []) {
-      for (const d of (p?.daily as Any[] | null | undefined) ?? []) {
-        const date = String(d?.date ?? '');
-        if (date) dailyDates.add(date);
-      }
+  for (const lp of campaign?.linkPerformances ?? []) {
+    for (const d of (lp?.daily as Any[] | null | undefined) ?? []) {
+      const date = String(d?.date ?? '');
+      if (date) dailyDates.add(date);
     }
   }
 

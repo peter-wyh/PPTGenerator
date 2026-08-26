@@ -8,7 +8,6 @@
  * - collaboration:       合作汇总（一个作品一行，含 CPS 汇总 + 执行价格）
  * - collaborationDaily:  合作每日明细（互动数据）
  * - cps:                 CPS 链接效果汇总（一条 CPS 链接一行）
- * - cpsDaily:            CPS 链接每日明细
  * - orders:              订单商品明细（联盟平台订单导出；聚合出 Top-Sales QTY 排行 + 购物篮指标）
  */
 
@@ -72,26 +71,7 @@ export const COLLAB_DAILY_FIELDS = [
 ] as const;
 export const COLLAB_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 'dailyDate'];
 
-// ─── CPS 链接效果汇总（独立表，一条链接一行）──────────────────────────────
-
-export const CPS_FIELDS = [
-  'campaignId', 'creatorId', 'collabId', 'contentType',
-  'linkUrl', 'clicks', 'impressions', 'orders',
-  'gmv', 'commission', 'spend',
-  'productName', 'category', 'market', 'promoName', 'promoType',
-] as const;
-export const CPS_REQUIRED = ['campaignId', 'creatorId', 'contentType'];
-
-// ─── CPS 每日明细 ───────────────────────────────────────────────────────────
-
-export const CPS_DAILY_FIELDS = [
-  'campaignId', 'creatorId', 'collabId', 'contentType', 'date',
-  'dailyClicks', 'dailyImpressions', 'dailyOrders',
-  'dailyGmv', 'dailyCommission',
-  'dailySpend', 'dailyNewCustomers',
-] as const;
-export const CPS_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 'date'];
-
+// ─── CPS 每日明细（唯一 CPS 导入口径——汇总数字由 Σdaily 聚合得出，不再单独导入）──
 // ─── 订单商品明细（联盟平台订单导出）───────────────────────────────────────
 // 一行 = 订单 × 商品。同订单多商品 = 多行共享 orderId。
 // 聚合产出：Top-Sales 商品排行（含 QTY 件数）+ 购物篮结构（多件单占比等）。
@@ -105,7 +85,7 @@ export const ORDERS_REQUIRED = ['campaignId', 'orderId', 'productName'];
 // ─── 链接效果（Click References CSV 口径，一条跟踪链接一行）────────────────
 // 流量/成交数据的链接维度入口——替代 cps-daily 的流量侧职责。
 export const LINK_PERFORMANCE_FIELDS = [
-  'campaignId', 'trackingUrl', 'siteName',
+  'campaignId', 'trackingUrl', 'siteName', 'date',
   'clicks', 'impressions', 'orders', 'sales',
   'gmv', 'saleAmount', 'commission', 'spend',
 ] as const;
@@ -114,7 +94,7 @@ export const LINK_PERFORMANCE_REQUIRED = ['campaignId', 'trackingUrl'];
 // ─── 类型定义 ──────────────────────────────────────────────────────────────
 
 export type DataKind = 'campaign' | 'creator' | 'collaboration';
-export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily' | 'cps' | 'cpsDaily' | 'orders' | 'linkPerformance';
+export type ImportKind = DataKind | 'creatorAudience' | 'creatorWorks' | 'collaborationDaily' | 'orders' | 'linkPerformance';
 
 export interface PreviewItem {
   data: Record<string, unknown>;
@@ -129,8 +109,6 @@ const FIELDS: Record<ImportKind, readonly string[]> = {
   creatorAudience: CREATOR_AUDIENCE_FIELDS,
   creatorWorks: CREATOR_WORKS_FIELDS,
   collaborationDaily: COLLAB_DAILY_FIELDS,
-  cps: CPS_FIELDS,
-  cpsDaily: CPS_DAILY_FIELDS,
   orders: ORDERS_FIELDS,
   linkPerformance: LINK_PERFORMANCE_FIELDS,
 };
@@ -141,8 +119,6 @@ const REQUIRED: Record<ImportKind, string[]> = {
   creatorAudience: [...CREATOR_AUDIENCE_REQUIRED],
   creatorWorks: [...CREATOR_WORKS_REQUIRED],
   collaborationDaily: [...COLLAB_DAILY_REQUIRED],
-  cps: [...CPS_REQUIRED],
-  cpsDaily: [...CPS_DAILY_REQUIRED],
   orders: [...ORDERS_REQUIRED],
   linkPerformance: [...LINK_PERFORMANCE_REQUIRED],
 };
@@ -155,8 +131,6 @@ export const PREVIEW_COLUMNS: Record<ImportKind, string[]> = {
   creatorAudience: ['creatorId', 'genderMale', 'genderFemale', 'age18_24', 'age25_34', 'topCity1'],
   creatorWorks: ['creatorId', 'workId', 'title', 'platform', 'publishedAt', 'impressions', 'likes', 'engagementRate'],
   collaborationDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'dailyDate', 'dailyImpressions'],
-  cps: ['campaignId', 'creatorId', 'collabId', 'contentType', 'linkUrl', 'clicks', 'orders', 'gmv', 'commission', 'productName', 'category', 'market', 'promoName', 'promoType'],
-  cpsDaily: ['campaignId', 'creatorId', 'collabId', 'contentType', 'date', 'dailyClicks', 'dailyOrders', 'dailyGmv', 'dailySpend', 'dailyNewCustomers'],
   orders: ['campaignId', 'creatorId', 'orderId', 'orderDate', 'orderStatus', 'productName', 'category', 'sku', 'qty', 'unitPrice', 'lineTotal'],
   linkPerformance: ['campaignId', 'trackingUrl', 'siteName', 'clicks', 'impressions', 'orders', 'gmv', 'commission', 'spend'],
 };
@@ -287,7 +261,7 @@ function getFieldComments(kind: ImportKind): Record<string, string> {
       featured: '是否精选（yes/no）',
     };
   }
-  if (kind === 'collaboration' || kind === 'collaborationDaily' || kind === 'cps' || kind === 'cpsDaily' || kind === 'orders') {
+  if (kind === 'collaboration' || kind === 'collaborationDaily' || kind === 'orders') {
     return {
       ...base,
       campaignId: '关联Campaign的ID',
@@ -383,40 +357,16 @@ export function downloadTemplate(kind: ImportKind): void {
       '# 关联键: campaignId+creatorId+collabId+contentType+publishedAt → 对应合作汇总中的作品',
       '# 必填字段: campaignId,creatorId,contentType,dailyDate',
     ].join('\n');
-  } else if (kind === 'cps') {
-    example = [
-      'camp-001,cre-mia,collab-001,video,https://shop.example.com/cps/abc,12500,375000,380,45000,4500,4860',
-      'camp-001,cre-sofia,collab-002,post,https://shop.example.com/cps/def,8900,267000,215,28000,2800,3024',
-    ].join('\n');
-    note = [
-      '# 每行=一条 CPS 跟踪链接的汇总数据',
-      '# 关联键: campaignId+creatorId+contentType → 自动 upsert 到 CpsPerformance 表',
-      '# collabId: 关联的合作分组ID（可选）',
-      '# linkUrl: CPS 跟踪链接 URL',
-      '# clicks/impressions/orders: 点击/曝光/订单',
-      '# gmv/commission/spend: GMV/佣金/花费(品牌侧成本)',
-      '# 必填字段: campaignId,creatorId,contentType',
-    ].join('\n');
-  } else if (kind === 'cpsDaily') {
-    example = [
-      'camp-001,cre-mia,collab-001,video,2026-03-15,1800,54000,55,6500,650,180,12',
-      'camp-001,cre-mia,collab-001,video,2026-03-16,1600,48000,48,5800,580,150,10',
-      'camp-001,cre-mia,collab-001,video,2026-03-17,1400,42000,42,5200,520,130,8',
-    ].join('\n');
-    note = [
-      '# 每行=一条 CPS 链接在某天的归因数据',
-      '# 关联键: campaignId+creatorId+contentType+date → 合并到 CpsPerformance.daily JSON',
-      '# 必填字段: campaignId,creatorId,contentType,date',
-    ].join('\n');
   } else if (kind === 'linkPerformance') {
     example = [
       'camp-001,https://track.awin.com/click.php?ref=gb-1442864,Timelynews,12500,,380,,45000,4500,',
       'camp-001,https://track.awin.com/click.php?ref=gb-1442865,DealHub,8900,,215,,28000,2800,',
     ].join('\n');
     note = [
-      '# 每行=一条跟踪链接×campaign 的周期汇总（Awin Click References 口径）',
+      '# 每行=一条跟踪链接×campaign 的周期汇总（Awin Click References 口径）；带 date 列则为每日行',
       '# 幂等键: campaignId+trackingUrl 域名归一化(linkKey)+媒体 归属',
       '# trackingUrl 域名自动 upsert 媒体主档（siteName 可选补充命名）',
+      '# date(可选,YYYY-MM-DD): 带此列→clicks/impressions/spend 视为当日值,合并进链接每日明细(同日重导覆盖);不带→周期汇总标量',
       '# clicks/impressions: 点击/曝光（流量侧——订单表无此维度）',
       '# orders/sales: 订单数（sales 为 Awin 列名别名）',
       '# gmv/saleAmount: GMV（saleAmount 为 Awin 列名别名）',

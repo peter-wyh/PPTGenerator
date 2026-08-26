@@ -89,8 +89,6 @@ export function CampaignCollabPage() {
   const [analyticsCampaignId, setAnalyticsCampaignId] = useState<string>('');
   const csvRef = useRef<HTMLInputElement>(null);
   const dailyCsvRef = useRef<HTMLInputElement>(null);
-  const cpsCsvRef = useRef<HTMLInputElement>(null);
-  const cpsDailyCsvRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (filterCampaign) {
@@ -181,56 +179,6 @@ export function CampaignCollabPage() {
       setTick((t) => t + 1);
     } catch {
       toast.error('每日明细导入失败');
-    }
-  }
-
-  /** CPS 汇总 CSV 导入 */
-  async function onCsvCps(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    try {
-      const sheets = await parseFile(f);
-      setPreviewKind('cps');
-      setPreview(buildPreviewFromRows('cps', sheets[0]?.rows ?? []));
-    } catch {
-      toast.error('文件解析失败');
-    }
-  }
-
-  /** CPS 每日明细 CSV 导入 */
-  async function onCsvCpsDaily(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    try {
-      const sheets = await parseFile(f);
-      setPreviewKind('cpsDaily');
-      setPreview(buildPreviewFromRows('cpsDaily', sheets[0]?.rows ?? []));
-    } catch {
-      toast.error('文件解析失败');
-    }
-  }
-
-  async function confirmCpsImport(validItems: Record<string, unknown>[]) {
-    setPreview(null);
-    try {
-      const r = await campaignsApi.importCps(validItems);
-      toast.success(`CPS 汇总导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
-      setTick((t) => t + 1);
-    } catch {
-      toast.error('CPS 导入失败');
-    }
-  }
-
-  async function confirmCpsDailyImport(validItems: Record<string, unknown>[]) {
-    setPreview(null);
-    try {
-      const r = await campaignsApi.importCpsDaily(validItems);
-      toast.success(`CPS 每日明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
-      setTick((t) => t + 1);
-    } catch {
-      toast.error('CPS 每日明细导入失败');
     }
   }
 
@@ -548,18 +496,6 @@ export function CampaignCollabPage() {
         >
           导入每日互动 CSV
         </button>
-        <button
-          onClick={() => cpsCsvRef.current?.click()}
-          className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary"
-        >
-          导入 CPS 汇总 CSV
-        </button>
-        <button
-          onClick={() => cpsDailyCsvRef.current?.click()}
-          className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary"
-        >
-          导入 CPS 每日明细 CSV
-        </button>
         <select
           onChange={(e) => { if (e.target.value) downloadTemplate(e.target.value as ImportKind); e.target.value = ''; }}
           className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
@@ -568,13 +504,9 @@ export function CampaignCollabPage() {
           <option value="" disabled>下载模板</option>
           <option value="collaboration">合作汇总模板</option>
           <option value="collaborationDaily">每日互动模板</option>
-          <option value="cps">CPS 汇总模板</option>
-          <option value="cpsDaily">CPS 每日明细模板</option>
         </select>
         <input ref={csvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsv} />
         <input ref={dailyCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvDaily} />
-        <input ref={cpsCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvCps} />
-        <input ref={cpsDailyCsvRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsvCpsDaily} />
       </div>
 
       {filtered.length === 0 ? (
@@ -689,8 +621,6 @@ export function CampaignCollabPage() {
           items={preview}
           onConfirm={
             previewKind === 'collaborationDaily' ? confirmDailyImport
-            : previewKind === 'cps' ? confirmCpsImport
-            : previewKind === 'cpsDaily' ? confirmCpsDailyImport
             : confirmCollabImport
           }
           onCancel={() => setPreview(null)}

@@ -434,6 +434,8 @@ model CampaignCreator {
   collaboration Collaboration?
   cpsPerformances CpsPerformance[]
   orders        CampaignOrder[]
+  /// 该合作的跟踪链接（1:1；数据闭环：链接来自媒体合作）。
+  linkPerformance LinkPerformance?
 
   @@unique([campaignId, creatorId])
   @@index([campaignId])
@@ -770,7 +772,12 @@ model Publisher {
 
 /// 链接效果表：一条推广链接的全周期汇总（Click_References.csv 口径）。
 /// clicks/impressions 是链接维度指标（联盟平台导出）；orders/gmv/commission
-/// 同时保留（导入快照）——页面实时聚合以订单表为准，两者互为校验。
+/// 同时保留（导入快照）--页面实时聚合以订单表为准，两者互为校验。
+///
+/// ★ 数据闭环（0826 用户定稿）：订单来自链接，链接来自媒体合作
+///   Campaign 1:N CampaignCreator（媒体合作）1:1 LinkPerformance（链接）1:N CampaignOrder（订单）。
+///   campaignCreatorId 直接挂合作行（勿再经 publisher.creatorId 间接推导）；
+///   唯一约束 = 业务规则「1 次合作只有 1 个链接」（MySQL 唯一索引允许多 NULL，未归因存量可共存）。
 model LinkPerformance {
   id          String   @id @default(cuid())
   campaignId  String
@@ -778,6 +785,9 @@ model LinkPerformance {
   /// 归属媒体。
   publisherId String
   publisher   Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  /// 归属媒体合作行（CampaignCreator；闭环 FK）。可空=尚未归因（回填/导入自动挂）。
+  campaignCreatorId   String?
+  campaignCreator     CampaignCreator? @relation(fields: [campaignCreatorId], references: [id])
   /// 原始链接 URL（cloak 长链）。
   linkUrl     String?  @db.Text
   /// 归一化链接键（click_ref 原值或域名；同一链接多渠道拆分时的唯一业务键组成）。
@@ -803,6 +813,8 @@ model LinkPerformance {
   updatedAt  DateTime @updatedAt
 
   @@unique([campaignId, publisherId, linkKey])
+  /// 1 次合作只有 1 个链接（0826 定稿；NULL 不参与唯一性，未归因行可共存）。
+  @@unique([campaignCreatorId], map: "uq_link_performance_campaign_creator")
   @@index([campaignId])
   @@index([publisherId])
 }

@@ -1,9 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // extractPeriodData 直接查 prisma.campaign.findUnique({ include: { campaignCreators: { include: { creator, performance, cpsPerformances } } } })
+// ★ 真源切换(cps-daily 废弃)：loadCreatorCps 走 cc/LP/订单三查询——mock 同款注入
 const prismaMock = vi.hoisted(() => ({
   campaign: { findUnique: vi.fn() },
+  campaignCreator: { findMany: vi.fn() },
+  linkPerformance: { findMany: vi.fn() },
+  $queryRaw: vi.fn(),
 }));
+
+function mockCreatorCps(campaignRow: any) {
+  const ccs = (campaignRow.campaignCreators ?? []).map((cc: any, i: any) => ({
+    id: cc.id ?? `cc_${i}`, creatorId: cc.creatorId ?? `creator_${i}`, creator: { name: cc.creator?.name ?? 'X' },
+  }));
+  prismaMock.campaignCreator.findMany.mockResolvedValue(ccs);
+  const lpRows = (campaignRow.campaignCreators ?? []).flatMap((cc: any, i: any) =>
+    (cc.cpsPerformances ?? []).map((pp: any, j: any) => ({
+      id: `lp_${i}_${j}`, campaignCreatorId: ccs[i].id, publisher: { creatorId: null },
+      clicks: pp.clicks ?? 0, impressions: pp.impressions ?? 0, orders: pp.orders ?? 0,
+      gmv: pp.gmv ?? 0, commission: pp.commission ?? 0, spend: pp.spend ?? 0,
+      daily: pp.daily ?? [],
+    })),
+  );
+  prismaMock.linkPerformance.findMany.mockResolvedValue(lpRows);
+  campaignRow.linkPerformances = lpRows;
+  const orderRows = (campaignRow.campaignCreators ?? []).flatMap((cc: any, i: any) => {
+    const ccId = ccs[i].id;
+    const rows = [];
+    for (const perf of (cc.cpsPerformances ?? [])) {
+      for (const dd of (perf.daily ?? [])) {
+        const date = String(dd.date ?? '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+        rows.push({ ccId, d: date, cnt: BigInt(Number(dd.orders) || 0), sale: Number(dd.gmv) || 0, comm: Number(dd.commission) || 0, nc: BigInt(Number(dd.newCustomers) || 0) });
+      }
+    }
+    return rows;
+  });
+  prismaMock.$queryRaw.mockResolvedValue(orderRows);
+}
 
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
@@ -22,6 +56,7 @@ function campaignWithAvatarCreator() {
     metrics: {},
     campaignCreators: [
       {
+        id: 'cc_0', creatorId: 'creator_0',
         creator: {
           name: 'Alice',
           handle: '@alice',
@@ -53,7 +88,9 @@ function campaignWithAvatarCreator() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  prismaMock.campaign.findUnique.mockResolvedValue(campaignWithAvatarCreator());
+  const row = campaignWithAvatarCreator();
+  prismaMock.campaign.findUnique.mockResolvedValue(row);
+  mockCreatorCps(row);
 });
 
 describe('template-renderer · 达人头像字段名映射', () => {
@@ -87,6 +124,7 @@ describe('template-renderer · $ 值替换回归(反斜杠/捕获组注入)', ()
       ...campaignWithAvatarCreator(),
       campaignCreators: [
         {
+          id: 'cc_0', creatorId: 'creator_0',
           creator: { name: 'Alice', handle: '@alice', platform: 'instagram', partnerType: 'mega', avatar: AVATAR_URL },
           performance: { posts: 5, engagement: 100, impressions: 1000, engagementRate: 10 },
           cpsPerformances: [
@@ -103,7 +141,9 @@ describe('template-renderer · $ 值替换回归(反斜杠/捕获组注入)', ()
   }
 
   it('revenue 值 "$17.9K" 不被当作 $1 反向引用(标签不复制、$ 保留)', async () => {
-    prismaMock.campaign.findUnique.mockResolvedValue(campaignWithMoney());
+    const moneyRow = campaignWithMoney();
+    prismaMock.campaign.findUnique.mockResolvedValue(moneyRow);
+    mockCreatorCps(moneyRow);
     const html = await renderTemplate(
       `<p class="kpi-value" data-field="revenue">$8.1K</p>`,
       'camp-1',
@@ -113,7 +153,9 @@ describe('template-renderer · $ 值替换回归(反斜杠/捕获组注入)', ()
   });
 
   it('aov 值含 $ 且位数多($3600)不塌标签', async () => {
-    prismaMock.campaign.findUnique.mockResolvedValue(campaignWithMoney());
+    const moneyRow2 = campaignWithMoney();
+    prismaMock.campaign.findUnique.mockResolvedValue(moneyRow2);
+    mockCreatorCps(moneyRow2);
     const html = await renderTemplate(
       `<p class="kpi-value" data-field="aov">$34</p>`,
       'camp-1',

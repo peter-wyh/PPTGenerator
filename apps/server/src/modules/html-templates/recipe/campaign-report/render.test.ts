@@ -1,7 +1,55 @@
 // render.test.ts
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const prismaMock = vi.hoisted(() => ({ campaign: { findUnique: vi.fn() }, guide: { findMany: vi.fn() } }));
+const prismaMock = vi.hoisted(() => ({
+  campaign: { findUnique: vi.fn() }, guide: { findMany: vi.fn() },
+  // ★ 真源切换(cps-daily 废弃)：loadCreatorCps 三查询
+  campaignCreator: { findMany: vi.fn() },
+  linkPerformance: { findMany: vi.fn() },
+  orderDailyStat: { findMany: vi.fn() },
+  $queryRaw: vi.fn(),
+}));
+
+/** mockCreatorCps(mapper.test 同款)：fixture cpsPerformances → cc/LP/订单三查询 mock。 */
+function mockCreatorCps(campaignRow: any) {
+  const ccs = (campaignRow.campaignCreators ?? []).map((cc: any, i: any) => ({
+    id: cc.id ?? `cc_${i}`, creatorId: cc.creatorId ?? `creator_${i}`, creator: { name: cc.creator?.name ?? 'X' },
+  }));
+  prismaMock.campaignCreator.findMany.mockResolvedValue(ccs);
+  const lpRows = (campaignRow.campaignCreators ?? []).flatMap((cc: any, i: any) =>
+    (cc.cpsPerformances ?? []).map((p: any, j: any) => ({
+      id: `lp_${i}_${j}`, campaignCreatorId: ccs[i].id, publisher: { creatorId: null },
+      clicks: p.clicks ?? 0, impressions: p.impressions ?? 0, orders: p.orders ?? 0,
+      gmv: p.gmv ?? 0, commission: p.commission ?? 0, spend: p.spend ?? 0,
+      daily: p.daily ?? [],
+    })),
+  );
+  prismaMock.linkPerformance.findMany.mockResolvedValue(lpRows);
+  campaignRow.linkPerformances = lpRows;
+  // 成交侧:顶层 orders/gmv 差值放末日 + daily 逐日行(mapper.test 同款)
+  const orderRows = (campaignRow.campaignCreators ?? []).flatMap((cc: any, i: any) => {
+    const ccId = ccs[i].id;
+    const rows = [];
+    for (const perf of (cc.cpsPerformances ?? [])) {
+      const daily = perf.daily ?? [];
+      const sum = (k: any) => daily.reduce((acc: any, d: any) => acc + (Number(d[k]) || 0), 0);
+      const ordersTot = (perf.orders ?? 0) - sum('orders');
+      const gmvTot = (perf.gmv ?? 0) - sum('gmv');
+      const ncTot = (perf.newCustomers ?? 0) - sum('newCustomers');
+      if (ordersTot > 0 || gmvTot > 0 || ncTot > 0) {
+        const dates = daily.map((d: any) => String(d.date)).filter((x: any) => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
+        rows.push({ ccId, d: dates.length ? dates[dates.length - 1] : '2026-01-01', cnt: BigInt(Math.max(0, Math.round(ordersTot))), sale: gmvTot, comm: 0, nc: BigInt(Math.max(0, Math.round(ncTot))) });
+      }
+      for (const dd of daily) {
+        const date = String(dd.date ?? '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+        rows.push({ ccId, d: date, cnt: BigInt(Number(dd.orders) || 0), sale: Number(dd.gmv) || 0, comm: Number(dd.commission) || 0, nc: BigInt(Number(dd.newCustomers) || 0) });
+      }
+    }
+    return rows;
+  });
+  prismaMock.$queryRaw.mockResolvedValue(orderRows);
+}
 vi.mock('../../../../prisma', () => ({ prisma: prismaMock }));
 vi.mock('./narrative', () => ({ fillActionable: vi.fn().mockResolvedValue([{ icon: 'trophy', color: 'green', title: 'Top Performers', items: [{ text: 'Mia', sub: '(ROAS 4.10)' }], footer: 'Scale.' }]) }));
 
@@ -17,6 +65,7 @@ const campaignRow = {
   metrics: { totalRevenue: 876360, clicks: 348619, orders: 4636, newCustomers: 1604, aov: 189, newCustomerRate: 34.6 },
   analytics: { trend: { labels: ['Oct 12', 'Nov 10'], revenue: [50000, 166360], clicks: [15000, 83619], orders: [250, 876] } },
   campaignCreators: [{
+    id: 'cc_0', creatorId: 'creator_0',
     creator: { name: 'Mia Chen', handle: '@miaglowup', platform: 'TikTok', partnerType: 'creator', profileUrl: 'https://tiktok.com/@miaglowup' },
     contentType: 'video', collabType: 'cps',
     cpsPerformances: [{ clicks: 124678, impressions: 0, orders: 1016, gmv: 192000, spend: 0, commission: 0 }],
@@ -28,6 +77,7 @@ const campaignRowWithDaily = {
   ...campaignRow,
   campaignCreators: [{
     ...campaignRow.campaignCreators[0],
+    id: 'cc_0', creatorId: 'creator_0',
     cpsPerformances: [{
       clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0,
       daily: [
@@ -40,7 +90,7 @@ const campaignRowWithDaily = {
   }],
 };
 
-beforeEach(() => { vi.clearAllMocks(); prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); prismaMock.guide.findMany.mockResolvedValue([]); });
+beforeEach(() => { vi.clearAllMocks(); prismaMock.campaign.findUnique.mockResolvedValue(campaignRow); prismaMock.guide.findMany.mockResolvedValue([]); mockCreatorCps(campaignRow); prismaMock.orderDailyStat.findMany.mockResolvedValue([]); });
 
 describe('render · 宁缺勿假呈现', () => {
   // 基线 content 走真实 mapCampaign(fixture 数据),仅覆盖 dataCoverage / kpis
@@ -172,6 +222,7 @@ describe('render', () => {
 
   it('reportPeriod 透传到 mapCampaign → HTML 含期内数字、不含期外', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(campaignRowWithDaily);
+    mockCreatorCps(campaignRowWithDaily);
     const html = await render({ campaignId: 'c1', reportPeriod: { startDate: '2026-10-15', endDate: '2026-10-17' } });
     // 期内 gmv 合计 5000 → 注入 HTML
     expect(html).toContain('$5,000');

@@ -4,6 +4,7 @@ import { config } from '../../config';
 import { fetchChatCompletionWithRetry, type ChatMessage } from './ai-client';
 import { resolvePairForCampaign, mergeGuideLayers } from '../guides/guide.service';
 import { computeCoverage } from './recipe/campaign-report/coverage';
+import { loadCreatorCps } from './cps-source';
 import { campaignService } from '../campaigns/campaigns.service';
 import { orderStatsService } from '../campaigns/order-stats.service';
 
@@ -191,12 +192,18 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      * topProducts rows carry BOTH orders and qty (qty = units sold, ≥ orders for multi-packs) —
        render Top-Selling Products table with separate ORDERS and QTY columns when both exist.
      * basket (when present) = shopping-basket structure: multiItemRate/threePlusRate (% of orders
-       with ≥2 / ≥3 distinct products), avgItemsPerOrder — ideal as an insight card with big numbers.
+   with ≥2 / ≥3 distinct products), avgItemsPerOrder — MUST be surfaced as a "MULTI-ITEM BASKETS"
+   insight card or section with big numbers (do not silently drop it when the data exists).
    - Comparison (priorPeriod, when present) → MoM comparison table/bars: current vs prior period KPIs
      with mom % delta badges (green up / red down). mom=null means prior period was 0 — show "N/A".
-   - Media placements (mediaPlacements, when present) → image card grid: placement name + screenshot
-     (or placeholder) + description. Qualitative showcase — no numeric metrics needed.
-   - Ranking (creator performance) → table with avatar, tier tags, highlighted best values
+   - Media placements (mediaPlacements, when present) → STYLIZED image card grid: each card = screenshot
+     image with rounded-xl corners, subtle shadow (box-shadow), hover lift effect (transform:translateY(-2px)),
+     a gradient overlay strip at the bottom carrying the placement name in white bold text, and a small
+     platform tag chip (top-left, semi-transparent dark pill). object-fit:cover, aspect-ratio ~16:10,
+     responsive 2-4 per row. When screenshotUrl is missing, render a styled placeholder (soft gradient
+     background + centered camera icon + placement name) — NOT a plain dashed box. Qualitative showcase —
+     no numeric metrics needed.
+   - Ranking (creator performance) → table with avatar, highlighted best values (NO tier column/tags)
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
 
@@ -306,7 +313,8 @@ RULES:
 ═══ CREATOR CONTRIBUTION NARRATIVE ═══
 For each creator in the campaign, include a "Creator Contribution" analysis (in the creators table area or a dedicated section):
 - **Allocated orders**: use \`creators[].cps.orders\` (or \`creator.cps.orders\`) verbatim — do NOT fabricate.
-- **Content role**: 1 sentence on their positioning + content form, grounded in the creator's \`tier\` (mega/macro/micro), \`contentType\` (post/reels/video/story/article), and \`platform\` from the campaign JSON.
+- **HIGHLIGHTED METRICS**: For each creator, render 3-4 key metrics as visually prominent stat chips/badges (large bold numbers with small caps labels): Allocated Orders, GMV, Clicks, and Click Share % (creator clicks ÷ campaign total clicks). Use accent-colored backgrounds or borders — these numbers must stand out from body text. Do not bury them in prose.
+- **Content role**: 1 sentence on their positioning + content form, grounded in the creator's \`contentType\` (post/reels/video/story/article) and \`platform\` from the campaign JSON. Do NOT mention tier (mega/macro/micro) — tier is not provided.
 - **Why it converted**: 1-2 sentences connecting their positioning/content to the allocated orders. Base it on the data provided (e.g. "pain-point → product → CTA structure matches strong multi-pack performance"), not generic claims.
 Every number MUST come from the campaign JSON. If a creator has no \`cps.orders\`, write "no attributed orders" — never invent a number.
 
@@ -491,7 +499,8 @@ IMPORTANT:
 - HEADER LOGOS: Use campaign.businessLine.logoUrl and campaign.advertiser.logoUrl as <img src="..."> in the header. These are absolute URLs — use them verbatim. CRITICAL: the <img> MUST be visible (do NOT set style="display:none"). Do NOT create sibling text/initials fallback spans. Just use <img src="URL" alt="Name" class="h-10 object-contain" />.
 - DATE RANGE: Use campaign.period EXACTLY as the report's date range (e.g. "2026-07-01 ~ 2026-08-31"). Do NOT use today's date.
 - For the Performance Trend chart, use the "dailyTrend" array directly as chart data (date labels + revenue/orders values).
-- For each creator in the "creators" array, render their name, tier, platform, and performance data EXACTLY as provided.
+- For each creator in the "creators" array, render their name, platform, and performance data EXACTLY as provided. Do NOT render any "tier" column or tier badges — tier data is not provided.
+- MEDIA BREAKDOWN TABLE: When "allMedia" array is present, the media/creator performance table MUST use allMedia as its data source — one row per media (ALL publishers: creators + media sites + communities + content sites), columns: Media name, Type, Platform, Clicks, Orders, GMV (or Revenue), Commission. Sort as given (by orders desc). Media with type "creator" show the creator name; others show the site name. When allMedia is absent, fall back to the creators array. NEVER add a Tier column.
 - If avatarUrl is null, use a colored circle with the creator's first letter initial instead of a placeholder image URL.
 - If a creator's performance is null, still include them in the table with "—" for all metric values.
 
@@ -880,35 +889,17 @@ export const aiGenerateService = {
       (!reportPeriod?.endDate || d <= reportPeriod.endDate!);
 
     // ── 与 buildCampaignContext 同口径逐模块判定 ──
-    // 1) CPS daily(趋势/KPI 共用真源):期内切片非空天集合
-    //    双读:CpsPerformance.daily(旧,达人维度) + LinkPerformance.daily(新,链接维度)——
-    //    迁移期两处并存(迁移是复制非移动),先扫旧再扫新,linkKey 已迁移的行在旧处继续计
-    //    (数据相同不丢);全新链接只在 LinkPerformance。
+    // 1) 流量日数据(趋势/KPI 共用真源):期内切片非空天集合
+    //    ★ 真源切换(cps-daily 废弃)：统一从 cpsSource（LP 流量 daily + 订单表成交日）。
+    //    旧 CpsPerformance.daily 已全部复制/重建进 LP(migratedFromCpsId 溯源)——扫旧表会双计,删除。
+    const cpsSource = await loadCreatorCps(campaignId);
     const periodDates = new Set<string>();
     let clicksKeySeen = false;
-    for (const cc of campaign.campaignCreators) {
-      for (const p of cc.cpsPerformances ?? []) {
-        const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-        for (const d of daily) {
-          const date = String(d.date ?? '');
-          if (!date) continue;
-          if (!hasPeriod || inPeriod(date)) {
-            periodDates.add(date);
-            if ('clicks' in d) clicksKeySeen = true;
-          }
-        }
-      }
-    }
-    // 新真源补充扫描（LinkPerformance.daily——链接维度日数据；旧 CpsPerformance 已扫过，
-    // 迁移复制行的 daily 内容相同，periodDates 是 Set 天然去重，不双计）
-    for (const lp of campaign.linkPerformances ?? []) {
-      const daily = (lp.daily as Record<string, unknown>[] | null | undefined) ?? [];
-      for (const d of daily) {
-        const date = String(d.date ?? '');
-        if (!date) continue;
+    for (const [, e] of cpsSource.byCc) {
+      for (const [date, cell] of e.daily) {
         if (!hasPeriod || inPeriod(date)) {
           periodDates.add(date);
-          if ('clicks' in d) clicksKeySeen = true;
+          if (cell.clicks > 0) clicksKeySeen = true;
         }
       }
     }
@@ -967,7 +958,7 @@ export const aiGenerateService = {
       marketingEventCount = 0;
     }
 
-    // 5) MoM 前一期:报告周期往前推同样长度,期内 daily 非空才 ok
+    // 5) MoM 前一期:报告周期往前推同样长度,期内 daily 非空才 ok(真源:cpsSource.daily)
     let hasPrior = false;
     if (hasPeriod && reportPeriod?.startDate && reportPeriod.endDate) {
       const dayMs = 86_400_000;
@@ -976,16 +967,10 @@ export const aiGenerateService = {
       const len = Math.max(e - s + dayMs, dayMs);
       const pStart = new Date(s - len).toISOString().slice(0, 10);
       const pEnd = new Date(s - dayMs).toISOString().slice(0, 10);
-      for (const cc of campaign.campaignCreators) {
-        for (const p of cc.cpsPerformances ?? []) {
-          const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-          for (const d of daily) {
-            const date = String(d.date ?? '');
-            if (date && date >= pStart && date <= pEnd) { hasPrior = true; break; }
-          }
-          if (hasPrior) break;
+      outer: for (const [, e2] of cpsSource.byCc) {
+        for (const [date] of e2.daily) {
+          if (date >= pStart && date <= pEnd) { hasPrior = true; break outer; }
         }
-        if (hasPrior) break;
       }
     }
 
@@ -1085,7 +1070,8 @@ export const aiGenerateService = {
           },
         },
         // ★ 链接效果真源（LinkPerformance）：链接维度流量/成交——clicks 回退与 daily 双读合并
-        linkPerformances: { include: { publisher: { select: { id: true, creatorId: true } } } },
+        //   publisher 取全字段（allMedia 全媒体表需要 name/type/platform）
+        linkPerformances: { include: { publisher: true } },
         businessLine: true,
         advertiser: true,
       },
@@ -1124,7 +1110,6 @@ export const aiGenerateService = {
     // 这使得 AI 在生成新周期报告时获得的是该周期内的真实数据，而非整个 campaign 的汇总数据
     const inPeriod = (d: string) => (!reportPeriod?.startDate || d >= reportPeriod.startDate!) &&
       (!reportPeriod?.endDate || d <= reportPeriod.endDate!);
-    const num = (v: unknown) => Number(v) || 0;
 
     // 期内汇总数据（有请求周期且 daily 与之有交集时计算——由 coverage 判定，而非仅"存在 daily"）
     let periodKpis: { label: string; value: string }[] | null = null;
@@ -1149,30 +1134,29 @@ export const aiGenerateService = {
     let clicksFallback = false;
 
     if (hasPeriod && cov.covered) {
-      for (const cc of campaign.campaignCreators) {
+      // ★ 真源切换(cps-daily 废弃)：期内汇总统一从 cpsSource（LP 流量 daily + 订单表成交/新客日）。
+      //   旧 CpsPerformance.daily 已全部复制/重建进 LP——扫旧表双计,删除。
+      const cpsSource = await loadCreatorCps(campaignId);
+      for (const [ccId, e] of cpsSource.byCc) {
         const ccSum: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
-        for (const p of cc.cpsPerformances ?? []) {
-          const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-          for (const d of daily) {
-            const date = String(d.date ?? '');
-            if (!date || !inPeriod(date)) continue;
-            if ('clicks' in d) clicksKeySeen = true;
-            ccSum.clicks += num(d.clicks);
-            ccSum.impressions += num(d.impressions);
-            ccSum.orders += num(d.orders);
-            ccSum.gmv += num(d.gmv);
-            ccSum.spend += num(d.spend);
-            ccSum.commission += num(d.commission);
-            ccSum.newCustomers += num(d.newCustomers);
+        for (const [date, cell] of e.daily) {
+          if (!inPeriod(date)) continue;
+          if (cell.clicks > 0) clicksKeySeen = true;
+          ccSum.clicks += cell.clicks;
+          ccSum.impressions += cell.impressions;
+          ccSum.orders += cell.orders;
+          ccSum.gmv += cell.gmv;
+          ccSum.spend += cell.spend;
+          ccSum.commission += cell.commission;
+          ccSum.newCustomers += cell.newCustomers;
 
-            const entry = byDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0 };
-            entry.revenue += num(d.gmv);
-            entry.clicks += num(d.clicks);
-            entry.orders += num(d.orders);
-            byDate.set(date, entry);
-          }
+          const entry = byDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0 };
+          entry.revenue += cell.gmv;
+          entry.clicks += cell.clicks;
+          entry.orders += cell.orders;
+          byDate.set(date, entry);
         }
-        perCreatorSums.set(cc.id, ccSum);
+        perCreatorSums.set(ccId, ccSum);
         total.clicks += ccSum.clicks;
         total.impressions += ccSum.impressions;
         total.orders += ccSum.orders;
@@ -1183,42 +1167,18 @@ export const aiGenerateService = {
       }
 
       // ★ clicks 聚合列回退注入:daily 无 clicks 键 + 报告周期完整覆盖 campaign 生命周期。
-      //   将链接全周期汇总(Awin Click References 真源)注入 total/perCreatorSums——
+      //   真源:LP 聚合列(链接全周期汇总,Awin Click References 口径)注入 total/perCreatorSums——
       //   KPI Clicks/CVR、MoM、creators CPS 全链路生效;trend 日级分布仍不注入(无日级源,不编造)。
-      //   双读:CpsPerformance(旧)优先,已迁移链接(migratedFromCpsId)跳过防双计;
-      //   LinkPerformance(新)聚合补充未迁移的链接。
       if (!clicksKeySeen) {
         const coversAll = (!reportPeriod?.startDate || !campaign.startDate || reportPeriod.startDate <= campaign.startDate)
           && (!reportPeriod?.endDate || !campaign.endDate || reportPeriod.endDate >= campaign.endDate);
         if (coversAll) {
-          const migratedIds = new Set(
-            (campaign.linkPerformances ?? [])
-              .filter((lp) => lp.migratedFromCpsId)
-              .map((lp) => lp.migratedFromCpsId as string),
-          );
           let aggTotal = 0;
-          for (const cc of campaign.campaignCreators) {
-            // 旧表:跳过已迁移到 LinkPerformance 的行(数据已复制过去,防双计)
-            const agg = (cc.cpsPerformances ?? [])
-              .filter((p) => !migratedIds.has(p.id))
-              .reduce((s, p) => s + num(p.clicks), 0);
-            if (agg > 0) {
-              const cur = perCreatorSums.get(cc.id);
-              if (cur) cur.clicks = agg;
-              aggTotal += agg;
-            }
-          }
-          // 新表:链接维度聚合(达人型媒体经 publisher.creatorId 归到达人行,非达人型只进 total)
-          for (const lp of campaign.linkPerformances ?? []) {
-            if (num(lp.clicks) <= 0) continue;
-            const ccEntry = lp.publisher?.creatorId
-              ? campaign.campaignCreators.find((cc) => cc.creatorId === lp.publisher?.creatorId)
-              : undefined;
-            if (ccEntry) {
-              const cur = perCreatorSums.get(ccEntry.id);
-              if (cur) cur.clicks += num(lp.clicks);
-            }
-            aggTotal += num(lp.clicks);
+          for (const [ccId, e] of cpsSource.byCc) {
+            if (e.clicks <= 0) continue;
+            const cur = perCreatorSums.get(ccId);
+            if (cur) cur.clicks = e.clicks;
+            aggTotal += e.clicks;
           }
           if (aggTotal > 0) { total.clicks = aggTotal; clicksFallback = true; }
         }
@@ -1306,15 +1266,13 @@ export const aiGenerateService = {
         const inPrior = (d: string) => d >= pStart && d <= pEnd;
         const pt: typeof total = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
         let priorDays = 0;
-        for (const cc of campaign.campaignCreators) {
-          for (const p of cc.cpsPerformances ?? []) {
-            const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-            for (const d of daily) {
-              const date = String(d.date ?? '');
-              if (!date || !inPrior(date)) continue;
-              pt.clicks += num(d.clicks); pt.orders += num(d.orders); pt.gmv += num(d.gmv);
-              pt.newCustomers += num(d.newCustomers); priorDays++;
-            }
+        // ★ 真源切换(cps-daily 废弃)：前一期切片从 cpsSource(与当期同源)
+        const priorSource = await loadCreatorCps(campaignId);
+        for (const [, e] of priorSource.byCc) {
+          for (const [date, cell] of e.daily) {
+            if (!inPrior(date)) continue;
+            pt.clicks += cell.clicks; pt.orders += cell.orders; pt.gmv += cell.gmv;
+            pt.newCustomers += cell.newCustomers; priorDays++;
           }
         }
         // ★ 中间层口径：orders/revenue 前一期从 OrderDailyStat 取（订单真源），clicks 保持 daily
@@ -1401,6 +1359,10 @@ export const aiGenerateService = {
         ...(m.description ? { description: m.description } : {}),
       })) ?? [];
 
+    // ★ 真源切换(cps-daily 废弃)：creators 无 period 汇总时的聚合列真源（LP 流量+订单表现）
+    //   仅无 period 时预取（有 period 走 perCreatorSums，无需查询）
+    const syncSource = !hasPeriod ? await loadCreatorCps(campaignId) : null;
+
     // ★ 营销活动（MarketingEvent，营销系统同步）：该业务线与报告周期重叠的活动。
     //   宁缺勿假：label='1' 废弃过滤；1970 哨兵日期自然被重叠判定排除；无有效活动不注入。
     const eventPeriodStart = reportPeriod?.startDate || campaign.startDate;
@@ -1433,6 +1395,42 @@ export const aiGenerateService = {
       marketingEvents = []; // 表缺失等异常 → 不注入
     }
 
+    // ★ 全媒体表现（0826 用户要求：媒体表现表透出所有媒体，不只合作达人）：
+    //   LP 流量按 publisher 聚合（期内切片）+ cpsSource 订单侧归因到对应达人性 publisher——
+    //   含未挂达人合作行的 media_site/community/content_site。creator 类型标注达人名。
+    const allMediaCps = await loadCreatorCps(campaignId);
+    const allMedia = (() => {
+      const byPub = new Map<string, { name: string; type: string; platform: string | null; creatorName: string | null; clicks: number; orders: number; gmv: number; commission: number }>();
+      const inPeriod2 = (d: string) => (!reportPeriod?.startDate || d >= reportPeriod.startDate) && (!reportPeriod?.endDate || d <= reportPeriod.endDate);
+      for (const lp of campaign.linkPerformances ?? []) {
+        const pub = lp.publisher;
+        if (!pub) continue;
+        const daily = Array.isArray(lp.daily) ? (lp.daily as Array<{ date?: string; clicks?: unknown }>) : [];
+        let clicks = 0;
+        for (const d of daily) {
+          const date = String(d?.date ?? '');
+          if (!inPeriod2(date)) continue;
+          clicks += Number(d?.clicks) || 0;
+        }
+        const e = byPub.get(pub.id) ?? { name: pub.name, type: pub.type, platform: pub.platform ?? null, creatorName: null, clicks: 0, orders: 0, gmv: 0, commission: 0 };
+        e.clicks += clicks;
+        byPub.set(pub.id, e);
+      }
+      for (const [ccId, e] of allMediaCps.byCc) {
+        const cc = campaign.campaignCreators.find((c) => c.id === ccId);
+        if (!cc) continue;
+        const ccPeriod = { orders: 0, gmv: 0, commission: 0 };
+        for (const [date, cell] of e.daily) {
+          if (!inPeriod2(date)) continue;
+          ccPeriod.orders += cell.orders; ccPeriod.gmv += cell.gmv; ccPeriod.commission += cell.commission;
+        }
+        const name = cc.creator?.name ?? null;
+        const target = name ? [...byPub.values()].find((p) => p.creatorName === null && p.name?.includes(name.split(' ')[0])) : null;
+        if (target) { target.orders += ccPeriod.orders; target.gmv += ccPeriod.gmv; target.commission += ccPeriod.commission; target.creatorName = name; }
+      }
+      return [...byPub.values()].filter((p) => p.clicks > 0 || p.orders > 0).sort((a, b) => b.orders - a.orders || b.clicks - a.clicks);
+    })();
+
     const context = {
       campaign: {
         name: campaign.name,
@@ -1455,25 +1453,22 @@ export const aiGenerateService = {
           // ★ MUST use this exact URL in <img src>. It is an absolute URL.
           logoUrl: resolveUrl(campaign.advertiser?.logo),
         },
-        // ★ metrics 为空时回退 CPS 聚合列/daily 全覆盖合计(与 recipe mapper 汇总分支同口径):
-        //   revenue→gmv、orders、clicks(聚合列,链接全周期汇总);newCustomers 仅 daily 100% 日期覆盖才回退。
-        //   仍缺的维度不进 metrics(AI 按铁律渲染 Data Unavailable)。
-        metrics: (() => {
+        // ★ metrics 为空时回退聚合列/daily 全覆盖合计(与 recipe mapper 汇总分支同口径):
+        //   真源切换后:revenue/orders→订单表现合计、clicks→LP 聚合列(cpsSource);
+        //   newCustomers 仅 daily 100% 日期覆盖才回退。仍缺的维度不进 metrics(AI 按铁律渲染 Data Unavailable)。
+        metrics: (async () => {
           const m = (campaign.metrics ?? {}) as Record<string, unknown>;
           const hasVal = (v: unknown) => v !== undefined && v !== null && v !== '' && !Number.isNaN(Number(v));
           if (!hasPeriod && !hasVal(m.totalRevenue) && !hasVal(m.clicks) && !hasVal(m.orders)) {
             // 汇总口径 + metrics 全空 → 聚合列回退
-            let agg: { gmv: number; orders: number; clicks: number; newCustomers: number } = { gmv: 0, orders: 0, clicks: 0, newCustomers: 0 };
-            const dates = new Set<string>();
-            for (const cc of campaign.campaignCreators) {
-              for (const p of cc.cpsPerformances ?? []) {
-                agg.gmv += num(p.gmv); agg.orders += num(p.orders); agg.clicks += num(p.clicks);
-                for (const d of ((p.daily as Record<string, unknown>[]) ?? [])) {
-                  dates.add(String(d.date ?? ''));
-                  agg.newCustomers += num(d.newCustomers);
-                }
-              }
-            }
+            const aggSource = await loadCreatorCps(campaignId);
+            const agg = {
+              gmv: [...aggSource.byCc.values()].reduce((s, e) => s + e.gmv, 0),
+              orders: [...aggSource.byCc.values()].reduce((s, e) => s + e.orders, 0),
+              clicks: [...aggSource.byCc.values()].reduce((s, e) => s + e.clicks, 0),
+              newCustomers: [...aggSource.byCc.values()].reduce((s, e) => s + e.newCustomers, 0),
+            };
+            const dates = new Set<string>(aggSource.campaignDaily.keys());
             // daily 100% 日期覆盖才信 newCustomers(部分覆盖的合计非全周期真值)
             const fullCover = (() => {
               if (!campaign.startDate || !campaign.endDate) return false;
@@ -1518,6 +1513,9 @@ export const aiGenerateService = {
       ...(priorPeriod ? { priorPeriod } : {}),
       // ★ 缺口④ 媒体资源位（定性）。
       ...(mediaPlacements.length ? { mediaPlacements } : {}),
+      // ★ 全媒体表现表（0826）：所有 publisher 的期内 clicks/orders/GMV/Commission——
+      //   Creator Breakdown 表的数据源，覆盖 media_site/community/content_site 等非达人媒体。
+      ...(allMedia.length ? { allMedia } : {}),
       // ★ 营销活动（MarketingEvent）：业务线内与报告周期重叠的活动，注入后 AI 渲染 Marketing Activities 模块。
       ...(marketingEvents.length ? { marketingEvents } : {}),
       // ★ 订单中间层新增维度（宁缺勿假：有数据才注入）。
@@ -1571,35 +1569,14 @@ export const aiGenerateService = {
             if (s) {
               cpsTotal = s;
             } else {
-              // 理论不可达(perCreatorSums 对所有 campaignCreators 建键);防御性兜底走原切片逻辑
-              const periodSum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
-              for (const p of cc.cpsPerformances ?? []) {
-                const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-                for (const d of daily) {
-                  const date = String(d.date ?? '');
-                  if (!date || !inPeriod(date)) continue;
-                  periodSum.clicks += num(d.clicks);
-                  periodSum.impressions += num(d.impressions);
-                  periodSum.orders += num(d.orders);
-                  periodSum.gmv += num(d.gmv);
-                  periodSum.spend += num(d.spend);
-                  periodSum.commission += num(d.commission);
-                }
-              }
-              cpsTotal = periodSum;
+              cpsTotal = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
             }
           } else {
-            cpsTotal = cc.cpsPerformances.reduce(
-              (acc, cps) => ({
-                clicks: acc.clicks + cps.clicks,
-                impressions: acc.impressions + cps.impressions,
-                orders: acc.orders + cps.orders,
-                gmv: acc.gmv + Number(cps.gmv),
-                spend: acc.spend + Number(cps.spend),
-                commission: acc.commission + Number(cps.commission),
-              }),
-              { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 },
-            );
+            // ★ 真源切换(cps-daily 废弃)：无 period 汇总走聚合列真源（LP 流量+订单表现;syncSource 由外层预取）
+            const e = syncSource?.byCc.get(cc.id);
+            cpsTotal = e
+              ? { clicks: e.clicks, impressions: e.impressions, orders: e.orders, gmv: e.gmv, spend: e.spend, commission: e.commission }
+              : { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0 };
           }
           const summary = cc.performance?.summary ?? null;
           // ★ 中间层口径：orders/gmv(=commission)/commission 换订单表 byCreator，clicks/impressions/spend 保持 daily
@@ -1621,7 +1598,7 @@ export const aiGenerateService = {
             // ★ avatarUrl may be null — use initials circle fallback
             avatarUrl: cc.creator?.avatar ?? null,
             platform: cc.creator?.platform ?? null,
-            tier: cc.creator?.tier ?? '',
+            // ★ tier 不再注入（0826 用户要求：报告不透出 TIER 字段）
             contentType: cc.contentType,
             collabType: cc.collabType,
             totalPrice: cc.totalPrice,

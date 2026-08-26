@@ -8,7 +8,42 @@ const prismaMock = vi.hoisted(() => ({
   campaign: { findUnique: vi.fn() },
   guide: { findMany: vi.fn() },
   orderDailyStat: { findMany: vi.fn() },
+  // ★ 真源切换(cps-daily 废弃)：loadCreatorCps 三查询
+  campaignCreator: { findMany: vi.fn() },
+  linkPerformance: { findMany: vi.fn() },
+  $queryRaw: vi.fn(),
 }));
+
+/** mockCreatorCps(其他 test 同款)：fixture cpsPerformances → cc/LP/订单三查询 mock。 */
+function mockCreatorCps(campaignRow: any) {
+  const ccs = (campaignRow.campaignCreators ?? []).map((cc: any, i: any) => ({
+    id: cc.id ?? 'cc_' + i, creatorId: cc.creatorId ?? 'creator_' + i, creator: { name: cc.creator?.name ?? 'X' },
+  }));
+  prismaMock.campaignCreator.findMany.mockResolvedValue(ccs);
+  const lpRows = (campaignRow.campaignCreators ?? []).flatMap((cc: any, i: any) =>
+    (cc.cpsPerformances ?? []).map((pp: any, j: any) => ({
+      id: 'lp_' + i + '_' + j, campaignCreatorId: ccs[i].id, publisher: { creatorId: null },
+      clicks: pp.clicks ?? 0, impressions: pp.impressions ?? 0, orders: pp.orders ?? 0,
+      gmv: pp.gmv ?? 0, commission: pp.commission ?? 0, spend: pp.spend ?? 0,
+      daily: pp.daily ?? [],
+    })),
+  );
+  prismaMock.linkPerformance.findMany.mockResolvedValue(lpRows);
+  campaignRow.linkPerformances = lpRows;
+  const orderRows = (campaignRow.campaignCreators ?? []).flatMap((cc: any, i: any) => {
+    const ccId = ccs[i].id;
+    const rows = [];
+    for (const perf of (cc.cpsPerformances ?? [])) {
+      for (const dd of (perf.daily ?? [])) {
+        const date = String(dd.date ?? '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+        rows.push({ ccId, d: date, cnt: BigInt(Number(dd.orders) || 0), sale: Number(dd.gmv) || 0, comm: Number(dd.commission) || 0, nc: BigInt(Number(dd.newCustomers) || 0) });
+      }
+    }
+    return rows;
+  });
+  prismaMock.$queryRaw.mockResolvedValue(orderRows);
+}
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
 const aiClientMock = vi.hoisted(() => ({ fetchChatCompletionWithRetry: vi.fn() }));
@@ -103,6 +138,7 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
 
   it('有 period 且 daily 有交集 → 上下文含 periodKpis + dataCoverage，不含 analytics 数字字段', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockCreatorCps(dailyCamp);
     const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
     expect(json).toContain('periodKpis');
     expect(json).toContain('dataCoverage');
@@ -113,6 +149,7 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
 
   it('有 period 零交集 → 无 periodKpis，附 dataCoverage(covered=null)', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockCreatorCps(dailyCamp);
     const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-11-01', endDate: '2026-11-05' });
     expect(json).not.toContain('periodKpis');
     expect(json).toContain('"covered": null');
@@ -120,6 +157,7 @@ describe('ai-generate.service · buildCampaignContext 宁缺勿假', () => {
 
   it('无 period → dataGaps 列出缺失维度', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockCreatorCps(dailyCamp);
     const json = await aiGenerateService.buildCampaignContext('c1');
     expect(json).toContain('dataGaps');
   });
@@ -155,6 +193,7 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
 
   it('campaign 带 businessLineId → system 含指南,pick 用 scenario;返回 guideUsed', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
     prismaMock.guide.findMany.mockResolvedValue([
       { id: 'g-mo', scenario: '月报', name: 'DG 月报指南', content: '## 语调与术语\n用「创作者」', isDefault: false, isActive: true, updatedAt: new Date() },
     ]);
@@ -172,6 +211,7 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
   it('无匹配指南 → system 等于 CORE,guideUsed 空数组,user prompt 不再拼设计指南', async () => {
     // 无业务线名(businessLine 缺失 → businessLineName='') → system 严格等于 CORE
     prismaMock.campaign.findUnique.mockResolvedValue({ ...camp, businessLine: null });
+    mockCreatorCps({ ...camp, businessLine: null });
     prismaMock.guide.findMany.mockResolvedValue([]);
     const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p' });
     expect(out.guideUsed).toEqual([]); // 双层:无匹配=空数组
@@ -184,6 +224,7 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
 
   it('Guide 查询抛错 → 静默降级无指南,不阻断生成', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
     prismaMock.guide.findMany.mockRejectedValue(new Error('db down'));
     const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p' });
     expect(out.guideUsed).toEqual([]); // 双层:无指南=空数组
@@ -291,6 +332,7 @@ describe('ai-generate.service · buildCampaignContext 订单中间层口径', ()
 
   it('中间层有数据 → periodKpis 换订单源;新客标签缺失 → N/A + dataGaps 声明;注入 orderStatusSplit', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockCreatorCps(dailyCamp);
     mockOrderStats(
       [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 25, approvedOrders: 20, pendingOrders: 5, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('250.00'), pendingCommission: dec('50.00'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: [{ country: 'Netherlands', orders: 25, commission: '300.00' }] }],
       [{ statDate: '2026-10-02', campaignCreatorId: 'cc1', totalOrders: 25, approvedOrders: 20, pendingOrders: 5, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('250.00'), pendingCommission: dec('50.00'), newCustomerOrders: 0, hasNewCustomerTag: false }],
@@ -324,6 +366,7 @@ describe('ai-generate.service · buildCampaignContext 订单中间层口径', ()
       }],
     };
     prismaMock.campaign.findUnique.mockResolvedValue(noClicksCamp);
+    mockCreatorCps(noClicksCamp);
     mockOrderStats(
       [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 25, approvedOrders: 20, pendingOrders: 5, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('250.00'), pendingCommission: dec('50.00'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: null, topDevices: [] }],
       [],
@@ -340,6 +383,7 @@ describe('ai-generate.service · buildCampaignContext 订单中间层口径', ()
 
   it('设备维度注入 deviceSplit(区间合并)', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockCreatorCps(dailyCamp);
     mockOrderStats(
       [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 25, approvedOrders: 25, pendingOrders: 0, otherOrders: 0, totalCommission: dec('300.00'), approvedCommission: dec('300.00'), pendingCommission: dec('0'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: null, topDevices: [{ device: 'iPhone', orders: 15 }, { device: 'Android Mobile', orders: 10 }] }],
       [],
@@ -351,6 +395,7 @@ describe('ai-generate.service · buildCampaignContext 订单中间层口径', ()
 
   it('中间层有数据 + 标签可用 → 新客输真值', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockCreatorCps(dailyCamp);
     mockOrderStats(
       [{ statDate: '2026-10-02', campaignCreatorId: '', totalOrders: 10, approvedOrders: 10, pendingOrders: 0, otherOrders: 0, totalCommission: dec('100.00'), approvedCommission: dec('100.00'), pendingCommission: dec('0'), newCustomerOrders: 4, hasNewCustomerTag: true, topCountries: null }],
       [],
@@ -361,6 +406,7 @@ describe('ai-generate.service · buildCampaignContext 订单中间层口径', ()
 
   it('中间层无数据(空行) → 走 daily 老路(不注入 orderStatusSplit)', async () => {
     prismaMock.campaign.findUnique.mockResolvedValue(dailyCamp);
+    mockCreatorCps(dailyCamp);
     prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
     const json = await aiGenerateService.buildCampaignContext('c1', { startDate: '2026-10-01', endDate: '2026-10-31' });
     expect(json).not.toContain('orderStatusSplit');

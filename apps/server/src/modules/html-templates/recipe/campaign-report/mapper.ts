@@ -5,6 +5,7 @@ import { formatMoney, formatNum, formatPct, formatRatio } from '../format';
 import { aggregateDimensions, type DimLink, PALETTE } from './dimensions';
 import { computeCoverage } from './coverage';
 import { getRange, type OrderStatsRange } from '../../../campaigns/order-stats.service';
+import { loadCreatorCps } from '../../cps-source';
 import type { CampaignReportContent } from './schema';
 
 type Any = Record<string, any>;
@@ -21,43 +22,48 @@ function shortDate(iso: string): string {
  * 派生 KPI / publishers / trend / period / insights。纯函数,不查 DB。
  * 与 mapCampaign 的「汇总派生」分支隔离,可独立测试。
  */
-function mapFromDaily(
+async function mapFromDaily(
   campaign: Any,
   reportPeriod: { startDate?: string; endDate?: string },
-): { kpis: CampaignReportContent['kpis']; publishers: CampaignReportContent['publishers']; trend: CampaignReportContent['trend']; period: CampaignReportContent['header']['period']; insights: CampaignReportContent['insights'] } {
+  cpsSource: Awaited<ReturnType<typeof loadCreatorCps>>,
+): Promise<{ kpis: CampaignReportContent['kpis']; publishers: CampaignReportContent['publishers']; trend: CampaignReportContent['trend']; period: CampaignReportContent['header']['period']; insights: CampaignReportContent['insights'] }> {
   const { startDate, endDate } = reportPeriod;
   const inPeriod = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
-  const num = (v: unknown) => Number(v) || 0;
+
+  // ★ 真源切换(cps-daily 废弃)：流量/成交每日来自 loadCreatorCps（LP 流量 + 订单表成交/新客）。
+  //   维度标签 insights 保留读冻结的 cpsPerformances（存量标签数据 LP 无对应字段）。
+  //   cpsSource 由 mapCampaign 统一加载传入（与 mapFromOrderStats 共享一次查询）。
 
   // 1) 每个创作者的期内 daily 求和
   type DailySum = { clicks: number; orders: number; gmv: number; newCustomers: number };
   // ★ clicks 缺失判定:期内 daily 记录从未出现 clicks key = 数据源缺失(渲染 Metric unavailable);
-  //   有 key 值 0 = 真实 0。宁缺勿假。
+  //   有 key 值 0 = 真实 0。宁缺勿假。LP.daily 数组式每项都有 clicks 字段——cell.clicks>0 即真源存在;
+  //   全 0 无法区分"LP 行存在但导入没带 clicks"与"没导 LP"——用行级判定兜底(dailyRowCount>0 = LP 真源在)。
   let clicksKeySeen = false;
   const perCreator: { cc: Any; sum: DailySum }[] = (campaign.campaignCreators ?? []).map((cc: Any) => {
     const sum: DailySum = { clicks: 0, orders: 0, gmv: 0, newCustomers: 0 };
-    for (const p of cc.cpsPerformances ?? []) {
-      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
-        const date = String(d.date ?? '');
-        if (!date || !inPeriod(date)) continue;
-        if ('clicks' in d) clicksKeySeen = true;
-        sum.clicks += num(d.clicks);
-        sum.orders += num(d.orders);
-        sum.gmv += num(d.gmv);
-        sum.newCustomers += num(d.newCustomers);
+    const e = cpsSource.byCc.get(cc.id);
+    if (e) {
+      for (const [date, cell] of e.daily) {
+        if (!inPeriod(date)) continue;
+        if (cell.clicks > 0 || cell.fromLp) clicksKeySeen = true;
+        sum.clicks += cell.clicks;
+        sum.orders += cell.orders;
+        sum.gmv += cell.gmv;
+        sum.newCustomers += cell.newCustomers;
       }
     }
     return { cc, sum };
   });
   // ★ clicks 回退聚合列:daily 无 clicks 键 + 报告周期完整覆盖 campaign 周期(口径一致才回退,全 0 不回退)
   let clicksFallback = false;
-  if (!clicksKeySeen) {
+  if (!clicksKeySeen && cpsSource.dailyRowCount === 0) {
     const coversAll = (!startDate || !campaign.startDate || startDate <= campaign.startDate)
       && (!endDate || !campaign.endDate || endDate >= campaign.endDate);
     if (coversAll) {
       let aggTotal = 0;
       for (const e of perCreator) {
-        const agg = (e.cc.cpsPerformances ?? []).reduce((s: number, p: Any) => s + num(p.clicks), 0);
+        const agg = cpsSource.byCc.get(e.cc.id)?.clicks ?? 0;
         if (agg > 0) { e.sum.clicks = agg; aggTotal += agg; }
       }
       if (aggTotal > 0) clicksFallback = true;
@@ -105,20 +111,11 @@ function mapFromDaily(
     };
   });
 
-  // 5) trend:跨创作者按 date 分组(日粒度)
+  // 5) trend:跨创作者按 date 分组(日粒度——campaign 级每日合并)
   const byDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
-  for (const cc of campaign.campaignCreators ?? []) {
-    for (const p of cc.cpsPerformances ?? []) {
-      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
-        const date = String(d.date ?? '');
-        if (!date || !inPeriod(date)) continue;
-        const entry = byDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0 };
-        entry.revenue += num(d.gmv);
-        entry.clicks += num(d.clicks);
-        entry.orders += num(d.orders);
-        byDate.set(date, entry);
-      }
-    }
+  for (const [date, cell] of cpsSource.campaignDaily) {
+    if (!inPeriod(date)) continue;
+    byDate.set(date, { revenue: cell.gmv, clicks: cell.clicks, orders: cell.orders });
   }
   const dates = [...byDate.keys()].sort();
   const trend = {
@@ -135,23 +132,25 @@ function mapFromDaily(
   const end = reportPeriod.endDate ?? campaign.endDate;
   const period = { start, end, display: `${shortDate(start)} - ${shortDate(end)}, ${String(start).slice(0, 4)}` };
 
-  // 7) insights(4 维度从 cpsPerformances 链接级标签聚合 + newCustomerRate 从 daily 重算)
+  // 7) insights(4 维度从冻结 cpsPerformances 链接级标签聚合——存量标签 LP 无对应字段,读旧表不丢;
+  //    gmv/orders 改从 cpsSource 期内切片)
   const dimLinks: DimLink[] = [];
   for (const cc of campaign.campaignCreators ?? []) {
-    for (const p of cc.cpsPerformances ?? []) {
-      let gmv = 0, orders = 0;
-      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
-        const date = String(d.date ?? '');
-        if (!date || !inPeriod(date)) continue;
-        gmv += num(d.gmv);
-        orders += num(d.orders);
-      }
-      if (gmv > 0 || orders > 0) {
-        dimLinks.push({
-          productName: p.productName, category: p.category, market: p.market,
-          promoName: p.promoName, promoType: p.promoType, gmv, orders,
-        });
-      }
+    const e = cpsSource.byCc.get(cc.id);
+    if (!e) continue;
+    let gmv = 0, orders = 0;
+    for (const [date, cell] of e.daily) {
+      if (!inPeriod(date)) continue;
+      gmv += cell.gmv;
+      orders += cell.orders;
+    }
+    if (gmv > 0 || orders > 0) {
+      // 标签取该 creator 名下冻结 CPS 行的首个非空标签组（无标签则 undefined——维度聚合自动跳过）
+      const tagged = (cc.cpsPerformances ?? []).find((p: Any) => p.productName || p.category || p.market || p.promoName || p.promoType);
+      dimLinks.push({
+        productName: tagged?.productName, category: tagged?.category, market: tagged?.market,
+        promoName: tagged?.promoName, promoType: tagged?.promoType, gmv, orders,
+      });
     }
   }
   // 7b) MoM:reportPeriod vs 前等长期间(仅当 reportPeriod 完整时算,否则 undefined)
@@ -169,14 +168,11 @@ function mapFromDaily(
     const preEnd = iso(preEndD);
     const inPre = (d: string) => d >= preStart && d <= preEnd;
     let preOrders = 0, preGmv = 0;
-    for (const cc of campaign.campaignCreators ?? []) {
-      for (const p of cc.cpsPerformances ?? []) {
-        for (const d of (p.daily as Any[] | null | undefined) ?? []) {
-          const date = String(d.date ?? '');
-          if (!date || !inPre(date)) continue;
-          preOrders += num(d.orders);
-          preGmv += num(d.gmv);
-        }
+    for (const [, e] of cpsSource.byCc) {
+      for (const [date, cell] of e.daily) {
+        if (!inPre(date)) continue;
+        preOrders += cell.orders;
+        preGmv += cell.gmv;
       }
     }
     const signedPct = (cur: number, prev: number) => {
@@ -213,35 +209,32 @@ function mapFromOrderStats(
   campaign: Any,
   orderStats: OrderStatsRange,
   reportPeriod: { startDate?: string; endDate?: string },
+  cpsSource: Awaited<ReturnType<typeof loadCreatorCps>>,
 ): { kpis: CampaignReportContent['kpis']; publishers: CampaignReportContent['publishers']; trend: CampaignReportContent['trend']; period: CampaignReportContent['header']['period']; insights: CampaignReportContent['insights'] } {
   const { startDate, endDate } = reportPeriod;
   const inPeriod = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
-  const num = (v: unknown) => Number(v) || 0;
 
-  // 1) daily 侧只取 clicks / spend / 维度标签(revenue/orders 以中间层为准)
+  // 1) 流量侧从 cpsSource（LP 流量 + 订单表成交/新客）；revenue/orders 以中间层为准
   const perCreatorClicks = new Map<string, number>();
   const clicksByDate = new Map<string, number>();
   let totalSpend = 0;
-  // ★ clicks 缺失判定:期内 daily 从未出现 clicks key = 数据源缺失
   let clicksKeySeen = false;
   for (const cc of campaign.campaignCreators ?? []) {
+    const e = cpsSource.byCc.get(cc.id);
     let clicks = 0;
-    for (const p of cc.cpsPerformances ?? []) {
-      totalSpend += num(p.spend);
-      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
-        const date = String(d.date ?? '');
-        if (!date || !inPeriod(date)) continue;
-        if ('clicks' in d) clicksKeySeen = true;
-        clicks += num(d.clicks);
-        clicksByDate.set(date, (clicksByDate.get(date) ?? 0) + num(d.clicks));
+    if (e) {
+      totalSpend += e.spend;
+      for (const [date, cell] of e.daily) {
+        if (!inPeriod(date)) continue;
+        if (cell.clicks > 0) clicksKeySeen = true;
+        clicks += cell.clicks;
+        clicksByDate.set(date, (clicksByDate.get(date) ?? 0) + cell.clicks);
       }
     }
     perCreatorClicks.set(cc.id, clicks);
   }
-  // ★ clicks 回退聚合列:daily 无 clicks 键(日级导入通道未写入)但报告周期完整覆盖
-  //   campaign 生命周期时,回退 CpsPerformance 顶层聚合列(importCpsPerformance 导入的
-  //   链接全周期汇总,真源为 Awin Click References 等)。聚合列是全周期口径——
-  //   周期切片不满足全覆盖时口径不符,不回退;全 0 视为无数据,不回退。
+  // ★ clicks 回退聚合列:daily 无 clicks 键但报告周期完整覆盖 campaign 生命周期时,
+  //   回退 LP 聚合列（链接全周期汇总）。全 0 不回退。
   let clicksFallback = false;
   if (!clicksKeySeen) {
     const coversAll = (!startDate || !campaign.startDate || startDate <= campaign.startDate)
@@ -249,7 +242,7 @@ function mapFromOrderStats(
     if (coversAll) {
       let aggTotal = 0;
       for (const cc of campaign.campaignCreators ?? []) {
-        const agg = (cc.cpsPerformances ?? []).reduce((s: number, p: Any) => s + num(p.clicks), 0);
+        const agg = cpsSource.byCc.get(cc.id)?.clicks ?? 0;
         if (agg > 0) { perCreatorClicks.set(cc.id, agg); aggTotal += agg; }
       }
       if (aggTotal > 0) clicksFallback = true;
@@ -359,6 +352,7 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
     where: { id: campaignId },
     include: {
       campaignCreators: { include: { creator: true, performance: true, cpsPerformances: true } },
+      linkPerformances: true, // coverage 判定用（LP.daily 日期集合）
       businessLine: true, advertiser: true,
     },
   });
@@ -389,12 +383,15 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   } catch {
     orderStats = null;
   }
+  // ★ 真源切换(cps-daily 废弃)：统一取数源（LP 流量 + 订单表成交/新客）
+  //   （mapFromOrderStats / mapFromDaily 共享这一次查询）
+  const cpsSource = await loadCreatorCps(campaignId);
 
   // 有 reportPeriod → 周期切片(中间层优先;有交集出真数,零交集空态;不读 analytics 兜底)
   if (hasPeriod) {
     // ★ edge:daily coverage 为空但中间层有数据 → 仍渲染订单侧(订单真源不被 daily 覆盖判定误杀)
     if (orderStats) {
-      const { kpis, publishers, trend, period, insights } = mapFromOrderStats(campaign, orderStats, reportPeriod!);
+      const { kpis, publishers, trend, period, insights } = mapFromOrderStats(campaign, orderStats, reportPeriod!, cpsSource);
       return {
         header: { ...header, period }, kpis, trend, publishers,
         insights, actionable: [], dataCoverage,
@@ -407,7 +404,7 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
         dataCoverage,
       };
     }
-    const { kpis, publishers, trend, period, insights } = mapFromDaily(campaign, reportPeriod!);
+    const { kpis, publishers, trend, period, insights } = await mapFromDaily(campaign, reportPeriod!, cpsSource);
     return {
       header: { ...header, period }, kpis, trend, publishers,
       insights, actionable: [], dataCoverage,
@@ -423,20 +420,17 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   let newCustomers = hasVal(m.newCustomers) ? Number(m.newCustomers) : null;
   let cvr = clicks !== null && orders !== null && clicks > 0 ? (orders / clicks) * 100 : null;
   let aov = hasVal(m.aov) ? Number(m.aov) : null;
-  // ★ 汇总口径回退真源链(聚合列=链接全周期汇总,口径天然一致;全 0 视为无数据不回退):
-  //   revenue→gmv, orders→orders, clicks→clicks;newCustomers 只从 daily 合计且回退前须 100% 日期覆盖
-  //   (聚合列无 newCustomers 维度,daily 部分覆盖时合计非全周期真值——宁缺勿假)。
-  const cpsAgg = (campaign.campaignCreators ?? []).reduce(
-    (s: { gmv: number; orders: number; clicks: number }, cc: Any) => {
-      const r = (cc.cpsPerformances ?? []).reduce(
-        (a: { gmv: number; orders: number; clicks: number }, p: Any) => ({
-          gmv: a.gmv + (Number(p.gmv) || 0), orders: a.orders + (Number(p.orders) || 0), clicks: a.clicks + (Number(p.clicks) || 0),
-        }), { gmv: 0, orders: 0, clicks: 0 });
-      return { gmv: s.gmv + r.gmv, orders: s.orders + r.orders, clicks: s.clicks + r.clicks };
-    }, { gmv: 0, orders: 0, clicks: 0 });
+  // ★ 汇总口径回退真源链(真源切换后=LP 聚合列/订单表现;全 0 视为无数据不回退):
+  //   clicks→LP 聚合列;revenue/orders→订单表现合计(cpsSource);
+  //   newCustomers 从订单表现合计(customerAcquisition='New' 计数)。
+  const cpsAgg = {
+    gmv: [...cpsSource.byCc.values()].reduce((s, e) => s + e.gmv, 0),
+    orders: [...cpsSource.byCc.values()].reduce((s, e) => s + e.orders, 0),
+    clicks: [...cpsSource.byCc.values()].reduce((s, e) => s + e.clicks, 0),
+    newCustomers: [...cpsSource.byCc.values()].reduce((s, e) => s + e.newCustomers, 0),
+  };
   // newCustomers daily 全覆盖判定(dates ⊇ [startDate,endDate] 才回退)
-  const dailyAll = (campaign.campaignCreators ?? []).flatMap((cc: Any) => (cc.cpsPerformances ?? []).flatMap((p: Any) => (p.daily as Any[]) ?? []));
-  const dailyDates = new Set(dailyAll.map((d: Any) => String(d.date ?? '')));
+  const dailyDates = new Set(cpsSource.campaignDaily.keys());
   const fullCover = (() => {
     if (!campaign.startDate || !campaign.endDate) return false;
     const days = Math.round((new Date(campaign.endDate).getTime() - new Date(campaign.startDate).getTime()) / 86400000) + 1;
@@ -451,9 +445,9 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
   // ★ metrics 全空 + 聚合列有值 → revenue/orders 同步回退(同一次导入的完整镜像)
   if (totalRevenue === null && cpsAgg.gmv > 0) totalRevenue = cpsAgg.gmv;
   if (orders === null && cpsAgg.orders > 0) orders = cpsAgg.orders;
-  // newCustomers 回退(daily 全覆盖)
+  // newCustomers 回退(daily 全覆盖——口径:订单表现 New 客计数,与 daily 同源)
   if (newCustomers === null && fullCover) {
-    const nc = dailyAll.reduce((s: number, d: Any) => s + (Number(d.newCustomers) || 0), 0);
+    const nc = cpsAgg.newCustomers;
     if (nc > 0) newCustomers = nc;
   }
   // 回退后重算派生指标(aov/cvr)
@@ -477,12 +471,9 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
     kpi('AOV', aov),
   ];
 
-  // publishers + ROAS + 维度聚合:CPS 表顶层真实列(非 analytics)
+  // publishers + ROAS + 维度聚合:数值走 cpsSource(LP 流量+订单表现);维度标签读冻结 CPS 行
   const publishers = campaign.campaignCreators.map((cc) => {
-    const cps = cc.cpsPerformances.reduce(
-      (a, p) => ({ clicks: a.clicks + (Number(p.clicks) || 0), orders: a.orders + (Number(p.orders) || 0), gmv: a.gmv + (Number(p.gmv) || 0) }),
-      { clicks: 0, orders: 0, gmv: 0 },
-    );
+    const e = cpsSource.byCc.get(cc.id) ?? { clicks: 0, gmv: 0, orders: 0 };
     const partner = cc.creator?.partnerType ?? 'creator';
     const kind = partner === 'content_site' ? 'site' : partner === 'community' ? 'fb' : 'creator';
     const platform = cc.creator?.platform ?? campaign.platform;
@@ -491,19 +482,19 @@ export async function mapCampaign(campaignId: string, reportPeriod?: { startDate
       handle: cc.creator?.handle || undefined,
       type: { label: kind === 'creator' ? 'Creator' : kind === 'site' ? 'Site' : 'Community', kind: kind as any },
       screenshotUrl: `https://placehold.co/120x68/f5f7fa/1e1c24?text=${encodeURIComponent(platform)}`,
-      revenue: formatMoney(cps.gmv),
-      clicks: formatNum(cps.clicks),
-      orders: formatNum(cps.orders),
+      revenue: formatMoney(e.gmv),
+      clicks: formatNum(e.clicks),
+      orders: formatNum(e.orders),
       linkUrl: cc.creator?.profileUrl || undefined,
     };
   });
 
-  const totalSpend = campaign.campaignCreators.reduce(
-    (s, cc) => s + cc.cpsPerformances.reduce((a, p) => a + (Number(p.spend) || 0), 0), 0);
+  const totalSpend = [...cpsSource.byCc.values()].reduce((s, e) => s + e.spend, 0);
   if (totalSpend > 0 && totalRevenue !== null) {
     kpis.push({ label: 'ROAS', value: formatRatio(totalRevenue / totalSpend), highlight: false });
   }
 
+  // 维度标签:冻结 CPS 行链接级标签(gmv/orders 挂 CPS 顶层存量——历史导入口径,不再更新)
   const dimLinks: DimLink[] = (campaign.campaignCreators ?? []).flatMap((cc: Any) =>
     (cc.cpsPerformances ?? []).map((p: Any) => ({
       productName: p.productName, category: p.category, market: p.market,

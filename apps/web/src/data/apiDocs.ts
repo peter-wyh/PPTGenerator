@@ -281,108 +281,6 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
   },
   // ─────────────────────────────────────────────────────────────────────────
   {
-    id: 'cps',
-    method: 'POST',
-    path: '/campaigns/import/cps',
-    title: 'CPS 链接效果汇总',
-    purpose: '每条追踪链接的累计效果（点击/订单/GMV/佣金/花费）——链接级维度分析与 ROI 计算的数据源。',
-    source: '联盟平台（Amazon Attribution / ShareASale / 平台联盟后台）链接报表导出，每链接一行。',
-    prerequisites: ['Campaign 已创建', '达人已挂到该 Campaign'],
-    prerequisiteSummary: 'Campaign + 达人挂链',
-    semantics: [
-      '合并键 (campaignCreatorId, contentType)——即同一达人在同一 campaign 下的同类型链接，重导覆盖。',
-      '必填 campaignId + creatorId + contentType 三者齐全才处理，否则 skipped。',
-      '金额支持 $ 前缀与千分位逗号（服务端清洗为 Decimal）。',
-      '维度标签（productName/category/market/promoName/promoType）空值落 NULL。',
-    ],
-    fields: [
-      { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
-      { name: 'creatorId', type: 'string', required: true, desc: '达人 ID' },
-      { name: 'contentType', type: 'string', required: true, desc: '内容类型（每类链接一行，如 video / post）' },
-      { name: 'linkUrl', type: 'string', required: false, desc: '追踪链接 URL' },
-      { name: 'clicks', type: 'number', required: false, desc: '累计点击' },
-      { name: 'impressions', type: 'number', required: false, desc: '累计曝光' },
-      { name: 'orders', type: 'number', required: false, desc: '累计订单' },
-      { name: 'gmv', type: 'string | number', required: false, desc: '累计 GMV（支持 $ 千分位）' },
-      { name: 'commission', type: 'string | number', required: false, desc: '累计佣金' },
-      { name: 'spend', type: 'string | number', required: false, desc: '累计花费（投放/佣金外成本）' },
-      { name: 'productName', type: 'string', required: false, desc: '推广商品名（维度标签）' },
-      { name: 'category', type: 'string', required: false, desc: '商品类目（维度标签）' },
-      { name: 'market', type: 'string', required: false, desc: '投放市场（维度标签，如 US）' },
-      { name: 'promoName', type: 'string', required: false, desc: '活动名（维度标签）' },
-      { name: 'promoType', type: 'string', required: false, desc: '活动类型（维度标签）' },
-    ],
-    requestExample: `{
-  "items": [
-    {
-      "campaignId": "camp-everyday-bf",
-      "creatorId": "creator-leo-sato",
-      "contentType": "video",
-      "linkUrl": "https://example.com/track/leo-bf",
-      "clicks": 8621,
-      "impressions": 412000,
-      "orders": 214,
-      "gmv": "$9,842.50",
-      "commission": "$1,476.38",
-      "spend": "0",
-      "productName": "BF Gift Box",
-      "category": "Gift Set",
-      "market": "US",
-      "promoName": "BF 2026",
-      "promoType": "CPS"
-    }
-  ]
-}`,
-    response: '{ "updated": 1, "skipped": 0 }',
-  },
-  // ─────────────────────────────────────────────────────────────────────────
-  {
-    id: 'cps-daily',
-    method: 'POST',
-    path: '/campaigns/import/cps-daily',
-    title: 'CPS 每日明细',
-    purpose: '【deprecated 过渡保留】CPS 链接按天拆分的效果——流量侧（clicks/impressions）已由 link-performance 接管，本接口仅旧口径兼容；成交侧始终以订单表（import/orders）为真源。',
-    source: '联盟后台按日报表导出；与 cps 汇总接口配套（同一链接先导汇总再导每日）。',
-    prerequisites: ['Campaign 已创建', '达人已挂到该 Campaign', '建议先导 cps 汇总（每日明细会挂到同一链接记录上）'],
-    prerequisiteSummary: 'Campaign + 达人挂链',
-    semantics: [
-      '按 (campaignId, creatorId, contentType) 定位 CPS 链接记录；不存在则自动创建空汇总记录。',
-      '合并键 date：同日重导覆盖，其余日期保留，按日期排序合并。',
-      'dailyNewCustomers 用于报告 New Customers 指标。',
-    ],
-    fields: [
-      { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
-      { name: 'creatorId', type: 'string', required: true, desc: '达人 ID' },
-      { name: 'contentType', type: 'string', required: true, desc: '内容类型（与 cps 汇总一致）' },
-      { name: 'date', type: 'YYYY-MM-DD', required: true, desc: '数据日期' },
-      { name: 'dailyClicks', type: 'string | number', required: false, desc: '当日点击' },
-      { name: 'dailyImpressions', type: 'string | number', required: false, desc: '当日曝光' },
-      { name: 'dailyOrders', type: 'string | number', required: false, desc: '当日订单' },
-      { name: 'dailyGmv', type: 'string | number', required: false, desc: '当日 GMV（$ 前缀自动去除）' },
-      { name: 'dailyCommission', type: 'string | number', required: false, desc: '当日佣金' },
-      { name: 'dailySpend', type: 'string | number', required: false, desc: '当日花费' },
-      { name: 'dailyNewCustomers', type: 'string | number', required: false, desc: '当日新客数' },
-    ],
-    requestExample: `{
-  "items": [
-    {
-      "campaignId": "camp-everyday-bf",
-      "creatorId": "creator-leo-sato",
-      "contentType": "video",
-      "date": "2026-11-28",
-      "dailyClicks": "1900",
-      "dailyImpressions": "96000",
-      "dailyOrders": "48",
-      "dailyGmv": "$2,210.40",
-      "dailyCommission": "$331.56",
-      "dailyNewCustomers": "31"
-    }
-  ]
-}`,
-    response: '{ "updated": 1, "skipped": 0 }',
-  },
-  // ─────────────────────────────────────────────────────────────────────────
-  {
     id: 'orders',
     method: 'POST',
     path: '/campaigns/import/orders',
@@ -541,12 +439,13 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       '分组键 (campaignId, publisherId, linkKey)：upsert 幂等，重导覆盖汇总指标。',
       'trackingUrl 必填（linkUrl 为兼容别名）；linkKey 由 click_ref 或域名归一化生成。',
       'siteName 域名归一化 → 自动 upsert Publisher（媒体主档）→ 挂 publisherId；达人型媒体经 publisher.creatorId 归因到合作行。',
-      'daily 明细数组（date/clicks/impressions/orders/gmv/commission）按日期合并，同日重导覆盖。',
+      '每日行（date 列存在）：clicks/impressions/spend 为当日值 → 合并进 daily 数组 [{date,clicks,impressions,spend}]，同日重导覆盖；无 date 列 → 周期汇总标量。',
     ],
     fields: [
       { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
       { name: 'trackingUrl', type: 'string', required: true, desc: '跟踪链接 URL（linkUrl 为兼容别名）' },
       { name: 'siteName', type: 'string', required: false, desc: '媒体站点名（自动 upsert Publisher）' },
+      { name: 'date', type: 'YYYY-MM-DD', required: false, desc: '每日行标记：带此列 → clicks/impressions/spend 为当日值，合并进 daily（同日重导覆盖）；不带 → 周期汇总标量' },
       { name: 'clicks', type: 'number', required: false, desc: '点击数（周期汇总）' },
       { name: 'impressions', type: 'number', required: false, desc: '曝光数' },
       { name: 'orders', type: 'number', required: false, desc: '订单数' },

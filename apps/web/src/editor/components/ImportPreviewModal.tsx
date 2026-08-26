@@ -20,7 +20,6 @@ export function ImportPreviewModal({ kind, items, onConfirm, onCancel }: Props) 
     collaboration: '达人合作',
     collaborationDaily: '合作每日互动',
     cps: 'CPS 链接效果',
-    cpsDaily: 'CPS 每日明细',
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>

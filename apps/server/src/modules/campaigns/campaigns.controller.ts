@@ -165,18 +165,6 @@ export const campaignController = {
     res.json(result);
   }),
 
-  importCps: asyncHandler(async (req: Request, res: Response) => {
-    const items = (req.body.items ?? []) as Record<string, unknown>[];
-    const result = await importService.importCpsPerformance(userId(req), items);
-    res.json(result);
-  }),
-
-  importCpsDaily: asyncHandler(async (req: Request, res: Response) => {
-    const { items } = req.body as { items: Record<string, unknown>[] };
-    const result = await importService.importCpsDaily(userId(req), items);
-    res.json(result);
-  }),
-
   /** 导入链接效果（Click References 口径）——链接维度流量/成交数据唯一入口。 */
   importLinkPerformance: asyncHandler(async (req: Request, res: Response) => {
     const { items } = req.body as { items: Record<string, unknown>[] };

@@ -9,6 +9,7 @@
  */
 
 import { prisma } from '../../prisma';
+import { loadCreatorCps } from './cps-source';
 
 export interface MetricSnapshot {
   /** 原始数值（用于排序和去重） */
@@ -25,6 +26,7 @@ export interface PeriodSnapshot {
 }
 
 const num = (v: unknown): number => Number(v) || 0;
+void num;
 
 /** 数字格式化变体：模拟 AI 可能输出的各种格式 */
 function formatValueVariants(raw: number): string[] {
@@ -78,15 +80,11 @@ export async function getPeriodSnapshot(
 }> {
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
-    include: {
-      campaignCreators: {
-        include: {
-          cpsPerformances: true,
-        },
-      },
-    },
   });
   if (!campaign) return { metrics: {}, rawValues: {} };
+
+  // ★ 取数真源切换（cps-daily 废弃）：loadCreatorCps = LP 流量 + 订单表成交/新客
+  const cps = await loadCreatorCps(campaignId);
 
   // 解析 period → startDate/endDate
   let startDate = period?.startDate;
@@ -105,25 +103,22 @@ export async function getPeriodSnapshot(
   const total = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
   const perCreator = new Map<string, typeof total>();
 
-  for (const cc of campaign.campaignCreators ?? []) {
+  for (const [ccId, e] of cps.byCc) {
     const ccSum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
-    for (const p of cc.cpsPerformances ?? []) {
-      const daily = (p.daily as Record<string, unknown>[] | null | undefined) ?? [];
-      for (const d of daily) {
-        const date = String(d.date ?? '');
-        if (!date) continue;
-        // 如果有 period 则按 period 过滤；否则取全部
-        if (startDate && endDate && !inPeriod(date)) continue;
-        ccSum.clicks += num(d.clicks);
-        ccSum.impressions += num(d.impressions);
-        ccSum.orders += num(d.orders);
-        ccSum.gmv += num(d.gmv);
-        ccSum.spend += num(d.spend);
-        ccSum.commission += num(d.commission);
-        ccSum.newCustomers += num(d.newCustomers);
-      }
+    for (const [date, cell] of e.daily) {
+      // 如果有 period 则按 period 过滤；否则取全部
+      if (startDate && endDate && !inPeriod(date)) continue;
+      ccSum.clicks += cell.clicks;
+      ccSum.impressions += cell.impressions;
+      ccSum.orders += cell.orders;
+      ccSum.gmv += cell.gmv;
+      ccSum.spend += cell.spend;
+      ccSum.commission += cell.commission;
+      ccSum.newCustomers += cell.newCustomers;
     }
-    perCreator.set(cc.id, ccSum);
+    // 周期标量兜底（daily 为空但聚合列有值时——如纯周期导入的链接）
+    if (!ccSum.clicks && !ccSum.impressions) { ccSum.clicks = e.clicks; ccSum.impressions = e.impressions; ccSum.spend = e.spend; }
+    perCreator.set(ccId, ccSum);
     total.clicks += ccSum.clicks;
     total.impressions += ccSum.impressions;
     total.orders += ccSum.orders;

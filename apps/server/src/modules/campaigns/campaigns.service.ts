@@ -464,6 +464,10 @@ export const campaignCreatorService = {
       where: { campaignId },
       include: {
         creator: true,
+        // ★ 0826 口径：合作 1:1 链接——列表透出 trackingLink（null=未建链）。
+        linkPerformance: {
+          select: { id: true, linkUrl: true, linkKey: true, clicks: true, orders: true },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -792,6 +796,7 @@ export const importService = {
    * 字段：campaignId, trackingUrl（必填，linkUrl 为兼容别名）+ clicks/impressions/orders/gmv/commission/spend/sales（可选）。
    * 归因：trackingUrl 域名归一化 → upsert Publisher（siteName 可选补充命名）→ linkKey 唯一。
    */
+  /** 链接效果导入（trackingUrl 口径）。周期行（无 date 列）更新标量；每日行（带 date 列）合并进 daily 数组 [{date,clicks,impressions,spend}]。 */
   async importLinkPerformance(_ownerId: string, items: Record<string, unknown>[]) {
     let upserted = 0;
     let skipped = 0;
@@ -814,6 +819,23 @@ export const importService = {
           create: { name: siteName || linkKey, domain: linkKey },
         });
 
+        // ★ 闭环归因：达人型媒体（publisher.creatorId）-> 同 campaign 合作行，直接挂 FK。
+        //   1:1 约束冲突（该合作已有别的链接）时留空--宁缺勿假，不覆盖已有绑定。
+        let ccId: string | null = null;
+        if (publisher.creatorId) {
+          const cc = await prisma.campaignCreator.findFirst({
+            where: { campaignId, creatorId: publisher.creatorId },
+            select: { id: true },
+          });
+          if (cc) {
+            const holder = await prisma.linkPerformance.findFirst({
+              where: { campaignCreatorId: cc.id },
+              select: { id: true },
+            });
+            if (!holder) ccId = cc.id;
+          }
+        }
+
         const num = (v: unknown) => {
           const n = parseFloat(String(v ?? '').replace(/^[$£]/, '').replace(/,/g, ''));
           return Number.isFinite(n) ? n : null;
@@ -825,6 +847,47 @@ export const importService = {
         const commission = num(item.commission);
         const spend = num(item.spend);
 
+        // 每日行（带 date 列）：clicks/impressions/spend 视为当日值 → 合并进 daily 数组，不碰周期标量
+        const dateVal = String(item.date ?? '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+          const existing = await prisma.linkPerformance.findUnique({
+            where: { campaignId_publisherId_linkKey: { campaignId, publisherId: publisher.id, linkKey } },
+          });
+          // 兼容旧 Object 键式（{"2026-11-20":{clicks,impressions}}）→ 统一转数组式
+          const prevDaily = Array.isArray(existing?.daily)
+            ? (existing!.daily as Record<string, unknown>[])
+            : existing?.daily && typeof existing.daily === 'object'
+              ? Object.entries(existing.daily as Record<string, Record<string, unknown>>).map(([date, v]) => ({ date, ...v }))
+              : [];
+          const day = {
+            date: dateVal,
+            clicks: Math.round(clicks ?? 0),
+            impressions: Math.round(impressions ?? 0),
+            ...(spend != null ? { spend } : {}),
+          };
+          const merged = [...prevDaily.filter((d) => String(d.date ?? '') !== dateVal), day]
+            .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+          if (existing) {
+            await prisma.linkPerformance.update({
+              where: { id: existing.id },
+              data: {
+                daily: merged as unknown as Prisma.InputJsonValue,
+                ...(ccId ? { campaignCreatorId: ccId } : {}),
+              },
+            });
+          } else {
+            await prisma.linkPerformance.create({
+              data: {
+                campaignId, publisherId: publisher.id, linkUrl: trackingUrl, linkKey,
+                ...(ccId ? { campaignCreatorId: ccId } : {}),
+                daily: merged as unknown as Prisma.InputJsonValue,
+              },
+            });
+          }
+          upserted++;
+          continue;
+        }
+
         await prisma.linkPerformance.upsert({
           where: { campaignId_publisherId_linkKey: { campaignId, publisherId: publisher.id, linkKey } },
           update: {
@@ -835,12 +898,14 @@ export const importService = {
             ...(commission != null ? { commission: new Prisma.Decimal(commission) } : {}),
             ...(spend != null ? { spend: new Prisma.Decimal(spend) } : {}),
             publisherId: publisher.id,
+            ...(ccId ? { campaignCreatorId: ccId } : {}),
           },
           create: {
             campaignId,
             publisherId: publisher.id,
             linkUrl: trackingUrl,
             linkKey,
+            ...(ccId ? { campaignCreatorId: ccId } : {}),
             ...(clicks != null ? { clicks: Math.round(clicks) } : {}),
             ...(impressions != null ? { impressions: Math.round(impressions) } : {}),
             ...(orders != null ? { orders: Math.round(orders) } : {}),
@@ -1085,60 +1150,6 @@ export const importService = {
     return { updated, skipped };
   },
 
-  /** 导入 CPS 链接效果汇总（每条链接一行→CpsPerformance upsert）。 */
-  async importCpsPerformance(_ownerId: string, items: Record<string, unknown>[]) {
-    let updated = 0, skipped = 0;
-    for (const item of items) {
-      try {
-        const campaignId = String(item.campaignId ?? '');
-        const creatorId = String(item.creatorId ?? '');
-        const contentType = String(item.contentType ?? '');
-        if (!campaignId || !creatorId || !contentType) { skipped++; continue; }
-
-        const link = await prisma.campaignCreator.findFirst({
-          where: { campaignId, creatorId },
-        });
-        if (!link) { skipped++; continue; }
-
-        const clicks = parseInt(String(item.clicks ?? '0'), 10) || 0;
-        const impressions = parseInt(String(item.impressions ?? '0'), 10) || 0;
-        const orders = parseInt(String(item.orders ?? '0'), 10) || 0;
-        const gmv = new Prisma.Decimal(parseFloat(String(item.gmv ?? '0').replace(/[$,]/g, '')) || 0);
-        const commission = new Prisma.Decimal(parseFloat(String(item.commission ?? '0').replace(/[$,]/g, '')) || 0);
-        const spend = new Prisma.Decimal(parseFloat(String(item.spend ?? '0').replace(/[$,]/g, '')) || 0);
-
-        // 维度标签(链接级,空 → null)
-        const productName = String(item.productName ?? '').trim() || null;
-        const category = String(item.category ?? '').trim() || null;
-        const market = String(item.market ?? '').trim() || null;
-        const promoName = String(item.promoName ?? '').trim() || null;
-        const promoType = String(item.promoType ?? '').trim() || null;
-
-        await prisma.cpsPerformance.upsert({
-          where: { campaignCreatorId_contentType: { campaignCreatorId: link.id, contentType } },
-          create: {
-            campaignCreatorId: link.id,
-            contentType,
-            linkUrl: String(item.linkUrl ?? '') || null,
-            clicks, impressions, orders,
-            gmv, commission, spend,
-            productName, category, market, promoName, promoType,
-          },
-          update: {
-            linkUrl: String(item.linkUrl ?? '') || null,
-            clicks, impressions, orders,
-            gmv, commission, spend,
-            productName, category, market, promoName, promoType,
-          },
-        });
-        updated++;
-      } catch {
-        skipped++;
-      }
-    }
-    return { updated, skipped };
-  },
-
   /** 导入订单商品明细（联盟平台订单导出）。幂等：(campaignId, orderId) 重导覆盖。 */
   async importOrders(_ownerId: string, items: Record<string, unknown>[]) {
     let updated = 0, skipped = 0;
@@ -1173,19 +1184,45 @@ export const importService = {
         const orderStatus = String(rows[0].orderStatus ?? '').trim() || null;
         const mirrored = mirrorOrderFields(rows[0]);
 
-        // 媒体归因（publisher 维度）：★ clickRef（媒体实际投放链接）域名归一化 → Publisher upsert。
-        // 不用 publisherUrl 域名——那是业务线跟踪域名（如 dc.digchic.com），全部订单同域，不区分媒体。
+        // 媒体归因（publisher 维度）：★ clickRef（媒体实际投放链接）域名归一化 -> Publisher upsert。
+        // 不用 publisherUrl 域名--那是业务线跟踪域名（如 dc.digchic.com），全部订单同域，不区分媒体。
         let publisherId: string | null = null;
-        const refDomain = normPublisherDomain(mirrored.clickRef)
-          || normPublisherDomain(mirrored.publisherUrl)  // clickRef 缺失时退回（宁可挂跟踪域名也不空）
-          || normPublisherDomain(mirrored.siteName);
-        if (refDomain) {
-          const pub = await prisma.publisher.upsert({
-            where: { domain: refDomain },
-            create: { name: String(mirrored.siteName || refDomain).slice(0, 190), domain: refDomain, type: 'media_site' },
-            update: {},
+        // ★ 闭环挂链（0826 定稿：订单来自链接，链接来自媒体合作）。
+        //   优先级 1：合作行 -> 该合作的链接（LP.campaignCreatorId 1:1）；publisher 取链接的媒体
+        //   （clickRef 是达人主页域名，与链接的跟踪域名不同源--以此避免造出无主媒体）。
+        let linkPerformanceId: string | null = null;
+        if (campaignCreatorId) {
+          const lp = await prisma.linkPerformance.findFirst({
+            where: { campaignCreatorId },
+            select: { id: true, publisherId: true },
           });
-          publisherId = pub.id;
+          if (lp) { linkPerformanceId = lp.id; publisherId = lp.publisherId; }
+        }
+        //   优先级 2（合作行无链接/无合作行）：clickRef 域名 -> Publisher upsert。
+        if (!publisherId) {
+          const refDomain = normPublisherDomain(mirrored.clickRef)
+            || normPublisherDomain(mirrored.publisherUrl)  // clickRef 缺失时退回（宁可挂跟踪域名也不空）
+            || normPublisherDomain(mirrored.siteName);
+          if (refDomain) {
+            const pub = await prisma.publisher.upsert({
+              where: { domain: refDomain },
+              create: { name: String(mirrored.siteName || refDomain).slice(0, 190), domain: refDomain, type: 'media_site' },
+              update: {},
+            });
+            publisherId = pub.id;
+          }
+        }
+        //   优先级 2 续：同 (campaign, publisher) 唯一链接且归因不冲突（LP.cc 空或=本单 cc）才挂，
+        //   防张冠李戴（如 FB 群订单误挂 Fillmyfamily 的 facebook.com 链接）。宁缺勿假。
+        if (publisherId && !linkPerformanceId) {
+          const lps = await prisma.linkPerformance.findMany({
+            where: { campaignId, publisherId },
+            select: { id: true, campaignCreatorId: true },
+          });
+          const [lp] = lps;
+          if (lps.length === 1 && (!lp.campaignCreatorId || !campaignCreatorId || lp.campaignCreatorId === campaignCreatorId)) {
+            linkPerformanceId = lp.id;
+          }
         }
 
         // 商品行（挂 Product 主档：name+sku 匹配自动 upsert）
@@ -1222,7 +1259,7 @@ export const importService = {
           await prisma.campaignOrder.update({
             where: { id: existing.id },
             data: {
-              campaignCreatorId, orderDate, orderStatus, publisherId,
+              campaignCreatorId, orderDate, orderStatus, publisherId, linkPerformanceId,
               ...mirrored,
               items: { deleteMany: {} },   // 清空旧商品行
             },
@@ -1233,7 +1270,7 @@ export const importService = {
         } else {
           await prisma.campaignOrder.create({
             data: {
-              campaignId, orderId, campaignCreatorId, orderDate, orderStatus, publisherId,
+              campaignId, orderId, campaignCreatorId, orderDate, orderStatus, publisherId, linkPerformanceId,
               ...mirrored,
               items: { create: itemRows.map((r, i) => ({ ...r, productId: productIds[i] })) },
             },
@@ -1267,75 +1304,14 @@ export const importService = {
     return { updated, skipped };
   },
 
-  /** 导入 CPS 每日明细（合并到 CpsPerformance.daily JSON）。 */
-  async importCpsDaily(_ownerId: string, items: Record<string, unknown>[]) {
-    let updated = 0, skipped = 0;
-    // 按 (campaignId, creatorId, contentType) 分组
-    const grouped = new Map<string, Record<string, unknown>[]>();
-    for (const item of items) {
-      const key = `${String(item.campaignId)}::${String(item.creatorId)}::${String(item.contentType)}`;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(item);
-    }
-
-    for (const [key, dailyRows] of grouped) {
-      try {
-        const [campaignId, creatorId, contentType] = key.split('::');
-        const link = await prisma.campaignCreator.findFirst({
-          where: { campaignId, creatorId },
-        });
-        if (!link) { skipped += dailyRows.length; continue; }
-
-        const existingCps = await prisma.cpsPerformance.findUnique({
-          where: { campaignCreatorId_contentType: { campaignCreatorId: link.id, contentType } },
-        });
-
-        // 合并每日数据
-        const existingDaily = new Map<string, Record<string, unknown>>();
-        if (existingCps?.daily) {
-          const arr = (existingCps.daily as unknown as { date: string }[]) || [];
-          for (const d of arr) {
-            if (d.date) existingDaily.set(d.date, d as Record<string, unknown>);
-          }
-        }
-
-        for (const row of dailyRows) {
-          const date = String(row.date ?? '');
-          if (!date) continue;
-          existingDaily.set(date, {
-            date,
-            ...('dailyClicks' in row && row.dailyClicks ? { clicks: String(row.dailyClicks) } : {}),
-            ...('dailyImpressions' in row && row.dailyImpressions ? { impressions: String(row.dailyImpressions) } : {}),
-            ...('dailyOrders' in row && row.dailyOrders ? { orders: String(row.dailyOrders) } : {}),
-            ...('dailyGmv' in row && row.dailyGmv ? { gmv: String(row.dailyGmv).replace(/^[$]/, '') } : {}),
-            ...('dailyCommission' in row && row.dailyCommission ? { commission: String(row.dailyCommission).replace(/^[$]/, '') } : {}),
-            ...('dailySpend' in row && row.dailySpend ? { spend: String(row.dailySpend).replace(/^[$]/, '') } : {}),
-            ...('dailyNewCustomers' in row && row.dailyNewCustomers ? { newCustomers: String(row.dailyNewCustomers) } : {}),
-          });
-        }
-
-        const mergedDaily = [...existingDaily.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-
-        if (existingCps) {
-          await prisma.cpsPerformance.update({
-            where: { campaignCreatorId_contentType: { campaignCreatorId: link.id, contentType } },
-            data: { daily: mergedDaily as unknown as Prisma.InputJsonValue },
-          });
-        } else {
-          await prisma.cpsPerformance.create({
-            data: {
-              campaignCreatorId: link.id,
-              contentType,
-              daily: mergedDaily as unknown as Prisma.InputJsonValue,
-            },
-          });
-        }
-        updated += dailyRows.length;
-      } catch {
-        skipped += dailyRows.length;
-      }
-    }
-    return { updated, skipped };
+  /**
+   * @deprecated cps-daily 导入已废弃（0826 决策：CpsPerformance 冻结只读）。
+   * 流量/成本每日数据请用 importLinkPerformance（带 date 列 → daily 数组式同日覆盖）；
+   * 成交/新客一律从订单导入（importOrders）现算，无单独导入通道。
+   * 保留空实现返回 0，老客户端调用不报错。
+   */
+  async importCpsDaily(_ownerId: string, _items: Record<string, unknown>[]) {
+    return { updated: 0, skipped: 0 };
   },
 };
 
@@ -1422,9 +1398,12 @@ export const cpsOverviewService = {
         gmv: Number(lp.gmv), commission: Number(lp.commission), spend: Number(lp.spend),
         daily: Object.fromEntries(daily),
       };
-      const ccId = lp.publisher?.creatorId
-        ? ccRows.find((cc) => cc.creatorId === lp.publisher?.creatorId)?.id
-        : undefined;
+      // ★ 0826 闭环：直接 FK 优先；publisher.creatorId 仅未回填存量兜底
+      //（共享域名 publisher 如 facebook.com 无 creatorId，靠间接推导必丢——社群 LP 全靠直接 FK）。
+      const ccId = (lp.campaignCreatorId && ccRows.some((cc) => cc.id === lp.campaignCreatorId) ? lp.campaignCreatorId : null)
+        ?? (lp.publisher?.creatorId
+          ? ccRows.find((cc) => cc.creatorId === lp.publisher?.creatorId)?.id
+          : undefined);
       const key = ccId ?? '__campaign__';
       if (!lpByCc.has(key)) lpByCc.set(key, []);
       lpByCc.get(key)!.push(row);

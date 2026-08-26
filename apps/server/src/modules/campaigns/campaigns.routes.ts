@@ -60,8 +60,6 @@ router.post('/import/creators', campaignController.importCreators);
 router.post('/import/creator-audience', campaignController.importCreatorAudience);
 router.post('/import/creator-works', campaignController.importCreatorWorks);
 router.post('/import/collaboration-daily', campaignController.importCollaborationDaily);
-router.post('/import/cps', campaignController.importCps);
-router.post('/import/cps-daily', campaignController.importCpsDaily);
 router.post('/import/link-performance', campaignController.importLinkPerformance);
 router.post('/import/orders', campaignController.importOrders);
 router.get('/:id/cps-overview', campaignController.cpsOverview);

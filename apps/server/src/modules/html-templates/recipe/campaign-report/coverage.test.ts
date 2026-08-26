@@ -4,11 +4,12 @@ import { computeCoverage } from './coverage';
 
 /** 造一个带 daily 的 campaign 行(形状对齐 mapper include 返回)。 */
 function campWithDaily(dates: string[]) {
+  // ★ 真源切换(cps-daily 废弃)：daily 日期集合来自 LinkPerformance.daily
   return {
     startDate: '2026-10-01', endDate: '2026-10-31',
-    campaignCreators: [{
-      cpsPerformances: [{ daily: dates.map((date) => ({ date, clicks: '1', orders: '1', gmv: '1' })) }],
-    }],
+    linkPerformances: [
+      { daily: dates.map((date) => ({ date, clicks: '1', impressions: '1', spend: '1' })) },
+    ],
   };
 }
 

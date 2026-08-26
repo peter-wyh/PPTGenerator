@@ -13,6 +13,7 @@
  */
 
 import { prisma } from '../../prisma';
+import { loadCreatorCps } from './cps-source';
 
 type Any = Record<string, any>;
 
@@ -87,7 +88,6 @@ export async function extractPeriodData(
         include: {
           creator: true,
           performance: true,
-          cpsPerformances: true,
         },
       },
       businessLine: true,
@@ -101,19 +101,23 @@ export async function extractPeriodData(
   const inPeriod = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
   const num = (v: unknown) => Number(v) || 0;
 
+  // ★ 取数真源切换（cps-daily 导入废弃）：流量侧 LinkPerformance + 成交侧 CampaignOrder。
+  //   CpsPerformance 冻结只读，不再消费。
+  const cps = await loadCreatorCps(campaignId);
+
   // 1) 每个创作者的期内 daily 求和
   const perCreator: { cc: Any; sum: { clicks: number; orders: number; gmv: number; newCustomers: number; commission: number } }[] =
     (campaign.campaignCreators ?? []).map((cc: Any) => {
       const sum = { clicks: 0, orders: 0, gmv: 0, newCustomers: 0, commission: 0 };
-      for (const p of cc.cpsPerformances ?? []) {
-        for (const d of (p.daily as Any[] | null | undefined) ?? []) {
-          const date = String(d.date ?? '');
-          if (!date || !inPeriod(date)) continue;
-          sum.clicks += num(d.clicks);
-          sum.orders += num(d.orders);
-          sum.gmv += num(d.gmv);
-          sum.newCustomers += num(d.newCustomers);
-          sum.commission += num(d.commission ?? d.gmv * 0.1); // fallback 10%
+      const e = cps.byCc.get(cc.id);
+      if (e) {
+        for (const [date, cell] of e.daily) {
+          if (!inPeriod(date)) continue;
+          sum.clicks += cell.clicks;
+          sum.orders += cell.orders;
+          sum.gmv += cell.gmv;
+          sum.newCustomers += cell.newCustomers;
+          sum.commission += cell.commission;
         }
       }
       return { cc, sum };
@@ -134,10 +138,8 @@ export async function extractPeriodData(
   const aov = total.orders ? total.gmv / total.orders : 0;
   void aov; // used below in finalAov fallback
 
-  // 3) 如果 CPS daily 为空，降级到 campaign.metrics 全量数据
-  const hasDaily = (campaign.campaignCreators ?? []).some((cc: Any) =>
-    (cc.cpsPerformances ?? []).some((p: Any) => Array.isArray(p.daily) && p.daily.length > 0),
-  );
+  // 3) 如果期内 daily 为空，降级到 campaign.metrics 全量数据
+  const hasDaily = cps.dailyRowCount > 0;
 
   let finalTotal = total;
   let finalPerCreator = perCreator;
@@ -151,17 +153,17 @@ export async function extractPeriodData(
       newCustomers: num(m.newCustomers),
       commission: num(m.commission),
     };
-    // 用 campaignCreators 的 CPS 聚合数据
+    // 用 LP 聚合列 + 订单表全量兜底
     finalPerCreator = (campaign.campaignCreators ?? []).map((cc: Any) => {
-      const cps = cc.cpsPerformances?.[0];
+      const e = cps.byCc.get(cc.id);
       return {
         cc,
         sum: {
-          clicks: num(cps?.clicks),
-          orders: num(cps?.orders),
-          gmv: num(cps?.gmv ?? cps?.revenue),
-          newCustomers: num(cps?.newCustomers),
-          commission: num(cps?.commission),
+          clicks: e?.clicks ?? 0,
+          orders: e?.orders ?? 0,
+          gmv: e?.gmv ?? 0,
+          newCustomers: e?.newCustomers ?? 0,
+          commission: e?.commission ?? 0,
         },
       };
     });
@@ -213,20 +215,11 @@ export async function extractPeriodData(
       engagementRate: num(cc.performance?.engagementRate),
     }));
 
-  // 6) Trend（跨创作者按 date 分组）
+  // 6) Trend（跨创作者按 date 分组——campaign 级每日合并）
   const byDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
-  for (const cc of campaign.campaignCreators ?? []) {
-    for (const p of cc.cpsPerformances ?? []) {
-      for (const d of (p.daily as Any[] | null | undefined) ?? []) {
-        const date = String(d.date ?? '');
-        if (!date || !inPeriod(date)) continue;
-        const entry = byDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0 };
-        entry.revenue += num(d.gmv);
-        entry.clicks += num(d.clicks);
-        entry.orders += num(d.orders);
-        byDate.set(date, entry);
-      }
-    }
+  for (const [date, cell] of cps.campaignDaily) {
+    if (!inPeriod(date)) continue;
+    byDate.set(date, { revenue: cell.gmv, clicks: cell.clicks, orders: cell.orders });
   }
   const dates = [...byDate.keys()].sort();
   const trend = dates.map((d) => ({
