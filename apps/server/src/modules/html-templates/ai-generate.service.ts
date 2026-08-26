@@ -198,11 +198,13 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      with mom % delta badges (green up / red down). mom=null means prior period was 0 — show "N/A".
    - Media placements (mediaPlacements, when present) → STYLIZED image card grid: each card = screenshot
      image with rounded-xl corners, subtle shadow (box-shadow), hover lift effect (transform:translateY(-2px)),
-     a gradient overlay strip at the bottom carrying the placement name in white bold text, and a small
+     a gradient overlay strip at the bottom carrying the placementName in white bold text, and a small
      platform tag chip (top-left, semi-transparent dark pill). object-fit:cover, aspect-ratio ~16:10,
-     responsive 2-4 per row. When screenshotUrl is missing, render a styled placeholder (soft gradient
-     background + centered camera icon + placement name) — NOT a plain dashed box. Qualitative showcase —
-     no numeric metrics needed.
+     responsive 2-4 per row. When postUrl exists, make the whole card clickable (open in new tab).
+     When screenshotUrl is missing, render a styled placeholder (soft gradient background + centered
+     camera icon + placementName) — NOT a plain dashed box. NOTE: for creator-type placements, the
+     screenshot is the creator's real collaboration content (placementName like "Leo Sato — Reel") —
+     treat this section as the media placement showcase wall. Qualitative showcase — no numeric metrics.
    - Ranking (creator performance) → table with avatar, highlighted best values (NO tier column/tags)
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
@@ -1359,6 +1361,11 @@ export const aiGenerateService = {
         ...(m.description ? { description: m.description } : {}),
       })) ?? [];
 
+    // ★ 0826 用户要求：analytics.mediaPlacements 为空时回退达人合作作品截图墙。
+    //   媒体是达人的资源位 = 其 contentShowcase（Collaboration.deliverables[].screenshots）。
+    //   注意：此处 creators 数组在其后构建——回退在 creators 构建完成后执行（见下方 fallbackPlacements）。
+    let fallbackPlacements: Array<{ placementName: string; screenshotUrl: string; description: string; platform: string | null; postUrl: string | null }> = [];
+
     // ★ 真源切换(cps-daily 废弃)：creators 无 period 汇总时的聚合列真源（LP 流量+订单表现）
     //   仅无 period 时预取（有 period 走 perCreatorSums，无需查询）
     const syncSource = !hasPeriod ? await loadCreatorCps(campaignId) : null;
@@ -1512,6 +1519,8 @@ export const aiGenerateService = {
       //   mom 字段 = (cur-prior)/prior 百分比字符串（如 "+27.6%"）；null = 前一期为 0，无法计算。
       ...(priorPeriod ? { priorPeriod } : {}),
       // ★ 缺口④ 媒体资源位（定性）。
+      //   0826 用户要求：analytics.mediaPlacements 为空且媒体是达人时，
+      //   回退取达人合作作品截图（contentShowcase 同源）作为资源位截图墙。
       ...(mediaPlacements.length ? { mediaPlacements } : {}),
       // ★ 全媒体表现表（0826）：所有 publisher 的期内 clicks/orders/GMV/Commission——
       //   Creator Breakdown 表的数据源，覆盖 media_site/community/content_site 等非达人媒体。
@@ -1641,6 +1650,28 @@ export const aiGenerateService = {
         .filter((cc) => cc._periodActive !== false),
     };
 
+    // ★ 0826 资源位回退（creators 构建完成后）：analytics.mediaPlacements 为空时，
+    //   用达人合作作品截图组资源位墙——媒体是达人的资源位取其 contentShowcase 截图。
+    if (!mediaPlacements.length) {
+      fallbackPlacements = (context.creators as Array<{
+        name: string; platform: string | null;
+        contentShowcase?: Array<{ contentType: string | null; postUrl: string | null; screenshots: Array<{ url: string; caption: string | null }> }> | null;
+      }>)
+        .filter((c) => c.contentShowcase && c.contentShowcase.length)
+        .flatMap((c) => (c.contentShowcase ?? []).flatMap((d) =>
+          d.screenshots.map((s) => ({
+            placementName: `${c.name} — ${d.contentType ?? 'Collab Content'}`,
+            screenshotUrl: s.url,
+            description: s.caption ?? `${c.platform ? c.platform + ' ' : ''}creator collaboration content`,
+            platform: c.platform ?? null,
+            postUrl: d.postUrl ?? null,
+          }))));
+      if (fallbackPlacements.length) {
+        (context as { mediaPlacements?: unknown }).mediaPlacements = fallbackPlacements;
+        console.log(`[buildCampaignContext] mediaPlacements fallback: ${fallbackPlacements.length} creator-content placements injected`);
+      }
+    }
+
     return JSON.stringify(context, null, 2);
   },
 
@@ -1687,7 +1718,7 @@ export const aiGenerateService = {
     // 设 290s 主动中断，略早于 vite proxy 超时（600s）——确保 server 先返回
     // 友好的 JSON 错误，而不是让 proxy 返回裸 500（前端只看到 "Request failed with status code 500"）。
     // 429/5xx/网络抖动自动指数退避重试（最多 2 次，见 ai-client.ts）。
-    const DEEPSEEK_TIMEOUT_MS = 290_000;
+    const DEEPSEEK_TIMEOUT_MS = 540_000;
     const startedAt = Date.now();
 
     let response: Response;
@@ -1988,7 +2019,7 @@ Rules:
       : { role: 'user', content: userPrompt };
 
     // 编辑操作通常比全量生成快，但仍设 290s 超时保护（429/5xx/网络抖动自动重试，见 ai-client.ts）
-    const DEEPSEEK_TIMEOUT_MS = 290_000;
+    const DEEPSEEK_TIMEOUT_MS = 540_000;
     const startedAt = Date.now();
 
     let response: Response;
