@@ -245,9 +245,15 @@ export default function LinksPage() {
                           <span className="font-medium">{r.campaignName || r.campaignId}</span>
                         </td>
                         <td className="px-2 py-2">
-                          <span className="font-mono text-[10px] text-foreground-secondary max-w-[280px] block truncate" title={r.trackingUrl ?? undefined}>
-                            {r.trackingUrl ?? '—'}
-                          </span>
+                          <a
+                            href={r.trackingUrl ?? '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-[10px] text-link-default hover:underline"
+                            style={{ wordBreak: 'break-all' }}
+                          >
+                            {r.trackingUrl}
+                          </a>
                         </td>
                         <td className="whitespace-nowrap px-2 py-2">{r.publisher?.name ?? r.publisher?.domain ?? '—'}</td>
                         <td className="whitespace-nowrap px-2 py-2">{r.publisher ? (PUBLISHER_TYPE_LABEL[r.publisher.type] ?? r.publisher.type) : '—'}</td>
@@ -319,9 +325,15 @@ export default function LinksPage() {
                         </td>
                         <td className="whitespace-nowrap px-2 py-2">{r.campaignName || r.campaignId}</td>
                         <td className="px-2 py-2">
-                          <span className="font-mono text-[10px] text-foreground-secondary max-w-[260px] block truncate" title={r.trackingUrl}>
+                          <a
+                            href={r.trackingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-[10px] text-link-default hover:underline break-all"
+                            style={{ wordBreak: 'break-all' }}
+                          >
                             {r.trackingUrl}
-                          </span>
+                          </a>
                         </td>
                         <td className="whitespace-nowrap px-2 py-2">{r.publisher?.name ?? r.publisher?.domain ?? '—'}</td>
                         <td className="px-2 py-2 text-right">{r.orders.toLocaleString()}</td>
