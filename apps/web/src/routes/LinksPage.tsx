@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { campaignsApi, type LinkRow, type LinkDailyRow } from '@/api/campaignsApi';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
@@ -33,7 +33,10 @@ type Tab = 'summary' | 'daily';
 
 export default function LinksPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'daily' ? 'daily' : 'summary');
+  /** 子路由驱动页签：/data/links（=summary）| /data/links/daily（菜单下级独立路由） */
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tab: Tab = location.pathname.endsWith('/daily') ? 'daily' : 'summary';
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [campaignId, setCampaignId] = useState(searchParams.get('campaignId') ?? '');
   /** 达人筛选（合作详情浮窗跳转携带）：空=不过滤 */
@@ -73,10 +76,9 @@ export default function LinksPage() {
 
   // 加载按日明细
   const loadDaily = useCallback(async () => {
-    if (!campaignId) { setDailyRows([]); setDailyTotal(0); return; }
     setDailyLoading(true);
     try {
-      const r = await campaignsApi.listLinkDailyStats({ campaignId, creatorId: creatorId || undefined, page: dailyPage, pageSize: dailyPageSize });
+      const r = await campaignsApi.listLinkDailyStats({ campaignId: campaignId || undefined, creatorId: creatorId || undefined, page: dailyPage, pageSize: dailyPageSize });
       setDailyRows(r.rows);
       setDailyTotal(r.total);
     } catch { toast.error('加载按日明细失败'); }
@@ -91,7 +93,9 @@ export default function LinksPage() {
     setCampaignId(id); setPage(1); setDailyPage(1);
   }
   function switchTab(t: Tab) {
-    setTab(t); setPage(1); setDailyPage(1);
+    // 子路由切换（保留 query：campaignId/creatorId 筛选）
+    navigate(t === 'daily' ? '/data/links/daily' : '/data/links' + location.search, { replace: false });
+    setPage(1); setDailyPage(1);
   }
 
   useEffect(() => {
@@ -205,7 +209,7 @@ export default function LinksPage() {
           className={`rounded px-3 py-1 text-xs font-medium ${tab === 'daily'
             ? 'bg-accent-primary text-foreground-inverse'
             : 'bg-surface-secondary text-foreground-secondary hover:bg-surface-hover'}`}
-        >按日明细{!campaignId ? '（需选 Campaign）' : ''}</button>
+        >按日明细</button>
       </div>
 
       {/* ── 链接统计 ── */}
@@ -288,12 +292,10 @@ export default function LinksPage() {
       {/* ── 按日明细 ── */}
       {tab === 'daily' && (
         <>
-          {!campaignId ? (
-            <div className="py-12 text-center text-sm text-foreground-secondary">请先选择 Campaign</div>
-          ) : dailyLoading ? (
+          {dailyLoading ? (
             <div className="py-12 text-center text-sm text-foreground-secondary">加载中…</div>
           ) : dailyRows.length === 0 ? (
-            <div className="py-12 text-center text-sm text-foreground-secondary">该 Campaign 暂无按日明细</div>
+            <div className="py-12 text-center text-sm text-foreground-secondary">暂无按日明细</div>
           ) : (
             <>
               <div className="overflow-auto rounded-lg border border-border-default">
@@ -301,6 +303,8 @@ export default function LinksPage() {
                   <thead className="bg-surface-secondary text-foreground-secondary">
                     <tr>
                       <th className="sticky left-0 z-10 bg-surface-secondary px-2 py-2 text-left">日期</th>
+                      <th className="px-2 py-2 text-left">Campaign</th>
+                      <th className="px-2 py-2 text-left">Link</th>
                       <th className="px-2 py-2 text-left">媒体</th>
                       <th className="px-2 py-2 text-right">Orders</th>
                       <th className="px-2 py-2 text-right">GMV</th>
@@ -310,10 +314,12 @@ export default function LinksPage() {
                   <tbody className="divide-y divide-border-subtle">
                     {dailyRows.map((r) => (
                       <tr key={r.id} className="bg-surface-primary hover:bg-surface-hover/50">
-                        <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2" title={r.trackingUrl}>
+                        <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2">
                           <span className="font-medium">{r.statDate}</span>
-                          <br />
-                          <span className="font-mono text-[10px] text-foreground-secondary max-w-[260px] block truncate">
+                        </td>
+                        <td className="whitespace-nowrap px-2 py-2">{r.campaignName || r.campaignId}</td>
+                        <td className="px-2 py-2">
+                          <span className="font-mono text-[10px] text-foreground-secondary max-w-[260px] block truncate" title={r.trackingUrl}>
                             {r.trackingUrl}
                           </span>
                         </td>
@@ -326,7 +332,7 @@ export default function LinksPage() {
                   </tbody>
                   <tfoot className="border-t border-border-default bg-surface-secondary font-medium">
                     <tr>
-                      <td className="sticky left-0 z-10 bg-surface-secondary px-2 py-2" colSpan={2}>本页合计（{dailyRows.length} 条）</td>
+                      <td className="sticky left-0 z-10 bg-surface-secondary px-2 py-2" colSpan={3}>本页合计（{dailyRows.length} 条）</td>
                       <td className="px-2 py-2 text-right">{dSumOrders.toLocaleString()}</td>
                       <td className="px-2 py-2 text-right">{fmtMoney(dSumGmv)}</td>
                       <td className="px-2 py-2 text-right">{fmtMoney(dSumCommission)}</td>

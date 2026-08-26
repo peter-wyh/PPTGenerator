@@ -52,6 +52,7 @@ export function App() {
               <Route path="campaign-collabs" element={<CampaignCollabPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="links" element={<LinksPage />} />
+              <Route path="links/daily" element={<LinksPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="creators" element={<CreatorPage />} />
               <Route path="advertisers" element={<AdvertiserPage />} />

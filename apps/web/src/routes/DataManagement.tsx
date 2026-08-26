@@ -16,7 +16,13 @@ const MENUS: MenuItem[] = [
     ],
   },
   { path: '/data/orders', label: '订单明细' },
-  { path: '/data/links', label: 'TrackingLink' },
+  {
+    label: 'TrackingLink',
+    children: [
+      { path: '/data/links', label: '链接统计' },
+      { path: '/data/links/daily', label: '按日明细' },
+    ],
+  },
   { path: '/data/stats', label: '数据统计' },
   { path: '/data/creators', label: '达人库' },
   { path: '/data/advertisers', label: '广告主' },
@@ -33,9 +39,20 @@ function isActive(path: string, pathname: string) {
 export function DataManagement() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [expandedCampaign, setExpandedCampaign] = useState(
-    MENUS[0].children!.some((c) => isActive(c.path, location.pathname)),
-  );
+  // 通用多组展开：初始展开所有「含活跃子项」的组（当前路径命中即保持展开）
+  const [expandedLabels, setExpandedLabels] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    for (const m of MENUS) {
+      if (m.children?.some((c) => isActive(c.path, location.pathname))) s.add(m.label);
+    }
+    return s;
+  });
+  const toggle = (label: string) =>
+    setExpandedLabels((prev) => {
+      const s = new Set(prev);
+      if (s.has(label)) s.delete(label); else s.add(label);
+      return s;
+    });
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">
@@ -50,20 +67,21 @@ export function DataManagement() {
         <nav className="flex-1 overflow-auto px-2">
           {MENUS.map((menu) => {
             if (menu.children) {
-              // 有子菜单（Campaign）
+              // 有子菜单（可展开组）
               const anyActive = menu.children.some((c) => isActive(c.path, location.pathname));
+              const expanded = expandedLabels.has(menu.label);
               return (
                 <div key={menu.label} className="mb-1">
                   <button
-                    onClick={() => setExpandedCampaign(!expandedCampaign)}
+                    onClick={() => toggle(menu.label)}
                     className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
                       anyActive ? 'bg-accent-primary/10 text-accent-primary' : 'text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary'
                     }`}
                   >
                     <span>{menu.label}</span>
-                    <span className="text-xs">{expandedCampaign ? '▾' : '▸'}</span>
+                    <span className="text-xs">{expanded ? '▾' : '▸'}</span>
                   </button>
-                  {expandedCampaign && (
+                  {expanded && (
                     <div className="ml-2 mt-0.5 flex flex-col gap-0.5 border-l border-border-subtle pl-2">
                       {menu.children.map((child) => (
                         <button

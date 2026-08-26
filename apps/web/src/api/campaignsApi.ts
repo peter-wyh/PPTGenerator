@@ -273,7 +273,7 @@ export const campaignsApi = {
   listLinkPerformances: (params: { campaignId?: string; creatorId?: string; page?: number; pageSize?: number }) =>
     api.get<LinksPageResp>('/campaigns/links/list', { params }).then((r) => r.data),
   /** TrackingLink 按日明细（数据管理-链接数据页·按日明细）：campaignId 必填，creatorId/date 可选。 */
-  listLinkDailyStats: (params: { campaignId: string; creatorId?: string; date?: string; page?: number; pageSize?: number }) =>
+  listLinkDailyStats: (params: { campaignId?: string; creatorId?: string; date?: string; page?: number; pageSize?: number }) =>
     api.get<{ rows: LinkDailyRow[]; total: number; page: number; pageSize: number }>('/campaigns/links/daily', { params }).then((r) => r.data),
   /** 订单日统计（OrderDailyStat 透出）：campaign 必填；creatorBreakdown=true 看 creator×date 行。 */
   listOrderDailyStats: (params: { campaignId: string; creatorBreakdown?: boolean; page?: number; pageSize?: number }) =>
@@ -350,6 +350,7 @@ export interface LinkRow {
 export interface LinkDailyRow {
   id: string;
   campaignId: string;
+  campaignName?: string;
   trackingUrl: string;
   statDate: string;
   publisher: { id: string; name: string; domain: string; type: string; creatorId: string | null } | null;

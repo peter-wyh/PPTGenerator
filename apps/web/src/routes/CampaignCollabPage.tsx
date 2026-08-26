@@ -905,7 +905,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                     partnerType={creator.partnerType}
                     onChange={(d) => setDeliverable(i, d)}
                     onRemove={() => removeDeliverable(i)}
-                    onOpenDaily={() => navigate(`/data/links?campaignId=${encodeURIComponent(row.campaignId)}&creatorId=${encodeURIComponent(row.creatorId)}&tab=daily`)}
+                    onOpenDaily={() => navigate(`/data/links/daily?campaignId=${encodeURIComponent(row.campaignId)}&creatorId=${encodeURIComponent(row.creatorId)}`)}
                   />
                 ))}
               </div>
