@@ -869,7 +869,7 @@ export const aiGenerateService = {
     const campaign = await prisma.campaign.findUnique({
       where: { id: campaignId },
       include: {
-        campaignCreators: { include: { creator: true, cpsPerformances: true } },
+        campaignCreators: { include: { creator: true, cpsPerformances: true, collaboration: true } },
         // ★ 链接效果真源（LinkPerformance）：链接维度流量/成交——与 cpsPerformances 双读合并（去重）
         linkPerformances: { include: { publisher: { select: { id: true, creatorId: true } } } },
       },
@@ -939,6 +939,22 @@ export const aiGenerateService = {
       | { name?: string }[]
       | undefined)
       ?.filter((m) => m?.name) ?? [];
+    // ★ 0826 对齐 buildCampaignContext 回退口径:analytics.mediaPlacements 为空时,
+    //   达人合作作品截图(contentShowcase 同源)也构成资源位墙——预检不应误报缺失。
+    const fallbackPlacementCount = mediaPlacements.length
+      ? 0
+      : campaign.campaignCreators.reduce((sum, cc) => {
+          const dels = ((cc.collaboration?.deliverables ?? []) as Array<{
+            screenshots?: Array<{ src?: string }>;
+          }>).map((d) => d ?? {});
+          return (
+            sum +
+            dels.reduce(
+              (s, d) => s + (d.screenshots ?? []).filter((s2) => s2?.src && String(s2.src).trim()).length,
+              0,
+            )
+          );
+        }, 0);
 
     // 4b) 营销活动(MarketingEvent):与 buildCampaignContext marketingEvents 注入同口径
     //     —— 业务线内与报告周期重叠(label≠'1' 废弃)的活动数。
@@ -1019,8 +1035,13 @@ export const aiGenerateService = {
       {
         key: 'mediaPlacements',
         label: 'Campaign Placements',
-        status: mediaPlacements.length > 0 ? 'ok' : 'missing',
-        detail: mediaPlacements.length > 0 ? `${mediaPlacements.length} 个资源位` : '未配置资源位（analytics.mediaPlacements），模块将缺失',
+        status: mediaPlacements.length > 0 || fallbackPlacementCount > 0 ? 'ok' : 'missing',
+        detail:
+          mediaPlacements.length > 0
+            ? `${mediaPlacements.length} 个资源位`
+            : fallbackPlacementCount > 0
+              ? `${fallbackPlacementCount} 张达人作品截图（资源位回退）`
+              : '未配置资源位（analytics.mediaPlacements），模块将缺失',
       },
       {
         key: 'marketingEvents',
@@ -1409,6 +1430,15 @@ export const aiGenerateService = {
     const allMedia = (() => {
       const byPub = new Map<string, { name: string; type: string; platform: string | null; creatorName: string | null; clicks: number; orders: number; gmv: number; commission: number }>();
       const inPeriod2 = (d: string) => (!reportPeriod?.startDate || d >= reportPeriod.startDate) && (!reportPeriod?.endDate || d <= reportPeriod.endDate);
+      // ★ PLATFORM 修复（0827）：publisher.platform 常为 NULL（达人型媒体的平台真源在 Creator 表），
+      //   经 LP.campaignCreatorId 闭环 FK 反查 cc.creator.platform 兜底；非达人型媒体保持 publisher.platform。
+      const ccById = new Map(campaign.campaignCreators.map((c) => [c.id, c]));
+      const pubPlatform = new Map<string, string | null>();
+      for (const lp of campaign.linkPerformances ?? []) {
+        if (!lp.publisher) continue;
+        const cc = lp.campaignCreatorId ? ccById.get(lp.campaignCreatorId) : undefined;
+        pubPlatform.set(lp.publisher.id, lp.publisher.platform ?? cc?.creator?.platform ?? null);
+      }
       for (const lp of campaign.linkPerformances ?? []) {
         const pub = lp.publisher;
         if (!pub) continue;
@@ -1419,7 +1449,7 @@ export const aiGenerateService = {
           if (!inPeriod2(date)) continue;
           clicks += Number(d?.clicks) || 0;
         }
-        const e = byPub.get(pub.id) ?? { name: pub.name, type: pub.type, platform: pub.platform ?? null, creatorName: null, clicks: 0, orders: 0, gmv: 0, commission: 0 };
+        const e = byPub.get(pub.id) ?? { name: pub.name, type: pub.type, platform: pubPlatform.get(pub.id) ?? null, creatorName: null, clicks: 0, orders: 0, gmv: 0, commission: 0 };
         e.clicks += clicks;
         byPub.set(pub.id, e);
       }
