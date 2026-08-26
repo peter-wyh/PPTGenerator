@@ -29,21 +29,6 @@ export const globalLimiter = rateLimit({
 });
 
 /**
- * 登录限流（防暴力破解）：10 次 / 5 分钟 / IP。
- * 登录前无 user，只能按 IP；密码错 5 次即锁窗口。
- */
-export const loginLimiter = rateLimit({
-  store: new RedisStore({ sendCommand }),
-  windowMs: 5 * 60 * 1000,
-  // ★ dev 放宽到 60 次,生产维持 10——本地调试(冒烟脚本/热重载)频繁登录不再卡限流
-  limit: process.env.NODE_ENV === 'production' ? 10 : 60,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ''),
-  message: { error: 'TOO_MANY_REQUESTS', message: '尝试次数过多，请 5 分钟后再试' },
-});
-
-/**
  * AI 生成限流（防滥用烧钱）：20 次 / 小时 / 用户。
  * 单次生成约 14K output tokens，必须按用户配额。
  */
