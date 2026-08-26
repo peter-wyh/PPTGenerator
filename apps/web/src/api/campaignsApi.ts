@@ -335,6 +335,9 @@ export interface LinkRow {
   trackingUrl: string | null;
   linkKey: string;
   publisher: { id: string; name: string; domain: string; type: string; creatorId: string | null } | null;
+  /** Clicks（媒体链接口径，自 Click References/LinkPerformance 匹配；无匹配=null 显示 —）。 */
+  clicks: number | null;
+  impressions: number | null;
   orders: number;
   gmv: number;
   commission: number;

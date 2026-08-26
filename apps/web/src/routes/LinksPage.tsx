@@ -137,6 +137,8 @@ export default function LinksPage() {
   const dailyTotalPages = Math.max(1, Math.ceil(dailyTotal / dailyPageSize));
   const sumOrders = rows.reduce((s, r) => s + r.orders, 0);
   const sumGmv = rows.reduce((s, r) => s + r.gmv, 0);
+  // Clicks 合计：全页无匹配才显示 —（部分有匹配则合计已知部分）
+  const sumClicks = rows.every((r) => r.clicks == null) ? null : rows.reduce((s, r) => s + (r.clicks ?? 0), 0);
   const sumCommission = rows.reduce((s, r) => s + r.commission, 0);
   const dSumOrders = dailyRows.reduce((s, r) => s + r.orders, 0);
   const dSumGmv = dailyRows.reduce((s, r) => s + r.gmv, 0);
@@ -221,8 +223,10 @@ export default function LinksPage() {
                   <thead className="bg-surface-secondary text-foreground-secondary">
                     <tr>
                       <th className="sticky left-0 z-10 bg-surface-secondary px-2 py-2 text-left">Campaign</th>
+                      <th className="px-2 py-2 text-left">Link</th>
                       <th className="px-2 py-2 text-left">媒体</th>
                       <th className="px-2 py-2 text-left">类型</th>
+                      <th className="px-2 py-2 text-right">Clicks</th>
                       <th className="px-2 py-2 text-right">Orders</th>
                       <th className="px-2 py-2 text-right">GMV</th>
                       <th className="px-2 py-2 text-right">Commission</th>
@@ -233,15 +237,19 @@ export default function LinksPage() {
                   <tbody className="divide-y divide-border-subtle">
                     {rows.map((r) => (
                       <tr key={r.id} className="bg-surface-primary hover:bg-surface-hover/50">
-                        <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2" title={r.trackingUrl ?? undefined}>
+                        <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2">
                           <span className="font-medium">{r.campaignName || r.campaignId}</span>
-                          <br />
-                          <span className="font-mono text-[10px] text-foreground-secondary max-w-[260px] block truncate">
+                        </td>
+                        <td className="px-2 py-2">
+                          <span className="font-mono text-[10px] text-foreground-secondary max-w-[280px] block truncate" title={r.trackingUrl ?? undefined}>
                             {r.trackingUrl ?? '—'}
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-2 py-2">{r.publisher?.name ?? r.publisher?.domain ?? '—'}</td>
                         <td className="whitespace-nowrap px-2 py-2">{r.publisher ? (PUBLISHER_TYPE_LABEL[r.publisher.type] ?? r.publisher.type) : '—'}</td>
+                        <td className="px-2 py-2 text-right text-foreground-secondary" title={r.clicks == null ? '无 Click References 匹配' : undefined}>
+                          {r.clicks == null ? '—' : r.clicks.toLocaleString()}
+                        </td>
                         <td className="px-2 py-2 text-right">{r.orders.toLocaleString()}</td>
                         <td className="px-2 py-2 text-right">{fmtMoney(r.gmv)}</td>
                         <td className="px-2 py-2 text-right">{fmtMoney(r.commission)}</td>
@@ -252,7 +260,8 @@ export default function LinksPage() {
                   </tbody>
                   <tfoot className="border-t border-border-default bg-surface-secondary font-medium">
                     <tr>
-                      <td className="sticky left-0 z-10 bg-surface-secondary px-2 py-2" colSpan={3}>本页合计（{rows.length} 条）</td>
+                      <td className="sticky left-0 z-10 bg-surface-secondary px-2 py-2" colSpan={4}>本页合计（{rows.length} 条）</td>
+                      <td className="px-2 py-2 text-right">{sumClicks == null ? '—' : sumClicks.toLocaleString()}</td>
                       <td className="px-2 py-2 text-right">{sumOrders.toLocaleString()}</td>
                       <td className="px-2 py-2 text-right">{fmtMoney(sumGmv)}</td>
                       <td className="px-2 py-2 text-right">{fmtMoney(sumCommission)}</td>

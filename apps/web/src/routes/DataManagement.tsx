@@ -13,11 +13,11 @@ const MENUS: MenuItem[] = [
     children: [
       { path: '/data/campaigns', label: 'Campaign 列表' },
       { path: '/data/campaign-collabs', label: '合作列表' },
-      { path: '/data/orders', label: '订单明细' },
-      { path: '/data/links', label: 'TrackingLink' },
-      { path: '/data/stats', label: '数据统计' },
     ],
   },
+  { path: '/data/orders', label: '订单明细' },
+  { path: '/data/links', label: 'TrackingLink' },
+  { path: '/data/stats', label: '数据统计' },
   { path: '/data/creators', label: '达人库' },
   { path: '/data/advertisers', label: '广告主' },
   { path: '/data/marketing-events', label: '营销活动' },
@@ -44,7 +44,7 @@ export function DataManagement() {
         <div className="px-4 py-4">
           <h1 className="font-headings text-lg font-semibold text-foreground-primary">数据管理</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
-            Campaign · 达人 · 广告主 · 业务线
+            Campaign · 订单 · 链接 · 达人 · 业务线
           </p>
         </div>
         <nav className="flex-1 overflow-auto px-2">
