@@ -7,7 +7,7 @@
  * 点击「详情」打开右侧浮窗，展示每部作品的详细数据。
  */
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { campaignsApi, dtoToCampaign, dtoToCreator, type CpsOverview } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediakit/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
@@ -715,6 +715,7 @@ export function CampaignCollabPage() {
 /* ============================= 右侧浮窗 ============================= */
 
 function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () => void; onUpdate: () => void }) {
+  const navigate = useNavigate();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
@@ -904,6 +905,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                     partnerType={creator.partnerType}
                     onChange={(d) => setDeliverable(i, d)}
                     onRemove={() => removeDeliverable(i)}
+                    onOpenDaily={() => navigate(`/data/links?campaignId=${encodeURIComponent(row.campaignId)}&creatorId=${encodeURIComponent(row.creatorId)}&tab=daily`)}
                   />
                 ))}
               </div>
@@ -922,7 +924,7 @@ const CONTENT_TYPES: string[] = ['post', 'reels', 'video', 'image', 'live', 'sto
 /** 平台下拉选项 */
 const PLATFORM_OPTIONS: string[] = ['TikTok', 'Instagram', 'YouTube', 'Douyin', 'RED', 'Weibo', 'Bilibili', 'Twitter', 'Facebook'];
 
-/** 指标解释说明 — 鼠标 hover title 显示 */
+/** 指标解释说明 — 悬浮 title 显示（效果数据已改从每日聚合，hints 随手填 metrics 编辑模式保留） */
 const METRIC_HINTS: Record<string, string> = {
   曝光: '内容被展示的总次数（impressions）',
   播放量: '视频被播放的总次数',
@@ -934,6 +936,7 @@ const METRIC_HINTS: Record<string, string> = {
   互动量: '点赞+评论+转发+收藏的总和',
   互动率: '互动量 ÷ 曝光 × 100%，衡量内容质量',
 };
+void METRIC_HINTS;
 
 /* ───────── P1-14: 效果数据 icon 库（24 个常用图标，纯内联 SVG，无外部依赖） ───────── */
 const METRIC_ICONS: { name: string; path: string }[] = [
@@ -1024,14 +1027,7 @@ function IconPicker({ value, onChange }: { value?: string; onChange: (icon: stri
   );
 }
 
-/** 小信息点图标 */
-function InfoDot() {
-  return (
-    <svg className="w-2.5 h-2.5 inline-block shrink-0 opacity-40" viewBox="0 0 12 12" fill="currentColor">
-      <path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2a.75.75 0 110 1.5.75.75 0 010-1.5zm-.75 2.5h1.5v4H5.25v-4z" />
-    </svg>
-  );
-}
+/** 小信息点图标 InfoDot —— 已无引用（效果数据改聚合渲染），随本提交删除 */
 
 function DeliverableCard({
   deliverable,
@@ -1040,6 +1036,7 @@ function DeliverableCard({
   partnerType,
   onChange,
   onRemove,
+  onOpenDaily,
 }: {
   deliverable: CollaborationDeliverable;
   index: number;
@@ -1047,6 +1044,8 @@ function DeliverableCard({
   partnerType?: PartnerType;
   onChange: (d: CollaborationDeliverable) => void;
   onRemove: () => void;
+  /** 跳转链接数据页（按 tracking link 筛选）查看每日明细 */
+  onOpenDaily?: () => void;
 }) {
   const { contentType, screenshots = [], metrics = [], audience, wordcloud = [] } = deliverable;
 
@@ -1167,56 +1166,72 @@ function DeliverableCard({
         )}
       </div>
 
-      {/* 效果数据（含 CPS 挂链汇总） */}
+      {/* 效果数据：非编辑模式从每日数据聚合（impression/likes/... = Σ daily），不再用手填 metrics */}
       <div className="mb-2">
-        <div className="flex items-center gap-1 text-[10px] text-foreground-secondary mb-1">
-          <span>效果数据</span>
-          {editing && (
-            <button onClick={() => setMetrics([...metrics, { label: '', value: '' }])} className="text-accent-primary hover:underline">+ 添加</button>
-          )}
-        </div>
-        {metrics.length === 0 ? (
-          <span className="text-foreground-muted">—</span>
-        ) : (
-          <>
-            {/* 基础互动指标 */}
-            {metrics.length > 0 && (
+        {!editing ? (() => {
+          const daily = deliverable.daily ?? [];
+          const cpsDaily = deliverable.cps?.daily ?? [];
+          const sum = (key: 'impressions' | 'likes' | 'comments' | 'shares' | 'saves') =>
+            daily.reduce((s, d) => s + (parseFloat(d[key]) || 0), 0);
+          const fmt = (n: number) => n >= 10000 ? `${(n / 1000).toFixed(1)}K` : Math.round(n).toLocaleString('en-US');
+          const rows: Array<[string, string, string]> = [
+            ['曝光', daily.length ? fmt(sum('impressions')) : '—', 'Σ 每日曝光'],
+            ['点赞', daily.length ? fmt(sum('likes')) : '—', 'Σ 每日点赞'],
+            ['评论', daily.length ? fmt(sum('comments')) : '—', 'Σ 每日评论'],
+            ['转发', daily.length ? fmt(sum('shares')) : '—', 'Σ 每日转发'],
+            ['收藏', daily.length ? fmt(sum('saves')) : '—', 'Σ 每日收藏'],
+          ];
+          if (cpsDaily.length) {
+            const cSum = (key: 'clicks' | 'orders') => cpsDaily.reduce((s, d) => s + (parseFloat(String(d[key])) || 0), 0);
+            rows.push(['点击', fmt(cSum('clicks')), 'Σ 每日点击'], ['订单', fmt(cSum('orders')), 'Σ 每日订单']);
+            const gmv = cpsDaily.reduce((s, d) => s + (parseFloat(d.gmv.replace(/[^0-9.-]/g, '')) || 0), 0);
+            if (gmv > 0) rows.push(['GMV', `$${fmt(gmv)}`, 'Σ 每日 GMV']);
+          }
+          return (
+            <>
+              <div className="flex items-center gap-1 text-[10px] text-foreground-secondary mb-1">
+                <span>效果数据</span>
+                <span className="text-foreground-muted">({daily.length} 天汇总)</span>
+              </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
-                {metrics.map((m, i) => editing ? (
-                  <div key={i} className="flex items-center gap-1">
-                    <IconPicker
-                      value={m.icon}
-                      onChange={(icon) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, icon } : x)))}
-                    />
-                    <input
-                      value={m.label}
-                      placeholder="指标"
-                      onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)))}
-                      className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5"
-                    />
-                    <input
-                      value={m.value}
-                      placeholder="数值"
-                      onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, value: e.target.value } : x)))}
-                      className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5"
-                    />
-                    <button onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))} className="text-red">✕</button>
-                  </div>
-                ) : (
-                  <div key={i} className="rounded bg-surface-hover px-2 py-1.5" title={METRIC_HINTS[m.label] ?? ''}>
-                    <div className="text-[10px] text-foreground-muted flex items-center gap-0.5">
-                      {m.icon && <MetricIcon name={m.icon} size={10} />}
-                      {METRIC_HINTS[m.label] && <InfoDot />}
-                      {m.label}
-                    </div>
-                    <div className="text-xs font-medium text-foreground-primary tabular-nums">{m.value}</div>
+                {rows.map(([label, value, hint]) => (
+                  <div key={label} className="rounded bg-surface-hover px-2 py-1.5" title={hint}>
+                    <div className="text-[10px] text-foreground-muted">{label}</div>
+                    <div className="text-xs font-medium text-foreground-primary tabular-nums">{value}</div>
                   </div>
                 ))}
               </div>
-            )}
-
-            {/* CPS 挂链汇总指标：已迁移至浮窗顶部「CPS 实绩」只读聚合（cps-overview 端点）。
-                Collaboration.deliverables[].cps 手填 JSON 不再渲染（伪造来源已切断）。 */}
+            </>
+          );
+        })() : (
+          <>
+            <div className="flex items-center gap-1 text-[10px] text-foreground-secondary mb-1">
+              <span>效果数据</span>
+              <button onClick={() => setMetrics([...metrics, { label: '', value: '' }])} className="text-accent-primary hover:underline">+ 添加</button>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
+              {metrics.map((m, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <IconPicker
+                    value={m.icon}
+                    onChange={(icon) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, icon } : x)))}
+                  />
+                  <input
+                    value={m.label}
+                    placeholder="指标"
+                    onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)))}
+                    className="w-20 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                  />
+                  <input
+                    value={m.value}
+                    placeholder="数值"
+                    onChange={(e) => setMetrics(metrics.map((x, idx) => (idx === i ? { ...x, value: e.target.value } : x)))}
+                    className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5"
+                  />
+                  <button onClick={() => setMetrics(metrics.filter((_, idx) => idx !== i))} className="text-red">✕</button>
+                </div>
+              ))}
+            </div>
           </>
         )}
       </div>
@@ -1244,7 +1259,22 @@ function DeliverableCard({
         });
         const hasCps = cpsDaily.length > 0;
 
-        if (daily.length === 0 && cpsDaily.length === 0 && !editing) return null;
+        // 非编辑模式：每日明细不在浮窗展示——入口跳转链接数据页（按 tracking link 筛选）
+        if (!editing) {
+          if (daily.length === 0 && cpsDaily.length === 0) return null;
+          return (
+            <div className="mb-2">
+              <button
+                onClick={() => onOpenDaily?.()}
+                className="flex w-full items-center gap-2 rounded border border-border-subtle bg-surface-hover/50 px-2.5 py-1.5 text-[10px] text-foreground-secondary hover:border-accent-primary/40 hover:text-accent-primary"
+              >
+                <span>每日效果数据</span>
+                <span className="text-foreground-muted">({merged.length} 天{hasCps ? ' · 含 CPS 挂链' : ''})</span>
+                <span className="ml-auto">TrackingLink 明细 ↗</span>
+              </button>
+            </div>
+          );
+        }
 
         /** 编辑模式：添加一天 post daily */
         function addPostDay() {

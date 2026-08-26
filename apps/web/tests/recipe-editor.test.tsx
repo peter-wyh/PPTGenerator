@@ -127,12 +127,12 @@ describe('RecipeEditor · 数据层透传', () => {
         onSaved={() => {}}
       />,
     );
-    await waitFor(() => expect(screen.getByText(/请先导入链接效果/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/请先导入 Click References/)).toBeTruthy());
   });
 });
 
 describe('DataPanel · 宁缺勿假提示', () => {
-  it('coverage.covered=null → 红条(请先导入链接效果)', () => {
+  it('coverage.covered=null → 红条(请先导入 Click References)', () => {
     render(
       <DataPanel
         campaignId="c1"
@@ -141,7 +141,7 @@ describe('DataPanel · 宁缺勿假提示', () => {
         onRecomputed={() => {}}
       />,
     );
-    expect(screen.getByText(/请先导入链接效果/)).toBeTruthy();
+    expect(screen.getByText(/请先导入 Click References/)).toBeTruthy();
   });
 
   it('coverage 部分覆盖 → 黄条(实际数据区间 + 缺失天数)', () => {

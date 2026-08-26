@@ -92,10 +92,10 @@ describe('OrdersPage', () => {
     expect(screen.getByText('creator_a')).toBeTruthy();
     expect(screen.getByText('GB')).toBeTruthy();
     expect(screen.getByText('7100001')).toBeTruthy();
-    // 列头（全字段罗列）
-    expect(screen.getByText('点击引用')).toBeTruthy();
-    expect(screen.getByText('客户国家')).toBeTruthy();
-    expect(screen.getByText('Awin交易ID')).toBeTruthy();
-    expect(screen.getByText('拒单原因')).toBeTruthy();
+    // 列头（全字段罗列，UI 英文化后口径：5ad5c7a）
+    expect(screen.getByText('Click Ref')).toBeTruthy();
+    expect(screen.getByText('Country')).toBeTruthy();
+    expect(screen.getByText('Awin Txn ID')).toBeTruthy();
+    expect(screen.getByText('Decline Reason')).toBeTruthy();
   });
 });

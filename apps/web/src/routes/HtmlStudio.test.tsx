@@ -91,7 +91,7 @@ describe('HtmlStudio 表头基础信息', () => {
     render(<HtmlStudio />);
     await waitFor(() => expect(projectsApi.get).toHaveBeenCalledWith('p1'));
 
-    fireEvent.click(screen.getByRole('button', { name: /编辑/ }));
+    fireEvent.click(screen.getByTitle('编辑报告基础信息'));
 
     await waitFor(() => expect(screen.getByText('编辑报告')).toBeTruthy());
     // 名称输入框预填为项目名
