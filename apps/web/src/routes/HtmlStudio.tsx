@@ -475,10 +475,11 @@ export function HtmlStudio() {
   }
 
   // ── 左栏内容 ──
+  // ★ 配置面板恒挂载（CSS 显隐替代条件卸载）：首次生成被取消后回退 config，
+  //   AiGenerateForm 若重挂载,提示词/场景/模式等表单状态全部重置——用户输入凭空丢失。
   const leftPanel = (
     <aside className="flex h-full flex-col overflow-hidden bg-surface-primary">
-      {phase === 'config' ? (
-        <div className="flex flex-1 flex-col overflow-y-auto p-5">
+      <div className={`${phase === 'config' ? 'flex flex-1 flex-col overflow-y-auto' : 'hidden'} p-5`}>
           {/* ★ 错误 + 重试 */}
           {error && (
             <div className="mb-3 rounded-lg bg-red/10 px-3 py-2 text-xs text-red">
@@ -514,8 +515,8 @@ export function HtmlStudio() {
               ⏹ 取消生成
             </Button>
           )}
-        </div>
-      ) : (
+      </div>
+      <div className={`${phase === 'chat' ? 'flex flex-1 flex-col overflow-hidden' : 'hidden'}`}>
         <AgentChatPanel
           projectId={id || ''}
           currentHtml={generatedHtml}
@@ -531,7 +532,7 @@ export function HtmlStudio() {
           onCancelGenerate={handleCancel}
           generateReasoning={genReasoning}
         />
-      )}
+      </div>
     </aside>
   );
 

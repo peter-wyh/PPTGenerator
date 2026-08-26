@@ -36,8 +36,10 @@ function CollapsibleReasoning({ text, defaultCollapsed = true }: { text: string;
   const body = (
     <div
       ref={scrollRef}
-      className={`whitespace-pre-wrap text-[11px] leading-relaxed text-foreground-muted ${
-        fullscreen ? 'flex-1 overflow-y-auto p-6 font-mono' : 'max-h-40 overflow-y-auto'
+      className={`whitespace-pre-wrap text-[11px] leading-relaxed ${
+        fullscreen
+          ? 'flex-1 overflow-y-auto p-6 font-mono text-slate-600'
+          : 'max-h-40 overflow-y-auto text-foreground-muted'
       }`}
     >
       {text}
@@ -64,14 +66,14 @@ function CollapsibleReasoning({ text, defaultCollapsed = true }: { text: string;
         )}
       </div>
       {!collapsed && !fullscreen && body}
-      {/* ★ ③-2 全屏思考浮层：覆盖整个视口 */}
+      {/* ★ ③-2 全屏思考浮层：覆盖整个视口，纯白不透明（用户钦定：不要透明度） */}
       {fullscreen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-surface-primary/95 backdrop-blur-sm">
-          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-default px-4">
-            <span className="text-sm font-medium text-foreground-primary">🧠 AI 思考过程</span>
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 px-4">
+            <span className="text-sm font-medium text-slate-800">🧠 AI 思考过程</span>
             <button
               onClick={() => setFullscreen(false)}
-              className="rounded-md border border-border-default px-3 py-1.5 text-xs text-foreground-secondary hover:bg-surface-hover"
+              className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
             >
               ✕ 退出全屏 (Esc)
             </button>
@@ -267,6 +269,23 @@ export function AgentChatPanel({
     [onHtmlChange],
   );
 
+  // ★ 消息删除：从历史中移除并持久化。带 htmlSnapshot 的消息是版本点,删除需二次确认。
+  const handleDeleteMessage = useCallback(
+    (idx: number) => {
+      const msg = agentHistory[idx];
+      if (!msg) return;
+      if (msg.htmlSnapshot && !confirm('该消息带有 HTML 版本快照，删除后不可恢复。确定删除？')) {
+        return;
+      }
+      const next = agentHistory.filter((_, i) => i !== idx);
+      onHistoryChange(next);
+      // 展开的源码区块索引同步校正（删的是展开条前面的→索引前移）
+      setExpandedCodeIdx((prev) => (prev === null ? null : prev === idx ? null : prev > idx ? prev - 1 : prev));
+      void htmlTemplatesApi.autoSave(projectId, currentHtml, next);
+    },
+    [agentHistory, currentHtml, onHistoryChange, projectId],
+  );
+
   // ★ handleSend — SSE 流式编辑
   // ★ 意图路由:问题类消息走数据问答(不产出 HTML),编辑类走 SSE 编辑。
   //  判定保守——明确的问题形态才走 QA,拿不准一律走编辑(编辑是既有主链路,误伤成本低)。
@@ -291,11 +310,14 @@ export function AgentChatPanel({
         .filter((m) => !m.images?.length)
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
-      const { answer, hasDataContext } = await htmlTemplatesApi.agentQa({
-        question: text,
-        campaignId,
-        history: recent,
-      });
+      const { answer, hasDataContext } = await htmlTemplatesApi.agentQa(
+        {
+          question: text,
+          campaignId,
+          history: recent,
+        },
+        abortRef.current?.signal,
+      );
       const qaMsg: AgentChatMessage = {
         role: 'assistant',
         content: answer,
@@ -331,13 +353,23 @@ export function AgentChatPanel({
         setLoading(true);
         setQaMode(true);
         setError('');
+        // ★ QA 流也挂 abort——「取消」按钮可中断查询
+        const abortCtrl = new AbortController();
+        abortRef.current = abortCtrl;
         try {
           await handleQuestion(text, newHistory);
         } catch (e: any) {
-          setError(e?.response?.data?.error?.message || e?.message || '问答失败,请重试');
+          if (e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') {
+            // ★ 取消退回:移除刚发出的 user 消息 + 回填输入框,用户改完可直接再发
+            onHistoryChange(agentHistory);
+            setInput(text);
+          } else {
+            setError(e?.response?.data?.error?.message || e?.message || '问答失败,请重试');
+          }
         } finally {
           setLoading(false);
           setQaMode(false);
+          abortRef.current = null;
         }
         return;
       }
@@ -481,15 +513,24 @@ export function AgentChatPanel({
         {agentHistory.map((msg, idx) => (
           <div
             key={idx}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`group flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
+              className={`relative max-w-[85%] rounded-lg px-3 py-2 text-xs ${
                 msg.role === 'user'
                   ? 'bg-accent-primary text-foreground-inverse'
                   : 'bg-surface-hover text-foreground-primary'
               }`}
             >
+              {/* ★ 消息删除：hover 浮现,不占用平时空间 */}
+              <button
+                onClick={() => handleDeleteMessage(idx)}
+                disabled={loading || generating}
+                className="absolute -right-1.5 -top-1.5 hidden h-4 w-4 items-center justify-center rounded-full bg-surface-primary text-[8px] text-foreground-muted shadow-sm ring-1 ring-border-default hover:text-red group-hover:flex disabled:opacity-40"
+                title="删除该消息"
+              >
+                ✕
+              </button>
               {msg.images && msg.images.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap gap-1">
                   {msg.images.map((img, i) => (

@@ -406,14 +406,19 @@ export const htmlTemplatesApi = {
     ),
 
   /** Agent 数据问答:问题 → 纯文本回答(不产出 HTML),服务端限死在数据上下文内 */
-  agentQa: (input: {
-    question: string;
-    campaignId?: string;
-    reportPeriod?: { startDate?: string; endDate?: string };
-    history?: { role: 'user' | 'assistant'; content: string }[];
-  }) =>
+  agentQa: (
+    input: {
+      question: string;
+      campaignId?: string;
+      reportPeriod?: { startDate?: string; endDate?: string };
+      history?: { role: 'user' | 'assistant'; content: string }[];
+    },
+    signal?: AbortSignal,
+  ) =>
     api
-      .post<{ answer: string; hasDataContext: boolean }>('/html-templates/agent-qa', input)
+      .post<{ answer: string; hasDataContext: boolean }>('/html-templates/agent-qa', input, {
+        signal,
+      })
       .then((r) => r.data),
 
   /** Agent 模式自动保存（直接覆盖 htmlContent） */
