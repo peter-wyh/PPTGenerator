@@ -1181,17 +1181,66 @@ export const cpsOverviewService = {
       WHERE campaignId = ${campaignId}
       GROUP BY campaignCreatorId, d`);
 
-    // 2) 链接层：CpsPerformance（聚合列 + daily）
-    const links = await prisma.campaignCreator.findMany({
+    // 2) 链接层：CpsPerformance（旧）+ LinkPerformance（新）双读——迁移期两处并存（迁移是复制非移动），
+    //    CpsPerformance 行已被复制到 LinkPerformance（migratedFromCpsId 溯源），
+    //    旧行跳过防双计；新导入链接只在 LinkPerformance。
+    //    达人归因：publisher.creatorId → campaignCreator（达人型媒体）；非达人型只进 campaign 汇总不入 creator 行。
+    const ccRows = await prisma.campaignCreator.findMany({
       where: { campaignId, ...(campaignCreatorId ? { id: campaignCreatorId } : {}) },
       select: {
         id: true,
+        creatorId: true,
         creator: { select: { name: true, avatar: true } },
         cpsPerformances: {
-          select: { contentType: true, linkUrl: true, clicks: true, impressions: true, orders: true, gmv: true, commission: true, spend: true, daily: true },
+          select: { id: true, contentType: true, linkUrl: true, clicks: true, impressions: true, orders: true, gmv: true, commission: true, spend: true, daily: true },
         },
       },
     });
+    // 已迁移旧行 id 集（防双计）
+    const migratedIds = new Set<string>(
+      (await prisma.linkPerformance.findMany({
+        where: { campaignId },
+        select: { migratedFromCpsId: true },
+      })).map((x) => x.migratedFromCpsId).filter((x): x is string => !!x),
+    );
+    // LinkPerformance 按 creator 归因表：publisher.creatorId → ccId
+    const lpByCc = new Map<string, {
+      contentType: string; linkUrl: string | null; clicks: number; impressions: number; orders: number; gmv: number; commission: number; spend: number;
+      daily: Record<string, { clicks: number; impressions: number }>;
+    }[]>();
+    const campaignLpRows = await prisma.linkPerformance.findMany({
+      where: { campaignId },
+      include: { publisher: { select: { creatorId: true } } },
+    });
+    for (const lp of campaignLpRows) {
+      const daily = new Map<string, { clicks: number; impressions: number }>();
+      for (const d of ((lp.daily as Record<string, unknown>[] | null) ?? [])) {
+        const date = String(d.date ?? '');
+        if (!date) continue;
+        daily.set(date, { clicks: Number(d.clicks) || 0, impressions: Number(d.impressions) || 0 });
+      }
+      const row = {
+        contentType: 'tracking_url',
+        linkUrl: lp.linkUrl,
+        clicks: lp.clicks, impressions: lp.impressions, orders: lp.orders,
+        gmv: Number(lp.gmv), commission: Number(lp.commission), spend: Number(lp.spend),
+        daily: Object.fromEntries(daily),
+      };
+      const ccId = lp.publisher?.creatorId
+        ? ccRows.find((cc) => cc.creatorId === lp.publisher?.creatorId)?.id
+        : undefined;
+      const key = ccId ?? '__campaign__';
+      if (!lpByCc.has(key)) lpByCc.set(key, []);
+      lpByCc.get(key)!.push(row);
+    }
+    const links = ccRows.map((l) => ({
+      id: l.id,
+      creatorName: l.creator?.name ?? l.id,
+      rows: [
+        ...l.cpsPerformances.filter((p) => !migratedIds.has(p.id)),
+        ...lpByCc.get(l.id) ?? [],
+      ],
+    }));
 
     // 归并：byCampaignCreator map
     const byCc = new Map<string, {
@@ -1204,7 +1253,7 @@ export const cpsOverviewService = {
     }>();
     for (const l of links) {
       byCc.set(l.id, {
-        creatorName: l.creator?.name ?? l.id,
+        creatorName: l.creatorName,
         orders: { orders: 0, gmv: 0, commission: 0, daily: new Map() },
         traffic: { clicks: 0, impressions: 0, daily: new Map() },
         links: [],
@@ -1234,16 +1283,27 @@ export const cpsOverviewService = {
     }
     for (const l of links) {
       const e = byCc.get(l.id)!;
-      for (const p of l.cpsPerformances) {
+      for (const p of l.rows) {
         e.traffic.clicks += p.clicks; e.traffic.impressions += p.impressions;
         e.links.push({ contentType: p.contentType, linkUrl: p.linkUrl, clicks: p.clicks, impressions: p.impressions, orders: p.orders, gmv: Number(p.gmv), commission: Number(p.commission), spend: Number(p.spend) });
-        for (const d of ((p.daily as Record<string, unknown>[] | null) ?? [])) {
-          const date = String(d.date ?? '');
-          if (!date) continue;
-          const day = e.traffic.daily.get(date) ?? { clicks: 0, impressions: 0 };
-          day.clicks += Number(d.clicks) || 0;
-          day.impressions += Number(d.impressions) || 0;
-          e.traffic.daily.set(date, day);
+        const dailyArr = (p as { daily?: unknown }).daily;
+        if (Array.isArray(dailyArr)) {
+          for (const d of (dailyArr as Record<string, unknown>[])) {
+            const date = String(d.date ?? '');
+            if (!date) continue;
+            const day = e.traffic.daily.get(date) ?? { clicks: 0, impressions: 0 };
+            day.clicks += Number(d.clicks) || 0;
+            day.impressions += Number(d.impressions) || 0;
+            e.traffic.daily.set(date, day);
+          }
+        } else if (dailyArr && typeof dailyArr === 'object') {
+          // LinkPerformance 行的 daily 是 {date: {clicks, impressions}} 对象形态
+          for (const [date, t] of Object.entries(dailyArr as Record<string, { clicks?: number; impressions?: number }>)) {
+            const day = e.traffic.daily.get(date) ?? { clicks: 0, impressions: 0 };
+            day.clicks += Number(t.clicks) || 0;
+            day.impressions += Number(t.impressions) || 0;
+            e.traffic.daily.set(date, day);
+          }
         }
       }
     }

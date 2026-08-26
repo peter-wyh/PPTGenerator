@@ -341,7 +341,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/cps-daily',
     title: 'CPS 每日明细',
-    purpose: 'CPS 链接按天拆分的效果（含每日新客）——报告环比/趋势分析的核心数据源，GMV/Orders/Clicks 每日曲线由它构成。',
+    purpose: '【deprecated 过渡保留】CPS 链接按天拆分的效果——流量侧（clicks/impressions）已由 link-performance 接管，本接口仅旧口径兼容；成交侧始终以订单表（import/orders）为真源。',
     source: '联盟后台按日报表导出；与 cps 汇总接口配套（同一链接先导汇总再导每日）。',
     prerequisites: ['Campaign 已创建', '达人已挂到该 Campaign', '建议先导 cps 汇总（每日明细会挂到同一链接记录上）'],
     prerequisiteSummary: 'Campaign + 达人挂链',
@@ -525,6 +525,179 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
   "total": 1,
   "page": 1,
   "pageSize": 20
+}`,
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'link-performance',
+    method: 'POST',
+    path: '/campaigns/import/link-performance',
+    title: '链接效果导入（trackingUrl 口径）',
+    purpose: '链接维度流量/成交数据的唯一入口（Awin Click References CSV 口径）——一行 = 一条跟踪链接 × campaign 周期汇总。替代 cps-daily 的流量侧职责。',
+    source: '联盟平台 Click References 导出 CSV（每跟踪链接一行）。',
+    prerequisites: ['Campaign 已创建'],
+    prerequisiteSummary: 'Campaign',
+    semantics: [
+      '分组键 (campaignId, publisherId, linkKey)：upsert 幂等，重导覆盖汇总指标。',
+      'trackingUrl 必填（linkUrl 为兼容别名）；linkKey 由 click_ref 或域名归一化生成。',
+      'siteName 域名归一化 → 自动 upsert Publisher（媒体主档）→ 挂 publisherId；达人型媒体经 publisher.creatorId 归因到合作行。',
+      'daily 明细数组（date/clicks/impressions/orders/gmv/commission）按日期合并，同日重导覆盖。',
+    ],
+    fields: [
+      { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
+      { name: 'trackingUrl', type: 'string', required: true, desc: '跟踪链接 URL（linkUrl 为兼容别名）' },
+      { name: 'siteName', type: 'string', required: false, desc: '媒体站点名（自动 upsert Publisher）' },
+      { name: 'clicks', type: 'number', required: false, desc: '点击数（周期汇总）' },
+      { name: 'impressions', type: 'number', required: false, desc: '曝光数' },
+      { name: 'orders', type: 'number', required: false, desc: '订单数' },
+      { name: 'gmv', type: 'string | number', required: false, desc: 'GMV（$ 前缀自动去除）' },
+      { name: 'commission', type: 'string | number', required: false, desc: '佣金' },
+      { name: 'spend', type: 'string | number', required: false, desc: '花费' },
+      { name: 'saleAmount', type: 'string | number', required: false, desc: '销售额别名（gmv 缺省时使用）' },
+    ],
+    requestExample: `{
+  "items": [
+    {
+      "campaignId": "cmszwk2dw000y8edagyejkj3f",
+      "trackingUrl": "https://track.awin1.com/click.php?ref=gb-1442864",
+      "siteName": "Timelynews",
+      "clicks": 12500,
+      "orders": 380,
+      "gmv": "45000",
+      "commission": "4500"
+    }
+  ]
+}`,
+    response: '{ "updated": 1, "skipped": 0 }',
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'links-list',
+    method: 'GET',
+    path: '/campaigns/links/list',
+    title: '链接数据列表',
+    purpose: 'LinkPerformance 透出查询（数据管理→链接数据页）：trackingUrl 视角，含媒体归属与日明细天数。链接流量/成交唯一真源的数据浏览入口。',
+    source: '系统内数据（link-performance 导入接口写入），无需上游提供。',
+    prerequisites: ['无前置——已有链接数据即可查询。'],
+    prerequisiteSummary: null,
+    semantics: [
+      'admin 全局可见；非 admin 限本人 campaign。',
+      'clicks 倒序；campaignId 筛选可选；pageSize 默认 20。',
+      '行含 publisher（媒体主档）、dailyDays（daily 数组长度）、派生 EPC/CVR 由前端计算。',
+    ],
+    fields: [
+      { name: 'campaignId', type: 'string', required: false, desc: 'Query 参数：按 Campaign 筛选' },
+      { name: 'page', type: 'number', required: false, desc: 'Query 参数：页码（默认 1）' },
+      { name: 'pageSize', type: 'number', required: false, desc: 'Query 参数：每页条数（默认 20）' },
+    ],
+    requestExample: `GET /api/v1/campaigns/links/list?campaignId=cmszwk2dw000y8edagyejkj3f&page=1&pageSize=20`,
+    response: `{
+  "rows": [
+    {
+      "id": "cmx...",
+      "campaignId": "cmszwk2dw000y8edagyejkj3f",
+      "campaignName": "GB Jul",
+      "trackingUrl": "https://track.awin1.com/click.php?ref=gb-1442864",
+      "linkKey": "gb-1442864",
+      "publisher": { "id": "cm...", "name": "Timelynews", "domain": "timelynews.com", "type": "media_site", "creatorId": null },
+      "clicks": 12500,
+      "impressions": 0,
+      "orders": 380,
+      "gmv": 45000,
+      "commission": 4500,
+      "spend": 0,
+      "dailyDays": 30,
+      "updatedAt": "2026-08-26T00:00:00.000Z"
+    }
+  ],
+  "total": 18,
+  "page": 1,
+  "pageSize": 20
+}`,
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'order-daily-stats',
+    method: 'GET',
+    path: '/campaigns/order-daily-stats',
+    title: '订单日统计列表',
+    purpose: 'OrderDailyStat 中间表透出（数据管理→数据统计页）：订单按日聚合行——campaign 级汇总或 creator×date 拆分。由 order-stats/recompute 从订单真源物化，页面只读。',
+    source: '系统内数据（订单导入后 recompute 物化），无需上游提供。',
+    prerequisites: ['已导入订单并重算（POST /campaigns/:id/order-stats/recompute）。'],
+    prerequisiteSummary: '订单导入 + 重算',
+    semantics: [
+      'campaignId 必填；creatorBreakdown=true 返回 creator×date 行（含 creatorName），缺省返回 campaign 聚合行（campaignCreatorId=""）。',
+      'statDate 升序；pageSize 默认 50 上限 200。',
+      '指标：orders/approvedOrders/pendingOrders/otherOrders/commission 三态/topCountries/topDevices/newCustomerOrders。',
+    ],
+    fields: [
+      { name: 'campaignId', type: 'string', required: true, desc: 'Query 参数：Campaign ID' },
+      { name: 'creatorBreakdown', type: 'boolean', required: false, desc: 'Query 参数：true=按达人拆分行' },
+      { name: 'page', type: 'number', required: false, desc: 'Query 参数：页码（默认 1）' },
+      { name: 'pageSize', type: 'number', required: false, desc: 'Query 参数：每页条数（默认 50，上限 200）' },
+    ],
+    requestExample: `GET /api/v1/campaigns/order-daily-stats?campaignId=cmszwk2dw000y8edagyejkj3f&creatorBreakdown=true&pageSize=50`,
+    response: `{
+  "rows": [
+    {
+      "statDate": "2026-06-30",
+      "campaignCreatorId": "cmsz...",
+      "creatorName": "Theworldonmynecklace",
+      "orders": 23,
+      "approvedOrders": 23,
+      "pendingOrders": 0,
+      "otherOrders": 0,
+      "commission": 17.71,
+      "newCustomerOrders": 5,
+      "topCountries": [{ "country": "GB", "orders": 20 }],
+      "topDevices": [{ "device": "mobile", "orders": 18 }],
+      "recomputedAt": "2026-08-25T..."
+    }
+  ],
+  "total": 208,
+  "page": 1,
+  "pageSize": 50
+}`,
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'publisher-daily-stats',
+    method: 'GET',
+    path: '/campaigns/publisher-daily-stats',
+    title: '媒体日统计列表',
+    purpose: 'PublisherDailyStat 中间表透出（数据管理→数据统计页）：publisher × 日双口径（成交 orders/GMV/Commission + 流量 clicks/impressions）。由 publisher-stats/recompute 物化。',
+    source: '系统内数据（订单 + 链接效果导入后 recompute 物化），无需上游提供。',
+    prerequisites: ['已导入订单/链接效果并重算（POST /campaigns/:id/publisher-stats/recompute）。'],
+    prerequisiteSummary: '订单+链接导入 + 重算',
+    semantics: [
+      'campaignId 必填；publisherId 可选过滤单媒体。',
+      'statDate 升序、publisherId 升序；pageSize 默认 50 上限 200。',
+      'CVR 等派生率由前端计算。',
+    ],
+    fields: [
+      { name: 'campaignId', type: 'string', required: true, desc: 'Query 参数：Campaign ID' },
+      { name: 'publisherId', type: 'string', required: false, desc: 'Query 参数：按媒体过滤' },
+      { name: 'page', type: 'number', required: false, desc: 'Query 参数：页码（默认 1）' },
+      { name: 'pageSize', type: 'number', required: false, desc: 'Query 参数：每页条数（默认 50，上限 200）' },
+    ],
+    requestExample: `GET /api/v1/campaigns/publisher-daily-stats?campaignId=cmszwk2dw000y8edagyejkj3f&pageSize=50`,
+    response: `{
+  "rows": [
+    {
+      "statDate": "2026-06-30",
+      "publisherId": "cmt8...",
+      "publisher": { "id": "cmt8...", "name": "Trivago UK", "domain": "dc.digchic.com", "type": "media_site", "creatorId": null },
+      "clicks": 0,
+      "impressions": 0,
+      "orders": 5,
+      "gmv": 120.5,
+      "commission": 18.07,
+      "recomputedAt": "2026-08-25T..."
+    }
+  ],
+  "total": 195,
+  "page": 1,
+  "pageSize": 50
 }`,
   },
   // ─────────────────────────────────────────────────────────────────────────
