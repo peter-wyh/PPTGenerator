@@ -173,7 +173,7 @@ function AdvertiserFormModal({
         {error && <p className="text-xs text-red">{error}</p>}
 
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-          名称
+          <span>名称 <span className="text-red">*</span></span>
           <input value={name} onChange={(e) => setName(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
         </label>
 
@@ -183,7 +183,7 @@ function AdvertiserFormModal({
         </label>
 
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-          业务线
+          <span>业务线 <span className="text-red">*</span></span>
           <select
             value={businessLineId}
             onChange={(e) => setBusinessLineId(e.target.value)}

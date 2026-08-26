@@ -260,11 +260,11 @@ function BusinessLineFormModal({
         {error && <p className="text-xs text-red">{error}</p>}
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            编码
+            <span>编码 <span className="text-red">*</span></span>
             <input value={code} onChange={(e) => setCode(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
           </label>
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            名称（title）
+            <span>名称（title） <span className="text-red">*</span></span>
             <input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
           </label>
         </div>

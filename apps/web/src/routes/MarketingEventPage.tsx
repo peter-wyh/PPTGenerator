@@ -235,11 +235,11 @@ function MarketingEventFormModal({
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            活动名称
+            <span>活动名称 <span className="text-red">*</span></span>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如 GlowLab Q4 大促" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
           </label>
           <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            所属业务线
+            <span>所属业务线 <span className="text-red">*</span></span>
             <select
               value={businessLineId}
               onChange={(e) => setBusinessLineId(e.target.value)}
@@ -255,11 +255,11 @@ function MarketingEventFormModal({
 
         <div className="flex gap-2">
           <label className="flex flex-1 flex-col gap-1 text-xs text-foreground-secondary">
-            开始时间（start_time）
+            <span>开始时间（start_time） <span className="text-red">*</span></span>
             <input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
           </label>
           <label className="flex flex-1 flex-col gap-1 text-xs text-foreground-secondary">
-            结束时间（end_time）
+            <span>结束时间（end_time） <span className="text-red">*</span></span>
             <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
           </label>
         </div>

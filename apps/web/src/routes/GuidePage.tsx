@@ -146,7 +146,7 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
 
         <div className="flex gap-2">
           <label className="flex flex-1 flex-col gap-1 text-xs text-foreground-secondary">
-            业务线
+            <span>业务线 <span className="text-red">*</span></span>
             <select value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
               <option value="">请选择业务线…</option>
               {businessLines.map((b) => <option key={b.id} value={b.id}>{b.title || b.code}（{b.code}）</option>)}
@@ -168,12 +168,12 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
         )}
 
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-          指南名称
+          <span>指南名称 <span className="text-red">*</span></span>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如 DG 月报指南" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
         </label>
 
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-          指南内容（Markdown，约定分节：品牌视觉 / 章节结构 / 展示形式偏好 / 语调与术语）
+          <span>指南内容（Markdown，约定分节：品牌视觉 / 章节结构 / 展示形式偏好 / 语调与术语） <span className="text-red">*</span></span>
           <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} spellCheck={false}
             placeholder={'# {业务线名} 报告指南\n\n## 品牌视觉\n主色 #xxxxxx / 字体 …\n\n## 章节结构\n必须包含 …；不提 …\n\n## 展示形式偏好\n达人列表 ≤6 人卡片，>6 人表格\n\n## 语调与术语\n自称「团队」；用「推广」不用「投放」'}
             className="resize-y rounded border border-border-default bg-surface-primary px-2 py-1.5 font-mono text-xs text-foreground-primary" />

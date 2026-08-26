@@ -17,6 +17,14 @@ interface FieldDef {
   label: string;
 }
 
+/** 必填字段定义（与导入模板 REQUIRED 口径一致——表单/导入/模板三处统一）
+ *  Campaign：platforms(≥1) 代表平台维度；budget 金额必填（币种有默认值）。 */
+const CAMPAIGN_REQUIRED_LABELS: [key: string, label: string][] = [
+  ['name', '名称'], ['businessLine', '业务线'], ['advertiser', '广告主'], ['platforms', '平台'],
+  ['startDate', '开始日期'], ['endDate', '结束日期'], ['budget', '预算'],
+];
+const CREATOR_REQUIRED_FIELDS = new Set(['name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region']);
+
 /** 普通 input 字段（非 select/multi-select）— 已排除 owner/status/startDate/endDate/budget */
 const CAMPAIGN_INPUT_FIELDS: FieldDef[] = [
   { key: 'name', label: '名称' },
@@ -194,6 +202,28 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
   const [advOptions, setAdvOptions] = useState<AdvertiserDTO[]>([]);
 
   const [busy, setBusy] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  /** 必填校验（与导入模板口径一致）：返回缺失字段中文标签列表 */
+  function missingLabels(): string[] {
+    if (isCampaign) {
+      const byKey: Record<string, boolean> = {
+        name: !!vals.name.trim(),
+        businessLine: !!businessLine,
+        advertiser: !!advertiser,
+        platforms: selectedPlatforms.length > 0,
+        startDate: !!startDate,
+        endDate: !!endDate,
+        budget: !!budgetAmount.trim(),
+      };
+      return CAMPAIGN_REQUIRED_LABELS.filter(([k]) => !byKey[k]).map(([, label]) => label);
+    }
+    return CREATOR_FORM_FIELDS
+      .filter((f) => CREATOR_REQUIRED_FIELDS.has(f.key) && !(vals[f.key] ?? '').trim())
+      .map((f) => f.label);
+  }
+  const missing = missingLabels();
+  // canSubmit 仅由 save() 内部拦截（按钮可点击：点击后展示缺失横幅，避免 disabled 看不到原因）
 
   useEffect(() => {
     if (!isCampaign) return;
@@ -227,6 +257,8 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
   }
 
   async function save() {
+    setTouched(true);
+    if (missingLabels().length > 0) return; // 双保险：按钮 disabled 之外再拦一道
     setBusy(true);
     try {
       const fieldEdits: Record<string, unknown> = {};
@@ -261,10 +293,6 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
     }
   }
 
-  const canSubmit = isCampaign
-    ? !!vals.name && !!businessLine && !!advertiser
-    : !!vals.name;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div
@@ -274,13 +302,18 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
         <div className="font-headings text-sm skin-fw-heading text-foreground-primary">
           {record ? '编辑' : '新增'} · {isCampaign ? 'Campaign' : '达人库'}
         </div>
+        {touched && missing.length > 0 && (
+          <p className="rounded bg-red/10 px-2 py-1.5 text-xs text-red">
+            必填项缺失：{missing.join('、')}
+          </p>
+        )}
 
         {isCampaign ? (
           /* ─── Campaign 表单 ─── */
           <div className="grid grid-cols-2 skin-gap-sm">
             {/* 名称占整行 */}
             <label className="col-span-2 flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-              名称
+              <span>名称 <span className="text-red">*</span></span>
               <input
                 value={vals.name ?? ''}
                 onChange={(e) => setVals((p) => ({ ...p, name: e.target.value }))}
@@ -290,7 +323,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
 
             {/* 业务线 → 选择框 */}
             <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-              业务线
+              <span>业务线 <span className="text-red">*</span></span>
               <select
                 value={businessLine}
                 onChange={(e) => {
@@ -310,7 +343,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
 
             {/* 广告主 → 选择框（联动业务线） */}
             <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-              广告主
+              <span>广告主 <span className="text-red">*</span></span>
               <select
                 value={advertiser}
                 onChange={(e) => setAdvertiser(e.target.value)}
@@ -328,7 +361,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
 
             {/* P1-7: 平台 → 多选预设 + 可手动添加 */}
             <div className="col-span-2 flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-              平台（可多选，支持手动新增）
+              <span>平台（可多选，支持手动新增） <span className="text-red">*</span></span>
               <div className="flex flex-wrap gap-1.5">
                 {PLATFORMS.map((p) => {
                   const active = selectedPlatforms.includes(p);
@@ -387,7 +420,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
 
             {/* P1-8: 开始日期 → DatePicker */}
             <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-              开始日期
+              <span>开始日期 <span className="text-red">*</span></span>
               <input
                 type="date"
                 value={startDate}
@@ -398,7 +431,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
 
             {/* P1-8: 结束日期 → DatePicker */}
             <label className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-              结束日期
+              <span>结束日期 <span className="text-red">*</span></span>
               <input
                 type="date"
                 value={endDate}
@@ -424,7 +457,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
                 </select>
               </label>
               <label className="flex flex-1 flex-col skin-gap-xs text-xs text-foreground-secondary">
-                预算金额
+                <span>预算金额 <span className="text-red">*</span></span>
                 <input
                   type="number"
                   value={budgetAmount}
@@ -484,7 +517,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               if (f.key === 'tier') {
                 return (
                   <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-                    {f.label}
+                    <span>{f.label} <span className="text-red">*</span></span>
                     <Combobox
                       value={vals[f.key] ?? ''}
                       onChange={(v) => setVals((p) => ({ ...p, tier: v }))}
@@ -498,7 +531,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               if (f.key === 'platform') {
                 return (
                   <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-                    {f.label}
+                    <span>{f.label} <span className="text-red">*</span></span>
                     <Combobox
                       value={vals[f.key] ?? ''}
                       onChange={(v) => setVals((p) => ({ ...p, platform: v }))}
@@ -513,7 +546,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               if (f.key === 'category') {
                 return (
                   <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-                    {f.label}
+                    <span>{f.label} <span className="text-red">*</span></span>
                     <Combobox
                       value={vals[f.key] ?? ''}
                       onChange={(v) => setVals((p) => ({ ...p, category: v }))}
@@ -526,9 +559,10 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
               }
               const idReadOnly = f.key === 'id' && !record;
               const autoLabel = f.key === 'id' && !record;
+              const reqStar = CREATOR_REQUIRED_FIELDS.has(f.key) ? ' *' : '';
               return (
                 <label key={f.key} className="flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-                  {f.label}{autoLabel ? '(自动)' : ''}
+                  <span>{f.label}{reqStar && <span className="text-red"> *</span>}{autoLabel ? '(自动)' : ''}</span>
                   <input
                     value={vals[f.key] ?? ''}
                     disabled={idReadOnly}
@@ -550,7 +584,7 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
             取消
           </button>
           <button
-            disabled={busy || !canSubmit}
+            disabled={busy}
             onClick={() => void save()}
             className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50"
           >
