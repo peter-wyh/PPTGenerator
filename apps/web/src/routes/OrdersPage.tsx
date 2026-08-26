@@ -57,17 +57,17 @@ export default function OrdersPage() {
     if (!f) return;
     parseFile(f)
       .then((sheets) => setPreview(buildPreviewFromRows('orders', sheets[0]?.rows ?? [])))
-      .catch(() => toast.error('文件解析失败'));
+      .catch(() => toast.error('Failed to parse file'));
   }
 
   async function confirmOrdersImport(validItems: Record<string, unknown>[]) {
     setPreview(null);
     try {
       const r = await campaignsApi.importOrders(validItems);
-      toast.success(`订单明细导入完成:更新 ${r.updated},跳过 ${r.skipped}`);
+      toast.success(`Orders import done: ${r.updated} updated, ${r.skipped} skipped`);
       load();
     } catch {
-      toast.error('订单明细导入失败');
+      toast.error('Orders import failed');
     }
   }
 
@@ -82,7 +82,7 @@ export default function OrdersPage() {
       setData(r);
       setError('');
     } catch {
-      setError('加载订单失败');
+      setError('Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -105,9 +105,9 @@ export default function OrdersPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="font-headings text-lg font-semibold text-foreground-primary">订单明细</h1>
+          <h1 className="font-headings text-lg font-semibold text-foreground-primary">Orders</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
-            已导入的订单（订单号 · 商品行 · 归因达人）— Top-Sales / 购物篮分析的数据底座
+            Imported orders (order id · item rows · attributed creator) — data foundation for Top-Sales / basket analysis
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -116,21 +116,21 @@ export default function OrdersPage() {
             className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-secondary hover:bg-surface-hover"
             defaultValue=""
           >
-            <option value="" disabled>下载模板</option>
-            <option value="orders">订单明细模板</option>
+            <option value="" disabled>Download template</option>
+            <option value="orders">Orders template</option>
           </select>
           <button
             onClick={() => ordersCsvRef.current?.click()}
             className="rounded bg-accent-primary px-3 py-1.5 text-xs text-foreground-inverse hover:bg-accent-secondary"
           >
-            导入订单明细 CSV
+            Import Orders CSV
           </button>
           <select
             value={campaignId}
             onChange={(e) => { setCampaignId(e.target.value); setPage(1); }}
             className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary min-w-[220px]"
           >
-            <option value="">全部 Campaign</option>
+            <option value="">All Campaigns</option>
             {campaigns.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -142,10 +142,10 @@ export default function OrdersPage() {
 
       {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
       {loading ? (
-        <div className="py-12 text-center text-sm text-foreground-secondary">加载中…</div>
+        <div className="py-12 text-center text-sm text-foreground-secondary">Loading…</div>
       ) : rows.length === 0 ? (
         <div className="py-12 text-center text-sm text-foreground-secondary">
-          暂无订单。前往 <span className="text-accent-primary">合作列表</span> 导入「订单明细 CSV」。
+          No orders yet. Go to <span className="text-accent-primary">Collaborations</span> and import the Orders CSV.
         </div>
       ) : (
         <>
@@ -154,50 +154,50 @@ export default function OrdersPage() {
               <thead>
                 <tr className="border-b border-border-default bg-surface-secondary text-left text-foreground-secondary">
                   {/* 核心区 */}
-                  <th className="px-3 py-2">订单号</th>
+                  <th className="px-3 py-2">Order ID</th>
                   <th className="px-3 py-2">Campaign</th>
-                  <th className="px-3 py-2">媒体</th>
-                  <th className="px-3 py-2">达人</th>
-                  <th className="px-3 py-2">下单时间</th>
-                  <th className="px-3 py-2">状态</th>
-                  <th className="px-3 py-2">类型</th>
-                  <th className="px-3 py-2 text-right">商品数</th>
-                  <th className="px-3 py-2 text-right">订单金额</th>
-                  <th className="px-3 py-2 text-right">佣金</th>
+                  <th className="px-3 py-2">Media</th>
+                  <th className="px-3 py-2">Creator</th>
+                  <th className="px-3 py-2">Order Date</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2 text-right">Items</th>
+                  <th className="px-3 py-2 text-right">Amount</th>
+                  <th className="px-3 py-2 text-right">Commission</th>
                   {/* 转化归因区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">点击引用</th>
-                  <th className="px-3 py-2">点击时间</th>
-                  <th className="px-3 py-2 text-right">转化时滞(s)</th>
-                  <th className="px-3 py-2">点击设备</th>
-                  <th className="px-3 py-2">交易设备</th>
-                  <th className="px-3 py-2">客户国家</th>
-                  <th className="px-3 py-2">发布商站点</th>
-                  <th className="px-3 py-2">发布商跟踪URL</th>
-                  <th className="px-3 py-2">落地页</th>
-                  <th className="px-3 py-2">Awin活动标签</th>
+                  <th className="px-3 py-2 border-l border-border-subtle">Click Ref</th>
+                  <th className="px-3 py-2">Click Time</th>
+                  <th className="px-3 py-2 text-right">Lag (s)</th>
+                  <th className="px-3 py-2">Click Device</th>
+                  <th className="px-3 py-2">Txn Device</th>
+                  <th className="px-3 py-2">Country</th>
+                  <th className="px-3 py-2">Site Name</th>
+                  <th className="px-3 py-2">Tracking URL</th>
+                  <th className="px-3 py-2">Landing Page</th>
+                  <th className="px-3 py-2">Campaign Label</th>
                   {/* 审核支付区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">审核通过</th>
-                  <th className="px-3 py-2">已付发布商</th>
-                  <th className="px-3 py-2">支付状态</th>
-                  <th className="px-3 py-2">支付ID</th>
-                  <th className="px-3 py-2">查询ID</th>
+                  <th className="px-3 py-2 border-l border-border-subtle">Approved</th>
+                  <th className="px-3 py-2">Paid to Pub</th>
+                  <th className="px-3 py-2">Payment Status</th>
+                  <th className="px-3 py-2">Payment ID</th>
+                  <th className="px-3 py-2">Query ID</th>
                   {/* 修改风控区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">是否修改</th>
-                  <th className="px-3 py-2">修改原因</th>
-                  <th className="px-3 py-2 text-right">原金额</th>
-                  <th className="px-3 py-2 text-right">原佣金</th>
-                  <th className="px-3 py-2">拒单原因</th>
+                  <th className="px-3 py-2 border-l border-border-subtle">Amended</th>
+                  <th className="px-3 py-2">Amend Reason</th>
+                  <th className="px-3 py-2 text-right">Old Amount</th>
+                  <th className="px-3 py-2 text-right">Old Commission</th>
+                  <th className="px-3 py-2">Decline Reason</th>
                   {/* 佣金用券区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">佣金构成</th>
-                  <th className="px-3 py-2">分成发布商</th>
-                  <th className="px-3 py-2">是否用券</th>
-                  <th className="px-3 py-2">券码</th>
-                  {/* 其他区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">Awin交易ID</th>
-                  <th className="px-3 py-2">广告主ID</th>
-                  <th className="px-3 py-2">新客标记</th>
-                  <th className="px-3 py-2">币种差异</th>
-                  <th className="px-3 py-2">自定义参数</th>
+                  <th className="px-3 py-2 border-l border-border-subtle">Commission Group</th>
+                  <th className="px-3 py-2">Sharing Pub</th>
+                  <th className="px-3 py-2">Voucher Used</th>
+                  <th className="px-3 py-2">Voucher Code</th>
+                  {/* Awin 标识区 */}
+                  <th className="px-3 py-2 border-l border-border-subtle">Awin Txn ID</th>
+                  <th className="px-3 py-2">Advertiser ID</th>
+                  <th className="px-3 py-2">New Customer</th>
+                  <th className="px-3 py-2">Currency Diff</th>
+                  <th className="px-3 py-2">Custom Params</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -222,8 +222,8 @@ export default function OrdersPage() {
                         <td className="px-3 py-2 text-right">{row.items.length}</td>
                         <td className="px-3 py-2 text-right font-medium">
                           {lead ? (
-                            <span title="Lead 单金额为平台占位值，佣金才是真实收益">
-                              {fmtMoney(row.saleAmount)}<span className="ml-0.5 text-[10px] text-orange-500">占位</span>
+                            <span title="Lead order amount is a platform placeholder; commission is the real payout">
+                              {fmtMoney(row.saleAmount)}<span className="ml-0.5 text-[10px] text-orange-500">placeholder</span>
                             </span>
                           ) : (
                             fmtMoney(row.saleAmount ?? orderTotal(row))
@@ -272,7 +272,7 @@ export default function OrdersPage() {
                               onClick={() => setExpanded({ ...expanded, [row.id]: !isOpen })}
                               className="rounded px-1.5 py-0.5 text-[11px] text-accent-primary hover:bg-accent-primary/10"
                             >
-                              {isOpen ? '收起' : '商品'}
+                              {isOpen ? 'Hide' : 'Items'}
                             </button>
                           )}
                         </td>
@@ -283,12 +283,12 @@ export default function OrdersPage() {
                             <table className="w-full text-[11px]">
                               <thead>
                                 <tr className="text-left text-foreground-muted">
-                                  <th className="py-1 pr-2">商品</th>
-                                  <th className="py-1 pr-2">品类</th>
+                                  <th className="py-1 pr-2">Item</th>
+                                  <th className="py-1 pr-2">Category</th>
                                   <th className="py-1 pr-2">SKU</th>
                                   <th className="py-1 pr-2 text-right">QTY</th>
-                                  <th className="py-1 pr-2 text-right">单价</th>
-                                  <th className="py-1 text-right">小计</th>
+                                  <th className="py-1 pr-2 text-right">Unit Price</th>
+                                  <th className="py-1 text-right">Subtotal</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border-subtle">
@@ -315,19 +315,19 @@ export default function OrdersPage() {
           </div>
 
           <div className="mt-3 flex items-center justify-between text-xs text-foreground-secondary">
-            <span>共 {total} 单</span>
+            <span>{total} orders</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page <= 1}
                 className="rounded border border-border-default px-2 py-1 disabled:opacity-40 hover:bg-surface-hover"
-              >上一页</button>
+              >Prev</button>
               <span>{page} / {totalPages}</span>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
                 className="rounded border border-border-default px-2 py-1 disabled:opacity-40 hover:bg-surface-hover"
-              >下一页</button>
+              >Next</button>
             </div>
           </div>
         </>
