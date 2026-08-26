@@ -196,7 +196,7 @@ export function Projects() {
           </p>
         </div>
         <nav className="flex-1 overflow-auto px-2">
-          {(['ppt', 'ai-html'] as const).map((t) => {
+          {(['ai-html', 'ppt'] as const).map((t) => {
             const count = projects.filter((p) => styleOf(p) === t).length;
             const active = activeTab === t;
             return (
@@ -461,6 +461,7 @@ export function Projects() {
         title="编辑报告"
         submitLabel="保存"
         lockScenario
+        lockStyleType
         initial={editing ? { name: editing.name, width: editing.width, height: editing.height, meta: editing.meta } : null}
         onCancel={() => !editSubmitting && setEditing(null)}
         onSubmit={handleEdit}

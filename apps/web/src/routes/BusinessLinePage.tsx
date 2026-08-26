@@ -41,7 +41,18 @@ export function BusinessLinePage() {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
 
-  const heads = ['#', 'Logo', '编码', '名称', '配色', '广告主数', '操作'];
+  const heads = ['#', 'Logo', '编码', '名称', '状态', '商户', '配色', '负责人 ID', '成员 IDs', '主体 IDs', '部门 IDs', '指定成员', '关联项目', 'CPT 提现', '作品提及', '作品标签', '备注', 'design.md', '创建人 ID', '更新人 ID', '创建时间', '更新时间', '删除时间', '广告主数', '营销活动数', '操作'];
+
+  /** JSON 数组字段显示元素个数，title 悬浮看全量。 */
+  const jsonCount = (v: unknown): string => (Array.isArray(v) ? String(v.length) : '—');
+  const jsonText = (v: unknown): string => (Array.isArray(v) ? v.join('、') : '');
+  const fmtTime = (v?: string | Date | null): string => {
+    if (!v) return '—';
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('zh-CN', { hour12: false });
+  };
+  const idList = (v?: string | null) =>
+    v ? <span className="block max-w-[160px] truncate" title={v}>{v}</span> : <span className="text-foreground-muted">—</span>;
 
   return (
     <div>
@@ -73,6 +84,14 @@ export function BusinessLinePage() {
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{bl.code}</td>
                 <td className="px-3 py-2 font-medium text-foreground-primary">{bl.title || bl.code}</td>
                 <td className="whitespace-nowrap px-3 py-2">
+                  {bl.status === 1 ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">启用</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">停用</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{bl.merchant?.name ?? '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2">
                   {bl.color ? (
                     <span className="inline-flex items-center gap-1.5">
                       <span className="inline-block h-3 w-3 rounded-full border border-border-subtle" style={{ backgroundColor: bl.color }} />
@@ -82,7 +101,24 @@ export function BusinessLinePage() {
                     <span className="text-foreground-muted">—</span>
                   )}
                 </td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{idList(bl.directorId)}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{idList(bl.members)}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{idList(bl.companyIds)}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{idList(bl.departmentIds)}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{idList(bl.specifyMembers)}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{bl.relatedProject || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{bl.cptWithdraw ? '是' : '否'}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary" title={jsonText(bl.expertWorkMention)}>{jsonCount(bl.expertWorkMention)}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary" title={jsonText(bl.expertWorkLabel)}>{jsonCount(bl.expertWorkLabel)}</td>
+                <td className="max-w-[160px] truncate px-3 py-2 text-foreground-secondary" title={bl.extra ?? undefined}>{bl.extra || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary" title={bl.designMdUrl ?? undefined}>{bl.designMd ? (bl.designMdUrl || '有内容') : '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{bl.creatorId || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{bl.updatorId || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground-muted">{fmtTime(bl.createTime)}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground-muted">{fmtTime(bl.updateTime)}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground-muted">{bl.deleteTime ? fmtTime(bl.deleteTime) : '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{bl._count?.advertisers ?? 0}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{bl._count?.marketingEvents ?? 0}</td>
                 <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 text-right hover:bg-surface-hover/50">
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setEditingId(bl.id)} className="text-xs text-accent-primary hover:underline">编辑</button>

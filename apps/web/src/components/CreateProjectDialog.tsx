@@ -79,6 +79,8 @@ interface Props {
   initial?: ProjectFormInitial | null;
   /** 锁定场景（编辑模式下避免误改已绑定 campaign）。 */
   lockScenario?: boolean;
+  /** 编辑模式：锁定样式类型（PPT/AI HTML 产物不同，创建后不可切换） */
+  lockStyleType?: boolean;
   title?: string;
   submitLabel?: string;
   onCancel: () => void;
@@ -92,6 +94,7 @@ export function CreateProjectDialog({
   error,
   initial,
   lockScenario = false,
+  lockStyleType = false,
   title = '新建报告',
   submitLabel = '创建',
   onCancel,
@@ -317,7 +320,7 @@ export function CreateProjectDialog({
 
           {/* 样式类型（第一步选择，决定后续流程；单页面类型已废弃下线） */}
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">样式类型</span>
+            <span className="mb-1.5 block text-sm font-medium text-foreground-secondary">样式类型{lockStyleType && <span className="ml-1 text-foreground-muted">（已锁定）</span>}</span>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'ppt' as const, label: 'PPT 多页', hint: '多页幻灯片报告' },
@@ -327,11 +330,12 @@ export function CreateProjectDialog({
                   type="button"
                   key={s.id}
                   onClick={() => setStyleType(s.id)}
+                  disabled={lockStyleType}
                   className={`rounded-lg border px-3 py-2 text-left transition ${
                     styleType === s.id
                       ? 'border-accent-primary bg-accent-primary/5'
                       : 'border-border-default hover:bg-surface-hover'
-                  }`}
+                  } ${lockStyleType ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
                   <div className="text-sm font-medium text-foreground-primary">{s.label}</div>
                   <div className="text-[11px] text-foreground-muted">{s.hint}</div>
