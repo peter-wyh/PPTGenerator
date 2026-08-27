@@ -196,22 +196,22 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
    insight card or section with big numbers (do not silently drop it when the data exists).
    - Comparison (priorPeriod, when present) → MoM comparison table/bars: current vs prior period KPIs
      with mom % delta badges (green up / red down). mom=null means prior period was 0 — show "N/A".
-   - Media placements (mediaPlacements, when present) → STYLIZED image card grid: each card = screenshot
-     image with rounded-xl corners, subtle shadow (box-shadow), hover lift effect (transform:translateY(-2px)),
-     a gradient overlay strip at the bottom carrying the placementName in white bold text, and a small
-     platform tag chip (top-left, semi-transparent dark pill). object-fit:cover, aspect-ratio ~16:10,
-     responsive 2-4 per row. When postUrl exists, make the whole card clickable (open in new tab).
-     When screenshotUrl is missing, render a styled placeholder (soft gradient background + centered
-     camera icon + placementName) — NOT a plain dashed box. NOTE: for creator-type placements, the
-     screenshot is the creator's real collaboration content (placementName like "Leo Sato — Reel") —
-     treat this section as the media placement showcase wall. Qualitative showcase — no numeric metrics.
+   - Placements grouped by creator (placementGroups, when present) → grouped image wall: for EACH group
+     render a group header (creator name / site name + platform chip) and its screenshot card grid.
+     Each card = screenshot image with rounded-xl corners, subtle shadow (box-shadow), hover lift
+     effect (transform:translateY(-2px)), a gradient overlay strip at the bottom carrying the item
+     title in white bold text, and a small platform tag chip (top-left, semi-transparent dark pill).
+     object-fit:cover, aspect-ratio ~16:10, responsive 2-4 per row. When postUrl exists, make the
+     whole card clickable (open in new tab). Entries without screenshots are EXCLUDED server-side.
+     When "placementGroups" is absent from the context, OMIT the entire Campaign Placements section
+     (no placeholder card, no empty wall). Qualitative showcase — no numeric metrics.
    - Ranking (creator performance) → table with avatar, highlighted best values (NO tier column/tags)
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
 
    ★ EXPLICIT PLACEHOLDER RULE (STANDARD MODULES — ZERO SILENT DROPS):
    The dimensions above marked as STANDARD for a performance report — Top-Selling Products
-   (topProducts), Campaign Placements (mediaPlacements), MoM comparison (priorPeriod) —
+   (topProducts), MoM comparison (priorPeriod) —
    MUST NOT be silently omitted from the report when their data is absent. Instead render
    an explicit "Data Unavailable" placeholder card in their place:
      - Grey card, dashed border, centered content, same grid cell size as a normal module card
@@ -637,7 +637,7 @@ export interface DoneDataCoverage {
  * 字段名 = buildCampaignContext 顶层注入键(AI 上下文键),前端按 key 映射中文标签。
  */
 export interface ModuleCoverageItem {
-  /** 模块键(= AI 上下文注入字段名): dailyTrend/periodKpis/priorPeriod/topProducts/basket/mediaPlacements/creators/orderStatusSplit/topCountries/deviceSplit */
+  /** 模块键(= AI 上下文注入字段名): dailyTrend/periodKpis/priorPeriod/topProducts/basket/placementGroups/creators/orderStatusSplit/topCountries/deviceSplit */
   key: string;
   /** 模块中文名(前端直接展示) */
   label: string;
@@ -934,11 +934,11 @@ export const aiGenerateService = {
       hasBasket = false;
     }
 
-    // 4) mediaPlacements:analytics JSON 白名单提取(与 buildCampaignContext L1093 同口径)
+    // 4) placementGroups:analytics JSON 白名单提取(与 buildCampaignContext 同口径——只数有 screenshotUrl 的条目)
     const mediaPlacements = ((campaign.analytics as Record<string, unknown> | null)?.mediaPlacements as
-      | { name?: string }[]
+      | { name?: string; screenshotUrl?: string }[]
       | undefined)
-      ?.filter((m) => m?.name) ?? [];
+      ?.filter((m) => m?.name && m.screenshotUrl) ?? [];
     // ★ 0826 对齐 buildCampaignContext 回退口径:analytics.mediaPlacements 为空时,
     //   达人合作作品截图(contentShowcase 同源)也构成资源位墙——预检不应误报缺失。
     const fallbackPlacementCount = mediaPlacements.length
@@ -1033,7 +1033,8 @@ export const aiGenerateService = {
         detail: hasPrior ? '前一期有数据，可计算环比' : '前一期无数据（首期报告属正常）',
       },
       {
-        key: 'mediaPlacements',
+        // ★ 0827 口径对齐 placementGroups：无图条目剔除后无可用截图 → missing（模块隐藏）
+        key: 'placementGroups',
         label: 'Campaign Placements',
         status: mediaPlacements.length > 0 || fallbackPlacementCount > 0 ? 'ok' : 'missing',
         detail:
@@ -1041,7 +1042,7 @@ export const aiGenerateService = {
             ? `${mediaPlacements.length} 个资源位`
             : fallbackPlacementCount > 0
               ? `${fallbackPlacementCount} 张达人作品截图（资源位回退）`
-              : '未配置资源位（analytics.mediaPlacements），模块将缺失',
+              : '无可用截图（模块将隐藏）',
       },
       {
         key: 'marketingEvents',
@@ -1379,20 +1380,39 @@ export const aiGenerateService = {
 
     // ★ 缺口④ 媒体资源位：analytics.mediaPlacements 白名单提取（定性：name/screenshotUrl/description）。
     //   analytics 数字字段仍不进上下文；此处仅资源位展示信息。截图走 resolveUrl 转 /uploads 绝对地址。
-    const mediaPlacements = ((campaign.analytics as Record<string, unknown> | null)?.mediaPlacements as
-      | { name?: string; screenshotUrl?: string; description?: string }[]
-      | undefined)
-      ?.filter((m) => m?.name)
-      .map((m) => ({
-        name: m.name!,
-        ...(m.screenshotUrl ? { screenshotUrl: resolveUrl(m.screenshotUrl) ?? m.screenshotUrl } : {}),
-        ...(m.description ? { description: m.description } : {}),
-      })) ?? [];
+    // ★ 0827 按达人聚合组图：资源位整形为 placementGroups（分组结构）。
+    //   analytics.mediaPlacements 条目只保留有 screenshotUrl 的（无图媒体不出现）；
+    //   name 形如 "Creator — Title" 且前缀精确命中达人名的归入该达人组，其余归站点组。
+    const creatorByName = new Map(campaign.campaignCreators.map((c) => [c.creator?.name ?? '', c]));
+    const analyticsPlacements = ((campaign.analytics as Record<string, unknown> | null)?.mediaPlacements as
+      | { name?: string; screenshotUrl?: string; description?: string; platform?: string; postUrl?: string }[]
+      | undefined) ?? [];
+    type PlacementGroup = { group: string; platform: string | null; items: Array<{ title: string; screenshotUrl: string; postUrl: string | null; contentType: string | null; description: string | null }> };
+    let placementGroups: PlacementGroup[] = [];
+    if (analyticsPlacements.length) {
+      const byGroup = new Map<string, PlacementGroup>();
+      for (const m of analyticsPlacements) {
+        if (!m?.name || !m.screenshotUrl) continue; // ★ 无图剔除（0827 隐藏模块口径）
+        const url = resolveUrl(m.screenshotUrl) ?? m.screenshotUrl;
+        const sep = m.name.indexOf(' — ');
+        const groupName = sep > 0 ? m.name.slice(0, sep) : m.name;
+        const cc = creatorByName.get(groupName);
+        const key = cc ? groupName : 'Site & Editorial Placements';
+        const g = byGroup.get(key) ?? { group: key, platform: cc?.creator?.platform ?? m.platform ?? null, items: [] };
+        g.items.push({
+          title: sep > 0 ? m.name.slice(sep + 3) : m.name,
+          screenshotUrl: url,
+          postUrl: m.postUrl ?? null,
+          contentType: null,
+          description: m.description ?? null,
+        });
+        byGroup.set(key, g);
+      }
+      placementGroups = [...byGroup.values()].filter((g) => g.items.length);
+    }
 
-    // ★ 0826 用户要求：analytics.mediaPlacements 为空时回退达人合作作品截图墙。
-    //   媒体是达人的资源位 = 其 contentShowcase（Collaboration.deliverables[].screenshots）。
-    //   注意：此处 creators 数组在其后构建——回退在 creators 构建完成后执行（见下方 fallbackPlacements）。
-    let fallbackPlacements: Array<{ placementName: string; screenshotUrl: string; description: string; platform: string | null; postUrl: string | null }> = [];
+    // ★ 0826 资源位回退 → 0827 分组结构：analytics 为空时用达人合作作品截图组 placementGroups
+    //   （构建过程见下方 creators 之后的分组回退段）。
 
     // ★ 真源切换(cps-daily 废弃)：creators 无 period 汇总时的聚合列真源（LP 流量+订单表现）。
     //   复用主链路 cpsSource（未查过才现场查）——syncSource 与主查询同源，省一次全表查询。
@@ -1576,10 +1596,9 @@ export const aiGenerateService = {
       // ★ 缺口① MoM 环比：前一期 KPI 对比（前一期有 daily 数据时注入）。
       //   mom 字段 = (cur-prior)/prior 百分比字符串（如 "+27.6%"）；null = 前一期为 0，无法计算。
       ...(priorPeriod ? { priorPeriod } : {}),
-      // ★ 缺口④ 媒体资源位（定性）。
-      //   0826 用户要求：analytics.mediaPlacements 为空且媒体是达人时，
-      //   回退取达人合作作品截图（contentShowcase 同源）作为资源位截图墙。
-      ...(mediaPlacements.length ? { mediaPlacements } : {}),
+      // ★ 缺口④ 媒体资源位（定性）→ 0827 按达人分组：placementGroups（每组 = 达人/站点 + 其截图列表）。
+      //   无图条目已在整形时剔除；全空时字段不注入 → AI 无该模块数据 → 整模块隐藏。
+      ...(placementGroups.length ? { placementGroups } : {}),
       // ★ 全媒体表现表（0826）：所有 publisher 的期内 clicks/orders/GMV/Commission——
       //   Creator Breakdown 表的数据源，覆盖 media_site/community/content_site 等非达人媒体。
       ...(allMedia.length ? { allMedia } : {}),
@@ -1708,26 +1727,32 @@ export const aiGenerateService = {
         .filter((cc) => cc._periodActive !== false),
     };
 
-    // ★ 0826 资源位回退（creators 构建完成后）：analytics.mediaPlacements 为空时，
-    //   用达人合作作品截图组资源位墙——媒体是达人的资源位取其 contentShowcase 截图。
-    if (!mediaPlacements.length) {
-      fallbackPlacements = (context.creators as Array<{
+    // ★ 0826 资源位回退（creators 构建完成后）→ 0827 改为分组结构：analytics 为空时，
+    //   用达人合作作品截图组 placementGroups——每个达人的 contentShowcase 截图构成其组。
+    if (!placementGroups.length) {
+      const byCreator = new Map<string, PlacementGroup>();
+      for (const c of context.creators as Array<{
         name: string; platform: string | null;
         contentShowcase?: Array<{ contentType: string | null; postUrl: string | null; screenshots: Array<{ url: string; caption: string | null }> }> | null;
-      }>)
-        .filter((c) => c.contentShowcase && c.contentShowcase.length)
-        .flatMap((c) => (c.contentShowcase ?? []).flatMap((d) =>
+      }>) {
+        if (!c.contentShowcase || !c.contentShowcase.length) continue;
+        const items = c.contentShowcase.flatMap((d) =>
           d.screenshots.map((s) => ({
-            placementName: `${c.name} — ${d.contentType ?? 'Collab Content'}`,
+            title: d.contentType ?? 'Collab Content',
             screenshotUrl: s.url,
-            description: s.caption ?? `${c.platform ? c.platform + ' ' : ''}creator collaboration content`,
-            platform: c.platform ?? null,
             postUrl: d.postUrl ?? null,
-          }))));
-      if (fallbackPlacements.length) {
-        (context as { mediaPlacements?: unknown }).mediaPlacements = fallbackPlacements;
-        console.log(`[buildCampaignContext] mediaPlacements fallback: ${fallbackPlacements.length} creator-content placements injected`);
+            contentType: d.contentType ?? null,
+            description: s.caption ?? null,
+          })));
+        if (items.length) byCreator.set(c.name, { group: c.name, platform: c.platform ?? null, items });
       }
+      placementGroups = [...byCreator.values()];
+      if (placementGroups.length) {
+        console.log(`[buildCampaignContext] placementGroups fallback: ${placementGroups.length} creator groups injected`);
+      }
+    }
+    if (placementGroups.length) {
+      (context as { placementGroups?: unknown }).placementGroups = placementGroups;
     }
 
     return JSON.stringify(context, null, 2);
