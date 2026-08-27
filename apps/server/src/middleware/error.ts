@@ -19,6 +19,7 @@ export const notFoundHandler: RequestHandler = (_req, _res, next) => {
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   const apiErr = toApiError(err);
 
+  // stack 只进服务端日志，永不下发客户端——生产响应带 stack 会泄露内部路径/代码结构（审计 #3）。
   if (apiErr.statusCode >= 500) {
     logger.error({ err }, 'request error');
   }
@@ -28,7 +29,6 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
       code: apiErr.code,
       message: apiErr.message,
       ...(apiErr.details ? { details: apiErr.details } : {}),
-      ...(config.isProd ? {} : { stack: err instanceof Error ? err.stack : undefined }),
     },
   });
 };

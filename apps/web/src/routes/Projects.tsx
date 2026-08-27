@@ -354,7 +354,7 @@ export function Projects() {
                             className="mr-1 rounded bg-accent-primary px-2.5 py-1 text-xs font-medium text-foreground-inverse hover:bg-accent-secondary"
                             title={p.meta?.styleType === 'ai-html' ? '进入 AI HTML 工作台' : '进入可视化编辑器'}
                           >
-                            {p.meta?.styleType === 'ai-html' ? '⚡ AI生成' : '可视化编辑'}
+                            {p.meta?.styleType === 'ai-html' ? '⚡生成HTML' : '可视化编辑'}
                           </button>
                         ) : (
                           <button

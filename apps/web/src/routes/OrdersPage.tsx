@@ -6,6 +6,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { campaignsApi, type OrderRow, type OrdersPage } from '@/api/campaignsApi';
+import { fmtMoney } from '@/utils/money';
 import { buildPreviewFromRows, downloadTemplate, type ImportKind, type PreviewItem } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
 import { toast } from '@/components/Toast';
@@ -17,11 +18,6 @@ function fmtDate(v: string | null) {
 function fmtDateTime(v: string | null | undefined) {
   if (!v) return '—';
   return /^\d{4}-\d{2}-\d{2}T/.test(v) ? v.slice(0, 19).replace('T', ' ') : v;
-}
-function fmtMoney(v: string | number | null | undefined) {
-  if (v === null || v === undefined || v === '') return '—';
-  const n = typeof v === 'string' ? parseFloat(v) : v;
-  return Number.isFinite(n) ? `${n < 0 ? '-' : ''}£${Math.abs(n).toFixed(2)}` : '—';
 }
 function orderTotal(row: OrderRow) {
   return row.items.reduce((s, it) => s + parseFloat(it.lineTotal) * it.qty, 0);

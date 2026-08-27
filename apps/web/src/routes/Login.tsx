@@ -8,8 +8,11 @@ import { Logo } from '@/components/Logo';
 export function Login() {
   const navigate = useNavigate();
   const { login, status, loginError } = useAuthStore();
-  const [email, setEmail] = useState(import.meta.env.DEV ? 'admin@mediakit.local' : '');
-  const [password, setPassword] = useState(import.meta.env.DEV ? 'mediakit123' : '');
+  // DEV 预填凭据走 .env.local（gitignored），不再硬编码于源码（审计 #10）。
+  const devEmail = import.meta.env.DEV ? import.meta.env.VITE_DEV_PREFILL_EMAIL ?? '' : '';
+  const devPassword = import.meta.env.DEV ? import.meta.env.VITE_DEV_PREFILL_PASSWORD ?? '' : '';
+  const [email, setEmail] = useState(devEmail);
+  const [password, setPassword] = useState(devPassword);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {

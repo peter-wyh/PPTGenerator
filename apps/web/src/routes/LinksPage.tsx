@@ -8,16 +8,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { campaignsApi, type LinkRow, type LinkDailyRow } from '@/api/campaignsApi';
+import { fmtMoney } from '@/utils/money';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
 import { parseFile } from '@/editor/datasource/parse';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { toast } from '@/components/Toast';
 
-function fmtMoney(v: number | string | null | undefined) {
-  if (v === null || v === undefined || v === '') return '—';
-  const n = typeof v === 'string' ? parseFloat(v) : v;
-  return Number.isFinite(n) ? `${n < 0 ? '-' : ''}£${Math.abs(n).toFixed(2)}` : '—';
-}
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—';
   const dt = new Date(d);

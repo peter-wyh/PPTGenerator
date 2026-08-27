@@ -10,7 +10,9 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
+    // image/svg+xml 会被 controller 的 EXT_BY_MIME 拒绝；在 multer 层一并拦截
+    // （审计 #2：SVG 可内嵌 <script>，同域提供即存储型 XSS）。
+    if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/svg+xml') cb(null, true);
     else cb(null, false);
   },
 });
