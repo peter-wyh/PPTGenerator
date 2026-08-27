@@ -1155,16 +1155,21 @@ export const aiGenerateService = {
     //   Click References)。周期切片不全覆盖时口径不符,不回退;全 0 视为无数据。
     //   声明提升:KPI/MoM/creators 区共用;注入在下方 daily 扫描后(clicksKeySeen 需先得出)。
     let clicksFallback = false;
+    // ★ 查询去重（0827）：cpsSource 全量日数据 + 聚合列，主链路/prior/allMedia/sync 四处共用一次查询。
+    //   hasPeriod && cov.covered 时主链路必查；否则延迟到 syncSource/allMedia 按需查。
+    let cpsSource: Awaited<ReturnType<typeof loadCreatorCps>> | null = null;
 
     if (hasPeriod && cov.covered) {
       // ★ 真源切换(cps-daily 废弃)：期内汇总统一从 cpsSource（LP 流量 daily + 订单表成交/新客日）。
       //   旧 CpsPerformance.daily 已全部复制/重建进 LP——扫旧表双计,删除。
-      const cpsSource = await loadCreatorCps(campaignId);
+      cpsSource = await loadCreatorCps(campaignId);
       for (const [ccId, e] of cpsSource.byCc) {
         const ccSum: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
         for (const [date, cell] of e.daily) {
           if (!inPeriod(date)) continue;
-          if (cell.clicks > 0) clicksKeySeen = true;
+          // ★ 与 recipe mapper 同口径：fromLp 置位（LP 行存在、clicks 为真实 0）也算 key 存在——
+          //   防止期内真实 0 clicks 被误判为「数据源缺失」而用全周期聚合列覆盖（子区间真 0 ≠ 无数据）。
+          if (cell.clicks > 0 || cell.fromLp) clicksKeySeen = true;
           ccSum.clicks += cell.clicks;
           ccSum.impressions += cell.impressions;
           ccSum.orders += cell.orders;
@@ -1192,7 +1197,9 @@ export const aiGenerateService = {
       // ★ clicks 聚合列回退注入:daily 无 clicks 键 + 报告周期完整覆盖 campaign 生命周期。
       //   真源:LP 聚合列(链接全周期汇总,Awin Click References 口径)注入 total/perCreatorSums——
       //   KPI Clicks/CVR、MoM、creators CPS 全链路生效;trend 日级分布仍不注入(无日级源,不编造)。
-      if (!clicksKeySeen) {
+      // ★ 与 recipe mapper 同口径补第二重 guard：daily 完全无 LP 行（dailyRowCount===0）才允许聚合列回退。
+      //   有 LP 行但期内 clicks 全 0 = 真实 0（fromLp 已置位 clicksKeySeen），不得用全周期聚合列覆盖子区间。
+      if (!clicksKeySeen && cpsSource.dailyRowCount === 0) {
         const coversAll = (!reportPeriod?.startDate || !campaign.startDate || reportPeriod.startDate <= campaign.startDate)
           && (!reportPeriod?.endDate || !campaign.endDate || reportPeriod.endDate >= campaign.endDate);
         if (coversAll) {
@@ -1289,9 +1296,9 @@ export const aiGenerateService = {
         const inPrior = (d: string) => d >= pStart && d <= pEnd;
         const pt: typeof total = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
         let priorDays = 0;
-        // ★ 真源切换(cps-daily 废弃)：前一期切片从 cpsSource(与当期同源)
-        const priorSource = await loadCreatorCps(campaignId);
-        for (const [, e] of priorSource.byCc) {
+        // ★ 真源切换(cps-daily 废弃)：前一期切片与当期同源——直接复用主查询（cpsSource 全量日数据，
+        //   inPrior 只是切片），不再二次 loadCreatorCps（省一次 LP+订单全表查询）。
+        for (const [, e] of cpsSource.byCc) {
           for (const [date, cell] of e.daily) {
             if (!inPrior(date)) continue;
             pt.clicks += cell.clicks; pt.orders += cell.orders; pt.gmv += cell.gmv;
@@ -1387,9 +1394,10 @@ export const aiGenerateService = {
     //   注意：此处 creators 数组在其后构建——回退在 creators 构建完成后执行（见下方 fallbackPlacements）。
     let fallbackPlacements: Array<{ placementName: string; screenshotUrl: string; description: string; platform: string | null; postUrl: string | null }> = [];
 
-    // ★ 真源切换(cps-daily 废弃)：creators 无 period 汇总时的聚合列真源（LP 流量+订单表现）
-    //   仅无 period 时预取（有 period 走 perCreatorSums，无需查询）
-    const syncSource = !hasPeriod ? await loadCreatorCps(campaignId) : null;
+    // ★ 真源切换(cps-daily 废弃)：creators 无 period 汇总时的聚合列真源（LP 流量+订单表现）。
+    //   复用主链路 cpsSource（未查过才现场查）——syncSource 与主查询同源，省一次全表查询。
+    if (!cpsSource) cpsSource = await loadCreatorCps(campaignId);
+    const syncSource = cpsSource;
 
     // ★ 营销活动（MarketingEvent，营销系统同步）：该业务线与报告周期重叠的活动。
     //   宁缺勿假：label='1' 废弃过滤；1970 哨兵日期自然被重叠判定排除；无有效活动不注入。
@@ -1426,7 +1434,7 @@ export const aiGenerateService = {
     // ★ 全媒体表现（0826 用户要求：媒体表现表透出所有媒体，不只合作达人）：
     //   LP 流量按 publisher 聚合（期内切片）+ cpsSource 订单侧归因到对应达人性 publisher——
     //   含未挂达人合作行的 media_site/community/content_site。creator 类型标注达人名。
-    const allMediaCps = await loadCreatorCps(campaignId);
+    const allMediaCps = syncSource; // 查询去重：allMedia 与 creators 聚合同源（LP 流量 + 订单归因）
     const allMedia = (() => {
       const byPub = new Map<string, { name: string; type: string; platform: string | null; creatorName: string | null; clicks: number; orders: number; gmv: number; commission: number }>();
       const inPeriod2 = (d: string) => (!reportPeriod?.startDate || d >= reportPeriod.startDate) && (!reportPeriod?.endDate || d <= reportPeriod.endDate);
@@ -1453,6 +1461,13 @@ export const aiGenerateService = {
         e.clicks += clicks;
         byPub.set(pub.id, e);
       }
+      // ★ 精确归因（0827 替代名字子串匹配）：LP.campaignCreatorId 闭环 FK → cc → publisher。
+      //   每个 cc 的订单成交只落到其 LP 所挂 publisher 行；无 FK 的 cc 保持不落（宁缺勿错配）。
+      //   （旧逻辑按 creator 名字首词子串匹配 publisher 名——同名/同前缀达人会错配。）
+      const pubByCc = new Map<string, string>();
+      for (const lp of campaign.linkPerformances ?? []) {
+        if (lp.campaignCreatorId && lp.publisher) pubByCc.set(lp.campaignCreatorId, lp.publisher.id);
+      }
       for (const [ccId, e] of allMediaCps.byCc) {
         const cc = campaign.campaignCreators.find((c) => c.id === ccId);
         if (!cc) continue;
@@ -1461,9 +1476,13 @@ export const aiGenerateService = {
           if (!inPeriod2(date)) continue;
           ccPeriod.orders += cell.orders; ccPeriod.gmv += cell.gmv; ccPeriod.commission += cell.commission;
         }
+        const pubId = pubByCc.get(ccId);
+        const target = pubId ? byPub.get(pubId) : undefined;
         const name = cc.creator?.name ?? null;
-        const target = name ? [...byPub.values()].find((p) => p.creatorName === null && p.name?.includes(name.split(' ')[0])) : null;
-        if (target) { target.orders += ccPeriod.orders; target.gmv += ccPeriod.gmv; target.commission += ccPeriod.commission; target.creatorName = name; }
+        if (target && target.creatorName === null) {
+          target.orders += ccPeriod.orders; target.gmv += ccPeriod.gmv; target.commission += ccPeriod.commission;
+          target.creatorName = name;
+        }
       }
       return [...byPub.values()].filter((p) => p.clicks > 0 || p.orders > 0).sort((a, b) => b.orders - a.orders || b.clicks - a.clicks);
     })();
