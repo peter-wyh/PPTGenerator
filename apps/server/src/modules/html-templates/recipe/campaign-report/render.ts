@@ -7,6 +7,7 @@ import { mapCampaign } from './mapper';
 import { fillActionable } from './narrative';
 import { pickVoiceForCampaign } from '../../../guides/guide.service';
 import { applyManifest } from './manifest';
+import { devSafeBase } from '../../../../utils/dev-safe-base';
 import { mergeTokens } from '../overrides';
 import type { RenderInput } from '../types';
 import { ApiError } from '../../../../utils/ApiError';
@@ -31,7 +32,9 @@ const compiled = Handlebars.compile(templateSrc, { noEscape: false });
 
 // recipe 报告自托管资源基础 URL(与 ai-generate.service.ts 的 SELF_HOST_BASE 同源);
 // 模板里 {{vendorBase}}/vendor/... 引用。空则回退相对路径(srcdoc 同源可用,export 断)。
-const vendorBase = (process.env.PUBLIC_BASE_URL || config.webUrl || '').replace(/\/+$/, '');
+// ★ localhost 防御(dev-safe-base):本地 dev 归一化为 ''(相对路径),报告同步/分享到
+//   任意环境不裂图;生产域名照旧。
+const vendorBase = devSafeBase(process.env.PUBLIC_BASE_URL || config.webUrl);
 
 export async function render(input: RenderInput): Promise<string> {
   if (!input.campaignId && !input.reportContent) {

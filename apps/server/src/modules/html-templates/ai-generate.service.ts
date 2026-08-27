@@ -5,6 +5,7 @@ import { fetchChatCompletionWithRetry, type ChatMessage } from './ai-client';
 import { resolvePairForCampaign, mergeGuideLayers } from '../guides/guide.service';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { loadCreatorCps } from './cps-source';
+import { devSafeBase } from '../../utils/dev-safe-base';
 import { campaignService } from '../campaigns/campaigns.service';
 import { orderStatsService } from '../campaigns/order-stats.service';
 
@@ -21,7 +22,9 @@ const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 
 // 自托管静态资源基础 URL（与 buildCampaignContext 里 logo 的绝对 URL 同源）。
 // 报告 HTML 后处理时用它把海外公共 CDN 改写为同源自托管路径；空则跳过（不破坏原 HTML）。
-const SELF_HOST_BASE = (process.env.PUBLIC_BASE_URL || config.webUrl || '').replace(/\/+$/, '');
+// ★ localhost 防御：本地 dev 的 webUrl 是 localhost——绝对地址一旦离开本机全部裂图，
+//   归一化为 ''（相对路径），iframe 同源反代 /vendor 任意环境都通（生产域名照旧）。
+const SELF_HOST_BASE = devSafeBase(process.env.PUBLIC_BASE_URL || config.webUrl);
 
 /**
  * 把生成的报告 HTML 中引用的海外公共 CDN（国内不可达）改写为自托管绝对 URL。
@@ -1359,7 +1362,10 @@ export const aiGenerateService = {
     //   1) 报告 iframe 在前端页面中渲染，浏览器经 Vite proxy 访问 /uploads
     //   2) 生产环境部署后前端域名才是可访问入口
     //   3) 直连后端 :4000 在 dev 模式下可能被 CORS/端口隔离阻断
-    const baseUrl = process.env.PUBLIC_BASE_URL || config.webUrl;
+    // ★ localhost 防御（与 upload/storage.ts 同款）：本地 dev 的 webUrl 是 localhost——
+    //   绝对地址一旦离开本机（测试环境/分享出去）全部裂图。归一化为相对路径，
+    //   报告 iframe 同源反代 /uploads 任意环境都通。
+    const baseUrl = devSafeBase(process.env.PUBLIC_BASE_URL || config.webUrl);
     const resolveUrl = (p?: string | null) =>
       p && p.startsWith('/uploads/') ? `${baseUrl}${p}` : (p || null);
 
