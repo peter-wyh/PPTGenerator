@@ -279,9 +279,12 @@ export const campaignsApi = {
   /** 订单日统计（OrderDailyStat 透出）：campaign 必填；creatorBreakdown=true 看 creator×date 行。 */
   listOrderDailyStats: (params: { campaignId: string; creatorBreakdown?: boolean; page?: number; pageSize?: number }) =>
     api.get<StatsPageResp<OrderDailyRow>>('/campaigns/order-daily-stats', { params }).then((r) => r.data),
-  /** 媒体日统计（PublisherDailyStat 透出）：campaign 必填；publisherId 可选过滤。 */
-  listPublisherDailyStats: (params: { campaignId: string; publisherId?: string; page?: number; pageSize?: number }) =>
+  /** 媒体日统计（PublisherDailyStat 透出）：campaign 必填；publisherId/dateFrom/dateTo 可选过滤。 */
+  listPublisherDailyStats: (params: { campaignId: string; publisherId?: string; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number }) =>
     api.get<StatsPageResp<PublisherDailyRow>>('/campaigns/publisher-daily-stats', { params }).then((r) => r.data),
+  /** 媒体×日 tab 媒体下拉选项：campaign 下有统计行的媒体去重列表。 */
+  listPublisherStatPublishers: (campaignId: string) =>
+    api.get<{ id: string; name: string; domain: string; type: string }[]>('/campaigns/publisher-stat-publishers', { params: { campaignId } }).then((r) => r.data),
   /** 重算中间层统计：kind=order（OrderDailyStat）/ publisher（PublisherDailyStat）。 */
   recomputeStats: (campaignId: string, kind: 'order' | 'publisher') =>
     api.post<{ rows: number; dropped?: number }>(`/campaigns/${campaignId}/${kind}-stats/recompute`).then((r) => r.data),

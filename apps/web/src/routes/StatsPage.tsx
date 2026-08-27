@@ -22,6 +22,10 @@ export default function StatsPage() {
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [campaignId, setCampaignId] = useState('');
   const [creatorBreakdown, setCreatorBreakdown] = useState(false);
+  const [pubOptions, setPubOptions] = useState<{ id: string; name: string; domain: string; type: string }[]>([]);
+  const [publisherId, setPublisherId] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [orderRows, setOrderRows] = useState<OrderDailyRow[]>([]);
   const [pubRows, setPubRows] = useState<PublisherDailyRow[]>([]);
   const [orderTotal, setOrderTotal] = useState(0);
@@ -37,6 +41,13 @@ export default function StatsPage() {
     )).catch(() => {});
   }, []);
 
+  // 媒体下拉选项：切 campaign 或重算后刷新。
+  const loadPubOptions = useCallback((cid: string) => {
+    if (!cid) { setPubOptions([]); return; }
+    campaignsApi.listPublisherStatPublishers(cid).then(setPubOptions).catch(() => setPubOptions([]));
+  }, []);
+  useEffect(() => { loadPubOptions(campaignId); }, [campaignId, loadPubOptions]);
+
   const load = useCallback(async () => {
     if (!campaignId) return;
     setLoading(true);
@@ -46,7 +57,12 @@ export default function StatsPage() {
         setOrderRows(r.rows);
         setOrderTotal(r.total);
       } else {
-        const r = await campaignsApi.listPublisherDailyStats({ campaignId, page, pageSize });
+        const r = await campaignsApi.listPublisherDailyStats({
+          campaignId, page, pageSize,
+          ...(publisherId ? { publisherId } : {}),
+          ...(dateFrom ? { dateFrom } : {}),
+          ...(dateTo ? { dateTo } : {}),
+        });
         setPubRows(r.rows);
         setPubTotal(r.total);
       }
@@ -56,7 +72,7 @@ export default function StatsPage() {
     } finally {
       setLoading(false);
     }
-  }, [tab, campaignId, creatorBreakdown, page]);
+  }, [tab, campaignId, creatorBreakdown, page, publisherId, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -68,6 +84,7 @@ export default function StatsPage() {
     try {
       const r = await campaignsApi.recomputeStats(campaignId, kind);
       window.alert(`重算完成：写入 ${r.rows} 行${r.dropped ? `，跳过 ${r.dropped} 条无媒体/无日期订单` : ''}`);
+      if (kind === 'publisher') loadPubOptions(campaignId);
       load();
     } catch {
       window.alert('重算失败');
@@ -86,7 +103,7 @@ export default function StatsPage() {
         <div className="flex items-center gap-2">
           <select
             value={campaignId}
-            onChange={(e) => { setCampaignId(e.target.value); setPage(1); }}
+            onChange={(e) => { setCampaignId(e.target.value); setPage(1); setPublisherId(''); }}
             className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary min-w-[220px]"
           >
             <option value="">选择 Campaign…</option>
@@ -124,6 +141,43 @@ export default function StatsPage() {
           </label>
         )}
       </div>
+
+      {tab === 'publisher' && campaignId && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-foreground-secondary">
+          <select
+            value={publisherId}
+            onChange={(e) => { setPublisherId(e.target.value); setPage(1); }}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary min-w-[200px]"
+          >
+            <option value="">全部媒体…</option>
+            {pubOptions.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <span>日期</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary"
+          />
+          <span>→</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary"
+          />
+          {(publisherId || dateFrom || dateTo) && (
+            <button
+              onClick={() => { setPublisherId(''); setDateFrom(''); setDateTo(''); setPage(1); }}
+              className="rounded border border-border-default px-2 py-1 text-xs text-foreground-secondary hover:bg-surface-hover"
+            >
+              清除筛选
+            </button>
+          )}
+        </div>
+      )}
 
       {!campaignId ? (
         <div className="py-12 text-center text-sm text-foreground-secondary">请先选择 Campaign</div>

@@ -367,14 +367,25 @@ export const campaignService = {
 
   /** 媒体日统计列表（PublisherDailyStat 透出）：publisher × 日，成交+流量双口径。 */
   async listPublisherDailyStats(
-    opts: { campaignId?: string; publisherId?: string; page?: number; pageSize?: number } = {},
+    opts: {
+      campaignId?: string; publisherId?: string; dateFrom?: string; dateTo?: string;
+      page?: number; pageSize?: number;
+    } = {},
   ) {
     const page = Math.max(1, opts.page ?? 1);
     const pageSize = Math.min(200, Math.max(1, opts.pageSize ?? 50));
     if (!opts.campaignId) return { rows: [], total: 0, page, pageSize };
+    const dateRange: Prisma.StringFilter<'PublisherDailyStat'> | undefined =
+      opts.dateFrom || opts.dateTo
+        ? {
+            ...(opts.dateFrom ? { gte: opts.dateFrom } : {}),
+            ...(opts.dateTo ? { lte: opts.dateTo } : {}),
+          }
+        : undefined;
     const where: Prisma.PublisherDailyStatWhereInput = {
       campaignId: opts.campaignId,
       ...(opts.publisherId ? { publisherId: opts.publisherId } : {}),
+      ...(dateRange ? { statDate: dateRange } : {}),
     };
     const [rows, total] = await Promise.all([
       prisma.publisherDailyStat.findMany({
@@ -400,6 +411,22 @@ export const campaignService = {
       })),
       total, page, pageSize,
     };
+  },
+
+  /** 媒体×日 tab 的媒体下拉选项：该 campaign 下有统计行的媒体（去重，按名称排序）。 */
+  async listPublisherStatPublishers(campaignId: string) {
+    if (!campaignId) return [];
+    const grouped = await prisma.publisherDailyStat.groupBy({
+      by: ['publisherId'],
+      where: { campaignId },
+    });
+    const ids = grouped.map((g) => g.publisherId);
+    if (!ids.length) return [];
+    const pubs = await prisma.publisher.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, domain: true, type: true },
+    });
+    return pubs.sort((a, b) => a.name.localeCompare(b.name));
   },
 };
 

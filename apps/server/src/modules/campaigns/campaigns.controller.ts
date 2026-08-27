@@ -285,17 +285,28 @@ export const campaignController = {
     res.json(result);
   }),
 
-  /** 媒体日统计列表（PublisherDailyStat 透出）：query: campaignId(必填)/publisherId/page/pageSize。 */
+  /** 媒体日统计列表（PublisherDailyStat 透出）：query: campaignId(必填)/publisherId/dateFrom/dateTo/page/pageSize。 */
   listPublisherDailyStats: asyncHandler(async (req: Request, res: Response) => {
-    const { campaignId, publisherId } = req.query as { campaignId?: string; publisherId?: string };
+    const { campaignId, publisherId, dateFrom, dateTo } = req.query as {
+      campaignId?: string; publisherId?: string; dateFrom?: string; dateTo?: string;
+    };
     const page = parseInt(String(req.query.page ?? '1'), 10) || 1;
     const pageSize = parseInt(String(req.query.pageSize ?? '50'), 10) || 50;
     const result = await campaignService.listPublisherDailyStats({
       campaignId: campaignId || undefined,
       publisherId: publisherId || undefined,
+      dateFrom: /^\d{4}-\d{2}-\d{2}$/.test(dateFrom ?? '') ? dateFrom : undefined,
+      dateTo: /^\d{4}-\d{2}-\d{2}$/.test(dateTo ?? '') ? dateTo : undefined,
       page,
       pageSize,
     });
     res.json(result);
+  }),
+
+  /** 媒体×日 tab 媒体下拉选项：campaign 下有统计行的媒体去重列表。 */
+  listPublisherStatPublishers: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId } = req.query as { campaignId?: string };
+    const publishers = await campaignService.listPublisherStatPublishers(campaignId || '');
+    res.json(publishers);
   }),
 };

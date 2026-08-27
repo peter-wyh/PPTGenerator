@@ -24,6 +24,7 @@ router.get('/', validate({ query: listCampaignsQuerySchema }), campaignControlle
 // ★ 字面量路由必须先于 /:id 注册，否则被 :id 吞掉（orders/list 同理在下方集中放行前）
 router.get('/order-daily-stats', campaignController.listOrderDailyStats);
 router.get('/publisher-daily-stats', campaignController.listPublisherDailyStats);
+router.get('/publisher-stat-publishers', campaignController.listPublisherStatPublishers);
 router.get('/links/list', campaignController.listLinkPerformances);
 router.get('/links/daily', campaignController.listLinkDailyStats);
 router.get('/:id', validate({ params: idParamSchema }), campaignController.get);
