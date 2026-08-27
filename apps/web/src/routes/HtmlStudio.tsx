@@ -466,7 +466,7 @@ export function HtmlStudio() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <p className="text-sm text-red">{projectError || '报告不存在'}</p>
-          <Button variant="secondary" className="mt-4" onClick={() => navigate('/projects/ppt')}>
+          <Button variant="secondary" className="mt-4" onClick={() => navigate('/projects/ai-html')}>
             返回报告列表
           </Button>
         </div>

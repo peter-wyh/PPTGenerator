@@ -44,7 +44,7 @@ export function Layout({ children }: LayoutProps) {
             </span>
           </button>
           <button
-            onClick={() => navigate('/projects/ppt')}
+            onClick={() => navigate('/projects/ai-html')}
             className={navBtn(location.pathname === '/projects' || location.pathname.startsWith('/projects/ppt') || location.pathname.startsWith('/projects/ai-html'))}
           >
             报告管理

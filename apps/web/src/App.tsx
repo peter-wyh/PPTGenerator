@@ -42,7 +42,7 @@ export function App() {
           <Route path="/share/:token" element={<SharePage />} />
           <Route element={<ProtectedLayout />}>
             {/* ★ 报告管理两类报告独立路由：可直达/可刷新/前进后退不丢；:tab 用静态路由避免与 bare 布局的 /projects/:id 冲突 */}
-            <Route path="/projects" element={<Navigate to="/projects/ppt" replace />} />
+            <Route path="/projects" element={<Navigate to="/projects/ai-html" replace />} />
             <Route path="/projects/ppt" element={<Projects />} />
             <Route path="/projects/ai-html" element={<Projects />} />
             <Route path="/schemes" element={<SchemesPage />} />
