@@ -1,14 +1,13 @@
 /**
  * 业务线报告指南管理 —— /data/guides。
  * 指南 = 拼进 AI 系统提示词的业务线差异配置(品牌视觉/章节结构/展示形式/语调术语)。
- * 一个业务线可多份(scenario 切分),isDefault 唯一兜底;停用不删除。
+ * 0827 ID 方案:结构指南在生成表单直接按 id 选中,scenario 匹配已消灭;isDefault=视觉规范兜底;停用不删除。
  */
 import { useCallback, useEffect, useState } from 'react';
 import { guidesApi, type GuideDTO } from '@/api/guides';
 import { lookupApi, type BusinessLineDTO } from '@/api/lookup';
 import { toast } from '../components/Toast';
 
-const SCENARIO_OPTIONS = ['', '月报', '结案', '复盘'];
 
 export function GuidePage() {
   const [list, setList] = useState<GuideDTO[]>([]);
@@ -35,7 +34,7 @@ export function GuidePage() {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
 
-  const heads = ['#', '指南名称', '业务线', '场景', '默认', '状态', '更新时间', ''];
+  const heads = ['#', '指南名称', '业务线', '默认', '状态', '更新时间', ''];
 
   return (
     <div>
@@ -59,7 +58,6 @@ export function GuidePage() {
                 <td className="px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted">{idx + 1}</td>
                 <td className="px-3 py-2 font-medium text-foreground-primary">{g.name}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{g.businessLine?.title || g.businessLine?.code || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{g.scenario || '通用'}</td>
                 <td className="px-3 py-2 text-foreground-secondary">{g.isDefault ? '⭐ 默认' : '—'}</td>
                 <td className="px-3 py-2 text-foreground-secondary">{g.isActive ? '启用' : '已停用'}</td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground-muted">{g.updatedAt ? String(g.updatedAt).slice(0, 10) : '—'}</td>
@@ -88,8 +86,6 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
   const isEdit = !!guideId;
   const [businessLineId, setBusinessLineId] = useState('');
   const [name, setName] = useState('');
-  const [scenario, setScenario] = useState('');
-  const [customScenario, setCustomScenario] = useState('');
   const [content, setContent] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -112,15 +108,11 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
       if (!g) { setError('加载失败'); return; }
       setBusinessLineId(g.businessLineId);
       setName(g.name);
-      if (g.scenario && !SCENARIO_OPTIONS.includes(g.scenario)) { setScenario('自定义'); setCustomScenario(g.scenario); }
-      else setScenario(g.scenario ?? '');
       setContent(g.content ?? '');
       setIsDefault(!!g.isDefault);
       setIsActive(g.isActive !== false);
     }).catch(() => setError('加载失败'));
   }, [guideId]);
-
-  const finalScenario = scenario === '自定义' ? customScenario.trim() : scenario;
 
   async function save() {
     if (!businessLineId) { setError('请选择业务线'); return; }
@@ -131,7 +123,6 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
       const payload = {
         businessLineId,
         name: name.trim(),
-        scenario: finalScenario || undefined,
         content,
         isDefault,
         isActive,
@@ -153,28 +144,13 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
         <div className="font-headings text-sm font-semibold text-foreground-primary">{isEdit ? '编辑指南' : '新增指南'}</div>
         {error && <p className="text-xs text-red">{error}</p>}
 
-        <div className="flex gap-2">
-          <label className="flex flex-1 flex-col gap-1 text-xs text-foreground-secondary">
-            <span>业务线 <span className="text-red">*</span></span>
-            <select value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
-              <option value="">请选择业务线…</option>
-              {businessLines.map((b) => <option key={b.id} value={b.id}>{b.title || b.code}（{b.code}）</option>)}
-            </select>
-          </label>
-          <label className="flex flex-1 flex-col gap-1 text-xs text-foreground-secondary">
-            报告场景（空=通用，仅可作默认兜底）
-            <select value={scenario} onChange={(e) => setScenario(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
-              {SCENARIO_OPTIONS.map((s) => <option key={s} value={s}>{s || '通用'}</option>)}
-              <option value="自定义">自定义…</option>
-            </select>
-          </label>
-        </div>
-        {scenario === '自定义' && (
-          <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-            自定义场景名
-            <input value={customScenario} onChange={(e) => setCustomScenario(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
-          </label>
-        )}
+        <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
+          <span>业务线 <span className="text-red">*</span></span>
+          <select value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
+            <option value="">请选择业务线…</option>
+            {businessLines.map((b) => <option key={b.id} value={b.id}>{b.title || b.code}（{b.code}）</option>)}
+          </select>
+        </label>
 
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
           <span>指南名称 <span className="text-red">*</span></span>

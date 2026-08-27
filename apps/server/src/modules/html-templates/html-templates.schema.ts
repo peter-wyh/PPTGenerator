@@ -31,8 +31,8 @@ export const generateHtmlSchema = z.object({
   prompt: z.string().optional(),
   campaignId: z.string().optional(),
   theme: z.enum(['light', 'dark']).optional(),
-  /** 报告场景(月报/结案/复盘…),决定匹配哪份业务线指南 */
-  scenario: z.string().max(64).optional(),
+  /** ★ 叠加的结构指南 id(直接选指南;undefined=仅视觉层) */
+  guideId: z.string().max(64).optional(),
   reportPeriod: z.object({ startDate: z.string(), endDate: z.string() }).optional(),
 });
 
@@ -59,8 +59,8 @@ export const agentEditSchema = z.object({
     startDate: z.string().max(40).optional(),
     endDate: z.string().max(40).optional(),
   }).optional(),
-  // 报告场景,匹配业务线指南
-  scenario: z.string().max(64).optional(),
+  // ★ 叠加的结构指南 id(直接选指南,消灭场景字符串匹配;undefined=仅视觉层)
+  guideId: z.string().max(64).optional(),
 });
 
 /** Agent 数据问答:问题 → 纯文本回答(不产出 HTML)。与编辑链路同一数据真源。 */

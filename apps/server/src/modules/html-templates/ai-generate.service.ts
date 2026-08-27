@@ -336,7 +336,7 @@ export const SYSTEM_PROMPT_DISPLAY = `# 系统提示词 (SYSTEM_PROMPT)
 
 ## 📎 业务线指南（Guide · 双层注入）
 
-系统提示词按请求拼装：\`SYSTEM_PROMPT\`（下方通用规则）+ **双层业务线指南**（Guide 表按 campaign 业务线匹配：**视觉层** = isDefault 设计规范，管品牌色/字体/组件/动效，恒注入；**结构层** = 报告场景（scenario）精确匹配的指南，管章节结构/展示偏好/语调，命中即叠加）+ 业务事实（署名 Prepared by {业务线名}）。同一份指南可兼两职。指南在数据管理 → 指南 维护。
+系统提示词按请求拼装：\`SYSTEM_PROMPT\`（下方通用规则）+ **双层业务线指南**（Guide 表按 campaign 业务线匹配：**视觉层** = isDefault 设计规范，管品牌色/字体/组件/动效，恒注入；**结构层** = 用户选中的结构指南（按 id 精确匹配），管章节结构/展示偏好/语调，选中即叠加）+ 业务事实（署名 Prepared by {业务线名}）。同一份指南可兼两职。指南在数据管理 → 指南 维护。
 
 ---
 
@@ -1773,8 +1773,8 @@ export const aiGenerateService = {
   async generateHtml(params: {
     campaignId?: string;
     prompt: string;
-    /** 报告场景(月报/结案/复盘…),决定匹配哪份业务线指南 */
-    scenario?: string;
+    /** ★ 叠加的结构指南 id;undefined=仅视觉层 */
+    guideId?: string;
     reportPeriod?: { startDate?: string; endDate?: string };
   }): Promise<{ html: string; guideUsed: { id: string; name: string }[] }> {
     if (!DEEPSEEK_API_KEY) {
@@ -1785,9 +1785,9 @@ export const aiGenerateService = {
       ? await this.buildCampaignContext(params.campaignId, params.reportPeriod)
       : 'No campaign data provided.';
 
-    // 业务线指南·双层注入:视觉层(isDefault 规范)恒注入 + 结构层(scenario 精确匹配)叠加
+    // 业务线指南·双层注入:视觉层(isDefault 规范)恒注入 + 结构层(guideId 精确)选中即叠加
     const pair = params.campaignId
-      ? await resolvePairForCampaign(params.campaignId, params.scenario)
+      ? await resolvePairForCampaign(params.campaignId, params.guideId)
       : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
     const { content: guideContent, used: guidesUsed } = mergeGuideLayers(pair.visual, pair.structural);
     const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));
@@ -2221,8 +2221,8 @@ Rules:
   async *generateHtmlStream(params: {
     campaignId?: string;
     prompt: string;
-    /** 报告场景(月报/结案/复盘…),决定匹配哪份业务线指南 */
-    scenario?: string;
+    /** ★ 叠加的结构指南 id;undefined=仅视觉层 */
+    guideId?: string;
     reportPeriod?: { startDate?: string; endDate?: string };
     signal?: AbortSignal;
   }): AsyncGenerator<StreamChunk> {
@@ -2238,9 +2238,9 @@ Rules:
     // done chunk 附带数据覆盖(与 context 同口径,前端 toast 提醒用)
     const dataCoverage = await this.getDataCoverage(params.campaignId, params.reportPeriod);
 
-    // 业务线指南·双层注入:视觉层(isDefault 规范)恒注入 + 结构层(scenario 精确匹配)叠加
+    // 业务线指南·双层注入:视觉层(isDefault 规范)恒注入 + 结构层(guideId 精确)选中即叠加
     const pair = params.campaignId
-      ? await resolvePairForCampaign(params.campaignId, params.scenario)
+      ? await resolvePairForCampaign(params.campaignId, params.guideId)
       : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
     const { content: guideContent, used: guidesUsed } = mergeGuideLayers(pair.visual, pair.structural);
     const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));

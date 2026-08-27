@@ -628,7 +628,10 @@ export interface BusinessLine {
 export interface Guide {
   /** 展示名,如 "DG 月报指南"。 */
   name: string;
-  /** 报告场景(月报/结案/复盘…),空=通用(仅可作 isDefault 兜底)。 */
+  /**
+   * @deprecated 0827 ID 方案:结构指南已按 id 直接选中,scenario 字符串匹配消灭。
+   * 字段暂留(历史数据),不再有任何匹配语义;新代码勿读勿写。
+   */
   scenario?: string;
   /** Markdown 指南正文。 */
   content: string;

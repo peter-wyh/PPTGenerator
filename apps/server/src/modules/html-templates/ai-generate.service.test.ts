@@ -197,7 +197,7 @@ describe('generateHtml · 指南接入与 guideUsed 回传', () => {
     prismaMock.guide.findMany.mockResolvedValue([
       { id: 'g-mo', scenario: '月报', name: 'DG 月报指南', content: '## 语调与术语\n用「创作者」', isDefault: false, isActive: true, updatedAt: new Date() },
     ]);
-    const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p', scenario: '月报' });
+    const out = await aiGenerateService.generateHtml({ campaignId: 'c1', prompt: 'p', guideId: 'g-mo' });
     expect(out.html).toContain('<!DOCTYPE html>');
     expect(out.guideUsed).toEqual([{ id: 'g-mo', name: 'DG 月报指南' }]); // 双层:数组承载(视觉+结构)
     const body = aiClientMock.fetchChatCompletionWithRetry.mock.calls[0][0];

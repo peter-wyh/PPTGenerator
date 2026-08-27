@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { htmlTemplateService } from './html-templates.service';
 import { aiGenerateService, type StreamChunk } from './ai-generate.service';
 import { SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
-import { resolvePairForCampaign, mergeGuideLayers, resolveScenariosForCampaign } from '../guides/guide.service';
+import { resolvePairForCampaign, mergeGuideLayers, resolveStructuralForCampaign } from '../guides/guide.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ApiError } from '../../utils/ApiError';
 import type { AuthPayload } from '../../types/express';
@@ -96,7 +96,7 @@ export const htmlTemplateController = {
       const out = await aiGenerateService.generateHtml({
         campaignId,
         prompt: prompt || 'Generate a comprehensive campaign performance report',
-        scenario: req.body.scenario,
+        guideId: req.body.guideId,
         reportPeriod,
       });
       html = out.html;
@@ -168,14 +168,14 @@ export const htmlTemplateController = {
 
   /** Agent 增量编辑：当前 HTML + 用户指令（可选附带图片）→ 修改后的完整 HTML */
   agentEdit: asyncHandler(async (req: Request, res: Response) => {
-    const { currentHtml, instruction, images, campaignId, reportPeriod, scenario } = req.body;
+    const { currentHtml, instruction, images, campaignId, reportPeriod, guideId } = req.body;
     // ★ ④ 数据上下文：有 campaignId → 注入真实 DB 数据（AI 数据改动唯一真源），杜绝凭空编造
     const dataContext = campaignId
       ? await aiGenerateService.buildCampaignContext(campaignId, reportPeriod).catch(() => undefined)
       : undefined;
     // ★ 数据上下文 + 业务线指南·双层：有 campaignId → 注入真实 DB 数据与双层指南（编辑风格与首稿一致）
     const pair = campaignId
-      ? await resolvePairForCampaign(campaignId, scenario)
+      ? await resolvePairForCampaign(campaignId, guideId)
       : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
     const { content: mergedGuide, used: guidesUsed } = mergeGuideLayers(pair.visual, pair.structural);
     const html = await aiGenerateService.editHtml({
@@ -201,7 +201,7 @@ export const htmlTemplateController = {
 
   /** SSE 流式生成 HTML 报告 */
   generateStream: async (req: Request, res: Response) => {
-    const { prompt, campaignId, scenario, reportPeriod } = req.body;
+    const { prompt, campaignId, guideId, reportPeriod } = req.body;
     initSSE(res);
 
     // AbortController: 前端断开连接时取消上游 fetch
@@ -212,7 +212,7 @@ export const htmlTemplateController = {
       for await (const chunk of aiGenerateService.generateHtmlStream({
         campaignId,
         prompt: prompt || 'Generate a comprehensive campaign performance report',
-        scenario,
+        guideId,
         reportPeriod,
         signal: abortCtrl.signal,
       })) {
@@ -238,7 +238,7 @@ export const htmlTemplateController = {
 
   /** SSE 流式 Agent 增量编辑 */
   agentEditStream: async (req: Request, res: Response) => {
-    const { currentHtml, instruction, images, campaignId, reportPeriod, scenario } = req.body;
+    const { currentHtml, instruction, images, campaignId, reportPeriod, guideId } = req.body;
     initSSE(res);
 
     const abortCtrl = new AbortController();
@@ -252,7 +252,7 @@ export const htmlTemplateController = {
         : undefined;
       // ★ 业务线指南·双层：编辑风格与首稿一致（resolvePairForCampaign 静默降级，无指南不阻断）
       const pair = campaignId
-        ? await resolvePairForCampaign(campaignId, scenario)
+        ? await resolvePairForCampaign(campaignId, guideId)
         : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
       const { content: mergedGuide } = mergeGuideLayers(pair.visual, pair.structural);
       for await (const chunk of aiGenerateService.editHtmlStream({
@@ -307,11 +307,11 @@ export const htmlTemplateController = {
   /** 获取 Campaign 匹配的业务线指南（供前端回显：指南名/内容/业务线） */
   getDesignGuide: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId } = req.params;
-    // ★ scenario 透传——与 generateHtmlStream/editHtmlStream 的 resolveForCampaign 同参,
-    //   保证「表单回显的指南」⟺「生成时实际注入的指南」(前端场景下拉切换即重查)。
-    const scenario = (req.query.scenario as string | undefined)?.trim() || undefined;
-    // ★ 双层匹配:视觉层(恒)+结构层(scenario 命中即有)。回显=生成时实际注入的合并文本。
-    const pair = await resolvePairForCampaign(campaignId, scenario);
+    // ★ guideId 透传——与 generateHtmlStream/editHtmlStream 的 resolvePairForCampaign 同参,
+    //   保证「表单回显的指南」⟺「生成时实际注入的指南」(前端结构指南下拉切换即重查)。
+    const guideId = (req.query.guideId as string | undefined)?.trim() || undefined;
+    // ★ 双层匹配:视觉层(恒)+结构层(选中即有)。回显=生成时实际注入的合并文本。
+    const pair = await resolvePairForCampaign(campaignId, guideId);
     const { content, used } = mergeGuideLayers(pair.visual, pair.structural);
     res.json({
       designMd: content,                        // 兼容旧字段名：双层合并后的注入全文
@@ -323,11 +323,11 @@ export const htmlTemplateController = {
     });
   }),
 
-  /** ★ 该 campaign 业务线实际存在的指南场景列表 — 前端「报告场景」下拉动态化用 */
-  listGuideScenarios: asyncHandler(async (req: Request, res: Response) => {
+  /** ★ 该 campaign 业务线可选的结构指南列表 — 前端「叠加结构指南」下拉动态化用 */
+  listStructuralGuides: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId } = req.params;
-    const scenarios = await resolveScenariosForCampaign(campaignId);
-    res.json({ scenarios });
+    const guides = await resolveStructuralForCampaign(campaignId);
+    res.json({ guides });
   }),
 
   /** ★ 模块级数据覆盖预检（生成前）：标准模块清单逐项判定数据可用性，

@@ -18,7 +18,10 @@ vi.mock('@/api/htmlTemplates', () => ({
       guideName: 'DG 默认指南',
       guideId: 'g1',
     }),
-    getGuideScenarios: vi.fn().mockResolvedValue(['campaign-report', '月报']),
+    getStructuralGuides: vi.fn().mockResolvedValue([
+      { id: 'g1', name: 'campaign-report 结构指南', updatedAt: '2026-08-27' },
+      { id: 'g2', name: '月报结构指南', updatedAt: '2026-08-27' },
+    ]),
     getSystemPrompt: vi.fn().mockResolvedValue('# SYSTEM_PROMPT\nUse exact data.'),
   },
 }));
@@ -35,7 +38,7 @@ describe('AiGenerateForm', () => {
     const onGenerate = vi.fn();
     render(<AiGenerateForm campaignId="c1" onGenerate={onGenerate} />);
 
-    await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', expect.anything()));
+    await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', undefined));
     await waitFor(() => expect((screen.getByDisplayValue('默认要求') as HTMLTextAreaElement)).toBeTruthy());
 
     expect(screen.getByText('生成方式')).toBeTruthy();
@@ -57,22 +60,22 @@ describe('AiGenerateForm', () => {
     await waitFor(() => expect(htmlTemplatesApi.getSystemPrompt).toHaveBeenCalled());
   });
 
-  it('scenario 选择器:切「月报」→ onGenerate 携带 scenario', async () => {
+  it('结构指南选择器:切「月报结构指南」→ onGenerate 携带 guideId', async () => {
     const onGenerate = vi.fn();
     render(<AiGenerateForm campaignId="c1" onGenerate={onGenerate} />);
-    await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', expect.anything()));
-    // 展开指南折叠面板（scenario 下拉在面板内；preset=campaign 自动推导已选 campaign-report）
+    await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', undefined));
+    // 展开指南折叠面板（结构指南下拉在面板内;默认不叠加）
     fireEvent.click(screen.getByText('业务线指南'));
-    fireEvent.change(screen.getByDisplayValue('campaign-report'), { target: { value: '月报' } });
+    fireEvent.change(screen.getByDisplayValue('不叠加（仅视觉规范）'), { target: { value: 'g2' } });
     fireEvent.click(screen.getByRole('button', { name: /生成报告/ }));
     const arg = onGenerate.mock.calls[0][0];
-    expect(arg.scenario).toBe('月报');
+    expect(arg.guideId).toBe('g2');
   });
 
   it('recipe 模式点生成 → onGenerate mode=recipe, prompt/designMd 为空串', async () => {
     const onGenerate = vi.fn();
     render(<AiGenerateForm campaignId="c1" onGenerate={onGenerate} />);
-    await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', expect.anything()));
+    await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', undefined));
     // 切到 Recipe 模板
     fireEvent.click(screen.getByRole('button', { name: /Recipe/ }));
     // 点生成

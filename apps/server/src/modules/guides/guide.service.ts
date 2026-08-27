@@ -4,8 +4,7 @@ import type { Prisma, Guide } from '@prisma/client';
 
 /**
  * 指南匹配(确定性,不依赖 AI):
- * scenario 精确匹配 > 业务线 isDefault > null。
- * scenario=null 的指南只能作为 isDefault 参与第二级(通用指南不抢特定场景)。
+ * 0827 ID 方案——结构指南直接选(前端传 guideId),消灭自由字符串 scenario 匹配。
  * content 空串视同无指南。
  */
 export const guideService = {
@@ -27,12 +26,12 @@ export const guideService = {
   },
 
   /**
-   * ★ 双层匹配（视觉层 + 结构层，可同命中）:
+   * ★ 双层匹配（视觉层 + 结构层,可同命中）:
    *   - visual  = isDefault 指南（设计规范:品牌色/字体/组件/动效,恒注入）
-   *   - structural = scenario 精确匹配指南（章节结构/展示偏好/语调,命中即叠加）
+   *   - structural = 指南 id 精确匹配（章节结构/展示偏好/语调,选中即叠加）
    * 同一份指南可同时承担两职(返回同一引用两处)。保持 pick() 单选行为不变(voice/recipe 链路仍用)。
    */
-  async pickPair(businessLineId: string, scenario?: string): Promise<{ visual: Guide | null; structural: Guide | null }> {
+  async pickPair(businessLineId: string, guideId?: string): Promise<{ visual: Guide | null; structural: Guide | null }> {
     if (!businessLineId) return { visual: null, structural: null };
     const rows = await prisma.guide.findMany({
       where: { businessLineId, isActive: true },
@@ -43,25 +42,26 @@ export const guideService = {
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     const visual = usable.find((r) => r.isDefault) ?? null;
     let structural: Guide | null = null;
-    if (scenario) {
-      structural = usable.find((r) => r.scenario === scenario) ?? null;
+    if (guideId) {
+      structural = usable.find((r) => r.id === guideId) ?? null;
       if (structural && visual && structural.id === visual.id) structural = visual; // 同一份两职
     }
     return { visual, structural };
   },
 
   /**
-   * ★ 该业务线实际存在的 scenario 精确匹配值(去重,updatedAt desc)——
-   * 前端「报告场景」下拉动态化用,消灭与 DB 脱节的死选项。
+   * ★ 该业务线可选的结构指南列表(isDefault 视觉规范之外的启用指南)——
+   * 前端「叠加结构指南」下拉动态化用。所见即所得:列 name,选 id。
    */
-  async listScenarios(businessLineId: string): Promise<string[]> {
+  async listStructural(businessLineId: string): Promise<Array<{ id: string; name: string; updatedAt: Date }>> {
     if (!businessLineId) return [];
     const rows = await prisma.guide.findMany({
-      where: { businessLineId, isActive: true, scenario: { not: null } },
-      select: { scenario: true, updatedAt: true },
+      where: { businessLineId, isActive: true },
       orderBy: { updatedAt: 'desc' },
+      select: { id: true, name: true, updatedAt: true },
     });
-    return [...new Set(rows.map((r) => r.scenario!).filter(Boolean))];
+    // 结构指南=非默认指南(默认那份已作为视觉层恒注入,不在下拉重复出现)
+    return rows.filter((r) => r.name?.trim());
   },
 
   async list(opts?: { businessLineId?: string }) {
@@ -144,11 +144,11 @@ export interface GuidePair {
 }
 
 /**
- * ★ 双层版 resolveForCampaign:视觉层(isDefault 规范)恒取,结构层(scenario 精确)命中即叠加。
+ * ★ 双层版 resolveForCampaign:视觉层(isDefault 规范)恒取,结构层(guideId 精确)命中即叠加。
  * 与 resolveForCampaign 同静默降级语义。供 generate/edit + getDesignGuide 回显共用,
  * 保证「表单回显的两份」⟺「生成时注入的两份」。
  */
-export async function resolvePairForCampaign(campaignId: string, scenario?: string): Promise<GuidePair> {
+export async function resolvePairForCampaign(campaignId: string, guideId?: string): Promise<GuidePair> {
   try {
     const camp = await prisma.campaign.findUnique({
       where: { id: campaignId },
@@ -157,7 +157,7 @@ export async function resolvePairForCampaign(campaignId: string, scenario?: stri
     const businessLineName = camp?.businessLine?.title || camp?.businessLine?.code || '';
     const businessLineCode = camp?.businessLine?.code ?? '';
     if (!camp?.businessLineId) return { visual: null, structural: null, businessLineName, businessLineCode };
-    const pair = await guideService.pickPair(camp.businessLineId, scenario).catch(() => ({ visual: null, structural: null }));
+    const pair = await guideService.pickPair(camp.businessLineId, guideId).catch(() => ({ visual: null, structural: null }));
     return { ...pair, businessLineName, businessLineCode };
   } catch (e) {
     console.warn('[guide] resolvePairForCampaign 失败,降级为无指南:', (e as Error)?.message ?? e);
@@ -202,16 +202,18 @@ export function mergeGuideLayers(visual: Guide | null, structural: Guide | null)
 }
 
 /**
- * ★ campaign → 业务线 → scenario 列表。任何失败降级空数组(前端隐藏场景字段)。
+ * ★ campaign → 业务线 → 可选结构指南列表。任何失败降级空数组(前端隐藏下拉)。
  */
-export async function resolveScenariosForCampaign(campaignId: string): Promise<string[]> {
+export async function resolveStructuralForCampaign(
+  campaignId: string,
+): Promise<Array<{ id: string; name: string; updatedAt: Date }>> {
   try {
     const camp = await prisma.campaign.findUnique({
       where: { id: campaignId },
       select: { businessLineId: true },
     });
     if (!camp?.businessLineId) return [];
-    return await guideService.listScenarios(camp.businessLineId).catch(() => []);
+    return await guideService.listStructural(camp.businessLineId).catch(() => []);
   } catch {
     return [];
   }

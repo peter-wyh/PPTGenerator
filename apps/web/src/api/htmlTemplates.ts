@@ -221,7 +221,7 @@ export const htmlTemplatesApi = {
     input: {
       prompt?: string;
       campaignId?: string;
-      scenario?: string;
+      guideId?: string;
       reportPeriod?: { startDate?: string; endDate?: string };
     },
     onChunk: (chunk: SSEChunk) => void,
@@ -284,8 +284,8 @@ export const htmlTemplatesApi = {
       )
       .then((r) => r.data),
 
-  /** 获取 Campaign 关联业务线的 design.md（供前端回显/编辑） */
-  getDesignGuide: (campaignId: string, scenario?: string) =>
+  /** 获取 Campaign 关联业务线的指南（供前端回显/编辑） */
+  getDesignGuide: (campaignId: string, guideId?: string) =>
     api
       .get<{
         designMd: string; businessLineName: string; businessLineCode: string;
@@ -293,15 +293,15 @@ export const htmlTemplatesApi = {
         guides?: { id: string; name: string; layer: 'visual' | 'structural' }[];
       }>(
         `/html-templates/campaign/${campaignId}/design-guide`,
-        { params: scenario ? { scenario } : undefined },
+        { params: guideId ? { guideId } : undefined },
       )
       .then((r) => r.data),
 
-  /** ★ 该 campaign 业务线实际存在的指南场景列表（报告场景下拉动态化） */
-  getGuideScenarios: (campaignId: string) =>
+  /** ★ 该 campaign 业务线可选的结构指南列表（「叠加结构指南」下拉动态化） */
+  getStructuralGuides: (campaignId: string) =>
     api
-      .get<{ scenarios: string[] }>(`/html-templates/campaign/${campaignId}/guide-scenarios`)
-      .then((r) => r.data.scenarios),
+      .get<{ guides: { id: string; name: string; updatedAt: string }[] }>(`/html-templates/campaign/${campaignId}/structural-guides`)
+      .then((r) => r.data.guides),
 
   /** ★ 模块级数据覆盖预检（生成前）：标准模块清单逐项判定数据可用性 */
   getModuleCoverage: (campaignId: string, reportPeriod?: { startDate?: string; endDate?: string }) =>

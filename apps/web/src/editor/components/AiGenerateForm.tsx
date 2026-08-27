@@ -10,7 +10,7 @@ interface Props {
   campaignId?: string;
   /** ★ 报告周期(project.meta.reportPeriod)——模块覆盖预检的判定口径 */
   reportPeriod?: { startDate?: string; endDate?: string };
-  onGenerate: (vals: { mode: Mode; prompt: string; designMd: string; scenario: string }) => void;
+  onGenerate: (vals: { mode: Mode; prompt: string; designMd: string; guideId: string }) => void;
   generating?: boolean;
   generateLabel?: string;
   error?: string;
@@ -20,7 +20,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
   const [mode, setMode] = useState<Mode>('ai');
   const [prompt, setPrompt] = useState('');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
-  const [scenario, setScenario] = useState('');
+  const [structuralGuideId, setStructuralGuideId] = useState('');
 
   const [designMd, setDesignMd] = useState('');
   const [designMdLoading, setDesignMdLoading] = useState(false);
@@ -28,9 +28,8 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
   const [guides, setGuides] = useState<{ id: string; name: string; layer: 'visual' | 'structural' }[]>([]);
   const [blCode, setBlCode] = useState('');
   const [designMdExpanded, setDesignMdExpanded] = useState(false);
-  // ★ 场景下拉动态化:业务线实际存在的 scenario 值(拉不到=空数组隐藏字段)
-  const [scenarioOptions, setScenarioOptions] = useState<string[]>([]);
-  const [scenarioTouched, setScenarioTouched] = useState(false); // 用户手动选过→不再自动推导
+  // ★ 结构指南下拉动态化:该业务线可选指南(拉不到=空数组隐藏字段);选中即注入,无需字符串匹配
+  const [structuralGuides, setStructuralGuides] = useState<{ id: string; name: string }[]>([]);
 
   const [systemPrompt, setSystemPrompt] = useState('');
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -52,38 +51,25 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blCode]);
 
-  // ★ 回显=实际注入:同 resolveForCampaign(campaignId, scenario) 口径。
-  //   scenario 变化(场景下拉切换)即重查——用户看到哪份,生成时就注入哪份。
+  // ★ 回显=实际注入:同 resolvePairForCampaign(campaignId, guideId) 口径。
+  //   结构指南切换即重查——用户看到哪份,生成时就注入哪份。
   useEffect(() => {
     if (!campaignId) {
-      setScenarioOptions([]);
+      setStructuralGuides([]);
       return;
     }
     htmlTemplatesApi
-      .getGuideScenarios(campaignId)
-      .then(setScenarioOptions)
-      .catch(() => setScenarioOptions([]));
+      .getStructuralGuides(campaignId)
+      .then(setStructuralGuides)
+      .catch(() => setStructuralGuides([]));
   }, [campaignId]);
 
-  // ★ 模板自动推导场景:用户没手动选过时,preset 的 reportType=campaign → 场景自动对齐
-  //   业务线存在的 campaign-report 指南(如「DM Campaign Report 报告指南」立即复活);
-  //   AI 智能排版(requirement 空)不强制,保持用户上一次选择或空。
-  useEffect(() => {
-    if (scenarioTouched || !scenarioOptions.length) return;
-    const preset = presets[selectedPresetIdx];
-    const want = preset?.reportType === 'campaign' && scenarioOptions.includes('campaign-report')
-      ? 'campaign-report'
-      : preset?.requirement === '' ? scenario : // 智能排版:不动
-        scenarioOptions.includes('campaign-report') ? 'campaign-report' : '';
-    if (want !== scenario) setScenario(want);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPresetIdx, scenarioOptions]);
 
   useEffect(() => {
     if (!campaignId) return;
     setDesignMdLoading(true);
     htmlTemplatesApi
-      .getDesignGuide(campaignId, scenario || undefined)
+      .getDesignGuide(campaignId, structuralGuideId || undefined)
       .then((data) => {
         setDesignMd(data.designMd || '');
         setDesignMdSource(data.businessLineName || '');
@@ -92,7 +78,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
       })
       .catch(() => {})
       .finally(() => setDesignMdLoading(false));
-  }, [campaignId, scenario]);
+  }, [campaignId, structuralGuideId]);
 
   useEffect(() => {
     if (!campaignId) {
@@ -125,7 +111,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
       mode,
       prompt: mode === 'ai' ? prompt : '',
       designMd: mode === 'ai' ? designMd.trim() : '',
-      scenario,
+      guideId: structuralGuideId,
     });
   };
 
@@ -276,37 +262,36 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
                   <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted">自动注入 · 只读</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
-                  {scenario !== '' && (
-                    <span className="text-[10px] text-foreground-muted">场景: {scenario}</span>
+                  {structuralGuideId !== '' && (
+                    <span className="text-[10px] text-foreground-muted">
+                      结构: {structuralGuides.find((g) => g.id === structuralGuideId)?.name ?? structuralGuideId}
+                    </span>
                   )}
                   <span className="text-foreground-muted">{designMdExpanded ? '▾' : '▸'}</span>
                 </span>
               </button>
               {designMdExpanded && (
                 <div className="space-y-2 border-t border-border-default p-3">
-                  {/* 报告场景 — 结构层指南匹配(scenario 精确);视觉层规范恒注入 */}
+                  {/* 叠加结构指南 — 按指南直接选(id 精确);视觉层规范恒注入 */}
                   <div>
                     <label className="mb-1 block text-[10px] font-medium text-foreground-muted">
-                      报告场景（决定叠加哪份结构指南；视觉规范恒注入）
+                      叠加结构指南（选中即注入；视觉规范恒注入）
                     </label>
-                    {campaignId && scenarioOptions.length > 0 ? (
+                    {campaignId && structuralGuides.length > 0 ? (
                       <select
-                        value={scenario}
-                        onChange={(e) => {
-                          setScenarioTouched(true);
-                          setScenario(e.target.value);
-                        }}
+                        value={structuralGuideId}
+                        onChange={(e) => setStructuralGuideId(e.target.value)}
                         className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary"
                       >
-                        <option value="">通用（仅视觉规范，不叠加结构指南）</option>
-                        {scenarioOptions.map((sc) => (
-                          <option key={sc} value={sc}>{sc}</option>
+                        <option value="">不叠加（仅视觉规范）</option>
+                        {structuralGuides.map((g) => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
                         ))}
                       </select>
                     ) : (
                       <p className="text-[11px] text-foreground-muted">
                         {campaignId
-                          ? '当前业务线未配置场景指南——生成仅注入默认设计规范。'
+                          ? '当前业务线暂无可叠加的结构指南——生成仅注入默认设计规范。'
                           : '未绑定 Campaign，无业务线指南。'}
                       </p>
                     )}
