@@ -56,7 +56,8 @@ export const campaignRecordDataSchema = z.object({
   platforms: z.array(campaignPlatformSchema).optional(),
   startDate: z.string(),
   endDate: z.string(),
-  budget: z.string(),
+  /** 预算非必填（0827 放开）。 */
+  budget: z.string().optional(),
   status: z.string().optional(),
   owner: z.string().optional(),
   metrics: z.array(campaignMetricSchema).optional(),

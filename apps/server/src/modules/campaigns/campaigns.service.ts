@@ -800,6 +800,8 @@ export const importService = {
   async importLinkPerformance(_ownerId: string, items: Record<string, unknown>[]) {
     let upserted = 0;
     let skipped = 0;
+    // ★ 记录成功写入的 campaign，导入尾部统一重算媒体日统计（PublisherDailyStat）
+    const touched = new Set<string>();
     for (const item of items) {
       try {
         const campaignId = String(item.campaignId ?? '');
@@ -807,6 +809,7 @@ export const importService = {
         if (!campaignId || !trackingUrl) { skipped++; continue; }
         const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) { skipped++; continue; }
+        touched.add(campaignId);
 
         const linkKey = normPublisherDomain(trackingUrl);
         if (!linkKey) { skipped++; continue; }
@@ -917,6 +920,17 @@ export const importService = {
         upserted++;
       } catch {
         skipped++;
+      }
+    }
+    // ★ 链接每日明细导入成功 → 重算媒体日统计中间层（PublisherDailyStat 流量侧）。
+    //   对齐 importOrders 尾部模式：每 campaign 一次、失败不阻塞导入仅告警；
+    //   亦可 POST /campaigns/:id/publisher-stats/recompute 手动补算。
+    for (const cid of touched) {
+      try {
+        const r = await recomputePublisherStats(cid);
+        console.log(`[importLinkPerformance] publisher stats recomputed: campaign=${cid} rows=${r.rows}`);
+      } catch (err) {
+        console.warn(`[importLinkPerformance] publisher stats recompute failed for campaign=${cid}:`, err);
       }
     }
     return { upserted, skipped };

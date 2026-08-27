@@ -13,6 +13,18 @@ vi.mock('@/api/dataLibrary', () => ({
     list: vi.fn(),
   },
 }));
+// 0827: Campaign CRUD 改走独立表 API（与列表读取同源）
+const campaignsUpdateMock = vi.fn<(id: string, data: unknown) => Promise<unknown>>(() => Promise.resolve({}));
+const campaignsCreateMock = vi.fn<(data: unknown) => Promise<unknown>>(() => Promise.resolve({}));
+vi.mock('@/api/campaignsApi', () => ({
+  campaignsApi: {
+    update: (id: string, data: unknown) => campaignsUpdateMock(id, data),
+    create: (data: unknown) => campaignsCreateMock(data),
+    list: vi.fn(),
+    get: vi.fn(),
+    remove: vi.fn(),
+  },
+}));
 vi.mock('@/api/lookup', () => ({
   lookupApi: {
     listBusinessLines: () => Promise.resolve([
@@ -34,18 +46,21 @@ const fullCampaign = {
 const record: DataRecordDTO = { id: 'camp-x', kind: 'CAMPAIGN', ownerId: 'u', data: fullCampaign, createdAt: '', updatedAt: '' };
 
 describe('RecordFormModal · edit preserves non-form fields', () => {
-  it('编辑后 metrics 仍保留(只覆盖表单字段)', async () => {
+  it('编辑走 campaignsApi.update(新表);payload 不含 metrics/creatorIds(PATCH 语义,DB 侧保留)', async () => {
     render(<RecordFormModal kind="campaign" record={record} onSaved={() => {}} onCancel={() => {}} />);
     // 改名称
     const nameInput = screen.getByLabelText(/名称/);
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, '改名后');
     await userEvent.click(screen.getByText('保存'));
-    await waitFor(() => expect(updateMock).toHaveBeenCalled());
-    const [, payload] = updateMock.mock.calls[0] as [string, Record<string, unknown>];
+    await waitFor(() => expect(campaignsUpdateMock).toHaveBeenCalled());
+    const [id, payload] = campaignsUpdateMock.mock.calls[0] as [string, Record<string, unknown>];
+    expect(id).toBe('camp-x');
     expect(payload.name).toBe('改名后');
-    expect(payload.metrics).toEqual(fullCampaign.metrics);
-    expect(payload.creatorIds).toEqual(['cre-mia']);
+    // PATCH 部分更新:未在表单中的字段不发送 → DB 原值保留(替代旧 dataApi 的浅合并语义)
+    expect(payload.metrics).toBeUndefined();
+    expect(payload.creatorIds).toBeUndefined();
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });
 

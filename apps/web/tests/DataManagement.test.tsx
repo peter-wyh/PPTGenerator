@@ -8,13 +8,14 @@ import { CampaignPage } from '@/routes/CampaignPage';
 import { CreatorPage } from '@/routes/CreatorPage';
 import { DataManagement } from '@/routes/DataManagement';
 
-const { listMock, removeMock, importManyMock, updateMock, listCampaignsMock, listCreatorsMock } = vi.hoisted(() => ({
+const { listMock, removeMock, importManyMock, updateMock, listCampaignsMock, listCreatorsMock, campaignsRemoveMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   removeMock: vi.fn(),
   importManyMock: vi.fn(),
   updateMock: vi.fn(),
   listCampaignsMock: vi.fn(),
   listCreatorsMock: vi.fn(),
+  campaignsRemoveMock: vi.fn(),
 }));
 
 // CRUD/导入仍走 dataApi(RecordFormModal 兼容)
@@ -46,7 +47,7 @@ vi.mock('@/api/campaignsApi', () => ({
     get: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
-    remove: vi.fn(),
+    remove: (id: string) => campaignsRemoveMock(id),
     upsertLink: vi.fn(),
     updateLink: vi.fn(),
     listLinks: (_id: string) => Promise.resolve([]),
@@ -156,13 +157,15 @@ describe('CampaignPage', () => {
     expect(screen.getByText('新增')).toBeInTheDocument();
   });
 
-  it('删除按钮二次确认后调用 dataApi.remove', async () => {
+  it('删除按钮二次确认后调用 campaignsApi.remove(新表优先)', async () => {
+    campaignsRemoveMock.mockResolvedValue(undefined);
     listCampaignsMock.mockResolvedValue([campaign]);
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWithDataLayout('/data/campaigns');
     await screen.findByText('Campaign X');
     await userEvent.click(screen.getByText('删除'));
-    await waitFor(() => expect(removeMock).toHaveBeenCalledWith('camp-x'));
+    await waitFor(() => expect(campaignsRemoveMock).toHaveBeenCalledWith('camp-x'));
+    expect(removeMock).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
 

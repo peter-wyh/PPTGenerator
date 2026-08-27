@@ -5,6 +5,7 @@
 import { promises as fs } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 
 export interface SaveResult {
   url: string;
@@ -49,8 +50,11 @@ export class OssStorage implements Storage {
 
   constructor(opts: { region: string; bucket: string; accessKeyId: string; accessKeySecret: string; endpoint?: string }) {
     // 动态 require，避免本地驱动也加载 ali-oss。
+    // ★ ESM 兼容：tsx 按 ESM 加载时裸 require 是 ReferenceError → 模块加载即崩
+    //   （测试环境 OSS env 配齐后首次触发）。用 createRequire 兜底两种模块制式。
+    const nodeRequire = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const OSSLib = require('ali-oss');
+    const OSSLib = nodeRequire('ali-oss');
     const Ctor = (OSSLib.default ?? OSSLib) as new (o: typeof opts) => OssClient;
     this.client = new Ctor(opts);
     // 公网访问基址：自定义 endpoint 优先，否则 bucket.region 风格。

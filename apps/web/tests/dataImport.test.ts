@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { buildPreviewFromRows, buildPreviewFromObjects, downloadTemplate, CAMPAIGN_REQUIRED, CREATOR_REQUIRED, CAMPAIGN_FIELDS } from '@/editor/dataImport';
 
 describe('dataImport · 字段定义', () => {
-  it('Campaign 必填含 id/name/advertiser/businessLine/platform/startDate/endDate/budget', () => {
-    expect(CAMPAIGN_REQUIRED).toEqual(['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate', 'budget']);
+  it('Campaign 必填含 id/name/advertiser/businessLine/platform/startDate/endDate(budget 0827 放开非必填)', () => {
+    expect(CAMPAIGN_REQUIRED).toEqual(['id', 'name', 'advertiser', 'businessLine', 'platform', 'startDate', 'endDate']);
   });
   it('Creator 必填含 id/name/handle/platform/tier/followers/engagement/category/region', () => {
     expect(CREATOR_REQUIRED).toEqual(['id', 'name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region']);
@@ -17,11 +17,10 @@ describe('dataImport · buildPreviewFromRows(CSV/XLSX)', () => {
     expect(r[0].valid).toBe(true);
     expect(r[0].data.id).toBe('c1');
   });
-  it('缺 budget → invalid,error 列出缺失字段', () => {
+  it('缺 budget → 仍 valid(0827 预算非必填)', () => {
     const rows = [{ id: 'c1', name: 'C', advertiser: 'A', businessLine: 'FT', platform: 'TikTok', startDate: '2026-01-01', endDate: '2026-01-31' }];
     const r = buildPreviewFromRows('campaign', rows);
-    expect(r[0].valid).toBe(false);
-    expect(r[0].error).toContain('budget');
+    expect(r[0].valid).toBe(true);
   });
   it('空行(无必填)→ invalid', () => {
     expect(buildPreviewFromRows('creator', [{}])[0].valid).toBe(false);

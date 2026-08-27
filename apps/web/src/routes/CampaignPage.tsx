@@ -10,6 +10,7 @@ import { Fragment, useCallback, useEffect, useRef, useState, type ChangeEvent } 
 import { useNavigate } from 'react-router-dom';
 import type { Campaign, CampaignMetric, ProjectMeta } from '@mediakit/shared';
 import { listCampaigns } from '@/api/campaigns';
+import { campaignsApi } from '@/api/campaignsApi';
 import { projectsApi } from '@/api/projects';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
@@ -46,7 +47,12 @@ export function CampaignPage() {
   async function del(id: string) {
     if (!window.confirm('确认删除该 Campaign?')) return;
     try {
-      await dataApi.remove(id);
+      // 新表优先；旧 DataRecord 兼容清理（Phase 4 前创建的记录仍存于 DataRecord）
+      try {
+        await campaignsApi.remove(id);
+      } catch {
+        await dataApi.remove(id);
+      }
       toast.success('删除成功');
       await reload();
     } catch {

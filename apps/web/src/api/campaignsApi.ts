@@ -45,7 +45,12 @@ export function dtoToCampaign(dto: CampaignDTO): Campaign {
     status: dto.status ?? undefined,
     owner: dto.owner ?? undefined,
     metrics: dto.metrics as Campaign['metrics'] ?? [],
-    platforms: [],
+    // 多选平台回填：DTO 无 platforms 字段时从主 platform 派生（编辑态必填校验依赖）
+    platforms: (dto as { platforms?: string[] }).platforms?.length
+      ? ((dto as { platforms?: string[] }).platforms as unknown as Campaign['platforms'])
+      : dto.platform
+        ? ([{ platform: dto.platform, collaborationType: '' }] as Campaign['platforms'])
+        : [],
     creatorIds: [],
   };
 }

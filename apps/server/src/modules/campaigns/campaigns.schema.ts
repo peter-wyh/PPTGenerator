@@ -8,7 +8,8 @@ export const createCampaignSchema = z.object({
   platform: z.string().min(1),
   startDate: z.string(),
   endDate: z.string(),
-  budget: z.string(),
+  /** 预算（含币种符号如 "$300K"）。非必填——新建时预算常未定（0827 放开）。 */
+  budget: z.string().optional(),
   status: z.string().optional(),
   owner: z.string().optional(),
   businessLineId: z.string().optional(),

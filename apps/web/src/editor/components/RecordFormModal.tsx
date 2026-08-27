@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { dataApi, type DataRecordDTO } from '@/api/dataLibrary';
+import { campaignsApi } from '@/api/campaignsApi';
 import { lookupApi, type BusinessLineDTO, type AdvertiserDTO } from '@/api/lookup';
 import { ImageInput } from '@/components/ImageInput';
 import { PLATFORMS } from '@/projectsMeta';
@@ -18,10 +19,10 @@ interface FieldDef {
 }
 
 /** 必填字段定义（与导入模板 REQUIRED 口径一致——表单/导入/模板三处统一）
- *  Campaign：platforms(≥1) 代表平台维度；budget 金额必填（币种有默认值）。 */
+ *  Campaign：platforms(≥1) 代表平台维度；budget 非必填（0827 放开——新建时预算常未定）。 */
 const CAMPAIGN_REQUIRED_LABELS: [key: string, label: string][] = [
   ['name', '名称'], ['businessLine', '业务线'], ['advertiser', '广告主'], ['platforms', '平台'],
-  ['startDate', '开始日期'], ['endDate', '结束日期'], ['budget', '预算'],
+  ['startDate', '开始日期'], ['endDate', '结束日期'],
 ];
 const CREATOR_REQUIRED_FIELDS = new Set(['name', 'handle', 'platform', 'tier', 'followers', 'engagement', 'category', 'region']);
 
@@ -168,9 +169,12 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
   const [businessLine, setBusinessLine] = useState((initial.businessLine as string) ?? '');
   const [advertiser, setAdvertiser] = useState((initial.advertiser as string) ?? '');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(() => {
-    // P1-7: 支持自定义平台（来自 platforms 数组，可能含非预设值）
+    // P1-7: 支持自定义平台（来自 platforms 数组，可能含非预设值）。
+    // 兼容两种形态：字符串数组（新表）与 CampaignPlatform 对象数组（shared 类型/dtoToCampaign 派生）。
     const raw = Array.isArray(initial.platforms)
-      ? (initial.platforms as string[])
+      ? (initial.platforms as unknown[]).map((p) =>
+          typeof p === 'string' ? p : ((p as { platform?: string }).platform ?? ''),
+        ).filter(Boolean)
       : initial.platform
         ? [initial.platform as string]
         : [];
@@ -214,7 +218,6 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
         platforms: selectedPlatforms.length > 0,
         startDate: !!startDate,
         endDate: !!endDate,
-        budget: !!budgetAmount.trim(),
       };
       return CAMPAIGN_REQUIRED_LABELS.filter(([k]) => !byKey[k]).map(([, label]) => label);
     }
@@ -261,28 +264,34 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
     if (missingLabels().length > 0) return; // 双保险：按钮 disabled 之外再拦一道
     setBusy(true);
     try {
+      // Campaign 走新独立表 /api/v1/campaigns（与列表读取同源，Phase 4 半迁移错位修复 0827）。
+      // Creator/Collaboration 维持 DataRecord 旧路径。
+      if (isCampaign) {
+        const bl = blOptions.find((b) => b.code === businessLine);
+        const adv = advOptions.find((a) => a.name === advertiser);
+        const sym = CURRENCY_OPTIONS.find((c) => c.value === currency)?.symbol ?? '';
+        const payload = {
+          name: vals.name.trim(),
+          platform: selectedPlatforms[0] ?? '',
+          startDate,
+          endDate,
+          budget: budgetAmount ? `${sym}${budgetAmount}` : '',
+          status: status || undefined,
+          owner: owner || undefined,
+          businessLineId: bl?.id,
+          businessLineCode: bl?.code,
+          advertiserId: adv?.id,
+          advertiserName: adv?.name,
+        };
+        if (record?.id) await campaignsApi.update(record.id, payload);
+        else await campaignsApi.create(payload);
+        onSaved();
+        return;
+      }
       const fieldEdits: Record<string, unknown> = {};
       for (const f of fields) {
         const v = vals[f.key];
         if (v !== '') fieldEdits[f.key] = v;
-      }
-      if (isCampaign) {
-        fieldEdits.businessLine = businessLine;
-        fieldEdits.advertiser = advertiser;
-        // platform 存数组（多选），同时保留单个 platform 字段做向后兼容
-        fieldEdits.platforms = selectedPlatforms;
-        fieldEdits.platform = selectedPlatforms[0] ?? '';
-        // P1-8: 日期
-        fieldEdits.startDate = startDate;
-        fieldEdits.endDate = endDate;
-        // P1-9: 预算（币种+金额）
-        const sym = CURRENCY_OPTIONS.find((c) => c.value === currency)?.symbol ?? '';
-        fieldEdits.budget = budgetAmount ? `${sym}${budgetAmount}` : '';
-        fieldEdits.budgetCurrency = currency;
-        // P1-10: 状态
-        fieldEdits.status = status;
-        // P1-11: 归属者
-        fieldEdits.owner = owner;
       }
       const data = record ? { ...(record.data as object), ...fieldEdits } : fieldEdits;
       if (record) await dataApi.update(record.id, data);
@@ -457,12 +466,12 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
                 </select>
               </label>
               <label className="flex flex-1 flex-col skin-gap-xs text-xs text-foreground-secondary">
-                <span>预算金额 <span className="text-red">*</span></span>
+                <span>预算金额</span>
                 <input
                   type="number"
                   value={budgetAmount}
                   onChange={(e) => setBudgetAmount(e.target.value)}
-                  placeholder="如 300000"
+                  placeholder="如 300000（可留空）"
                   className={inputCls}
                 />
               </label>

@@ -460,7 +460,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     }
   ]
 }`,
-    response: '{ "updated": 1, "skipped": 0 }',
+    response: '{ "upserted": 1, "skipped": 0 } —— 尾部自动重算该 campaign 的 PublisherDailyStat（数据统计页/报告流量侧数据源；对齐订单导入行为，无需手动触发 recompute）',
   },
   // ─────────────────────────────────────────────────────────────────────────
   {
