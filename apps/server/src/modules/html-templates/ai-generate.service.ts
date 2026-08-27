@@ -1690,6 +1690,9 @@ export const aiGenerateService = {
             // ★ avatarUrl may be null — use initials circle fallback
             avatarUrl: cc.creator?.avatar ?? null,
             platform: cc.creator?.platform ?? null,
+            // ★ 达人主页链接（0827 迭代）：Creator 表 schema 字段。报告指南 Creator Breakdown
+            //   story 合作行跳主页用；无值保持 null，AI 端宁缺勿假不编造。
+            profileUrl: cc.creator?.profileUrl ?? null,
             // ★ tier 不再注入（0826 用户要求：报告不透出 TIER 字段）
             contentType: cc.contentType,
             collabType: cc.collabType,
