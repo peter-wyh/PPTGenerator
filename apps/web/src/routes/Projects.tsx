@@ -272,8 +272,13 @@ export function Projects() {
                   <th className="px-3 py-2 text-left font-medium">场景</th>
                   <th className="px-3 py-2 text-left font-medium">广告主</th>
                   <th className="px-3 py-2 text-left font-medium">创建人</th>
-                  <th className="px-3 py-2 text-left font-medium">尺寸</th>
-                  <th className="px-3 py-2 text-left font-medium">页数</th>
+                  {/* 尺寸/页数是 PPT 编辑器概念（ai-html 的 width/height 是创建路径遗留值、pages 是 0/1 副作用，均无意义）——ai-html tab 不渲染 */}
+                  {activeTab !== 'ai-html' && (
+                    <>
+                      <th className="px-3 py-2 text-left font-medium">尺寸</th>
+                      <th className="px-3 py-2 text-left font-medium">页数</th>
+                    </>
+                  )}
                   {activeTab === 'ai-html' && (
                     <th className="px-3 py-2 text-left font-medium">HTML 状态</th>
                   )}
@@ -296,8 +301,12 @@ export function Projects() {
                     <td className="px-3 py-2 text-foreground-secondary">{scenarioText(p.meta)}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.advertiser ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.creator ?? '—'}</td>
-                    <td className="px-3 py-2 text-foreground-muted">{p.width}×{p.height}</td>
-                    <td className="px-3 py-2 text-foreground-muted">{p.pageCount}</td>
+                    {activeTab !== 'ai-html' && (
+                      <>
+                        <td className="px-3 py-2 text-foreground-muted">{p.width}×{p.height}</td>
+                        <td className="px-3 py-2 text-foreground-muted">{p.pageCount}</td>
+                      </>
+                    )}
                     {activeTab === 'ai-html' && (
                       <td className="px-3 py-2">
                         {(() => {
