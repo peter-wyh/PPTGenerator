@@ -21,6 +21,8 @@ export interface DocEndpoint {
   method: 'POST' | 'GET';
   path: string;
   title: string;
+  /** 接口分组（左侧导航分类 + 总览表分区）。 */
+  group: DocEndpointGroup;
   purpose: string;
   source: string;
   prerequisites: string[];
@@ -38,8 +40,12 @@ export interface ChangelogEntry {
   changes: { kind: '新增' | '变更' | '修复' | '下线'; text: string }[];
 }
 
-export const API_DOC_VERSION = '1.3.0';
-export const API_DOC_UPDATED = '2026-08-27';
+export const API_DOC_VERSION = '1.4.0';
+export const API_DOC_UPDATED = '2026-08-28';
+
+/** 接口分组（按数据链路排序）：达人 → 合作 → 订单 → 链接 → 统计中间层 → CPS。 */
+export type DocEndpointGroup = '达人数据' | '合作数据' | '订单数据' | '链接数据' | '统计中间层' | 'CPS 真源';
+export const DOC_GROUPS: DocEndpointGroup[] = ['达人数据', '合作数据', '订单数据', '链接数据', '统计中间层', 'CPS 真源'];
 
 export const API_DOC_CONVENTIONS = [
   'Base URL：http://<server>:4000/api/v1（生产环境以部署域名为准）。',
@@ -57,6 +63,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/creators',
     title: '达人基础数据',
+    group: '达人数据',
     purpose: '建立/更新达人主档：身份、平台、粉丝量级、报价、联系方式。是其他达人数据（画像/作品）的前置。',
     source: '达人商务台账 / MCN 名单 / 各平台达人主页后台导出。',
     prerequisites: ['无前置——可直接导入，作为整条数据链路的起点。'],
@@ -120,6 +127,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/creator-audience',
     title: '达人受众画像',
+    group: '达人数据',
     purpose: '补充达人的受众结构：性别分布 / 年龄段分布 / Top 城市——用于报告中的达人匹配度分析。',
     source: '平台达人后台（TikTok Creator Marketplace / Instagram Insights）受众数据导出。',
     prerequisites: ['达人主档已导入（creators 接口，同一 creatorId）。'],
@@ -171,6 +179,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/creator-works',
     title: '达人作品',
+    group: '达人数据',
     purpose: '导入达人合作发布的作品（视频/图文）及其内容表现与带货归因——用于报告的作品案例区。',
     source: '达人交付清单 + 平台作品数据（播放/点赞/评论），hashtags 用分号分隔。',
     prerequisites: ['达人主档已导入（同一 creatorId）。'],
@@ -235,6 +244,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/collaboration-daily',
     title: '合作每日明细（内容表现）',
+    group: '合作数据',
     purpose: '按天记录每位达人在 campaign 下的内容表现（曝光/互动）——报告核心趋势图表的数据源。CPS 口径已并入链接效果+订单真源（见 creator-cps-daily），不再经本接口。',
     source: '平台后台每日数据截图/导出汇总；同一天多内容类型分行（contentType 区分）。',
     prerequisites: ['Campaign 已创建', '达人已挂到该 Campaign（CampaignCreator 链接已建立）'],
@@ -278,6 +288,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/orders',
     title: '订单商品明细',
+    group: '订单数据',
     purpose: '联盟平台订单级导出（含商品行）——Top-Sales 商品排行、购物篮结构、QTY 分析的唯一数据源。',
     source: '联盟平台订单导出 CSV（每商品一行；同一订单多商品时 orderId 重复多行）。',
     prerequisites: ['Campaign 已创建', '（可选）达人已挂链——creatorId 归因到具体达人，缺失则计为未归因'],
@@ -383,6 +394,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'GET',
     path: '/campaigns/orders/list',
     title: '订单明细列表',
+    group: '订单数据',
     purpose: '订单明细列表查询（数据管理页）：分页返回订单及商品行展开——admin 全局可见，非 admin 限本人 campaign。',
     source: '系统内数据（orders 导入接口写入），无需上游提供。',
     prerequisites: ['无前置——已有订单数据即可查询。'],
@@ -424,6 +436,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/link-performance',
     title: '链接效果导入（trackingUrl 口径）',
+    group: '链接数据',
     purpose: '链接维度流量/成交数据的唯一入口（Awin Click References CSV 口径）——一行 = 一条跟踪链接 × campaign 周期汇总。替代 cps-daily 的流量侧职责。',
     source: '联盟平台 Click References 导出 CSV（每跟踪链接一行）。',
     prerequisites: ['Campaign 已创建'],
@@ -468,6 +481,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'GET',
     path: '/campaigns/links/list',
     title: '链接数据列表',
+    group: '链接数据',
     purpose: 'LinkPerformance 透出查询（数据管理→链接数据页）：trackingUrl 视角，含媒体归属与日明细天数。链接流量/成交唯一真源的数据浏览入口。',
     source: '系统内数据（link-performance 导入接口写入），无需上游提供。',
     prerequisites: ['无前置——已有链接数据即可查询。'],
@@ -513,6 +527,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'GET',
     path: '/campaigns/order-daily-stats',
     title: '订单日统计列表',
+    group: '统计中间层',
     purpose: 'OrderDailyStat 中间表透出（数据管理→数据统计页）：订单按日聚合行——campaign 级汇总或 creator×date 拆分。由 order-stats/recompute 从订单真源物化，页面只读。',
     source: '系统内数据（订单导入后 recompute 物化），无需上游提供。',
     prerequisites: ['已导入订单并重算（POST /campaigns/:id/order-stats/recompute）。'],
@@ -557,6 +572,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'GET',
     path: '/campaigns/publisher-daily-stats',
     title: '媒体日统计列表',
+    group: '统计中间层',
     purpose: 'PublisherDailyStat 中间表透出（数据管理→数据统计页）：publisher × 日双口径（成交 orders/GMV/Commission + 流量 clicks/impressions）。由 publisher-stats/recompute 物化。',
     source: '系统内数据（订单 + 链接效果导入后 recompute 物化），无需上游提供。',
     prerequisites: ['已导入订单/链接效果并重算（POST /campaigns/:id/publisher-stats/recompute）。'],
@@ -598,6 +614,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'GET',
     path: '/campaigns/:campaignId/creators/:creatorId/cps-daily',
     title: '合作行每日 CPS（真源现算）',
+    group: 'CPS 真源',
     purpose: '单个合作行（campaign × creator）的每日 CPS 真源现算：流量侧 LinkPerformance.daily + 成交侧订单表按日聚合。合作页「CPS 每日明细」浮窗数据源（2026-08-27 起替代 deliverable.cps 冻结快照，只读）。',
     source: '系统内数据（链接效果 + 订单导入后现算，无物化表），无需上游提供。',
     prerequisites: ['Campaign 已创建', '达人已挂链（合作行建立）', '（可选）已导入 link-performance（含每日行）与订单——无数据时返回空 daily 和零值 totals。'],
@@ -630,6 +647,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'GET',
     path: '/campaigns/:id/order-insights',
     title: '订单商品聚合（Top-Sales + 购物篮）',
+    group: '订单数据',
     purpose: '订单商品聚合分析——Top-Sales 商品排行（含 QTY）与购物篮结构指标，供报告引用。',
     source: '系统内数据（orders 导入接口写入的订单商品行聚合），无需上游提供。',
     prerequisites: ['Campaign 已创建。'],
@@ -663,6 +681,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/:id/order-stats/recompute',
     title: '订单日级统计重算',
+    group: '统计中间层',
     purpose: '手动重算 OrderDailyStat 中间层（订单表真源日级聚合）——数据迁移后回填或统计异常排查用。',
     source: '系统内数据（orders 导入接口写入的订单），无需上游提供。',
     prerequisites: ['Campaign 已创建。'],
@@ -684,6 +703,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/:id/publisher-stats/recompute',
     title: '媒体日统计重算',
+    group: '统计中间层',
     purpose: '手动重算 PublisherDailyStat 中间层（媒体 × 日聚合：成交侧订单 + 流量侧链接）——数据迁移回填或媒体维度统计排查用。',
     source: '系统内数据（订单表 + LinkPerformance.daily），无需上游提供。',
     prerequisites: ['Campaign 已创建（订单已导入并完成媒体归因更佳）。'],
@@ -704,6 +724,13 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
 ];
 
 export const API_DOC_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.4.0',
+    date: '2026-08-28',
+    changes: [
+      { kind: '变更', text: '接口文档增加分组（达人数据 / 合作数据 / 订单数据 / 链接数据 / 统计中间层 / CPS 真源）——左侧导航与总览表按数据链路分类展示，接口契约本身不变。' },
+    ],
+  },
   {
     version: '1.3.0',
     date: '2026-08-27',

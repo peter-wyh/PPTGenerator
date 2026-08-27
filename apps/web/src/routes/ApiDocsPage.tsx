@@ -9,6 +9,7 @@ import {
   API_DOC_CHANGELOG,
   API_DOC_UPDATED,
   API_DOC_VERSION,
+  DOC_GROUPS,
 } from '../data/apiDocs';
 
 type Section = 'conventions' | 'endpoint' | 'changelog';
@@ -40,18 +41,23 @@ export function ApiDocsPage() {
             <span>通用约定</span>
           </button>
           <div className="mt-1 border-t border-border-subtle pt-1" />
-          {API_DOC_ENDPOINTS.map((e) => (
-            <button
-              key={e.id}
-              onClick={() => {
-                setSection('endpoint');
-                setActiveEndpoint(e.id);
-              }}
-              className={navBtn(section === 'endpoint' && activeEndpoint === e.id)}
-            >
-              <span>{e.title}</span>
-              <span className={`ml-2 shrink-0 text-[10px] ${e.method === 'GET' ? 'text-blue-500' : 'text-foreground-tertiary'}`}>{e.method}</span>
-            </button>
+          {DOC_GROUPS.map((g) => (
+            <div key={g} className="mt-1">
+              <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground-tertiary">{g}</div>
+              {API_DOC_ENDPOINTS.filter((e) => e.group === g).map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => {
+                    setSection('endpoint');
+                    setActiveEndpoint(e.id);
+                  }}
+                  className={navBtn(section === 'endpoint' && activeEndpoint === e.id)}
+                >
+                  <span>{e.title}</span>
+                  <span className={`ml-2 shrink-0 text-[10px] ${e.method === 'GET' ? 'text-blue-500' : 'text-foreground-tertiary'}`}>{e.method}</span>
+                </button>
+              ))}
+            </div>
           ))}
           <div className="mt-1 border-t border-border-subtle pt-1" />
           <button
@@ -87,37 +93,34 @@ export function ApiDocsPage() {
               </ul>
             </div>
             <h2 className="mt-8 text-base font-semibold text-foreground-primary">接口一览与数据链路</h2>
-            <p className="mt-1 text-xs text-foreground-secondary">按数据链路顺序排列：主档 → 画像/作品 → 合作数据 → 订单。</p>
-            <div className="mt-3 overflow-hidden rounded-lg border border-border-default">
-              <table className="w-full border-collapse">
-                <thead className="bg-surface-secondary">
-                  <tr>
-                    <th className={th}>#</th>
-                    <th className={th}>接口</th>
-                    <th className={th}>标题</th>
-                    <th className={th}>前置依赖</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {API_DOC_ENDPOINTS.map((e, i) => (
-                    <tr
-                      key={e.id}
-                      onClick={() => {
-                        setSection('endpoint');
-                        setActiveEndpoint(e.id);
-                      }}
-                      className="cursor-pointer border-t border-border-subtle hover:bg-surface-hover"
-                    >
-                      <td className={`${td} w-8 text-foreground-tertiary`}>{i + 1}</td>
-                      <td className={`${td} font-mono text-xs`}>{e.path}</td>
-                      <td className={td}>{e.title}</td>
-                      <td className={`${td} text-xs text-foreground-secondary`}>
-                        {e.prerequisiteSummary ?? '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <p className="mt-1 text-xs text-foreground-secondary">按数据链路分类：达人 → 合作 → 订单 / 链接（导入）→ 统计中间层（物化）→ CPS 真源。</p>
+            <div className="mt-3 flex flex-col gap-4">
+              {DOC_GROUPS.map((g) => (
+                <div key={g} className="overflow-hidden rounded-lg border border-border-default">
+                  <div className="border-b border-border-subtle bg-surface-secondary px-3 py-1.5 text-xs font-semibold text-foreground-primary">{g}</div>
+                  <table className="w-full border-collapse">
+                    <tbody>
+                      {API_DOC_ENDPOINTS.filter((e) => e.group === g).map((e) => (
+                        <tr
+                          key={e.id}
+                          onClick={() => {
+                            setSection('endpoint');
+                            setActiveEndpoint(e.id);
+                          }}
+                          className="cursor-pointer border-t border-border-subtle hover:bg-surface-hover"
+                        >
+                          <td className={`${td} w-16 font-mono text-[10px] ${e.method === 'GET' ? 'text-blue-500' : 'text-foreground-tertiary'}`}>{e.method}</td>
+                          <td className={`${td} font-mono text-xs`}>{e.path}</td>
+                          <td className={td}>{e.title}</td>
+                          <td className={`${td} text-xs text-foreground-secondary`}>
+                            {e.prerequisiteSummary ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
             </div>
           </div>
         )}
