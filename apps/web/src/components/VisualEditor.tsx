@@ -154,6 +154,10 @@ export function VisualEditor({
   const editorRef = useRef<Editor | null>(null);
   const originalHtmlRef = useRef<string>(html);
   const lastLoadedBodyRef = useRef<string>('');
+  // ★ 回声抑制：本编辑器 emit 出去的 html 会经父组件 setState 流回 html prop——
+  //   若不识别，[html] effect 会 setComponents 整体重建画布（正被编辑的 DOM 销毁 → 频闪）。
+  //   GJS getHtml() 序列化与 parseHtmlForEditor 解析结果恒有格式化差异，靠字符串相等判不出。
+  const lastEmittedHtmlRef = useRef<string | null>(null);
   const bodyScriptsRef = useRef<string[]>([]);
   const changeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [device, setDevice] = useState(defaultDevice);
@@ -256,7 +260,8 @@ export function VisualEditor({
         const orig = originalHtmlRef.current as string;
         const scripts = bodyScriptsRef.current;
         const fullHtml = reconstructFullHtml(orig, editedHtml, editedCss, scripts);
-        onHtmlChange(fullHtml);
+        lastEmittedHtmlRef.current = fullHtml; // ★ 回声登记
+        onHtmlChange?.(fullHtml);
       }, 800);
     };
 
@@ -527,6 +532,7 @@ export function VisualEditor({
         const orig = originalHtmlRef.current;
         const scripts = bodyScriptsRef.current;
         const fullHtml = reconstructFullHtml(orig, editedHtml, editedCss, scripts);
+        lastEmittedHtmlRef.current = fullHtml; // ★ 回声登记
         onHtmlChange?.(fullHtml);
 
         currentEditable = null;
@@ -598,6 +604,7 @@ export function VisualEditor({
                 const orig = originalHtmlRef.current;
                 const scripts = bodyScriptsRef.current;
                 const fullHtml = reconstructFullHtml(orig, editedHtml, editedCss, scripts);
+                lastEmittedHtmlRef.current = fullHtml; // ★ 回声登记
                 onHtmlChange?.(fullHtml);
               }
               classInput.remove();
@@ -681,6 +688,10 @@ export function VisualEditor({
   // ── 外部 HTML 变更 → 同步到编辑器 ──
   useEffect(() => {
     if (!editorRef.current) return;
+
+    // ★ 回声抑制：这帧 html 就是本编辑器刚 emit 出去的（父组件 state 回流）——
+    //   画布模型已是最新，重建只会销毁正在编辑的 DOM（双击编辑频闪根因）
+    if (lastEmittedHtmlRef.current === html) return;
 
     const parsed = parseHtmlForEditor(html);
     if (parsed.bodyHtml === lastLoadedBodyRef.current) return;
