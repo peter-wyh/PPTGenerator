@@ -215,36 +215,4 @@ describe('CreatorPage', () => {
   });
 });
 
-describe('CampaignPage · Stats 列', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    removeMock.mockResolvedValue(undefined);
-    importManyMock.mockResolvedValue({ created: 1, updated: 0, skipped: 0 });
-    listCampaignsMock.mockResolvedValue([]);
-    listCreatorsMock.mockResolvedValue([]);
-  });
-
-  it('按优先级 GMV/ROAS/Spend 展示至多 3 项指标,优先级外的指标不显示', async () => {
-    listCampaignsMock.mockResolvedValue([
-      {
-        ...campaign,
-        id: 'camp-y',
-        name: 'Campaign Y',
-        metrics: [
-          { label: 'GMV', value: '$1.2M', compare: '+18%' },
-          { label: 'Clicks', value: '45K', compare: '+5%' },
-          { label: 'ROAS', value: '4.2', compare: '+0.6' },
-          { label: 'Spend', value: '$128K', compare: '-5%' },
-        ],
-      },
-    ]);
-    renderWithDataLayout('/data/campaigns');
-    await screen.findByText('Campaign Y');
-    // Stats 列按优先级展示 GMV/ROAS/Spend(label 与 value 合并渲染)
-    expect(screen.getByText((_, el) => el?.textContent === 'GMV $1.2M')).toBeInTheDocument();
-    expect(screen.getByText((_, el) => el?.textContent === 'ROAS 4.2')).toBeInTheDocument();
-    expect(screen.getByText((_, el) => el?.textContent === 'Spend $128K')).toBeInTheDocument();
-    // 优先级外:Clicks 不展示
-    expect(screen.queryByText(/Clicks/)).not.toBeInTheDocument();
-  });
-});
+// Stats 列已于审计 #16 移除（无真实数据源、7 行全「—」）；相关断言随之删除。

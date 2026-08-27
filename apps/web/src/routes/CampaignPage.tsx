@@ -6,9 +6,9 @@
  * Phase A: 列表读取走真实 DB Campaign 表（/api/v1/campaigns），不再走 DataRecord。
  * CRUD/导入保留 dataApi 以兼容现有 RecordFormModal。
  */
-import { Fragment, useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Campaign, CampaignMetric, ProjectMeta } from '@mediakit/shared';
+import type { Campaign, ProjectMeta } from '@mediakit/shared';
 import { listCampaigns } from '@/api/campaigns';
 import { campaignsApi } from '@/api/campaignsApi';
 import { projectsApi } from '@/api/projects';
@@ -273,28 +273,6 @@ function useCampaignRecords() {
 
 /* ========================= Campaign List ========================= */
 
-const CAMPAIGN_STATS_PRIORITY = ['GMV', 'ROAS', 'Spend'];
-function pickCampaignStats(metrics?: CampaignMetric[]): CampaignMetric[] {
-  if (!metrics?.length) return [];
-  const picked: CampaignMetric[] = [];
-  const used = new Set<string>();
-  for (const label of CAMPAIGN_STATS_PRIORITY) {
-    const m = metrics.find((x) => x.label === label);
-    if (m && !used.has(label)) {
-      picked.push(m);
-      used.add(label);
-    }
-    if (picked.length >= 3) return picked;
-  }
-  for (const m of metrics) {
-    if (used.has(m.label)) continue;
-    picked.push(m);
-    used.add(m.label);
-    if (picked.length >= 3) break;
-  }
-  return picked;
-}
-
 function CampaignList({
   records,
   loading,
@@ -331,7 +309,6 @@ function CampaignList({
     'Platform',
     'Period',
     'Budget',
-    'Stats',
     'Status',
     'Owner',
     '',
@@ -355,7 +332,6 @@ function CampaignList({
         </thead>
         <tbody>
           {records.map((d, idx) => {
-            const stats = pickCampaignStats(d.metrics);
             return (
               <tr key={d.id} className="border-t border-border-subtle hover:bg-surface-hover/50">
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted hover:bg-surface-hover/50">
@@ -368,29 +344,8 @@ function CampaignList({
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">
                   {d.startDate} ~ {d.endDate}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.budget}</td>
-                <td className="px-3 py-2">
-                  {stats.length === 0 ? (
-                    <span className="text-foreground-muted">—</span>
-                  ) : (
-                    <div className="whitespace-nowrap text-xs">
-                      <div className="font-medium text-foreground-secondary">
-                        {stats[0].label} {stats[0].value}
-                      </div>
-                      {stats.length > 1 && (
-                        <div className="text-foreground-muted">
-                          {stats.slice(1).map((m, i) => (
-                            <Fragment key={m.label}>
-                              {i > 0 && ' · '}
-                              <span>
-                                {m.label} {m.value}
-                              </span>
-                            </Fragment>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">
+                  {d.budget?.trim() ? d.budget : <span className="text-foreground-muted">—</span>}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.status ?? '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-foreground-secondary">{d.owner ?? '—'}</td>

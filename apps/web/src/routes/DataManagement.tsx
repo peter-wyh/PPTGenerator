@@ -61,7 +61,7 @@ export function DataManagement() {
         <div className="px-4 py-4">
           <h1 className="font-headings text-lg font-semibold text-foreground-primary">数据管理</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
-            Campaign · 订单 · 链接 · 达人 · 业务线
+            Campaign · 订单 · TrackingLink · 达人 · 业务线
           </p>
         </div>
         <nav className="flex-1 overflow-auto px-2">

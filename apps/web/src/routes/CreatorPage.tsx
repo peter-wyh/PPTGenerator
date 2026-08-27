@@ -25,43 +25,6 @@ import {
 import { parseFile } from '@/editor/datasource/parse';
 import { toast } from '../components/Toast';
 
-/** 简单字符串哈希，用于派生确定性 mock 值（与 campaignsApi 中同款逻辑一致）。 */
-function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Math.abs(h);
-}
-
-function parseFollowers(s: string | undefined): number {
-  if (!s) return 10000;
-  const m = s.replace(/[,\s]/g, '').match(/([\d.]+)([KkMm]?)/);
-  if (!m) return 10000;
-  const num = parseFloat(m[1]);
-  const unit = m[2].toLowerCase();
-  if (unit === 'm') return Math.round(num * 1_000_000);
-  if (unit === 'k') return Math.round(num * 1000);
-  return Math.round(num);
-}
-
-function deriveRecentPosts(name: string, tier: string): number {
-  const base = { mega: 45, macro: 30, micro: 18 }[tier as 'mega' | 'macro' | 'micro'] ?? 25;
-  const jitter = hashStr(name) % 20;
-  return base - 10 + jitter;
-}
-
-function deriveEngagementMedian(name: string, followers: string, engagement: string): string {
-  const followersNum = parseFollowers(followers);
-  const engRate = parseFloat((engagement || '5').replace('%', '')) / 100;
-  const jitterFactor = 0.4 + (hashStr(name + '_med') % 60) / 100;
-  const raw = Math.round(followersNum * engRate * jitterFactor);
-  if (raw >= 1_000_000) return `${(raw / 1_000_000).toFixed(2)}M`;
-  if (raw >= 1000) return `${(raw / 1000).toFixed(1)}K`;
-  return String(raw);
-}
-
 export function CreatorPage() {
   const { records, loading, reload } = useCreatorRecords();
   const [preview, setPreview] = useState<PreviewItem[] | null>(null);
@@ -102,10 +65,10 @@ export function CreatorPage() {
   );
 
   const rows: ReactNode[][] = records.map((d) => {
-    // recentPostsCount / engagementMedian 在 JSON 列里已有（seed-creator-extension），
-    // 缺失时用确定性派生补全（向后兼容）
-    const recentPosts = d.recentPostsCount ?? deriveRecentPosts(d.name, d.tier);
-    const engMedian = d.engagementMedian ?? deriveEngagementMedian(d.name, d.followers, d.engagement);
+    // recentPostsCount / engagementMedian 在 JSON 列里已有（seed-creator-extension）。
+    // 真实数据缺失时显示「—」——禁止前端派生伪造数据（审计 #14/#15）。
+    const recentPosts = d.recentPostsCount ?? '—';
+    const engMedian = d.engagementMedian ?? '—';
     return [
       (
         <div key="n" className="flex items-center gap-2">

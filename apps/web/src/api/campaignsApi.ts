@@ -77,48 +77,6 @@ export interface CreatorDTO {
   profile: unknown;
 }
 
-/** 简单字符串哈希，用于派生确定性 mock 值。 */
-function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Math.abs(h);
-}
-
-/** 把 "1.28M" / "684K" / "54K" 等粉丝数解析为数字。 */
-function parseFollowers(s: string | undefined): number {
-  if (!s) return 10000;
-  const m = s.replace(/[,\s]/g, '').match(/([\d.]+)([KkMm]?)/);
-  if (!m) return 10000;
-  const num = parseFloat(m[1]);
-  const unit = m[2].toLowerCase();
-  if (unit === 'm') return Math.round(num * 1_000_000);
-  if (unit === 'k') return Math.round(num * 1000);
-  return Math.round(num);
-}
-
-/** 根据 creator 基础信息派生"近 90 天作品数"（确定性）。 */
-function deriveRecentPosts(name: string, tier: string): number {
-  // tier 越大越频繁发帖；mega 90 天约 30-60 条，macro 20-40，micro 10-25
-  const base = { mega: 45, macro: 30, micro: 18 }[tier] ?? 25;
-  const jitter = hashStr(name) % 20; // 0-19
-  return base - 10 + jitter;
-}
-
-/** 根据 creator 基础信息派生"近 90 天互动中位数"（确定性，带单位字符串）。 */
-function deriveEngagementMedian(name: string, followers: string, engagement: string): string {
-  const followersNum = parseFollowers(followers);
-  const engRate = parseFloat((engagement || '5').replace('%', '')) / 100;
-  // 互动中位数 ≈ 粉丝数 × 互动率 × [0.4, 1.0] 的抖动因子
-  const jitterFactor = 0.4 + (hashStr(name + '_med') % 60) / 100; // 0.4-1.0
-  const raw = Math.round(followersNum * engRate * jitterFactor);
-  if (raw >= 1_000_000) return `${(raw / 1_000_000).toFixed(2)}M`;
-  if (raw >= 1000) return `${(raw / 1000).toFixed(1)}K`;
-  return String(raw);
-}
-
 /** CreatorDTO → 前端 Creator 类型。 */
 export function dtoToCreator(dto: CreatorDTO): Creator {
   const profile = (dto.profile ?? null) as {
@@ -126,7 +84,7 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
   } | null;
   const contact = (dto.contact ?? null) as Creator['contact'] | null;
   const rate = (dto.rate ?? null) as Creator['rate'] | null;
-  // 优先用 DB stats 中的 recentPostsCount / engagementMedian；缺失时派生确定性 mock
+  // 优先用 DB stats 中的 recentPostsCount / engagementMedian；缺失时不伪造（审计 #15）
   const stats = (dto.stats ?? null) as {
     recentPostsCount?: number; engagementMedian?: string;
   } | null;
@@ -150,8 +108,8 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     tags: profile?.tags,
     contact: contact ?? undefined,
     rate: rate ?? undefined,
-    recentPostsCount: stats?.recentPostsCount ?? deriveRecentPosts(dto.name, dto.tier),
-    engagementMedian: stats?.engagementMedian ?? deriveEngagementMedian(dto.name, dto.followers, dto.engagement),
+    recentPostsCount: stats?.recentPostsCount,
+    engagementMedian: stats?.engagementMedian,
   };
 }
 
