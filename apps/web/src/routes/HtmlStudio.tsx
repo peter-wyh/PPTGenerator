@@ -687,6 +687,10 @@ export function HtmlStudio() {
           /* 普通预览（iframe）— 生成完成后一次性展示 */
           <div className="relative flex flex-1 overflow-hidden">
             <div className="flex flex-1 items-start justify-center overflow-auto p-4">
+              {/* 审计#25：不带 allow-same-origin——srcDoc 内容（AI 生成 HTML）不可信，
+                  opaque origin 阻断其读取父页 cookie/内存 token、以用户身份调 API。
+                  相对路径资源（/uploads、/vendor）不受影响：srcdoc 文档 base URL 继承父页。
+                  若未来需 iframe→父页通信，用 postMessage + origin 校验，无需同源。 */}
               <iframe
                 ref={iframeRef}
                 srcDoc={generatedHtml}
@@ -699,7 +703,7 @@ export function HtmlStudio() {
                   border: '1px solid var(--border-default, #e5e7eb)',
                   height: previewDevice === 'mobile' ? '812px' : '100%',
                 }}
-                sandbox="allow-same-origin allow-scripts"
+                sandbox="allow-scripts"
               />
             </div>
             {/* ★ Chat 模式 AI 编辑遮罩：保留旧报告半透明底层，完成后一次性替换 */}

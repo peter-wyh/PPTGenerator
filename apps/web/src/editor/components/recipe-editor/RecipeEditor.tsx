@@ -114,9 +114,12 @@ export function RecipeEditor(props: Props) {
 
       {/* 右:实时预览 */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* 审计#25：不带 allow-same-origin——预览 HTML 与父页隔离（opaque origin），
+            无法读取父页凭据或以用户身份调 API。vendor/图片相对路径加载不受影响
+            （srcdoc base URL 继承父页）。跨窗通信走 postMessage + origin 校验。 */}
         <iframe
           srcDoc={previewHtml}
-          sandbox="allow-same-origin allow-scripts"
+          sandbox="allow-scripts"
           title="Recipe Report Preview"
           className="h-full w-full flex-1 rounded-lg border border-border-default bg-white"
         />
