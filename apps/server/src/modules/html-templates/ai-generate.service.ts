@@ -501,8 +501,8 @@ IMPORTANT:
 - HEADER LOGOS: Use campaign.businessLine.logoUrl and campaign.advertiser.logoUrl as <img src="..."> in the header. These are absolute URLs — use them verbatim. CRITICAL: the <img> MUST be visible (do NOT set style="display:none"). Do NOT create sibling text/initials fallback spans. Just use <img src="URL" alt="Name" class="h-10 object-contain" />.
 - DATE RANGE: Use campaign.period EXACTLY as the report's date range (e.g. "2026-07-01 ~ 2026-08-31"). Do NOT use today's date.
 - For the Performance Trend chart, use the "dailyTrend" array directly as chart data (date labels + revenue/orders values).
-- For each creator in the "creators" array, render their name, platform, and performance data EXACTLY as provided. Do NOT render any "tier" column or tier badges — tier data is not provided.
-- MEDIA BREAKDOWN TABLE: When "allMedia" array is present, the media/creator performance table MUST use allMedia as its data source — one row per media (ALL publishers: creators + media sites + communities + content sites), columns: Media name, Type, Platform, Clicks, Orders, GMV (or Revenue), Commission. Sort as given (by orders desc). Media with type "creator" show the creator name; others show the site name. When allMedia is absent, fall back to the creators array. NEVER add a Tier column.
+- The "creators" array provides creator PROFILES (name, avatar, platform, contentType, showcase screenshots) for cards/showcase sections. Do NOT render a standalone creator/social performance TABLE from creators[].performance.
+- MEDIA BREAKDOWN TABLE (the ONLY performance table): When "allMedia" array is present, it MUST be the table's data source — one row per media (ALL publishers: creators + media sites + communities + content sites), columns: Media name, Type, Platform, Clicks, Orders, GMV (or Revenue), Commission; creator-type rows may carry social fields (posts/engagement/impressions/engRate) — render them as ADDITIONAL columns (Posts / Engagement / Impressions / Eng. Rate) of this same table. Sort as given (by orders desc). Media with type "creator" show the creator name; others show the site name. When allMedia is absent, fall back to the creators array. NEVER add a Tier column. The report must contain EXACTLY ONE media/creator performance table — do NOT render a second table (e.g. "Content Performance") for the same media/creators; merge those social metrics into the single table instead.
 - If avatarUrl is null, use a colored circle with the creator's first letter initial instead of a placeholder image URL.
 - If a creator's performance is null, still include them in the table with "—" for all metric values.
 
@@ -1436,7 +1436,7 @@ export const aiGenerateService = {
     //   含未挂达人合作行的 media_site/community/content_site。creator 类型标注达人名。
     const allMediaCps = syncSource; // 查询去重：allMedia 与 creators 聚合同源（LP 流量 + 订单归因）
     const allMedia = (() => {
-      const byPub = new Map<string, { name: string; type: string; platform: string | null; creatorName: string | null; clicks: number; orders: number; gmv: number; commission: number }>();
+      const byPub = new Map<string, { name: string; type: string; platform: string | null; creatorName: string | null; clicks: number; orders: number; gmv: number; commission: number; posts?: number; engagement?: number; impressions?: number; engRate?: number }>();
       const inPeriod2 = (d: string) => (!reportPeriod?.startDate || d >= reportPeriod.startDate) && (!reportPeriod?.endDate || d <= reportPeriod.endDate);
       // ★ PLATFORM 修复（0827）：publisher.platform 常为 NULL（达人型媒体的平台真源在 Creator 表），
       //   经 LP.campaignCreatorId 闭环 FK 反查 cc.creator.platform 兜底；非达人型媒体保持 publisher.platform。
@@ -1482,6 +1482,15 @@ export const aiGenerateService = {
         if (target && target.creatorName === null) {
           target.orders += ccPeriod.orders; target.gmv += ccPeriod.gmv; target.commission += ccPeriod.commission;
           target.creatorName = name;
+          // ★ 社媒列合并（0827 修双表）：creators[].performance.summary 的社媒指标
+          //   （posts/engagement/impressions/engRate）并入 allMedia 行——一张表全含，
+          //   AI 不再需要从 creators 数组派生第二张 "Content Performance" 表。
+          const s = (cc.performance?.summary ?? {}) as { posts?: unknown; totalImpressions?: unknown; totalEngagement?: unknown; avgEngagementRate?: unknown };
+          const nOr = (v: unknown): number | undefined => { const n = Number(String(v ?? '').replace(/[$,%]/g, '')); return Number.isFinite(n) ? n : undefined; };
+          if (nOr(s.posts) !== undefined) target.posts = nOr(s.posts);
+          if (nOr(s.totalEngagement) !== undefined) target.engagement = nOr(s.totalEngagement);
+          if (nOr(s.totalImpressions) !== undefined) target.impressions = nOr(s.totalImpressions);
+          if (nOr(s.avgEngagementRate) !== undefined) target.engRate = nOr(s.avgEngagementRate);
         }
       }
       return [...byPub.values()].filter((p) => p.clicks > 0 || p.orders > 0).sort((a, b) => b.orders - a.orders || b.clicks - a.clicks);
