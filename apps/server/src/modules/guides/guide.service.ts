@@ -56,11 +56,11 @@ export const guideService = {
   async listStructural(businessLineId: string): Promise<Array<{ id: string; name: string; updatedAt: Date }>> {
     if (!businessLineId) return [];
     const rows = await prisma.guide.findMany({
-      where: { businessLineId, isActive: true },
+      // isDefault=视觉层恒注入,不在结构下拉重复出现
+      where: { businessLineId, isActive: true, isDefault: { not: true } },
       orderBy: { updatedAt: 'desc' },
       select: { id: true, name: true, updatedAt: true },
     });
-    // 结构指南=非默认指南(默认那份已作为视觉层恒注入,不在下拉重复出现)
     return rows.filter((r) => r.name?.trim());
   },
 
