@@ -8,12 +8,12 @@
  */
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
-import { campaignsApi, dtoToCampaign, dtoToCreator, type CpsOverview } from '@/api/campaignsApi';
+import { campaignsApi, dtoToCampaign, dtoToCreator, type CpsOverview, type CreatorCpsDailyResp } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediakit/shared';
 import { getCollaboration, saveCollaboration } from '@/api/collaborations';
-import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type CpsLinkData, type PartnerType } from '@mediakit/shared';
-import { buildSeedCollaboration, buildCpsDaily } from '@/api/analytics/collaborationSeed';
-import { formatUSD, formatEPC } from '@/lib/format';
+import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type PartnerType } from '@mediakit/shared';
+import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
+import { formatUSD } from '@/lib/format';
 import { CreatorAvatar } from '@/components/CreatorAvatar';
 import { ImageInput } from '@/components/ImageInput';
 import { buildPreviewFromRows, downloadTemplate, type PreviewItem } from '@/editor/dataImport';
@@ -22,36 +22,6 @@ import { parseFile } from '@/editor/datasource/parse';
 import { ImportPreviewModal } from '@/editor/components/ImportPreviewModal';
 import { CampaignAnalyticsEditor } from '@/editor/components/CampaignAnalyticsEditor';
 import { toast } from '../components/Toast';
-
-/** 从每日 CPS 明细累加出汇总 CpsLinkData。 */
-function cpsDailyToSummary(daily: CpsDaily[]): CpsLinkData {
-  let clicks = 0, impressions = 0, orders = 0, gmv = 0, commission = 0;
-  for (const d of daily) {
-    clicks += parseInt(d.clicks, 10) || 0;
-    impressions += parseInt(d.impressions, 10) || 0;
-    orders += parseInt(d.orders, 10) || 0;
-    gmv += parseFloat(d.gmv.replace(/[$,]/g, '')) || 0;
-    commission += parseFloat(d.commission.replace(/[$,]/g, '')) || 0;
-  }
-  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-  const cvr = clicks > 0 ? (orders / clicks) * 100 : 0;
-  const spend = Math.round(commission * 1.08);
-  const roas = spend > 0 ? gmv / spend : 0;
-  const epc = clicks > 0 ? gmv / clicks : 0;
-  return {
-    clicks: clicks.toLocaleString('en-US'),
-    impressions: impressions.toLocaleString('en-US'),
-    ctr: `${ctr.toFixed(2)}%`,
-    orders: orders.toLocaleString('en-US'),
-    cvr: `${cvr.toFixed(2)}%`,
-    gmv: formatUSD(gmv),
-    commission: formatUSD(commission),
-    spend: formatUSD(spend),
-    roas: roas.toFixed(2),
-    epc: formatEPC(epc),
-    daily,
-  };
-}
 
 /* ============================= 类型 ============================= */
 
@@ -230,30 +200,8 @@ export function CampaignCollabPage() {
           });
         }
 
-        // CpsDaily（CPS 指标）
-        const cpsClicks = item.dailyCpsClicks ? parseInt(String(item.dailyCpsClicks), 10) || 0 : 0;
-        const cpsOrders = item.dailyCpsOrders ? parseInt(String(item.dailyCpsOrders), 10) || 0 : 0;
-        const cpsGmv = item.dailyCpsGmv ? parseFloat(String(item.dailyCpsGmv).replace(/[$,]/g, '')) || 0 : 0;
-        const cpsCommission = item.dailyCpsCommission ? parseFloat(String(item.dailyCpsCommission).replace(/[$,]/g, '')) || 0 : 0;
-        if (cpsClicks > 0 || cpsOrders > 0 || cpsGmv > 0 || cpsCommission > 0) {
-          const ctr = cpsClicks > 0 ? (cpsClicks / Math.max(parseInt(String(item.dailyImpressions), 10) || cpsClicks * 30)) * 100 : 0;
-          const cvr = cpsClicks > 0 ? (cpsOrders / cpsClicks) * 100 : 0;
-          const spend = Math.round(cpsCommission * 1.08);
-          const roas = spend > 0 ? cpsGmv / spend : 0;
-          const epc = cpsClicks > 0 ? cpsGmv / cpsClicks : 0;
-          buf.dailyCps.set(dailyDate, {
-            date: dailyDate,
-            clicks: String(cpsClicks),
-            impressions: item.dailyImpressions ? String(item.dailyImpressions) : String(cpsClicks * 30),
-            ctr: `${ctr.toFixed(2)}%`,
-            orders: String(cpsOrders),
-            cvr: `${cvr.toFixed(2)}%`,
-            gmv: `$${Math.round(cpsGmv).toLocaleString('en-US')}`,
-            commission: `$${Math.round(cpsCommission).toLocaleString('en-US')}`,
-            roas: roas.toFixed(2),
-            epc: `$${epc.toFixed(2)}`,
-          });
-        }
+        // ★ 0827 整合：CPS 明流列（dailyCpsClicks/Orders/Gmv/Commission）不再收集——
+        // CPS 口径一律走 LinkPerformance + CampaignOrder 导入，每日由 cps-daily API 现算。
       } else {
         // ── 汇总行（deliverable 定义） ──
         let buf = g.get(delKey);
@@ -268,42 +216,8 @@ export function CampaignCollabPage() {
         if (item.screenshots) del.screenshots = item.screenshots as CollaborationDeliverable['screenshots'];
         if (item.execPrice) del.execPrice = String(item.execPrice);
 
-        // CPS 挂链效果：填了 cpsClicks 即启用
-        const cpsClicks = item.cpsClicks ? parseInt(String(item.cpsClicks), 10) || 0 : 0;
-        if (cpsClicks > 0) {
-          const cpsOrders = item.cpsOrders ? parseInt(String(item.cpsOrders), 10) || 0 : 0;
-          const cpsGmv = item.cpsGmv ? parseFloat(String(item.cpsGmv).replace(/[$,]/g, '')) || 0 : 0;
-          const cpsCommission = item.cpsCommission ? parseFloat(String(item.cpsCommission).replace(/[$,]/g, '')) || 0 : 0;
-          const linkUrl = item.cpsLinkUrl ? String(item.cpsLinkUrl) : undefined;
-
-          const ctr = 3 + (cpsClicks % 20) / 10;
-          const impressions = Math.round((cpsClicks * 100) / ctr);
-          const cvr = cpsClicks > 0 ? (cpsOrders / cpsClicks) * 100 : 0;
-          const spend = Math.round(cpsCommission * 1.08);
-          const roas = spend > 0 ? cpsGmv / spend : 0;
-          const epc = cpsClicks > 0 ? cpsGmv / cpsClicks : 0;
-          const aov = cpsOrders > 0 ? cpsGmv / cpsOrders : 0;
-
-          // 如果有明细行，使用明细行的 CPS daily；否则按 S 曲线拆分
-          del.cps = {
-            linkUrl,
-            clicks: cpsClicks.toLocaleString('en-US'),
-            impressions: impressions.toLocaleString('en-US'),
-            ctr: `${ctr.toFixed(2)}%`,
-            orders: cpsOrders.toLocaleString('en-US'),
-            cvr: `${cvr.toFixed(2)}%`,
-            gmv: `$${Math.round(cpsGmv).toLocaleString('en-US')}`,
-            commission: `$${Math.round(cpsCommission).toLocaleString('en-US')}`,
-            spend: `$${spend.toLocaleString('en-US')}`,
-            roas: roas.toFixed(2),
-            epc: `$${epc.toFixed(2)}`,
-            daily: [], // 先占位，下面填充
-          };
-          // 保存这些用于后面构建汇总 CPS（如果明细行覆盖了汇总）
-          (buf as DelBuf & { _cpsSummary?: Record<string, unknown> })._cpsSummary = {
-            cpsClicks, cpsOrders, cpsGmv, cpsCommission, linkUrl, ctr, impressions, cvr, spend, roas, epc, aov,
-          };
-        }
+        // ★ 0827 整合：汇总行 CPS 列（cpsClicks/Orders/Gmv/Commission/LinkUrl）不再写
+        // deliverable.cps JSON——链接效果走 LinkPerformance 导入（真源 trackingUrl）。
       }
     }
 
@@ -326,36 +240,6 @@ export function CampaignCollabPage() {
         // 写入 PostDaily
         if (buf.dailyPost.size > 0) {
           del.daily = [...buf.dailyPost.values()].sort((a, b) => a.date.localeCompare(b.date));
-        }
-
-        // 写入 CpsDaily
-        if (buf.dailyCps.size > 0) {
-          const cpsDailyArr = [...buf.dailyCps.values()].sort((a, b) => a.date.localeCompare(b.date));
-          if (del.cps) {
-            // 有明细 CPS 数据 → 覆盖 S 曲线拆分
-            del.cps.daily = cpsDailyArr;
-          } else {
-            // 有明细 CPS 但无汇总 CPS → 只填 daily，汇总从明细累加
-            del.cps = cpsDailyToSummary(cpsDailyArr);
-          }
-        } else if (del.cps) {
-          // 有汇总 CPS 但无明细 → 按 S 曲线拆分
-          const summary = (buf as DelBuf & { _cpsSummary?: Record<string, unknown> })._cpsSummary;
-          if (summary) {
-            del.cps.daily = buildCpsDaily(
-              del.publishedAt,
-              {
-                clicks: summary.cpsClicks as number,
-                impressions: summary.impressions as number,
-                orders: summary.cpsOrders as number,
-                gmv: summary.cpsGmv as number,
-                commission: summary.cpsCommission as number,
-                ctr: summary.ctr as number,
-                cvr: summary.cvr as number,
-                aov: summary.aov as number,
-              },
-            );
-          }
         }
 
         deliverables.push(del);
@@ -659,16 +543,26 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
   const [busy, setBusy] = useState(false);
   // CPS 实绩（只读聚合）：成交←订单表逐单，流量←CpsPerformance。与报告 AI 上下文同口径。
   const [cpsOv, setCpsOv] = useState<CpsOverview['rows'][number] | null>(null);
+  // 0827 整合：每日 CPS 真源现算（LP.daily + 订单按日 join），替代 deliverable.cps JSON 快照。
+  const [cpsLive, setCpsLive] = useState<CreatorCpsDailyResp | null>(null);
   useEffect(() => {
     let alive = true;
     campaignsApi.cpsOverview(row.campaignId, { creatorId: row.creatorId })
       .then((r) => { if (alive) setCpsOv(r.rows[0] ?? null); })
       .catch(() => { if (alive) setCpsOv(null); });
+    campaignsApi.getCreatorCpsDaily(row.campaignId, row.creatorId)
+      .then((r) => { if (alive) setCpsLive(r); })
+      .catch(() => { if (alive) setCpsLive(null); });
     return () => { alive = false; };
   }, [row.campaignId, row.creatorId]);
 
   const creator = row.creator;
   const metrics = creator.metrics ?? [];
+  // 0827 需求：透出统计时间范围（CPS 实绩）
+  const cpsRange = (() => {
+    const dates = (cpsOv?.daily ?? []).map((d) => String(d.date)).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
+    return dates.length ? `${dates[0]} ~ ${dates[dates.length - 1]}` : '';
+  })();
 
   async function save() {
     setBusy(true);
@@ -782,6 +676,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
               <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">
                 <span>CPS 实绩</span>
                 <span className="font-normal normal-case text-foreground-muted/70">订单表 + 链接导出聚合 · 只读</span>
+                {cpsRange && <span className="font-normal normal-case text-foreground-muted/70">· {cpsRange}</span>}
               </div>
               <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-border-subtle">
                 {([
@@ -836,6 +731,7 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                     onChange={(d) => setDeliverable(i, d)}
                     onRemove={() => removeDeliverable(i)}
                     onOpenDaily={() => navigate(`/data/links/daily?campaignId=${encodeURIComponent(row.campaignId)}&creatorId=${encodeURIComponent(row.creatorId)}`)}
+                    cpsLive={cpsLive}
                   />
                 ))}
               </div>
@@ -967,6 +863,7 @@ function DeliverableCard({
   onChange,
   onRemove,
   onOpenDaily,
+  cpsLive,
 }: {
   deliverable: CollaborationDeliverable;
   index: number;
@@ -976,6 +873,8 @@ function DeliverableCard({
   onRemove: () => void;
   /** 跳转链接数据页（按 tracking link 筛选）查看每日明细 */
   onOpenDaily?: () => void;
+  /** CPS 真源现算（0827 整合：每日/汇总只读，替代 deliverable.cps JSON 快照与 mock 覆盖） */
+  cpsLive?: CreatorCpsDailyResp | null;
 }) {
   const { contentType, screenshots = [], metrics = [], audience, wordcloud = [] } = deliverable;
 
@@ -1100,7 +999,6 @@ function DeliverableCard({
       <div className="mb-2">
         {!editing ? (() => {
           const daily = deliverable.daily ?? [];
-          const cpsDaily = deliverable.cps?.daily ?? [];
           const sum = (key: 'impressions' | 'likes' | 'comments' | 'shares' | 'saves') =>
             daily.reduce((s, d) => s + (parseFloat(d[key]) || 0), 0);
           const fmt = (n: number) => n >= 10000 ? `${(n / 1000).toFixed(1)}K` : Math.round(n).toLocaleString('en-US');
@@ -1111,12 +1009,7 @@ function DeliverableCard({
             ['转发', daily.length ? fmt(sum('shares')) : '—', 'Σ 每日转发'],
             ['收藏', daily.length ? fmt(sum('saves')) : '—', 'Σ 每日收藏'],
           ];
-          if (cpsDaily.length) {
-            const cSum = (key: 'clicks' | 'orders') => cpsDaily.reduce((s, d) => s + (parseFloat(String(d[key])) || 0), 0);
-            rows.push(['点击', fmt(cSum('clicks')), 'Σ 每日点击'], ['订单', fmt(cSum('orders')), 'Σ 每日订单']);
-            const gmv = cpsDaily.reduce((s, d) => s + (parseFloat(d.gmv.replace(/[^0-9.-]/g, '')) || 0), 0);
-            if (gmv > 0) rows.push(['GMV', `$${fmt(gmv)}`, 'Σ 每日 GMV']);
-          }
+          // 0827 需求：作品维度不再重复透出 CPS（点击/订单/GMV 已在顶部 CPS 实绩透出），效果数据只留互动指标
           return (
             <>
               <div className="flex items-center gap-1 text-[10px] text-foreground-secondary mb-1">
@@ -1169,16 +1062,15 @@ function DeliverableCard({
       {/* 每日效果数据 + CPS 每日明细 editing 模式下行内可编辑 */}
       {(() => {
         const daily = deliverable.daily ?? [];
-        const cpsDaily = deliverable.cps?.daily ?? [];
+        // ★ 0827 整合：CPS 每日/汇总一律真源现算（cpsLive），deliverable.cps JSON 快照不再读。
+        const cpsLiveDaily = cpsLive?.daily ?? [];
 
         const setDaily = (d: typeof daily) => patch({ daily: d });
-        const setCpsDaily = (c: typeof cpsDaily) =>
-          patch({ cps: { ...(deliverable.cps ?? { clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', spend: '$0', roas: '0', epc: '$0' }), daily: c } });
 
-        // 按日期 join
-        const byDate = new Map<string, { post?: typeof daily[number]; cps?: typeof cpsDaily[number] }>();
+        // 按日期 join（互动数据 post + CPS 真源现算）
+        const byDate = new Map<string, { post?: typeof daily[number]; cps?: (typeof cpsLiveDaily)[number] }>();
         for (const d of daily) byDate.set(d.date, { post: d });
-        for (const d of cpsDaily) {
+        for (const d of cpsLiveDaily) {
           const e = byDate.get(d.date);
           if (e) e.cps = d; else byDate.set(d.date, { cps: d });
         }
@@ -1187,11 +1079,11 @@ function DeliverableCard({
           const db = b.post?.date ?? b.cps?.date ?? '';
           return da.localeCompare(db);
         });
-        const hasCps = cpsDaily.length > 0;
+        const hasCps = cpsLiveDaily.length > 0 || (cpsLive?.totals.clicks ?? 0) > 0 || (cpsLive?.totals.orders ?? 0) > 0;
 
         // 非编辑模式：每日明细不在浮窗展示——入口跳转链接数据页（按 tracking link 筛选）
         if (!editing) {
-          if (daily.length === 0 && cpsDaily.length === 0) return null;
+          if (daily.length === 0 && cpsLiveDaily.length === 0) return null;
           return (
             <div className="mb-2">
               <button
@@ -1211,29 +1103,13 @@ function DeliverableCard({
           const today = new Date().toISOString().slice(0, 10);
           setDaily([...daily, { date: today, impressions: '0', likes: '0', comments: '0', shares: '0', saves: '0' }]);
         }
-        /** 编辑模式：添加一天 cps daily（确保 cps 对象存在且 daily 列表完整） */
-        function addCpsDay() {
-          const today = new Date().toISOString().slice(0, 10);
-          const newRow = { date: today, clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', roas: '0', epc: '$0' };
-          if (!deliverable.cps) {
-            patch({ cps: { clicks: '0', impressions: '0', ctr: '0%', orders: '0', cvr: '0%', gmv: '$0', commission: '$0', spend: '$0', roas: '0', epc: '$0', daily: [newRow] } });
-          } else {
-            setCpsDaily([...(deliverable.cps.daily ?? []), newRow]);
-          }
-        }
-
         function updPost(ri: number, key: keyof typeof daily[number], val: string) {
           const date = merged[ri].post?.date ?? merged[ri].cps?.date ?? '';
           setDaily(daily.map((d) => (d.date === date ? { ...d, [key]: val } : d)));
         }
-        function updCps(ri: number, key: keyof typeof cpsDaily[number], val: string) {
-          const date = merged[ri].post?.date ?? merged[ri].cps?.date ?? '';
-          setCpsDaily(cpsDaily.map((d) => (d.date === date ? { ...d, [key]: val } : d)));
-        }
         function delDay(ri: number) {
           const date = merged[ri].post?.date ?? merged[ri].cps?.date ?? '';
           setDaily(daily.filter((d) => d.date !== date));
-          if (cpsDaily.length) setCpsDaily(cpsDaily.filter((d) => d.date !== date));
         }
 
         const EditableCell = ({ editing: ed, value, onChange, className = '' }: { editing: boolean; value: string; onChange?: (v: string) => void; className?: string }) =>
@@ -1257,9 +1133,9 @@ function DeliverableCard({
               {editing && (
                 <div className="ml-auto flex gap-2">
                   <button onClick={addPostDay} className="text-accent-primary hover:underline">+ 互动</button>
-                  <button onClick={addCpsDay} className="text-accent-primary hover:underline">+ CPS</button>
                 </div>
               )}
+              {hasCps && <span className="ml-auto text-foreground-muted">CPS 列=真源现算（只读）</span>}
             </div>
             {merged.length === 0 ? (
               <span className="text-foreground-muted">—</span>
@@ -1291,10 +1167,9 @@ function DeliverableCard({
                             <input
                               value={row.post?.date ?? row.cps?.date ?? ''}
                               onChange={(e) => {
-                                const oldDate = row.post?.date ?? row.cps?.date ?? '';
+                                const oldDate = row.post?.date ?? '';
                                 const newDate = e.target.value;
                                 setDaily(daily.map((d) => (d.date === oldDate ? { ...d, date: newDate } : d)));
-                                if (cpsDaily.length) setCpsDaily(cpsDaily.map((d) => (d.date === oldDate ? { ...d, date: newDate } : d)));
                               }}
                               className="w-24 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-[10px]"
                             />
@@ -1308,10 +1183,10 @@ function DeliverableCard({
                         <EditableCell editing={editing} value={row.post?.shares ?? ''} onChange={(v) => updPost(ri, 'shares', v)} />
                         <EditableCell editing={editing} value={row.post?.saves ?? ''} onChange={(v) => updPost(ri, 'saves', v)} />
                         {hasCps && <>
-                          <EditableCell editing={editing} value={row.cps?.clicks ?? ''} onChange={(v) => updCps(ri, 'clicks', v)} className="border-l border-border-subtle" />
-                          <EditableCell editing={editing} value={row.cps?.orders ?? ''} onChange={(v) => updCps(ri, 'orders', v)} />
-                          <EditableCell editing={editing} value={row.cps?.gmv ?? ''} onChange={(v) => updCps(ri, 'gmv', v)} />
-                          <EditableCell editing={editing} value={row.cps?.commission ?? ''} onChange={(v) => updCps(ri, 'commission', v)} />
+                          <td className="border-l border-border-subtle px-1.5 py-0.5 text-right tabular-nums">{row.cps?.clicks ?? '—'}</td>
+                          <td className="px-1.5 py-0.5 text-right tabular-nums">{row.cps?.orders ?? '—'}</td>
+                          <td className="px-1.5 py-0.5 text-right tabular-nums">{row.cps ? formatUSD(row.cps.gmv) : '—'}</td>
+                          <td className="px-1.5 py-0.5 text-right tabular-nums">{row.cps ? formatUSD(row.cps.commission) : '—'}</td>
                         </>}
                         {editing && (
                           <td className="px-1 py-0.5">

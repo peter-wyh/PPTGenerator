@@ -38,8 +38,8 @@ export interface ChangelogEntry {
   changes: { kind: '新增' | '变更' | '修复' | '下线'; text: string }[];
 }
 
-export const API_DOC_VERSION = '1.2.0';
-export const API_DOC_UPDATED = '2026-08-25';
+export const API_DOC_VERSION = '1.3.0';
+export const API_DOC_UPDATED = '2026-08-27';
 
 export const API_DOC_CONVENTIONS = [
   'Base URL：http://<server>:4000/api/v1（生产环境以部署域名为准）。',
@@ -235,7 +235,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
     method: 'POST',
     path: '/campaigns/import/collaboration-daily',
     title: '合作每日明细（内容表现）',
-    purpose: '按天记录每位达人在 campaign 下的内容表现（曝光/互动/CPS 效果）——报告核心趋势图表的数据源。',
+    purpose: '按天记录每位达人在 campaign 下的内容表现（曝光/互动）——报告核心趋势图表的数据源。CPS 口径已并入链接效果+订单真源（见 creator-cps-daily），不再经本接口。',
     source: '平台后台每日数据截图/导出汇总；同一天多内容类型分行（contentType 区分）。',
     prerequisites: ['Campaign 已创建', '达人已挂到该 Campaign（CampaignCreator 链接已建立）'],
     prerequisiteSummary: 'Campaign + 达人挂链',
@@ -243,6 +243,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       '按 (campaignId, creatorId) 定位合作链接；任一不存在则整组 skipped。',
       '合并键 (contentType, date)：同日同类型重导覆盖，其余日期保留，最终按日期排序。',
       'contentType 缺省为 default；同一天有视频+图文两类数据时用两行表示。',
+      '★ 2026-08-27 起 CPS 四列（dailyCpsClicks/Orders/Gmv/Commission）已停写：订单/佣金归 LinkPerformance + CampaignOrder 真源，合作浮窗每日 CPS 由 GET /campaigns/:cid/creators/:uid/cps-daily 现算。历史 JSON 键冻结不清洗。',
     ],
     fields: [
       { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
@@ -254,10 +255,6 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       { name: 'dailyComments', type: 'number', required: false, desc: '当日评论' },
       { name: 'dailyShares', type: 'number', required: false, desc: '当日分享' },
       { name: 'dailySaves', type: 'number', required: false, desc: '当日收藏' },
-      { name: 'dailyCpsClicks', type: 'number', required: false, desc: '当日 CPS 点击' },
-      { name: 'dailyCpsOrders', type: 'number', required: false, desc: '当日 CPS 订单' },
-      { name: 'dailyCpsGmv', type: 'number', required: false, desc: '当日 CPS GMV' },
-      { name: 'dailyCpsCommission', type: 'number', required: false, desc: '当日 CPS 佣金' },
     ],
     requestExample: `{
   "items": [
@@ -269,11 +266,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       "dailyImpressions": 96000,
       "dailyLikes": 8400,
       "dailyComments": 310,
-      "dailyShares": 520,
-      "dailyCpsClicks": 1900,
-      "dailyCpsOrders": 48,
-      "dailyCpsGmv": 2210.40,
-      "dailyCpsCommission": 331.56
+      "dailyShares": 520
     }
   ]
 }`,
@@ -601,6 +594,38 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
   },
   // ─────────────────────────────────────────────────────────────────────────
   {
+    id: 'creator-cps-daily',
+    method: 'GET',
+    path: '/campaigns/:campaignId/creators/:creatorId/cps-daily',
+    title: '合作行每日 CPS（真源现算）',
+    purpose: '单个合作行（campaign × creator）的每日 CPS 真源现算：流量侧 LinkPerformance.daily + 成交侧订单表按日聚合。合作页「CPS 每日明细」浮窗数据源（2026-08-27 起替代 deliverable.cps 冻结快照，只读）。',
+    source: '系统内数据（链接效果 + 订单导入后现算，无物化表），无需上游提供。',
+    prerequisites: ['Campaign 已创建', '达人已挂链（合作行建立）', '（可选）已导入 link-performance（含每日行）与订单——无数据时返回空 daily 和零值 totals。'],
+    prerequisiteSummary: 'Campaign + 合作行',
+    semantics: [
+      '流量侧（clicks/impressions/spend）：读该合作行 1:1 LinkPerformance 的 daily JSON（数组式/键值式双格式兼容）；totals 的流量指标用 LP 周期聚合列。',
+      '成交侧（orders/gmv/commission）：订单表 GROUP BY DATE(orderDate) 现算；totals 的成交指标 = daily 全量求和（与 cps-overview 全 campaign 口径对账一致），不用 LP 冻结列。',
+      '订单归因与闭环同口径：COALESCE(order.campaignCreatorId, linkPerformance.campaignCreatorId)——直接 FK 优先，LP 兜底。',
+      '只读接口：历史 deliverable.cps JSON 冻结退役，本接口是合作浮窗唯一 CPS 数据源。',
+    ],
+    fields: [
+      { name: 'campaignId', type: 'string', required: true, desc: 'Path 参数：Campaign ID' },
+      { name: 'creatorId', type: 'string', required: true, desc: 'Path 参数：达人 ID' },
+    ],
+    requestExample: `GET /api/v1/campaigns/cmszwk2dw000y8edagyejkj3f/creators/cmst.../cps-daily`,
+    response: `{
+  "campaignId": "cmszwk2dw000y8edagyejkj3f",
+  "campaignCreatorId": "cmsz...",
+  "link": { "id": "cmt8...", "linkUrl": "https://tc.trivago.com/...", "linkKey": "trivago-uk-luxurylife" },
+  "totals": { "clicks": 33163, "impressions": 994890, "spend": 5164.79, "orders": 2939, "gmv": 66329.61, "commission": 4396.10 },
+  "daily": [
+    { "date": "2026-06-01", "clicks": 1820, "impressions": 54600, "spend": 289.20, "orders": 161, "gmv": 3630.45, "commission": 240.71 }
+  ],
+  "recomputedAt": "2026-08-26T13:52:00.000Z"
+}`,
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
     id: 'order-insights',
     method: 'GET',
     path: '/campaigns/:id/order-insights',
@@ -679,6 +704,15 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
 ];
 
 export const API_DOC_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.3.0',
+    date: '2026-08-27',
+    changes: [
+      { kind: '新增', text: '合作行每日 CPS 真源现算接口（GET /campaigns/:cid/creators/:uid/cps-daily）：流量侧 LinkPerformance.daily（数组/键值双格式）+ 成交侧订单表按日聚合；订单归因 COALESCE(直接 FK, LP 兜底)；totals 成交指标由 daily 全量求和（与 cps-overview 口径对账一致）。' },
+      { kind: '下线', text: 'collaboration-daily 的 CPS 四列（dailyCpsClicks/Orders/Gmv/Commission）停写——CPS 口径一律归 LinkPerformance + CampaignOrder 真源；历史 deliverable.cps JSON 键冻结不清洗。' },
+      { kind: '变更', text: '合作页「CPS 每日明细」浮窗切换为只读真源现算（替代 deliverable.cps 冻结快照与 S 曲线模拟拆分），互动数据（曝光/点赞/评论/分享/收藏）编辑保留。' },
+    ],
+  },
   {
     version: '1.2.0',
     date: '2026-08-25',

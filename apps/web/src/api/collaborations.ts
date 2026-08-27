@@ -58,10 +58,9 @@ export async function getCollaboration(
     }
   }
 
-  // 3. daily + cps 都是确定性 mock 数据，总是从 seed 重新生成
-  //    daily: 发布日→当前日期，最多 30 天
-  //    cps: CPS 链接挂链效果（clicks/GMV/佣金/ROAS/CVR 等）
-  //    这样无需 DB migration 即可保证确定性 mock 始终反映最新逻辑
+  // 3. daily 互动数据是确定性 mock 种子（发布日→当前日期，最多 30 天）
+  //    ★ 0827 整合：CPS 不再 mock 覆盖——每日/汇总真源现算（cps-daily API），
+  //    deliverable.cps JSON 快照冻结退役，S 曲线造数（buildCpsDaily）废弃。
   if (result) {
     try {
       const seed = buildSeedCollaboration(campaignId, creatorId);
@@ -70,7 +69,6 @@ export async function getCollaboration(
         deliverables: result.deliverables.map((d, i) => ({
           ...d,
           daily: seed.deliverables[i]?.daily ?? d.daily,
-          cps: seed.deliverables[i]?.cps ?? d.cps,
         })),
       };
     } catch {

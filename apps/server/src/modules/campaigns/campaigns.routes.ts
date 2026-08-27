@@ -53,6 +53,8 @@ router.delete('/links/:id', validate({ params: idParamSchema }), campaignControl
 router.get('/:campaignId/creators/:creatorId/performance', campaignController.getPerformance);
 router.put('/:campaignId/creators/:creatorId/performance', campaignController.upsertPerformance);
 router.get('/:campaignId/creators/:creatorId/collaboration', campaignController.getCollaboration);
+/** 合作行每日 CPS 真源现算（0827 整合，只读） */
+router.get('/:campaignId/creators/:creatorId/cps-daily', campaignController.getCreatorCpsDaily);
 router.put('/:campaignId/creators/:creatorId/collaboration', campaignController.upsertCollaboration);
 
 // ─── Batch Import (structured tables) ────────────────────────────────────────

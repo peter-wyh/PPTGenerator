@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService, importService, cpsOverviewService } from './campaigns.service';
+import { campaignService, creatorService, campaignCreatorService, performanceService, collaborationService, importService, cpsOverviewService, creatorCpsDailyService } from './campaigns.service';
 import { orderStatsService } from './order-stats.service';
 import { recomputePublisherStats } from './publisher-stats.service';
 import { asyncHandler } from '../../utils/asyncHandler';
@@ -125,6 +125,14 @@ export const campaignController = {
     const linkId = await performanceService.resolveLinkId(campaignId, creatorId, v.id, v.role === 'ADMIN');
     const collab = await collaborationService.getByCampaignCreator(linkId);
     res.json({ collaboration: collab });
+  }),
+
+  /** 合作行每日 CPS 真源现算（0827 整合：只读，替代 deliverable.cps JSON 快照）。 */
+  getCreatorCpsDaily: asyncHandler(async (req: Request, res: Response) => {
+    const { campaignId, creatorId } = req.params;
+    const v = req.user as AuthPayload;
+    const linkId = await performanceService.resolveLinkId(campaignId, creatorId, v.id, v.role === 'ADMIN');
+    res.json(await creatorCpsDailyService.getDaily(campaignId, linkId));
   }),
 
   upsertCollaboration: asyncHandler(async (req: Request, res: Response) => {

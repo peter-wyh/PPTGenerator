@@ -283,7 +283,20 @@ export const campaignsApi = {
   /** CPS 概览（合作浮窗只读聚合）：成交←订单表逐单，流量←CpsPerformance。creatorId/ccId 可选限定单个合作行。 */
   cpsOverview: (campaignId: string, opts?: { ccId?: string; creatorId?: string }) =>
     api.get<CpsOverview>(`/campaigns/${campaignId}/cps-overview`, { params: { ...(opts?.ccId ? { ccId: opts.ccId } : {}), ...(opts?.creatorId ? { creatorId: opts.creatorId } : {}) } }).then((r) => r.data),
+  /** 合作行每日 CPS 真源现算（0827 整合：只读，LP.daily + 订单按日 join）。 */
+  getCreatorCpsDaily: (campaignId: string, creatorId: string) =>
+    api.get<CreatorCpsDailyResp>(`/campaigns/${campaignId}/creators/${creatorId}/cps-daily`).then((r) => r.data),
 };
+
+/** /campaigns/:campaignId/creators/:creatorId/cps-daily 响应（真源现算）。 */
+export interface CreatorCpsDailyResp {
+  campaignId: string;
+  campaignCreatorId: string;
+  link: { id: string; linkUrl: string | null; linkKey: string } | null;
+  totals: { clicks: number; impressions: number; spend: number; orders: number; gmv: number; commission: number };
+  daily: Array<{ date: string; clicks: number; impressions: number; spend: number; orders: number; gmv: number; commission: number }>;
+  recomputedAt: string;
+}
 
 /** /campaigns/:id/cps-overview 响应。 */
 export interface CpsOverview {

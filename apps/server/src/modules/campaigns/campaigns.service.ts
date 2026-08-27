@@ -1115,10 +1115,10 @@ export const importService = {
             ...('dailyComments' in row && row.dailyComments ? { comments: Number(row.dailyComments) } : {}),
             ...('dailyShares' in row && row.dailyShares ? { shares: Number(row.dailyShares) } : {}),
             ...('dailySaves' in row && row.dailySaves ? { saves: Number(row.dailySaves) } : {}),
-            ...('dailyCpsClicks' in row && row.dailyCpsClicks ? { cpsClicks: Number(row.dailyCpsClicks) } : {}),
-            ...('dailyCpsOrders' in row && row.dailyCpsOrders ? { cpsOrders: Number(row.dailyCpsOrders) } : {}),
-            ...('dailyCpsGmv' in row && row.dailyCpsGmv ? { cpsGmv: Number(row.dailyCpsGmv) } : {}),
-            ...('dailyCpsCommission' in row && row.dailyCpsCommission ? { cpsCommission: Number(row.dailyCpsCommission) } : {}),
+            // ★ 0827 整合：CPS 列不再写入互动日数据 JSON——CPS 口径一律走
+            // LinkPerformance（importLinkPerformance）+ CampaignOrder（importOrders）真源，
+            // 每日聚合由 creatorCpsDailyService.getDaily 现算。历史 cpsClicks/cpsOrders/
+            // cpsGmv/cpsCommission 键冻结不清洗（浮窗已不读）。
           });
         }
         // Merge daily data into CreatorPerformance
@@ -1320,6 +1320,87 @@ export const importService = {
 //   成交类（orders/gmv/commission/spend/roas）← CampaignOrder 按 campaignCreatorId × orderDate 聚合（真源：逐单）
 //   流量类（clicks/impressions）← CpsPerformance 聚合列 + daily 期内切片（真源：联盟平台链接导出）
 //   ctr/cvr/epc 为派生值：ctr=clicks/impressions、cvr=orders/clicks、epc=gmv/clicks
+// ─── 合作行每日 CPS 现算（0827 整合：deliverable.cps JSON 冻结退役，浮窗只读真源） ──
+export const creatorCpsDailyService = {
+  /**
+   * 单个合作行（campaignCreatorId）的每日 CPS 真源现算：
+   * 流量侧 LinkPerformance.daily + 成交侧订单 GROUP BY DATE(orderDate)。
+   * 返回按日 join 后的行（clicks/impressions/orders/gmv/commission），只读。
+   */
+  async getDaily(campaignId: string, campaignCreatorId: string) {
+    // 1:1 直接 FK 拿该合作的 LP 行（0826 闭环后必挂）
+    const lp = await prisma.linkPerformance.findUnique({
+      where: { campaignCreatorId: campaignCreatorId },
+      select: { id: true, linkUrl: true, linkKey: true, clicks: true, impressions: true, orders: true, gmv: true, commission: true, spend: true, daily: true },
+    });
+    // 成交侧：订单按日聚合（闭环归因标准：直接 FK 优先，LP 兜底——与 cps-source/cpsOverview 同口径）
+    const orderRows = await prisma.$queryRaw<Array<{ d: string; cnt: bigint; sale: unknown; comm: unknown }>>(Prisma.sql`
+      SELECT DATE_FORMAT(o.orderDate, '%Y-%m-%d') AS d, COUNT(*) AS cnt,
+             COALESCE(SUM(o.saleAmount), 0) AS sale, COALESCE(SUM(o.commission), 0) AS comm
+      FROM CampaignOrder o
+      LEFT JOIN LinkPerformance lp ON lp.id = o.linkPerformanceId
+      WHERE COALESCE(o.campaignCreatorId, lp.campaignCreatorId) = ${campaignCreatorId} AND o.orderDate IS NOT NULL
+      GROUP BY d`);
+    // 流量侧：LP.daily 兼容双格式（数组式 [{date,clicks,...}] / 键值式 {"2026-11-20":{...}}）
+    const lpDaily = new Map<string, { clicks: number; impressions: number; spend: number }>();
+    if (lp?.daily) {
+      const d = lp.daily as unknown;
+      if (Array.isArray(d)) {
+        for (const row of d as Array<{ date?: string; clicks?: unknown; impressions?: unknown; spend?: unknown }>) {
+          if (!row?.date) continue;
+          lpDaily.set(String(row.date), {
+            clicks: Number(row.clicks ?? 0) || 0,
+            impressions: Number(row.impressions ?? 0) || 0,
+            spend: Number(row.spend ?? 0) || 0,
+          });
+        }
+      } else if (typeof d === 'object') {
+        for (const [date, cell] of Object.entries(d as Record<string, { clicks?: unknown; impressions?: unknown; spend?: unknown }>)) {
+          lpDaily.set(date, {
+            clicks: Number(cell?.clicks ?? 0) || 0,
+            impressions: Number(cell?.impressions ?? 0) || 0,
+            spend: Number(cell?.spend ?? 0) || 0,
+          });
+        }
+      }
+    }
+    // 按日 join
+    const byDate = new Map<string, { date: string; clicks: number; impressions: number; spend: number; orders: number; gmv: number; commission: number }>();
+    for (const [date, t] of lpDaily) {
+      byDate.set(date, { date, ...t, orders: 0, gmv: 0, commission: 0 });
+    }
+    for (const r of orderRows) {
+      const e = byDate.get(r.d) ?? { date: r.d, clicks: 0, impressions: 0, spend: 0, orders: 0, gmv: 0, commission: 0 };
+      e.orders = Number(r.cnt);
+      e.gmv = Number(r.sale ?? 0);
+      e.commission = Number(r.comm ?? 0);
+      byDate.set(r.d, e);
+    }
+    const daily = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+    // 周期合计：流量侧（clicks/impressions/spend）用 LP 聚合列真源；
+    // 成交侧（orders/gmv/commission）与 cps-overview 同口径——订单表逐单聚合（daily 全量再 SUM），
+    // 不用 LP.orders 历史冻结列（0827 整合基准：Σ orders 必须等于订单表现算 20496）。
+    const ordersSum = daily.reduce((s, d) => s + d.orders, 0);
+    const gmvSum = daily.reduce((s, d) => s + d.gmv, 0);
+    const commSum = daily.reduce((s, d) => s + d.commission, 0);
+    return {
+      campaignId,
+      campaignCreatorId,
+      link: lp ? { id: lp.id, linkUrl: lp.linkUrl, linkKey: lp.linkKey } : null,
+      totals: {
+        clicks: lp ? Number(lp.clicks ?? 0) : 0,
+        impressions: lp ? Number(lp.impressions ?? 0) : 0,
+        spend: lp ? Number(lp.spend ?? 0) : 0,
+        orders: ordersSum,
+        gmv: gmvSum,
+        commission: commSum,
+      },
+      daily,
+      recomputedAt: new Date().toISOString(),
+    };
+  },
+};
+
 export const cpsOverviewService = {
   /**
    * campaign × creator 的 CPS 概览（浮窗只读）。

@@ -95,6 +95,15 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
   const [isActive, setIsActive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // 0827：指南内容支持全屏编辑（Esc 关闭，与 AiGenerateForm 同交互）
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullscreen]);
 
   useEffect(() => {
     if (!guideId) return;
@@ -173,11 +182,34 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
         </label>
 
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
-          <span>指南内容（Markdown，约定分节：品牌视觉 / 章节结构 / 展示形式偏好 / 语调与术语） <span className="text-red">*</span></span>
+          <span className="flex items-center justify-between">
+            <span>指南内容（Markdown，约定分节：品牌视觉 / 章节结构 / 展示形式偏好 / 语调与术语） <span className="text-red">*</span></span>
+            <button onClick={() => setFullscreen(true)} title="全屏编辑" className="text-[10px] text-foreground-muted hover:text-foreground-primary">⛶ 全屏</button>
+          </span>
           <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} spellCheck={false}
             placeholder={'# {业务线名} 报告指南\n\n## 品牌视觉\n主色 #xxxxxx / 字体 …\n\n## 章节结构\n必须包含 …；不提 …\n\n## 展示形式偏好\n达人列表 ≤6 人卡片，>6 人表格\n\n## 语调与术语\n自称「团队」；用「推广」不用「投放」'}
             className="resize-y rounded border border-border-default bg-surface-primary px-2 py-1.5 font-mono text-xs text-foreground-primary" />
         </label>
+
+        {/* 0827：指南内容全屏编辑器（Esc 关闭） */}
+        {fullscreen && (
+          <div className="fixed inset-0 z-[70] flex flex-col bg-surface-primary">
+            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border-default px-4">
+              <span className="text-sm font-medium text-foreground-primary">指南内容编辑器</span>
+              <button onClick={() => setFullscreen(false)} className="rounded-md px-2 py-1 text-xs text-foreground-muted hover:bg-surface-hover">
+                ✕ 关闭 (Esc)
+              </button>
+            </div>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              spellCheck={false}
+              autoFocus
+              placeholder={'# {业务线名} 报告指南\n\n## 品牌视觉\n主色 #xxxxxx / 字体 …\n\n## 章节结构\n必须包含 …；不提 …\n\n## 展示形式偏好\n达人列表 ≤6 人卡片，>6 人表格\n\n## 语调与术语\n自称「团队」；用「推广」不用「投放」'}
+              className="flex-1 resize-none bg-surface-primary p-6 font-mono text-sm leading-relaxed text-foreground-primary focus:outline-none"
+            />
+          </div>
+        )}
 
         <div className="flex gap-4 text-xs text-foreground-secondary">
           <label className="flex items-center gap-1.5">
