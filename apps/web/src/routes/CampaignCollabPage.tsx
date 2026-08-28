@@ -34,6 +34,10 @@ interface CollabRow {
   collabType: string | null;
   status: string | null;
   contentType: string | null;
+  /** 0827 迭代：合作级字段（CampaignCreator 表）——抽屉编辑区透出。 */
+  collabId: string | null;
+  currency: string | null;
+  totalPrice: string | null;
   collabData?: CollaborationData | null;
 }
 
@@ -96,6 +100,9 @@ export function CampaignCollabPage() {
                 collabType: link.collabType,
                 status: link.status,
                 contentType: link.contentType,
+                collabId: link.collabId,
+                currency: link.currency,
+                totalPrice: link.totalPrice,
                 collabData,
               } satisfies CollabRow;
             }),
@@ -212,6 +219,10 @@ export function CampaignCollabPage() {
         const del = buf.del;
         if (item.publishedAt) del.publishedAt = String(item.publishedAt);
         if (item.platform) del.platform = String(item.platform);
+        // 0827 迭代：作品链接（报告 Creator Breakdown 非 story 行跳转目标）
+        if (item.postUrl) del.postUrl = String(item.postUrl);
+        // 0827 迭代：内容形式（短视频/图文/直播切片等，story 判定三字段之一）
+        if (item.contentFormat) del.contentFormat = String(item.contentFormat);
         if (item.metrics) del.metrics = item.metrics as CollaborationDeliverable['metrics'];
         if (item.screenshots) del.screenshots = item.screenshots as CollaborationDeliverable['screenshots'];
         if (item.execPrice) del.execPrice = String(item.execPrice);
@@ -228,6 +239,29 @@ export function CampaignCollabPage() {
       const cid = String(item.creatorId ?? '');
       const pt = item.partnerType as PartnerType | undefined;
       if (cid && pt && !partnerTypeMap.has(cid)) partnerTypeMap.set(cid, pt);
+    }
+
+    // 0827 迭代：合作汇总行可携带达人主页 URL（creatorProfileUrl 列）——同步到 Creator 表
+    //（报告 Creator Breakdown story 行跳转目标）。取每达人第一个非空值。
+    const profileUrlMap = new Map<string, string>();
+    for (const item of validItems) {
+      const cid = String(item.creatorId ?? '');
+      const pu = item.creatorProfileUrl ? String(item.creatorProfileUrl).trim() : '';
+      if (cid && pu && !profileUrlMap.has(cid)) profileUrlMap.set(cid, pu);
+    }
+
+    // 0827 迭代：达人基础信息列（creatorName/creatorAvatar/creatorHandle）——同步到 Creator 表。
+    // CSV 模板注释承诺「导入时自动 upsert 到 Creator 表」但此前从未实现（断头字段）。
+    // 取每达人第一个非空值；只覆盖提供了的字段（Partial update，不清空已有值）。
+    const creatorInfoMap = new Map<string, { name?: string; avatar?: string; handle?: string }>();
+    for (const item of validItems) {
+      const cid = String(item.creatorId ?? '');
+      if (!cid || creatorInfoMap.has(cid)) continue;
+      const info: { name?: string; avatar?: string; handle?: string } = {};
+      if (item.creatorName) info.name = String(item.creatorName).trim();
+      if (item.creatorAvatar) info.avatar = String(item.creatorAvatar).trim();
+      if (item.creatorHandle) info.handle = String(item.creatorHandle).trim();
+      if (Object.keys(info).length) creatorInfoMap.set(cid, info);
     }
 
     let success = 0, fail = 0;
@@ -249,6 +283,16 @@ export function CampaignCollabPage() {
         const pt = partnerTypeMap.get(creatorId);
         if (pt) {
           try { await campaignsApi.updateCreator(creatorId, { partnerType: pt }); } catch { /* 忽略，不影响导入主流程 */ }
+        }
+        // 0827：达人主页 URL 同步（story 行跳转目标）
+        const pu = profileUrlMap.get(creatorId);
+        if (pu) {
+          try { await campaignsApi.updateCreator(creatorId, { profileUrl: pu }); } catch { /* 忽略，不影响导入主流程 */ }
+        }
+        // 0827：达人基础信息同步（name/avatar/handle，Partial 只覆盖提供值）
+        const ci = creatorInfoMap.get(creatorId);
+        if (ci) {
+          try { await campaignsApi.updateCreator(creatorId, ci); } catch { /* 忽略，不影响导入主流程 */ }
         }
         await saveCollaboration({ id: `collab:${campaignId}:${creatorId}`, campaignId, creatorId, partnerType: pt, deliverables });
         success++;
@@ -540,6 +584,20 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
 
   const [collabData, setCollabData] = useState<CollaborationData>(row.collabData ?? buildSeedCollaboration(row.campaignId, row.creatorId));
   const [editing, setEditing] = useState(false);
+  // 0827 迭代：合作级字段编辑（collabType/status/currency/totalPrice——CampaignCreator 表，
+  // 报告 ai-generate 注入 cc.collabType/cc.currency 等；此前全系统无 UI 写入口）
+  const [linkEdits, setLinkEdits] = useState<{ collabType: string; status: string; currency: string; totalPrice: string } | null>(null);
+  const rowRef = useRef(row);
+  rowRef.current = row;
+  function beginEdit() {
+    setEditing(true);
+    const r = rowRef.current;
+    setLinkEdits({ collabType: r.collabType ?? '', status: r.status ?? '', currency: r.currency ?? '', totalPrice: r.totalPrice ?? '' });
+  }
+  function cancelEdit() {
+    setEditing(false);
+    setLinkEdits(null);
+  }
   const [busy, setBusy] = useState(false);
   // CPS 实绩（只读聚合）：成交←订单表逐单，流量←CpsPerformance。与报告 AI 上下文同口径。
   const [cpsOv, setCpsOv] = useState<CpsOverview['rows'][number] | null>(null);
@@ -568,6 +626,17 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
     setBusy(true);
     try {
       await saveCollaboration(collabData);
+      // 0827 迭代：合作级字段（collabType/status/contentType/currency/totalPrice）同步 CampaignCreator
+      if (linkEdits) {
+        const payload: Parameters<typeof campaignsApi.updateLink>[1] = {};
+        if (linkEdits.collabType !== (row.collabType ?? '')) payload.collabType = linkEdits.collabType || undefined;
+        if (linkEdits.status !== (row.status ?? '')) payload.status = linkEdits.status || undefined;
+        if (linkEdits.currency !== (row.currency ?? '')) payload.currency = linkEdits.currency || undefined;
+        if (linkEdits.totalPrice !== (row.totalPrice ?? '')) payload.totalPrice = linkEdits.totalPrice || undefined;
+        if (Object.keys(payload).length) {
+          try { await campaignsApi.updateLink(row.linkId, payload); } catch { toast.error('合作级字段保存失败'); }
+        }
+      }
       onUpdate();
     } catch {
       toast.error('保存失败');
@@ -608,10 +677,10 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
             {editing ? (
               <>
                 <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">保存</button>
-                <button onClick={() => setEditing(false)} className="text-xs text-foreground-secondary hover:underline">取消</button>
+                <button onClick={cancelEdit} className="text-xs text-foreground-secondary hover:underline">取消</button>
               </>
             ) : (
-              <button onClick={() => setEditing(true)} className="text-xs text-accent-primary hover:underline">编辑</button>
+              <button onClick={beginEdit} className="text-xs text-accent-primary hover:underline">编辑</button>
             )}
             <button onClick={onClose} aria-label="关闭" className="rounded p-1 text-foreground-secondary hover:bg-surface-hover hover:text-foreground-primary">✕</button>
           </div>
@@ -653,6 +722,55 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
               </div>
             );
           })()}
+
+          {/* 0827 迭代：合作级字段（CampaignCreator 表——collabType/status/currency/totalPrice）。
+              报告 ai-generate 注入 cc.collabType（story 判定主字段）/cc.currency/cc.totalPrice，
+              此前全系统无 UI 写入口（upsertLink API 零调用）。编辑态 ↔ 输入框。 */}
+          <div className="mb-4">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">合作条款</div>
+            <div className="grid grid-cols-4 gap-px rounded-lg overflow-hidden border border-border-subtle">
+              {editing && linkEdits ? (
+                <>
+                  <div className="bg-surface-primary p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-foreground-muted">合作类型 (collabType)</div>
+                    <input value={linkEdits.collabType} placeholder="seeding / dedicated / story…"
+                      onChange={(e) => setLinkEdits({ ...linkEdits, collabType: e.target.value })}
+                      className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs" />
+                  </div>
+                  <div className="bg-surface-primary p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-foreground-muted">状态 (status)</div>
+                    <input value={linkEdits.status} placeholder="active / closed…"
+                      onChange={(e) => setLinkEdits({ ...linkEdits, status: e.target.value })}
+                      className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs" />
+                  </div>
+                  <div className="bg-surface-primary p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-foreground-muted">币种 (currency)</div>
+                    <input value={linkEdits.currency} placeholder="USD / CNY…"
+                      onChange={(e) => setLinkEdits({ ...linkEdits, currency: e.target.value })}
+                      className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs" />
+                  </div>
+                  <div className="bg-surface-primary p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-foreground-muted">总价 (totalPrice)</div>
+                    <input value={linkEdits.totalPrice} placeholder="1200"
+                      onChange={(e) => setLinkEdits({ ...linkEdits, totalPrice: e.target.value })}
+                      className="mt-0.5 w-full rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-xs" />
+                  </div>
+                </>
+              ) : (
+                ([
+                  ['合作类型', row.collabType],
+                  ['状态', row.status],
+                  ['币种', row.currency],
+                  ['总价', row.totalPrice],
+                ] as const).map(([label, value]) => (
+                  <div key={label} className="bg-surface-primary p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{label}</div>
+                    <div className="text-xs font-medium text-foreground-primary truncate">{value || '—'}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
           {/* 频道 KPI */}
           {metrics.length > 0 && (
@@ -883,9 +1001,6 @@ function DeliverableCard({
   const setMetrics = (m: typeof metrics) => patch({ metrics: m });
   const setWords = (w: typeof wordcloud) => patch({ wordcloud: w });
 
-  // 查找是否有链接型截图（src 是 URL）
-  const firstLink = screenshots.find((s) => s.src && s.src.startsWith('http'))?.src;
-
   return (
     <div className="rounded-lg border border-border-subtle p-3">
       <div className="mb-2 flex items-center gap-2">
@@ -931,9 +1046,33 @@ function DeliverableCard({
             <span className="text-foreground-muted text-[10px]">{deliverable.platform}</span>
           )
         )}
-        {firstLink && !editing && (
-          <a href={firstLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline">↗ 作品链接</a>
+        {/* 0827 迭代：作品链接（报告 Creator Breakdown 非 story 行跳转目标） */}
+        {editing ? (
+          <input
+            value={deliverable.postUrl ?? ''}
+            placeholder="https:// 作品链接…"
+            onChange={(e) => patch({ postUrl: e.target.value })}
+            className="min-w-0 flex-1 rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-[10px]"
+          />
+        ) : (
+          deliverable.postUrl && (
+            <a href={deliverable.postUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline truncate max-w-[200px]">↗ 作品链接</a>
+          )
         )}
+        {/* 0827 迭代：内容形式（story 判定三字段之一） */}
+        {editing ? (
+          <input
+            value={deliverable.contentFormat ?? ''}
+            placeholder="内容形式（短视频/story…）"
+            onChange={(e) => patch({ contentFormat: e.target.value })}
+            className="min-w-0 w-[130px] rounded border border-border-default bg-surface-primary px-1.5 py-0.5 text-[10px]"
+          />
+        ) : (
+          deliverable.contentFormat && (
+            <span className="text-foreground-muted text-[10px] whitespace-nowrap">{deliverable.contentFormat}</span>
+          )
+        )}
+        {/* 0827：firstLink hack（拿截图 src 当作品链接）移除——postUrl 字段为正源 */}
         {deliverable.cps?.linkUrl && !editing && (
           <a href={deliverable.cps.linkUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline truncate max-w-[200px]">↗ CPS 挂链</a>
         )}

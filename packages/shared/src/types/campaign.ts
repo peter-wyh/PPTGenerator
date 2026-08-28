@@ -853,4 +853,6 @@ export interface MediaPlacement {
   screenshotUrl?: string;
   /** 说明（投放时段 / 位置描述）。 */
   description?: string;
+  /** 资源位可点链接（postUrl）——报告 placementGroups 卡片跳转用（0827 迭代）。 */
+  postUrl?: string;
 }

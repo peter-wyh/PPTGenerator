@@ -42,6 +42,7 @@ const CREATOR_FORM_FIELDS: FieldDef[] = [
   { key: 'category', label: '品类' },
   { key: 'region', label: '地区' },
   { key: 'avatar', label: '头像 URL' },
+  { key: 'profileUrl', label: '主页 URL' },
 ];
 
 const selectCls =

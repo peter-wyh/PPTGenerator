@@ -73,6 +73,10 @@ export interface CpsDaily {
 /** 一次合作中的一种作品类型 + 它的四类数据（均可选，按需填充）。 */
 export interface CollaborationDeliverable {
   contentType: ContentType;
+  /** 作品原始链接（帖子/视频/直播 URL）——报告 Creator Breakdown 达人行跳转用（0827 迭代）。 */
+  postUrl?: string;
+  /** 内容形式（短视频/图文/直播切片/合集/UGC）——报告 story 判定三字段之一（0827 迭代）。 */
+  contentFormat?: string;
   /** 作品截图（captionHidden 为渲染开关，存储层忽略）。 */
   screenshots?: WorkScreenshotItem[];
   /** 效果数据。 */

@@ -274,6 +274,9 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
               <input className="flex-1 min-w-0 border rounded px-1 py-0.5 text-[11px]" value={item.screenshotUrl ?? ''}
                 onChange={(e) => onChange({ ...item, screenshotUrl: e.target.value })} placeholder="Screenshot URL (/uploads/... 或 https://...)" />
             </div>
+            {/* 0827 迭代：资源位可点链接——报告 placementGroups 卡片跳转 */}
+            <input className="border rounded px-1 py-0.5 text-[11px]" value={item.postUrl ?? ''}
+              onChange={(e) => onChange({ ...item, postUrl: e.target.value })} placeholder="Post URL (https://... 资源位跳转链接，可选)" />
             <input className="border rounded px-1 py-0.5 text-[11px]" value={item.description ?? ''}
               onChange={(e) => onChange({ ...item, description: e.target.value })} placeholder="Description (投放时段 / 位置)" />
           </div>

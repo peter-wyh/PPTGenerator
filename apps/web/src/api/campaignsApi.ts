@@ -179,9 +179,9 @@ export const campaignsApi = {
     api
       .get<{ campaignCreators: CampaignCreatorDTO[] }>(`/campaigns/${campaignId}/creators`)
       .then((r) => r.data.campaignCreators),
-  upsertLink: (data: { campaignId: string; creatorId: string; collabType?: string; status?: string; contentType?: string }) =>
+  upsertLink: (data: { campaignId: string; creatorId: string; collabType?: string; status?: string; contentType?: string; collabId?: string; currency?: string; totalPrice?: string }) =>
     api.post<{ campaignCreator: CampaignCreatorDTO }>('/campaigns/links', data).then((r) => r.data.campaignCreator),
-  updateLink: (id: string, data: { collabType?: string; status?: string; contentType?: string }) =>
+  updateLink: (id: string, data: { collabType?: string; status?: string; contentType?: string; collabId?: string; currency?: string; totalPrice?: string }) =>
     api.patch<{ campaignCreator: CampaignCreatorDTO }>(`/campaigns/links/${id}`, data).then((r) => r.data.campaignCreator),
   removeLink: (id: string) => api.delete(`/campaigns/links/${id}`),
 

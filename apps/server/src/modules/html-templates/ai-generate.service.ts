@@ -101,6 +101,7 @@ The output is a STANDALONE CLIENT-FACING REPORT document — NOT an application,
 8. The report header should show BOTH the business line logo (left) and the advertiser logo (right or nearby), establishing the partnership visually. DO NOT create text/initials placeholder spans alongside the <img> tags — use ONLY the <img> when a logoUrl is provided.
 9. CREATOR DATA: For each creator in the JSON, display their name, avatar (img if avatarUrl exists, else initials circle), platform, tier, and ALL available performance metrics (posts, engagement, impressions, engagement rate). If a creator's performance is null, display "—" for their metrics — do NOT omit the row.
 9b. CREATOR CONTENT SHOWCASE: Each creator object MAY contain "contentShowcase": an array of deliverables, each with contentType, postUrl, contentFormat and screenshots[] ({url, caption}). When present, render a Creator Content Showcase section: group by creator (name + platform + screenshot count), display each screenshot as an <img src="url"> image card in a responsive grid (2-4 per row, object-fit:cover, ~16:9 ratio). Use caption as the card caption when provided. When postUrl exists, make the card a clickable link. When a creator's contentShowcase is null or missing, render dashed-border placeholder frames labeled "Screenshot Unavailable" for that creator — do NOT silently drop the creator from the showcase. NEVER invent screenshot URLs.
+9b2. CREATOR AUDIENCE & WORDCLOUD: Each creator object MAY contain "audienceInsight" (an object of audience demographics like gender split, age brackets, top cities — keys vary) and "commentWordcloud" (an array of {text, weight, sentiment}). When present for a creator, render them inside that creator's card in the CREATOR CONTRIBUTION ANALYSIS section: audienceInsight as a compact demographics strip (label + value rows or mini bars), commentWordcloud as an inline word list where font-size scales with weight (positive=accent color, neutral=default, negative=muted/red). When either is null/missing for a creator, silently omit that sub-block for that creator — do NOT render empty placeholders, do NOT invent words or percentages. NEVER fabricate demographic data.
 9c. MARKETING EVENTS: The context MAY contain "marketingEvents": an array of the business line's marketing activities overlapping the report period, each with name, period, and optional type (Festival / Event Day / Special Promo), info, region. When present, render a "Marketing Activities" section listing each event as a card or table row (event name + date range + type badge + region/info). When "marketingEvents" is absent from the context, OMIT the section entirely — do NOT fabricate events, do NOT render an empty placeholder.
 10. CROSS-SECTION DATA CONSISTENCY (CRITICAL): All data in the report MUST be internally consistent — every number must be derivable from the same source of truth.
     a. TOTALS: The KPI summary (Total GMV, Total Orders, Total Spend, Total ROAS) MUST equal the sum of all creators' CPS data.
@@ -1724,6 +1725,33 @@ export const aiGenerateService = {
                 }))
                 .filter((d) => d.screenshots.length > 0);
               return items.length ? items : null;
+            })(),
+            // ★ 0827 迭代：受众画像 + 评论词云注入（此前编辑 UI 有完整入口但报告侧 0 消费——断头）。
+            //   宁缺勿假：无数据置 null，AI 端不渲染对应模块。
+            audienceInsight: (() => {
+              const dels = (cc.collaboration?.deliverables ?? []) as unknown as Array<Record<string, unknown>>;
+              const auds = dels
+                .map((d) => d.audience)
+                .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object' && !Array.isArray(a) && Object.keys(a).length > 0);
+              return auds.length ? auds[auds.length - 1] : null;
+            })(),
+            commentWordcloud: (() => {
+              const dels = (cc.collaboration?.deliverables ?? []) as unknown as Array<Record<string, unknown>>;
+              const words = dels
+                .flatMap((d) => (Array.isArray(d.wordcloud) ? d.wordcloud : []))
+                .filter((w): w is { text?: string; weight?: number; sentiment?: string } =>
+                  !!w && typeof w === 'object' && typeof (w as { text?: string }).text === 'string' && (w as { text?: string }).text!.trim() !== '');
+              // 去重（同词取最大权重）+ 按权重降序 top 30
+              const byText = new Map<string, { text: string; weight: number; sentiment: string }>();
+              for (const w of words) {
+                const text = w.text!.trim();
+                const weight = typeof w.weight === 'number' && Number.isFinite(w.weight) ? w.weight : 50;
+                const sentiment = w.sentiment === 'positive' || w.sentiment === 'negative' ? w.sentiment : 'neutral';
+                const prev = byText.get(text);
+                if (!prev || weight > prev.weight) byText.set(text, { text, weight, sentiment });
+              }
+              const top = [...byText.values()].sort((a, b) => b.weight - a.weight).slice(0, 30);
+              return top.length ? top : null;
             })(),
             cps: Object.keys(cpsTotal).length > 0 ? cpsTotal : null,
             // ★ 期内数据标记（非零说明该达人在此周期有活动）
