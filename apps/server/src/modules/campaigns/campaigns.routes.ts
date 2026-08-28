@@ -27,6 +27,8 @@ router.get('/publisher-daily-stats', campaignController.listPublisherDailyStats)
 router.get('/publisher-stat-publishers', campaignController.listPublisherStatPublishers);
 router.get('/links/list', campaignController.listLinkPerformances);
 router.get('/links/daily', campaignController.listLinkDailyStats);
+/** 0828 批量总览：合作列表页一次拉全（须先于 /:id 注册，否则被吞） */
+router.get('/collab-overview', campaignController.collabOverview);
 router.get('/:id', validate({ params: idParamSchema }), campaignController.get);
 router.post('/', validate({ body: createCampaignSchema }), campaignController.create);
 router.patch('/:id', validate({ params: idParamSchema, body: updateCampaignSchema }), campaignController.update);

@@ -161,6 +161,21 @@ export const campaignsApi = {
     api.patch<{ campaign: CampaignDTO }>(`/campaigns/${id}`, data).then((r) => r.data.campaign),
   remove: (id: string) => api.delete(`/campaigns/${id}`),
 
+  /** 0828 批量总览：合作列表页一次拉全（替代 1+N+N×M 请求风暴）。 */
+  collabOverview: (opts?: { businessLineId?: string; advertiserId?: string; businessLineCode?: string; status?: string }) =>
+    api
+      .get<{
+        campaigns: CampaignDTO[];
+        links: Array<Omit<CampaignCreatorDTO, 'creator'> & {
+          creator?: CreatorDTO;
+          /** Collaboration 表记录（新通道，无则 null）。 */
+          collaboration: { campaignCreatorId: string; deliverables: unknown } | null;
+          /** DataRecord 旧通道回退数据（无则 null）。 */
+          legacyCollab: Record<string, unknown> | null;
+        }>;
+      }>('/campaigns/collab-overview', { params: opts })
+      .then((r) => r.data),
+
   // Creator
   listCreators: (opts?: { platform?: string; tier?: string; category?: string; search?: string }) =>
     api

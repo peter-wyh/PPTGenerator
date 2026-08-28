@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { campaignsApi, dtoToCampaign, dtoToCreator, type CpsOverview, type CreatorCpsDailyResp } from '@/api/campaignsApi';
 import type { Campaign, Creator } from '@mediakit/shared';
-import { getCollaboration, saveCollaboration } from '@/api/collaborations';
+import { saveCollaboration, shapeCollaboration } from '@/api/collaborations';
 import { collaborationLabel, type CollaborationData, type CollaborationDeliverable, type PostDaily, type CpsDaily, type PartnerType } from '@mediakit/shared';
 import { buildSeedCollaboration } from '@/api/analytics/collaborationSeed';
 import { formatUSD } from '@/lib/format';
@@ -75,41 +75,48 @@ export function CampaignCollabPage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const campaigns = await campaignsApi.list();
-      const allRows: CollabRow[] = [];
-      await Promise.all(
-        campaigns.map(async (c) => {
-          const links = await campaignsApi.listLinks(c.id);
-          const rowsWithCollab = await Promise.all(
-            links.filter((l) => l.creator).map(async (link) => {
-              let collabData: CollaborationData | null = null;
-              try {
-                collabData = await getCollaboration(c.id, link.creatorId);
-              } catch {
-                collabData = null;
-              }
-              if (!collabData || !collabData.deliverables?.length) {
-                collabData = buildSeedCollaboration(c.id, link.creatorId);
-              }
-              return {
-                linkId: link.id,
-                campaignId: c.id,
-                campaign: dtoToCampaign(c),
-                creatorId: link.creatorId,
-                creator: dtoToCreator(link.creator!),
-                collabType: link.collabType,
-                status: link.status,
-                contentType: link.contentType,
-                collabId: link.collabId,
-                currency: link.currency,
-                totalPrice: link.totalPrice,
-                collabData,
-              } satisfies CollabRow;
-            }),
-          );
-          allRows.push(...rowsWithCollab);
-        }),
-      );
+      // 0828：批量总览一次拉全（原 1+N+N×M 请求风暴烧限流，77 请求 → 1 请求）
+      const { campaigns, links } = await campaignsApi.collabOverview();
+      const campaignMap = new Map(campaigns.map((c) => [c.id, c]));
+      const allRows: CollabRow[] = links
+        .filter((l) => l.creator)
+        .map((link) => {
+          const c = campaignMap.get(link.campaignId)!;
+          // 新表 → legacy 回退 → 空壳（shapeCollaboration 与单条版判定一致）
+          let collabData = shapeCollaboration(link.campaignId, link.creatorId, link.collaboration, link.legacyCollab);
+          // daily 补全（与 getCollaboration 一致：旧记录缺 daily 用 seed 填充）
+          if (collabData) {
+            try {
+              const seed = buildSeedCollaboration(link.campaignId, link.creatorId);
+              collabData = {
+                ...collabData,
+                deliverables: collabData.deliverables.map((d, i) => ({
+                  ...d,
+                  daily: seed.deliverables[i]?.daily ?? d.daily,
+                })),
+              };
+            } catch {
+              // seed 补全失败不影响主流程
+            }
+          }
+          if (!collabData || !collabData.deliverables?.length) {
+            collabData = buildSeedCollaboration(link.campaignId, link.creatorId);
+          }
+          return {
+            linkId: link.id,
+            campaignId: link.campaignId,
+            campaign: dtoToCampaign(c),
+            creatorId: link.creatorId,
+            creator: dtoToCreator(link.creator!),
+            collabType: link.collabType,
+            status: link.status,
+            contentType: link.contentType,
+            collabId: link.collabId,
+            currency: link.currency,
+            totalPrice: link.totalPrice,
+            collabData,
+          } satisfies CollabRow;
+        });
       setRows(allRows);
     } catch {
       setRows([]);

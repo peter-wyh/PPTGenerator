@@ -76,4 +76,9 @@ export const createCampaignCreatorSchema = z.object({
 
 export const updateCampaignCreatorSchema = createCampaignCreatorSchema.partial().omit({ campaignId: true, creatorId: true });
 
+// ─── Collab Overview (批量总览) ──────────────────────────────────────────────
+// 0828：合作列表页原 3 层循环（list + N×listLinks + N×getCollaboration）烧限流；
+// 此查询参数透传 campaignService.list 同款过滤。
+export const collabOverviewQuerySchema = listCampaignsQuerySchema;
+
 export { idParamSchema };

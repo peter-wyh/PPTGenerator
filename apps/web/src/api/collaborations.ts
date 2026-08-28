@@ -8,7 +8,7 @@ import { buildSeedCollaboration } from './analytics/collaborationSeed';
  */
 
 /** 判断 deliverables 是否有实质内容（不只是 contentType 空壳）。 */
-function hasRichData(deliverables: CollaborationDeliverable[]): boolean {
+export function hasRichData(deliverables: CollaborationDeliverable[]): boolean {
   if (deliverables.length === 0) return false;
   return deliverables.some(
     (d) =>
@@ -16,6 +16,32 @@ function hasRichData(deliverables: CollaborationDeliverable[]): boolean {
       (d.metrics && d.metrics.length > 0) ||
       (d.audience && d.wordcloud && d.wordcloud.length > 0),
   );
+}
+
+/**
+ * 批量版数据整形：overview 端点返回的 (collaboration, legacyCollab) 归一为 CollaborationData | null。
+ * 判定与 getCollaboration 单条版一致：新表优先 → legacy 回退 → 空壳视为 null（调用方走 seed）。
+ */
+export function shapeCollaboration(
+  campaignId: string,
+  creatorId: string,
+  collaboration: { deliverables: unknown } | null,
+  legacyCollab: Record<string, unknown> | null,
+): CollaborationData | null {
+  const fromNew = collaboration?.deliverables as CollaborationDeliverable[] | undefined;
+  if (fromNew && hasRichData(fromNew)) {
+    return { id: collaborationId(campaignId, creatorId), campaignId, creatorId, deliverables: fromNew };
+  }
+  const legacyDeliverables = (legacyCollab?.deliverables as CollaborationDeliverable[] | undefined) ?? [];
+  if (legacyCollab && hasRichData(legacyDeliverables)) {
+    return {
+      id: collaborationId(campaignId, creatorId),
+      campaignId,
+      creatorId,
+      deliverables: legacyDeliverables,
+    };
+  }
+  return null;
 }
 
 /**
@@ -46,7 +72,7 @@ export async function getCollaboration(
   } catch {
     // fall through
   }
-  // 2. 回退 DataRecord
+  // 2. 回退 DataRecord（shapeCollaboration 内含空壳判定，此处只需网络请求）
   if (!result) {
     try {
       const r = await dataApi.get<CollaborationData>(collaborationId(campaignId, creatorId));

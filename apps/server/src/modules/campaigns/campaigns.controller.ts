@@ -136,6 +136,18 @@ export const campaignController = {
     res.json(await creatorCpsDailyService.getDaily(campaignId, linkId));
   }),
 
+  /** 0828 批量总览：合作列表页一次拉全（替代 1+N+N×M 请求风暴）。 */
+  collabOverview: asyncHandler(async (req: Request, res: Response) => {
+    const q = req.query as { businessLineId?: string; advertiserId?: string; businessLineCode?: string; status?: string };
+    const v = req.user as AuthPayload;
+    res.json(await collaborationService.overview({
+      ownerId: v.id,
+      admin: v.role === 'ADMIN',
+      viewerBusinessLineCode: v.businessLineCode,
+      ...q,
+    }));
+  }),
+
   upsertCollaboration: asyncHandler(async (req: Request, res: Response) => {
     const { campaignId, creatorId } = req.params;
     const v = req.user as AuthPayload;

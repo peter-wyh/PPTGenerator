@@ -624,6 +624,50 @@ export const collaborationService = {
   async remove(linkId: string) {
     await prisma.collaboration.delete({ where: { campaignCreatorId: linkId } }).catch(() => {});
   },
+
+  /**
+   * 0828 批量总览：一次返回合作列表页所需全部数据（campaigns + links(含 creator) + collaboration + DataRecord 回退）。
+   * 替代前端 1 + N + N×M 请求风暴（77 请求 → 1 请求），权限复用 campaignService.list 三态可见性。
+   */
+  async overview(opts: {
+    ownerId: string;
+    admin?: boolean;
+    viewerBusinessLineCode?: string | null;
+    businessLineId?: string;
+    advertiserId?: string;
+    businessLineCode?: string;
+    status?: string;
+  }) {
+    const campaigns = await campaignService.list(opts);
+    const campaignIds = campaigns.map((c) => c.id);
+    const links = campaignIds.length
+      ? await prisma.campaignCreator.findMany({
+          where: { campaignId: { in: campaignIds } },
+          include: {
+            creator: true,
+            collaboration: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        })
+      : [];
+    // DataRecord 旧通道回退（getCollaboration 的第 2 优先级）：collab:<campaignId>:<creatorId>
+    const legacyIds = links.map((l) => `collab:${l.campaignId}:${l.creatorId}`);
+    const legacyRecords = legacyIds.length
+      ? await prisma.dataRecord.findMany({
+          where: { id: { in: legacyIds }, kind: 'COLLABORATION' },
+          select: { id: true, data: true },
+        })
+      : [];
+    const legacyMap = new Map(legacyRecords.map((r) => [r.id, r.data as Record<string, unknown>]));
+    return {
+      campaigns,
+      links: links.map((l) => ({
+        ...l,
+        collaboration: l.collaboration ?? null,
+        legacyCollab: legacyMap.get(`collab:${l.campaignId}:${l.creatorId}`) ?? null,
+      })),
+    };
+  },
 };
 
 // ─── Batch Import (structured tables) ────────────────────────────────────────
