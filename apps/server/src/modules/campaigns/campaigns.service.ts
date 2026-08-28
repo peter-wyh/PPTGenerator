@@ -534,12 +534,15 @@ export const campaignCreatorService = {
     collabId?: string;
     currency?: string;
     totalPrice?: string;
-  }) {
+  }, admin = false) {
+    // 0828：ADMIN 放行（对齐 getOrThrow / listByCampaign 的 admin 语义）——
+    // 管理后台用 admin 账号编辑他人 campaign 的合作条款时原实现 404。
     const rec = await prisma.campaignCreator.findUnique({
       where: { id },
       include: { campaign: { select: { ownerId: true } } },
     });
-    if (!rec || rec.campaign.ownerId !== ownerId) throw ApiError.notFound('CampaignCreator not found');
+    if (!rec) throw ApiError.notFound('CampaignCreator not found');
+    if (!admin && rec.campaign.ownerId !== ownerId) throw ApiError.notFound('CampaignCreator not found');
     return prisma.campaignCreator.update({ where: { id }, data });
   },
 

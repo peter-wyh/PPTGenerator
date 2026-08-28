@@ -93,7 +93,8 @@ export const campaignController = {
   }),
 
   updateLink: asyncHandler(async (req: Request, res: Response) => {
-    res.json({ campaignCreator: await campaignCreatorService.update(req.params.id, userId(req), req.body) });
+    const v = req.user as AuthPayload;
+    res.json({ campaignCreator: await campaignCreatorService.update(req.params.id, v.id, req.body, v.role === 'ADMIN') });
   }),
 
   removeLink: asyncHandler(async (req: Request, res: Response) => {
