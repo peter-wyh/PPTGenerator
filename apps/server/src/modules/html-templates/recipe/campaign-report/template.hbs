@@ -35,10 +35,14 @@
 
     <style>
         body { background-color: {{tokens.bgLayout}}; color: {{tokens.greyPrimary}}; font-family: {{{tokens.fontBody}}}; -webkit-font-smoothing: antialiased; }
-        /* 0828 毛玻璃背景：渐变底 + 品牌色光斑（backdrop-filter 需要可糊内容才可见）。
-           平铺式(scroll+800px/份)：puppeteer clip 切片导出时每页都有光斑，fixed 附着会在首视口外丢失。 */
-        body { background-image: radial-gradient(560px 320px at 8% 6%, rgba(255,9,158,0.07), transparent 60%), radial-gradient(480px 300px at 93% 22%, rgba(99,102,241,0.08), transparent 55%), linear-gradient(180deg, #f8f9fc 0%, {{tokens.bgLayout}} 100%); background-size: 100% 800px, 100% 800px, 100% 800px; background-repeat: repeat; }
-        .card { background: {{tokens.glassBg}}; backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); border-radius: 8px; border: 1px solid {{tokens.glassStroke}}; padding: 20px; box-shadow: {{tokens.glassShadow}}; }
+        /* 0831 毛玻璃升级:高透明度 bokeh(品红/靛蓝/暖橙粉)+ 灰蓝对角渐变底。
+           保持 0828 平铺结论(100%×800px repeat):puppeteer 多页切片每页都有光斑。 */
+        body { background-color: {{tokens.glassBgBase2}}; background-image: radial-gradient(circle at 88% 10%, {{tokens.glassBlobMagenta}}, transparent 40%), radial-gradient(circle at 8% 30%, {{tokens.glassBlobIndigo}}, transparent 38%), radial-gradient(circle at 55% 85%, {{tokens.glassBlobWarm}}, transparent 34%), linear-gradient(160deg, {{tokens.glassBgBase1}} 0%, {{tokens.glassBgBase2}} 50%, {{tokens.glassBgBase3}} 100%); background-size: 100% 800px; background-repeat: repeat; }
+        /* 0831 均衡档玻璃卡:blur22/白0.45 + 大圆角 + ::before 斜向光泽(左上光源)。 */
+        .card { position: relative; background: {{tokens.glassBg}}; backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%); border-radius: 18px; border: 1px solid {{tokens.glassStroke}}; padding: 20px; box-shadow: {{tokens.glassShadow}}, {{tokens.glassInsetHighlight}}; overflow: hidden; }
+        .card::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: {{tokens.glassHighlight}}; }
+        /* 降级:老 PDF 引擎无 backdrop-filter → 近实色白,不穿底。 */
+        @supports not (backdrop-filter: blur(1px)) { .card { background: {{tokens.glassFallbackBg}}; } }
         .module-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: {{tokens.greyPrimary}}; margin-bottom: 16px; display: flex; align-items: center; }
         .module-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background-color: {{tokens.brandPrimary}}; border-radius: 2px; margin-right: 8px; }
         .digchic-table { width: 100%; text-align: left; border-collapse: collapse; }

@@ -173,6 +173,23 @@ describe('render', () => {
     expect(html).toContain('#ff099e');
   });
 
+  it('毛玻璃 token 升级(光斑/均衡档玻璃卡/高光边线)', async () => {
+    const html = await render({ campaignId: 'c1' });
+    // 背景四层:品红/靛蓝/暖橙粉 bokeh + 灰蓝对角渐变底
+    expect(html).toContain('rgba(255,9,158,0.30)');
+    expect(html).toContain('rgba(99,102,241,0.26)');
+    expect(html).toContain('rgba(250,166,133,0.30)');
+    expect(html).toContain('#d8dde6');
+    // 卡片:均衡档 blur22 + 白 0.45 + saturate 150%
+    expect(html).toContain('blur(22px) saturate(150%)');
+    expect(html).toContain('rgba(255, 255, 255, 0.45)');
+    // 高光边线:inset 顶高光
+    expect(html).toContain('inset 0 1px 0 rgba(255, 255, 255, 0.9)');
+    // 降级:@supports 回退近实色
+    expect(html).toContain('@supports not (backdrop-filter: blur(1px))');
+    expect(html).toContain('rgba(255, 255, 255, 0.92)');
+  });
+
   it('AI 文案出现(Actionable 区块)', async () => {
     const html = await render({ campaignId: 'c1' });
     expect(html).toContain('Top Performers');

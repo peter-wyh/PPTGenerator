@@ -38,10 +38,14 @@ exports[`render > HTML 快照(DG 保真基线) 1`] = `
 
     <style>
         body { background-color: #f5f7fa; color: #1e1c24; font-family: 'Outfit', sans-serif; -webkit-font-smoothing: antialiased; }
-        /* 0828 毛玻璃背景：渐变底 + 品牌色光斑（backdrop-filter 需要可糊内容才可见）。
-           平铺式(scroll+800px/份)：puppeteer clip 切片导出时每页都有光斑，fixed 附着会在首视口外丢失。 */
-        body { background-image: radial-gradient(560px 320px at 8% 6%, rgba(255,9,158,0.07), transparent 60%), radial-gradient(480px 300px at 93% 22%, rgba(99,102,241,0.08), transparent 55%), linear-gradient(180deg, #f8f9fc 0%, #f5f7fa 100%); background-size: 100% 800px, 100% 800px, 100% 800px; background-repeat: repeat; }
-        .card { background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.65); padding: 20px; box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08); }
+        /* 0831 毛玻璃升级:高透明度 bokeh(品红/靛蓝/暖橙粉)+ 灰蓝对角渐变底。
+           保持 0828 平铺结论(100%×800px repeat):puppeteer 多页切片每页都有光斑。 */
+        body { background-color: #e8ebf0; background-image: radial-gradient(circle at 88% 10%, rgba(255,9,158,0.30), transparent 40%), radial-gradient(circle at 8% 30%, rgba(99,102,241,0.26), transparent 38%), radial-gradient(circle at 55% 85%, rgba(250,166,133,0.30), transparent 34%), linear-gradient(160deg, #d8dde6 0%, #e8ebf0 50%, #f6f7f9 100%); background-size: 100% 800px; background-repeat: repeat; }
+        /* 0831 均衡档玻璃卡:blur22/白0.45 + 大圆角 + ::before 斜向光泽(左上光源)。 */
+        .card { position: relative; background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%); border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px; box-shadow: 0 8px 32px rgba(160, 168, 182, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.9); overflow: hidden; }
+        .card::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(120deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 30%); }
+        /* 降级:老 PDF 引擎无 backdrop-filter → 近实色白,不穿底。 */
+        @supports not (backdrop-filter: blur(1px)) { .card { background: rgba(255, 255, 255, 0.92); } }
         .module-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; color: #1e1c24; margin-bottom: 16px; display: flex; align-items: center; }
         .module-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background-color: #ff099e; border-radius: 2px; margin-right: 8px; }
         .digchic-table { width: 100%; text-align: left; border-collapse: collapse; }
