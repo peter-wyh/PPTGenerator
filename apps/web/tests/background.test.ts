@@ -26,8 +26,8 @@ describe('resolvePageBackground — 优先级 bgImage > bgGradient > bgColor > s
   it('仅 bgColor', () => {
     expect(resolvePageBackground(P({ bgColor: '#FF5C00' }))).toBe('#FF5C00');
   });
-  it('全空回退到 surface 变量', () => {
-    expect(resolvePageBackground(P({}))).toBe('var(--surface-primary)');
+  it('全空回退到 --page-bg 变量链（玻璃四层 bokeh；非玻璃回退 surface）', () => {
+    expect(resolvePageBackground(P({}))).toBe('var(--page-bg, var(--surface-primary))');
   });
 });
 
