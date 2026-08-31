@@ -6,6 +6,8 @@ export const createGuideSchema = z.object({
   name: z.string().min(1).max(191),
   scenario: z.string().max(64).optional(),
   content: z.string().min(1),
+  /** 结构指南自带全套视觉规范→生成时跳过业务线视觉层注入(deck 场景)。 */
+  overridesVisual: z.boolean().optional(),
   isDefault: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });

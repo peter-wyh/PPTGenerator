@@ -301,6 +301,8 @@ model Guide {
   name           String
   /// Markdown 指南正文(约定分节:品牌视觉/章节结构/展示形式偏好/语调与术语)。
   content        String       @db.Text
+  /// 结构指南自带全套视觉规范时置 true:生成时跳过 LAYER 1 视觉层注入,由本指南完全接管视觉(deck 场景)。
+  overridesVisual Boolean      @default(false)
   /// 业务线默认指南(同业务线唯一,service 写入时互斥)。
   isDefault      Boolean      @default(false)
   /// 停用后不参与匹配(软停用,不物理删除)。
@@ -713,7 +715,7 @@ model CpsPerformance {
   campaignCreatorId String
   campaignCreator   CampaignCreator @relation(fields: [campaignCreatorId], references: [id], onDelete: Cascade)
 
-  /// 归属的合作作品类型（post / reels / video / image / live / story）。
+  /// 合作作品的媒体类型（post / reels / video / image / live / story）。
   contentType       String
   /// CPS 跟踪链接 URL。
   linkUrl           String?

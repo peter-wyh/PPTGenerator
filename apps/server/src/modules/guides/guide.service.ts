@@ -80,7 +80,7 @@ export const guideService = {
     return rec;
   },
 
-  async create(data: { businessLineId: string; name: string; scenario?: string; content: string; isDefault?: boolean; isActive?: boolean }) {
+  async create(data: { businessLineId: string; name: string; scenario?: string; content: string; overridesVisual?: boolean; isDefault?: boolean; isActive?: boolean }) {
     if (data.isDefault) {
       // 同业务线 isDefault 唯一:事务内清旧默认再建
       return prisma.$transaction([
@@ -94,7 +94,7 @@ export const guideService = {
     return prisma.guide.create({ data });
   },
 
-  async update(id: string, data: Partial<{ businessLineId: string; name: string; scenario: string | null; content: string; isDefault: boolean; isActive: boolean }>) {
+  async update(id: string, data: Partial<{ businessLineId: string; name: string; scenario: string | null; content: string; overridesVisual: boolean; isDefault: boolean; isActive: boolean }>) {
     const rec = await this.getOrThrow(id);
     if (data.isDefault === true) {
       const blId = data.businessLineId ?? rec.businessLineId;
@@ -173,18 +173,26 @@ export async function resolvePairForCampaign(campaignId: string, guideId?: strin
 export function mergeGuideLayers(visual: Guide | null, structural: Guide | null): { content: string; used: Guide[] } {
   const parts: string[] = [];
   const used: Guide[] = [];
-  if (visual && (visual.content ?? '').trim()) {
+  // ★ overridesVisual:结构指南声明自带全套视觉规范(deck 等强版式场景)→ 完全跳过 LAYER 1,
+  //   由该指南接管视觉。否则 30K 白色设计系统会淹没结构层的版式覆盖,AI 产出走 LAYER 1 风格。
+  const skipLayer1 = !!structural?.overridesVisual && structural.id !== visual?.id;
+  if (visual && !skipLayer1 && (visual.content ?? '').trim()) {
     parts.push(`# ═══ LAYER 1 · VISUAL SPEC (design system — colors/fonts/components/motion) ═══\n${visual.content.trim()}`);
     used.push(visual);
   }
   if (structural && (!visual || structural.id !== visual.id) && (structural.content ?? '').trim()) {
-    parts.push(`# ═══ LAYER 2 · REPORT STRUCTURE GUIDE (sections/presentation/voice — NOT visual) ═══\n${structural.content.trim()}`);
+    parts.push(
+      skipLayer1
+        ? `# ═══ VISUAL + STRUCTURE GUIDE (this guide fully overrides the business-line visual spec for this scenario) ═══\n${structural.content.trim()}`
+        : `# ═══ LAYER 2 · REPORT STRUCTURE GUIDE (sections/presentation/voice — NOT visual) ═══\n${structural.content.trim()}`,
+    );
     used.push(structural);
   }
   // 双层并存时的裁决声明:两份指南同时注入时,模型须知道冲突时谁赢。
+  // (overridesVisual 场景 LAYER 1 未注入,无冲突可言,不发裁决声明)
   // LAYER 2 中显式声明的「报告场景专用视觉变量」允许覆盖 LAYER 1(如 DG 报告高亮粉),
   // 其余视觉规则冲突一律 LAYER 1 胜出。
-  if (visual && structural && structural.id !== visual.id) {
+  if (visual && structural && structural.id !== visual.id && !skipLayer1) {
     return {
       content: [
         '# ═══ CONFLICT RULE ═══',

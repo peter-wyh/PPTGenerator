@@ -14,7 +14,7 @@ const prismaMock = vi.hoisted(() => ({
 }));
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
 
-import { guideService, resolveForCampaign, extractVoiceSection, pickVoiceForCampaign } from './guide.service';
+import { guideService, resolveForCampaign, extractVoiceSection, pickVoiceForCampaign, mergeGuideLayers } from './guide.service';
 
 const mkGuide = (over: Record<string, unknown> = {}) => ({
   id: 'g1', businessLineId: 'bl1', scenario: null, name: '默认指南',
@@ -143,5 +143,35 @@ describe('pickVoiceForCampaign', () => {
     expect(await pickVoiceForCampaign('c1')).toBe('用「创作者」');
     prismaMock.campaign.findUnique.mockRejectedValue(new Error('x'));
     expect(await pickVoiceForCampaign('c1')).toBe('');
+  });
+});
+
+describe('mergeGuideLayers · overridesVisual 视觉接管', () => {
+  it('overridesVisual=true → LAYER 1 不注入,结构指南以「完全接管」头注入,不发 CONFLICT RULE', () => {
+    const visual = mkGuide({ id: 'vis', isDefault: true, content: '# 白色设计系统' });
+    const deck = mkGuide({ id: 'deck', scenario: 'dm-performance-deck', content: '# 票根 deck 指南', overridesVisual: true });
+    const r = mergeGuideLayers(visual, deck);
+    expect(r.content).not.toContain('白色设计系统');
+    expect(r.content).toContain('fully overrides the business-line visual spec');
+    expect(r.content).toContain('票根 deck 指南');
+    expect(r.content).not.toContain('CONFLICT RULE');
+    expect(r.used.map((g) => g.id)).toEqual(['deck']);
+  });
+
+  it('overridesVisual=false(默认) → 双层注入 + CONFLICT RULE(原行为不变)', () => {
+    const visual = mkGuide({ id: 'vis', isDefault: true, content: '# 白色设计系统' });
+    const struct = mkGuide({ id: 's1', content: '# 结构指南' });
+    const r = mergeGuideLayers(visual, struct);
+    expect(r.content).toContain('LAYER 1');
+    expect(r.content).toContain('LAYER 2');
+    expect(r.content).toContain('CONFLICT RULE');
+    expect(r.used).toHaveLength(2);
+  });
+
+  it('visual 为 isDefault 且 structural=同一份(两职一份)→只注入一次,不受 overridesVisual 影响', () => {
+    const both = mkGuide({ id: 'same', isDefault: true, content: '# 一份两职' });
+    const r = mergeGuideLayers(both, both);
+    expect(r.content).toContain('一份两职');
+    expect(r.used).toHaveLength(1);
   });
 });
