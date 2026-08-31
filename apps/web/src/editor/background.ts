@@ -3,11 +3,13 @@ import { gradientToCss } from '@mediakit/shared';
 
 export type BackgroundType = 'color' | 'gradient' | 'image' | 'none';
 
-/** 页面背景 CSS：bgImage > bgGradient > bgColor > #fff。 */
+/** 页面背景 CSS：bgImage > bgGradient > bgColor > --page-bg（玻璃四层 bokeh；非玻璃回落实色）。 */
 export function resolvePageBackground(page: Pick<Page, 'bgColor' | 'bgGradient' | 'bgImage'>): string {
   if (page.bgImage) return `var(--surface-primary) url(${page.bgImage}) center/cover no-repeat`;
   if (page.bgGradient) return gradientToCss(page.bgGradient);
-  return page.bgColor ?? 'var(--surface-primary)';
+  // 0831：缺省背景走 --page-bg 变量链——glass=true 时是四层 bokeh 渐变，
+  // 否则变量未定义回退 --surface-primary，现状外观不变。显式 bgColor/bgGradient/bgImage 优先级更高。
+  return page.bgColor ?? 'var(--page-bg, var(--surface-primary))';
 }
 
 /** 由数据推导当前背景类型。 */
