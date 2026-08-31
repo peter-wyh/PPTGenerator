@@ -144,6 +144,31 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
     vars[`--chart-${i + 1}`] = palette[i % palette.length];
   }
 
+  // v3 0831 毛玻璃升级(参考图档):玻璃=true 时注入;数值契约与 recipe 报告
+  // tokens.ts 对齐(specs/2026-08-31 §2)。背景四层 bokeh 走 --page-bg,
+  // 由 background.ts 缺省背景消费(Canvas 页面层)。
+  // 注:glass 开关为持久化可选字段(shared schema 暂未声明),此处宽松读取。
+  if ((t as { glass?: boolean }).glass === true) {
+    Object.assign(vars, {
+      '--card-bg': `color-mix(in srgb, ${t.color.surface?.primary ?? t.color.neutralBg} 55%, transparent)`,
+      '--card-border': `color-mix(in srgb, ${t.color.foreground?.primary ?? t.color.neutralText} 10%, transparent)`,
+      '--card-blur': 'blur(22px) saturate(150%)',
+      '--card-glow': 'rgba(255,255,255,0.9)',
+      '--card-border-top': 'rgba(255,255,255,0.85)',
+      '--card-border-left': 'rgba(255,255,255,0.45)',
+      '--card-border-right': 'rgba(255,255,255,0.25)',
+      '--card-border-bottom': 'rgba(255,255,255,0.15)',
+      '--card-sheen': 'rgba(255,255,255,0.5)',
+      '--card-sheen-soft': 'rgba(255,255,255,0.18)',
+      '--page-bg': [
+        'radial-gradient(circle at 88% 10%, rgba(255,9,158,0.30), transparent 40%)',
+        'radial-gradient(circle at 8% 30%, rgba(99,102,241,0.26), transparent 38%)',
+        'radial-gradient(circle at 55% 85%, rgba(250,166,133,0.30), transparent 34%)',
+        'linear-gradient(160deg, #d8dde6 0%, #e8ebf0 50%, #f6f7f9 100%)',
+      ].join(', '),
+    });
+  }
+
   // 标题字体：缺省=跟随 text
   const headingKey = t.font.heading ?? t.font.text;
   vars['--font-heading'] = getFontStack(headingKey, DEFAULT_THEME.font.text);
