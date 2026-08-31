@@ -38,7 +38,7 @@ background-size: 100% 800px; /* 各层同尺寸平铺 */
 background-repeat: repeat;
 ```
 
-编辑器侧:光斑画在**画布容器**上(非 body,编辑器有自己的 chrome 布局),四层数值同上。
+编辑器侧:光斑画在**画布页面背景**上——具体是 `CanvasComponent.tsx:123` 处 `background: var(--surface-primary)` 的页面层(现状纯实色,0828 轮只做了卡片玻璃、没做页面背景)。glass=true 时该层换为同样的四层渐变(通过 theme.tsx 注入 `--page-bg` 之类新变量,CanvasComponent 改引用),四层数值同上;glass=false 时变量回退实色,现状外观不变。
 
 ### 2.2 卡片层
 
@@ -90,7 +90,8 @@ businessLine 覆盖机制(预留设计)天然可覆盖新 token,不新增通道�
 |------|------|
 | `apps/server/src/modules/html-templates/recipe/campaign-report/tokens.ts` | 改 3 个 glass token 值,新增 ~7 个 |
 | `apps/server/src/modules/html-templates/recipe/campaign-report/template.hbs` | body 背景四层重写;.card 样式升级 + ::before;`@supports` 降级 |
-| `apps/web/src/editor/theme.tsx` | glass 分支变量值对齐(145-158 行区域) |
+| `apps/web/src/editor/theme.tsx` | glass 分支变量值对齐(145-158 行区域);新增页面背景四层渐变变量注入 |
+| `apps/web/src/editor/components/CanvasComponent.tsx` | 页面背景从 `var(--surface-primary)` 改为新背景变量(glass 时为四层渐变,非 glass 回落实色,一行改动) |
 | `packages/shared/src/types/theme.ts` / `theme/utils.ts` | 仅当需要持久化新字段时才动(glass 开关已存在,预计**不动**) |
 
 ## 4. 错误处理与降级
