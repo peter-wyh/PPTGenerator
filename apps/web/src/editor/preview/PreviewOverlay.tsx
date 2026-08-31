@@ -21,6 +21,8 @@ export function PreviewOverlay() {
 
   const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
   const themeStyle = useMemo(() => themeToCssVars(theme), [theme]);
+  // 玻璃模式类：门控 .skin-card border-image（见 index.css .glass-mode）。
+  const glassOn = theme.glass === true;
 
   // 键盘：Esc 关闭 / ← 上一页 / → 下一页（仅 open 时）
   useEffect(() => {
@@ -64,7 +66,7 @@ export function PreviewOverlay() {
       {/* 内容区 */}
       <div className="flex flex-1 items-center justify-center overflow-hidden px-4">
         {page ? (
-          <div className="rounded-lg bg-white shadow-2xl" style={{ width: canvasWidth * scale, height: canvasHeight * scale, ...themeStyle }}>
+          <div className={`rounded-lg bg-white shadow-2xl${glassOn ? ' glass-mode' : ''}`} style={{ width: canvasWidth * scale, height: canvasHeight * scale, ...themeStyle }}>
             <PageView page={page} canvasWidth={canvasWidth} canvasHeight={canvasHeight} scale={scale} />
           </div>
         ) : (

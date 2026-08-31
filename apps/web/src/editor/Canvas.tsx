@@ -53,6 +53,9 @@ export function Canvas() {
   // 全局主题 CSS vars — 只作用于画板内容（不影响编辑器 UI）。
   const theme = useEditorStore((s) => s.projectMeta?.theme ?? DEFAULT_THEME);
   const themeStyle = useMemo(() => themeToCssVars(theme), [theme]);
+  // 玻璃模式类：门控 .skin-card 的 border-image（border-image 会吃掉圆角，
+  // 必须仅 glass=true 时启用，保证非玻璃模式零视觉变化）。
+  const glassOn = theme.glass === true;
 
   // 业务线 Logo（右上角渲染）— 位置/尺寸可由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
@@ -322,7 +325,7 @@ export function Canvas() {
         }}
       >
         <div
-          className="relative origin-top-left"
+          className={`relative origin-top-left${glassOn ? ' glass-mode' : ''}`}
           style={{
             width: canvasWidth,
             height: canvasHeight,

@@ -84,13 +84,28 @@ mark {
   border-right-color: var(--card-border-right, var(--card-border, var(--border-default)));
   border-bottom-color: var(--card-border-bottom, var(--card-border, var(--border-default)));
   border-left-color: var(--card-border-left, var(--card-border, var(--border-default)));
+  /* 机制说明（0831 圆角修复）：
+     - 非玻璃（默认）：本条规则独立完成绘制——四边色回退 var(--border-default)，
+       border-radius 正常生效（v3.2 机制在此模式下真实生效）。
+     - 玻璃（.glass-mode）：下方 .glass-mode 规则设置 border-image，border-image
+       会整体替换四边色并使圆角对边框图像失效（1px 方角发丝线是 0828 已接受的取舍），
+       四边色此时被覆盖（保留定义作为回退）。 */
   background: var(--card-bg, var(--surface-primary));
   backdrop-filter: var(--card-blur, none);
   -webkit-backdrop-filter: var(--card-blur, none);
-  /* v3.4 点光源上边线：光斑挪到边框线上——border-image 双段渐变，
-     顶边从「左上热点(亮) → 中段 → 右侧(暗)」走，左边弱高光，右/底保持暗。
-     圆角处 border-image 连续过渡，形成「边线上的光点」效果。
-     非玻璃时 --card-sheen 缺省 transparent，渐变退化为普通四边色。 */
+  /* v3.1 顶沿内嵌高光 + 常规投影。 */
+  box-shadow:
+    inset 0 1px 0 var(--card-glow, transparent),
+    var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
+}
+
+/* v3.4 点光源上边线（仅玻璃模式）：光斑挪到边框线上——border-image 双段渐变，
+   顶边从「左上热点(亮) → 中段 → 右侧(暗)」走，左边弱高光，右/底保持暗。
+   border-image 无条件吃掉 border-radius 与四边色，故必须由 .glass-mode 祖先类
+   （Canvas / SharePage / PreviewOverlay 在 glass=true 时挂载）门控，
+   保证非玻璃模式零视觉变化。 */
+.glass-mode .skin-card,
+.glass-mode .skin-card-lg {
   border-image-source:
     linear-gradient(
       135deg,
@@ -100,10 +115,6 @@ mark {
       var(--card-border-bottom, var(--card-border, var(--border-default))) 100%
     );
   border-image-slice: 1;
-  /* v3.1 顶沿内嵌高光 + 常规投影。 */
-  box-shadow:
-    inset 0 1px 0 var(--card-glow, transparent),
-    var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
 }
 
 /* 大卡片容器：更圆 + 更深阴影（hero / glass 等强调卡）。 */
@@ -119,16 +130,7 @@ mark {
   background: var(--card-bg, var(--surface-primary));
   backdrop-filter: var(--card-blur, none);
   -webkit-backdrop-filter: var(--card-blur, none);
-  /* v3.4 点光源上边线（同 .skin-card）。 */
-  border-image-source:
-    linear-gradient(
-      135deg,
-      var(--card-sheen, var(--card-border-top, var(--card-border, var(--border-default)))) 0%,
-      var(--card-border-top, var(--card-border, var(--border-default))) 18%,
-      var(--card-border-right, var(--card-border, var(--border-default))) 55%,
-      var(--card-border-bottom, var(--card-border, var(--border-default))) 100%
-    );
-  border-image-slice: 1;
+  /* v3.4 点光源上边线已移至 .glass-mode 规则（border-image 吃圆角，须门控）。 */
   /* v3.1 顶沿内嵌高光 + 常规投影。 */
   box-shadow:
     inset 0 1px 0 var(--card-glow, transparent),
