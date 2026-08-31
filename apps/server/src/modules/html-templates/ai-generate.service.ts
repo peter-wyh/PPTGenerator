@@ -1100,6 +1100,8 @@ export const aiGenerateService = {
         // ★ 链接效果真源（LinkPerformance）：链接维度流量/成交——clicks 回退与 daily 双读合并
         //   publisher 取全字段（allMedia 全媒体表需要 name/type/platform）
         linkPerformances: { include: { publisher: true } },
+        // ★ 佣金方案时间线（DM deck 0831）：预算达成率 + 月度 CPA 标签数据源
+        commissionPlans: { orderBy: { startDate: 'asc' } },
         businessLine: true,
         advertiser: true,
       },
@@ -1533,6 +1535,21 @@ export const aiGenerateService = {
         endDate: reportPeriod?.endDate || campaign.endDate,
         period: `${reportPeriod?.startDate || campaign.startDate} ~ ${reportPeriod?.endDate || campaign.endDate}`,
         budget: campaign.budget,
+        // ★ 预算结构化（DM deck 0831）：budgetAmount/budgetCurrency 支撑预算达成率；
+        //   老数据未回填时为 null，AI 按铁律不渲染预算达成率。
+        budgetAmount: campaign.budgetAmount,
+        budgetCurrency: campaign.budgetCurrency,
+        // ★ 佣金方案时间线（DM deck 0831）：月度 CPA 标签 + 「调佣金→销量」叙事。
+        //   无方案数据时为空数组，AI 不渲染相关模块。
+        commissionPlans: campaign.commissionPlans.map((p) => ({
+          name: p.name,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          cpaRate: p.cpaRate,
+          flatFee: p.flatFee,
+          flatFeeFrequency: p.flatFeeFrequency,
+          note: p.note,
+        })),
         status: campaign.status,
         businessLine: {
           code: campaign.businessLineCode ?? '',

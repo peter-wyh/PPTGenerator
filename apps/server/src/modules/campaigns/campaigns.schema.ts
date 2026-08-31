@@ -10,6 +10,10 @@ export const createCampaignSchema = z.object({
   endDate: z.string(),
   /** 预算（含币种符号如 "$300K"）。非必填——新建时预算常未定（0827 放开）。 */
   budget: z.string().optional(),
+  /** 预算金额（结构化数值，DM deck 预算达成率用；与 budget 字符串并存）。 */
+  budgetAmount: z.number().nonnegative().optional(),
+  /** 预算币种（ISO 4217，如 USD）。 */
+  budgetCurrency: z.string().max(8).optional(),
   status: z.string().optional(),
   owner: z.string().optional(),
   businessLineId: z.string().optional(),

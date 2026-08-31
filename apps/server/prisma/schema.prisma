@@ -323,6 +323,10 @@ model Campaign {
   endDate   String
   /// 预算(含货币符号,如 "$300K")。
   budget    String
+  /// 预算金额(结构化数值,DM deck 预算达成率用;与 budget 字符串并存,新建/编辑时写入)。
+  budgetAmount   Decimal? @db.Decimal(14, 2)
+  /// 预算币种(ISO 4217,如 USD;与 budgetAmount 配套)。
+  budgetCurrency String?
   /// 状态:Active / Completed / Planning。
   status    String?
   /// 负责人(owner)。
@@ -355,6 +359,7 @@ model Campaign {
   orderDailyStats  OrderDailyStat[]
   linkPerformances LinkPerformance[]
   publisherDailyStats PublisherDailyStat[]
+  commissionPlans  CommissionPlan[]
 
   @@index([ownerId])
   @@index([businessLineId])
@@ -741,6 +746,34 @@ model CpsPerformance {
 // ─── 媒体维度 / 链接效果 / 商品主档（2026-08-25 数据结构升级） ────────────────
 // 概念澄清：订单先归因到「链接（publisher_url）」，链接属于「媒体（publisher）」，
 // 达人只是媒体的一种类型。clicks/impressions/ctr/cvr/epc 全部是链接维度指标。
+
+/// 佣金方案时间线:campaign × 时段 × 方案(CPA% / flat fee)。
+/// DM deck「佣金变更→销量变化」叙事的数据基础;报表按月取当期有效方案。
+model CommissionPlan {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  /// 方案名(如 "Q1 冲量方案")。
+  name        String?
+  /// 生效日(含,YYYY-MM-DD)。
+  startDate   String
+  /// 失效日(含;null=至今有效/开放式)。
+  endDate     String?
+  /// CPA 佣金率(小数,0.10=10%)。
+  cpaRate     Decimal? @db.Decimal(6, 4)
+  /// 固定费用(月或一次性,配 frequency)。
+  flatFee     Decimal? @db.Decimal(14, 2)
+  /// 固定费用周期:monthly / one_time;null=无固定费。
+  flatFeeFrequency String?
+  /// 备注(调价原因等,DM 叙事素材)。
+  note        String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([campaignId])
+  @@index([campaignId, startDate])
+}
 
 /// 媒体主档：推广渠道的载体（达人 / 社群 / 内容站 / 媒体站…）。
 /// 与 Creator 的关系：partnerType=creator 的媒体可挂 creatorId；其余类型独立存在。

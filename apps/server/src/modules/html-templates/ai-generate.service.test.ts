@@ -30,6 +30,8 @@ function mockCreatorCps(campaignRow: any) {
   );
   prismaMock.linkPerformance.findMany.mockResolvedValue(lpRows);
   campaignRow.linkPerformances = lpRows;
+  // ★ 佣金方案时间线（DM deck 0831）：include commissionPlans 的默认空数组（真实 Prisma include 必返回）。
+  if (!campaignRow.commissionPlans) campaignRow.commissionPlans = [];
   const orderRows = (campaignRow.campaignCreators ?? []).flatMap((cc: any, i: any) => {
     const ccId = ccs[i].id;
     const rows = [];
