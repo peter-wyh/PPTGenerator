@@ -29,6 +29,7 @@ export type ThemePatch = {
   format?: Partial<NonNullable<ProjectTheme['format']>>;
   chart?: Partial<NonNullable<ProjectTheme['chart']>>;
   shadow?: NonNullable<ProjectTheme['shadow']>;
+  glass?: boolean;
   branding?: Partial<NonNullable<ProjectTheme['branding']>>;
   background?: Partial<Omit<NonNullable<ProjectTheme['background']>, 'type'>> & {
     type?: NonNullable<ProjectTheme['background']>['type'];

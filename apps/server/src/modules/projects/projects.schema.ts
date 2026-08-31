@@ -136,6 +136,8 @@ const projectThemeSchema = z
       })
       .optional(),
     shadow: z.enum(['none', 'subtle', 'soft', 'strong']).optional(),
+    /** 0828 卡片毛玻璃开关（前端 themeToCssVars 消费 → .skin-card 系）。 */
+    glass: z.boolean().optional(),
     branding: z
       .object({
         logo: z.string().max(2048).optional(),

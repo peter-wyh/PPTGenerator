@@ -147,8 +147,7 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
   // v3 0831 毛玻璃升级(参考图档):玻璃=true 时注入;数值契约与 recipe 报告
   // tokens.ts 对齐(specs/2026-08-31 §2)。背景四层 bokeh 走 --page-bg,
   // 由 background.ts 缺省背景消费(Canvas 页面层)。
-  // 注:glass 开关为持久化可选字段(shared schema 暂未声明),此处宽松读取。
-  if ((t as { glass?: boolean }).glass === true) {
+  if (t.glass === true) {
     Object.assign(vars, {
       '--card-bg': `color-mix(in srgb, ${t.color.surface?.primary ?? t.color.neutralBg} 55%, transparent)`,
       '--card-border': `color-mix(in srgb, ${t.color.foreground?.primary ?? t.color.neutralText} 10%, transparent)`,

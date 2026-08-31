@@ -197,6 +197,9 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     color: typeof hRaw?.color === 'string' ? hRaw.color : d.heading!.color,
   };
 
+  // ---- 卡片毛玻璃（v3 0828）：布尔透传，非 true 一律视为关 ----
+  const glass = obj.glass === true;
+
   return {
     color: {
       primary: (colorRaw?.primary as string) || legacyPrimary || d.color.primary,
@@ -221,6 +224,7 @@ export function normalizeTheme(raw: unknown): ProjectTheme {
     format,
     chart,
     shadow: finalShadow,
+    glass,
   };
 }
 

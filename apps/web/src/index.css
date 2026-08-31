@@ -71,26 +71,96 @@ mark {
 
 /* 卡片容器：圆角 + 边框 + 背景 + 阴影。
    skinPreset 通过 --skin-radius-card / --skin-shadow-card 覆盖（可选），
-   未设置时回退到主题级 --radius-card / --shadow-card。 */
+   未设置时回退到主题级 --radius-card / --shadow-card。
+   v3 0828 毛玻璃：themeToCssVars 在 glass=true 时注入 --card-bg/--card-border/--card-blur，
+   三者缺省（非玻璃模式）时回退不透明 surface —— 单一类定义两种模式。 */
 .skin-card {
   border-radius: var(--skin-radius-card, var(--radius-card, 12px));
-  border: 1px solid var(--border-default);
-  background: var(--surface-primary);
-  box-shadow: var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
+  /* v3.2 高光变化边线：四边不同亮度（左上亮→右下暗）模拟左上光源，圆角处自动插值。
+     非玻璃模式四边回退 var(--border-default)，行为同旧版。 */
+  border-style: solid;
+  border-width: 1px;
+  border-top-color: var(--card-border-top, var(--card-border, var(--border-default)));
+  border-right-color: var(--card-border-right, var(--card-border, var(--border-default)));
+  border-bottom-color: var(--card-border-bottom, var(--card-border, var(--border-default)));
+  border-left-color: var(--card-border-left, var(--card-border, var(--border-default)));
+  background: var(--card-bg, var(--surface-primary));
+  backdrop-filter: var(--card-blur, none);
+  -webkit-backdrop-filter: var(--card-blur, none);
+  /* v3.4 点光源上边线：光斑挪到边框线上——border-image 双段渐变，
+     顶边从「左上热点(亮) → 中段 → 右侧(暗)」走，左边弱高光，右/底保持暗。
+     圆角处 border-image 连续过渡，形成「边线上的光点」效果。
+     非玻璃时 --card-sheen 缺省 transparent，渐变退化为普通四边色。 */
+  border-image-source:
+    linear-gradient(
+      135deg,
+      var(--card-sheen, var(--card-border-top, var(--card-border, var(--border-default)))) 0%,
+      var(--card-border-top, var(--card-border, var(--border-default))) 18%,
+      var(--card-border-right, var(--card-border, var(--border-default))) 55%,
+      var(--card-border-bottom, var(--card-border, var(--border-default))) 100%
+    );
+  border-image-slice: 1;
+  /* v3.1 顶沿内嵌高光 + 常规投影。 */
+  box-shadow:
+    inset 0 1px 0 var(--card-glow, transparent),
+    var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
 }
 
 /* 大卡片容器：更圆 + 更深阴影（hero / glass 等强调卡）。 */
 .skin-card-lg {
   border-radius: calc(var(--skin-radius-card, var(--radius-card, 12px)) * 1.33);
-  border: 1px solid var(--border-default);
-  background: var(--surface-primary);
-  box-shadow: var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
+  /* v3.2 四边递变边线（同 .skin-card，大卡对比更强）。 */
+  border-style: solid;
+  border-width: 1px;
+  border-top-color: var(--card-border-top, var(--card-border, var(--border-default)));
+  border-right-color: var(--card-border-right, var(--card-border, var(--border-default)));
+  border-bottom-color: var(--card-border-bottom, var(--card-border, var(--border-default)));
+  border-left-color: var(--card-border-left, var(--card-border, var(--border-default)));
+  background: var(--card-bg, var(--surface-primary));
+  backdrop-filter: var(--card-blur, none);
+  -webkit-backdrop-filter: var(--card-blur, none);
+  /* v3.4 点光源上边线（同 .skin-card）。 */
+  border-image-source:
+    linear-gradient(
+      135deg,
+      var(--card-sheen, var(--card-border-top, var(--card-border, var(--border-default)))) 0%,
+      var(--card-border-top, var(--card-border, var(--border-default))) 18%,
+      var(--card-border-right, var(--card-border, var(--border-default))) 55%,
+      var(--card-border-bottom, var(--card-border, var(--border-default))) 100%
+    );
+  border-image-slice: 1;
+  /* v3.1 顶沿内嵌高光 + 常规投影。 */
+  box-shadow:
+    inset 0 1px 0 var(--card-glow, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--card-glow, transparent) 40%, transparent),
+    var(--skin-shadow-card, var(--shadow-card, 0 1px 2px rgba(0,0,0,.05)));
+}
+
+/* v3.2 大卡对角光斑：左上角一颗柔和高光（拟「光斑掠过」），仅玻璃模式渲染。
+   非玻璃时 --card-glow 缺省 transparent，径向渐变整圈透明 = 不可见。 */
+.skin-card-lg.glass-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.skin-card-lg.glass-sheen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(120px 90px at 18% 8%, var(--card-glow, transparent), transparent 70%);
+  opacity: 0.5;
 }
 
 /* 无边框卡片（仅背景 + 圆角，无 border 无 shadow）。 */
 .skin-card-flat {
   border-radius: var(--skin-radius-card, var(--radius-card, 12px));
-  background: var(--surface-primary);
+  background: var(--card-bg, var(--surface-primary));
+  backdrop-filter: var(--card-blur, none);
+  -webkit-backdrop-filter: var(--card-blur, none);
+  /* v3.1：flat 卡也补一道顶高光，玻璃模式下保持质感统一。 */
+  box-shadow: inset 0 1px 0 var(--card-glow, transparent);
 }
 
 /* 胶囊 / 药丸形状（平台标签、tier 徽章等）。 */

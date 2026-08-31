@@ -219,6 +219,11 @@ export interface ProjectTheme {
   };
   /** 卡片阴影档位 → --shadow-card。 */
   shadow?: 'none' | 'subtle' | 'soft' | 'strong';
+  /**
+   * 卡片毛玻璃（v3 0828）：开启后所有 .skin-card 系容器变半透明 + backdrop-filter。
+   * 页面背景为图片/渐变时效果最佳；纯色背景下 blur 无内容可糊，视觉≈半透明卡片。
+   */
+  glass?: boolean;
   preset?: string; // 当前命中的预设 key，仅用于 UI 高亮；手改字段后置空
 }
 

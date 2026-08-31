@@ -87,6 +87,7 @@ function applyDraftPatch(prev: ProjectTheme, patch: ThemePatch): ProjectTheme {
       ...patch.chart,
     } as NonNullable<ProjectTheme['chart']>,
     shadow: patch.shadow ?? prev.shadow,
+    glass: 'glass' in patch ? patch.glass : prev.glass,
     branding:
       patch.branding || prev.branding
         ? { ...(prev.branding ?? DEFAULT_THEME.branding), ...patch.branding }
@@ -252,6 +253,11 @@ export function ReportSettingsOverlay({ onClose }: Props) {
 
   function updateShadow(s: NonNullable<ProjectTheme['shadow']>) {
     setTheme({ shadow: s, preset: undefined });
+  }
+
+  /** 0828 毛玻璃开关：卡片容器全局切半透明+backdrop-filter。 */
+  function updateGlass(on: boolean) {
+    setTheme({ glass: on, preset: undefined });
   }
 
   /** 更新默认背景配置字段。 */
@@ -871,6 +877,18 @@ export function ReportSettingsOverlay({ onClose }: Props) {
                         {{ none: '无', subtle: '细微', soft: '柔和', strong: '强烈' }[s]}
                       </Chip>
                     ))}
+                  </div>
+                </section>
+
+                {/* 0828 卡片毛玻璃 */}
+                <section>
+                  <div className="mb-2 text-xs skin-fw-heading text-foreground-secondary">卡片毛玻璃</div>
+                  <div className="flex skin-gap-sm">
+                    <Chip active={!theme.glass} onClick={() => updateGlass(false)}>关闭</Chip>
+                    <Chip active={!!theme.glass} onClick={() => updateGlass(true)}>开启</Chip>
+                  </div>
+                  <div className="mt-1.5 text-[10px] text-foreground-muted">
+                    卡片变半透明+背景模糊；页面背景为图片/渐变时效果最佳
                   </div>
                 </section>
 
