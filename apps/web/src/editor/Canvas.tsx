@@ -322,6 +322,9 @@ export function Canvas() {
           height: canvasHeight * zoom,
           transform: `translate(${panX}px, ${panY}px)`,
           background: currentPage ? resolvePageBackground(currentPage) : 'var(--page-bg, var(--surface-primary))',
+          // --page-bg 等 CSS 变量挂在内层缩放 div 上,但背景画在本层——
+          // 变量只能向下继承,本层看不到后代定义,故 themeStyle 也铺到本层(重复注入无害)。
+          ...themeStyle,
         }}
       >
         <div

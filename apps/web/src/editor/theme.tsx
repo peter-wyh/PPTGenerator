@@ -149,7 +149,7 @@ export function themeToCssVars(theme: ProjectTheme | null | undefined): CSSPrope
   // 由 background.ts 缺省背景消费(Canvas 页面层)。
   if (t.glass === true) {
     Object.assign(vars, {
-      '--card-bg': `color-mix(in srgb, ${t.color.surface?.primary ?? t.color.neutralBg} 55%, transparent)`,
+      '--card-bg': `color-mix(in srgb, ${t.color.surface?.primary ?? t.color.neutralBg} 45%, transparent)`,
       '--card-border': `color-mix(in srgb, ${t.color.foreground?.primary ?? t.color.neutralText} 10%, transparent)`,
       '--card-blur': 'blur(22px) saturate(150%)',
       '--card-glow': 'rgba(255,255,255,0.9)',

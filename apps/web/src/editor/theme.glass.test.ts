@@ -9,7 +9,7 @@ describe('themeToCssVars · 0831 毛玻璃升级', () => {
   it('glass=true → 均衡档参数(blur22/白0.45)+ 四边递变高光线', () => {
     const vars = themeToCssVars(withGlass(true)) as Record<string, string>;
     expect(vars['--card-blur']).toBe('blur(22px) saturate(150%)');
-    expect(vars['--card-bg']).toContain('55%, transparent'); // color-mix 通道保留
+    expect(vars['--card-bg']).toContain('45%, transparent'); // color-mix 通道保留,均衡档 0.45 与报告侧对齐
     // 左上亮 → 右下暗
     expect(vars['--card-border-top']).toBe('rgba(255,255,255,0.85)');
     expect(vars['--card-border-left']).toBe('rgba(255,255,255,0.45)');
