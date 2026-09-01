@@ -18,7 +18,7 @@ export async function createUser(opts: {
   return prisma.user.create({
     data: {
       email: opts.email.toLowerCase(),
-      passwordHash: hashPassword(opts.password ?? 'Password123'),
+      passwordHash: await hashPassword(opts.password ?? 'Password123'),
       name: opts.name ?? null,
       role: opts.role ?? 'USER',
     },

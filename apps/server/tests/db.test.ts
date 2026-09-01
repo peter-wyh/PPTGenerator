@@ -7,7 +7,7 @@ describe('database connectivity', () => {
     const created = await prisma.user.create({
       data: {
         email: 'db@x.com',
-        passwordHash: hashPassword('Password123'),
+        passwordHash: await hashPassword('Password123'),
         role: 'USER',
       },
     });
@@ -18,7 +18,7 @@ describe('database connectivity', () => {
 
   it('project cascade-deletes with its owner', async () => {
     const user = await prisma.user.create({
-      data: { email: 'cascade@x.com', passwordHash: hashPassword('x'), role: 'USER' },
+      data: { email: 'cascade@x.com', passwordHash: await hashPassword('x'), role: 'USER' },
     });
     await prisma.project.create({
       data: { ownerId: user.id, name: 'P', pages: [] },

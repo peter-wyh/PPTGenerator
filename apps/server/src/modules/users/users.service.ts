@@ -25,7 +25,7 @@ export const usersService = {
   async create(input: { email: string; password: string; name?: string; role?: 'ADMIN' | 'USER'; businessLineCode?: string | null }) {
     const data: Prisma.UserCreateInput = {
       email: input.email.toLowerCase(),
-      passwordHash: hashPassword(input.password),
+      passwordHash: await hashPassword(input.password),
       name: input.name ?? null,
       role: input.role ?? 'USER',
       ...(input.businessLineCode !== undefined ? { businessLineCode: input.businessLineCode } : {}),
@@ -47,7 +47,7 @@ export const usersService = {
   ) {
     const data: Prisma.UserUpdateInput = {};
     if (input.email !== undefined) data.email = input.email.toLowerCase();
-    if (input.password !== undefined) data.passwordHash = hashPassword(input.password);
+    if (input.password !== undefined) data.passwordHash = await hashPassword(input.password);
     if (input.name !== undefined) data.name = input.name;
     if (input.role !== undefined) data.role = input.role;
     if (input.businessLineCode !== undefined) data.businessLineCode = input.businessLineCode;

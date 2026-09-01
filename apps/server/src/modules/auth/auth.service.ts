@@ -1,6 +1,6 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
-import { verifyPassword } from '../../utils/hash';
+import { fakeVerifyPassword, verifyPassword } from '../../utils/hash';
 import {
   isRefreshValid,
   newJti,
@@ -50,10 +50,16 @@ async function issueSession(user: User): Promise<IssueResult> {
 export const authService = {
   async login(email: string, password: string): Promise<IssueResult> {
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    // 用户不存在/哈希非法时也走一次真实 scrypt 校验（fakeVerifyPassword 恒 false），
+    // 消除登录时序侧信道（存在 vs 不存在的响应时间差可枚举邮箱）。
+    // 短路顺序：user 存在 → 先真校验（短路后不再跑 fake，省一半开销）；
+    //           user 不存在 → 跳到 fakeVerify，保证仍付出一次 scrypt 代价。
+    const realOk = user ? await verifyPassword(password, user.passwordHash) : false;
+    if (!realOk) {
+      await fakeVerifyPassword(password); // 恒 false，仅为时序均衡
       throw ApiError.unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
     }
-    return issueSession(user);
+    return issueSession(user!);
   },
 
   /** 用 refresh token 轮换：作废旧 jti，签发新对。 */
