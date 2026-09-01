@@ -54,3 +54,32 @@ export const shareLimiter = rateLimit({
   keyGenerator: (req) => ipKeyGenerator(req.ip ?? ''),
   message: { error: 'TOO_MANY_REQUESTS', message: '访问过于频繁，请稍后再试' },
 });
+
+/**
+ * 登录专用限流（0828 审计 P1）：10 次 / 5 分钟 / IP + 邮箱 双桶。
+ * - IP 桶：防单源扫描（撞库/枚举邮箱——时序均衡器已抹平响应时间差，这里再加次数闸）。
+ * - 邮箱桶：防分布式针对单账号爆破（key 与 IP 桶独立计数）。
+ * 双桶任一超限即 429；登录失败不重置计数（fixed window，express-rate-limit 默认）。
+ */
+const loginFailMessage = { error: 'LOGIN_RATE_LIMITED', message: '登录尝试过于频繁，请 5 分钟后再试' };
+
+export const loginIpLimiter = rateLimit({
+  store: new RedisStore({ sendCommand }),
+  windowMs: 5 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => 'login-ip:' + ipKeyGenerator(req.ip ?? ''),
+  message: loginFailMessage,
+});
+
+export const loginEmailLimiter = rateLimit({
+  store: new RedisStore({ sendCommand }),
+  windowMs: 5 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  // body 已过 loginSchema 校验（email 必为合法格式字符串）；拿不到时退化为 IP 维度
+  keyGenerator: (req) => 'login-email:' + String((req.body as { email?: unknown })?.email ?? '').toLowerCase(),
+  message: loginFailMessage,
+});
