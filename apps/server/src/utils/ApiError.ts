@@ -29,6 +29,9 @@ export class ApiError extends Error {
   static internal(message = 'Internal Server Error', details?: unknown) {
     return new ApiError(500, message, 'INTERNAL', details);
   }
+  static serviceUnavailable(message = 'Service Unavailable', details?: unknown) {
+    return new ApiError(503, message, 'SERVICE_UNAVAILABLE', details);
+  }
 }
 
 function defaultCode(status: number): string {

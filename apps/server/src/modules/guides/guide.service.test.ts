@@ -18,7 +18,7 @@ import { guideService, resolveForCampaign, extractVoiceSection, pickVoiceForCamp
 
 const mkGuide = (over: Record<string, unknown> = {}) => ({
   id: 'g1', businessLineId: 'bl1', scenario: null, name: '默认指南',
-  content: '# 指南', isDefault: false, isActive: true,
+  content: '# 指南', isDefault: false, isActive: true, overridesVisual: false,
   createdAt: new Date('2026-08-01'), updatedAt: new Date('2026-08-01'),
   ...over,
 });

@@ -2,6 +2,7 @@ import puppeteer, { type Browser } from 'puppeteer';
 import { ZipArchive } from 'archiver';
 import { PassThrough } from 'stream';
 import { config } from '../../config';
+import { ApiError } from '../../utils/ApiError';
 import { projectsService } from '../projects/projects.service';
 
 /**
@@ -28,24 +29,44 @@ async function launchBrowser(): Promise<Browser> {
  * 导出并发信号量：同时最多 2 个 puppeteer 实例。
  * 每次导出独立 launch（隔离），但 Chromium 单实例 ~200-400MB 内存，
  * 无限制并发会 OOM。超出的请求排队等待。
+ *
+ * 0828 审计 P1：排队上限 + 排队超时。
+ * - MAX_QUEUE：队列长度上限（超过直接 503，防慢消费下请求无限堆积占内存）。
+ * - QUEUE_TIMEOUT：排队等待上限（30s 拿不到槽位就 503，避免客户端挂死到网关超时）。
  */
 const MAX_CONCURRENT_EXPORTS = 2;
+const MAX_QUEUE = 20;
+const QUEUE_TIMEOUT_MS = 30_000;
 let activeExports = 0;
-const waitQueue: Array<() => void> = [];
+const waitQueue: Array<{ resolve: () => void; reject: (err: Error) => void; timer: NodeJS.Timeout }> = [];
 
 async function acquireExportSlot(): Promise<void> {
   if (activeExports < MAX_CONCURRENT_EXPORTS) {
     activeExports++;
     return;
   }
-  await new Promise<void>((resolve) => waitQueue.push(resolve));
+  if (waitQueue.length >= MAX_QUEUE) {
+    throw ApiError.serviceUnavailable('导出排队已满，请稍后重试');
+  }
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      // 超时：从队列摘除自己（若还在），拒绝调用方
+      const idx = waitQueue.findIndex((w) => w.resolve === resolve);
+      if (idx >= 0) waitQueue.splice(idx, 1);
+      reject(ApiError.serviceUnavailable('导出排队超时，请稍后重试'));
+    }, QUEUE_TIMEOUT_MS);
+    waitQueue.push({ resolve, reject, timer });
+  });
   activeExports++;
 }
 
 function releaseExportSlot(): void {
   activeExports--;
   const next = waitQueue.shift();
-  if (next) next();
+  if (next) {
+    clearTimeout(next.timer);
+    next.resolve();
+  }
 }
 
 async function renderPdf(shareUrl: string, widthPx: number, heightPx: number): Promise<Buffer> {
