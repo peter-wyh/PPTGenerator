@@ -21,21 +21,18 @@ function dec(v: unknown): Prisma.Decimal {
  */
 export async function recomputePublisherStats(campaignId: string): Promise<{ rows: number; dropped: number }> {
   // 1) 成交侧：订单表按 (publisherId, DATE(orderDate)) 聚合
-  const dealRows = (await prisma.$queryRawUnsafe(
-    `SELECT publisherId, DATE_FORMAT(orderDate, '%Y-%m-%d') AS statDate,
-            COUNT(*) AS orders,
-            COALESCE(SUM(saleAmount), 0) AS gmv,
-            COALESCE(SUM(commission), 0) AS commission
-     FROM CampaignOrder
-     WHERE campaignId = ? AND publisherId IS NOT NULL AND publisherId != '' AND orderDate IS NOT NULL
-     GROUP BY publisherId, statDate`,
-    campaignId,
-  )) as Array<{ publisherId: string; statDate: string; orders: number; gmv: unknown; commission: unknown }>;
-  const [noPub] = (await prisma.$queryRawUnsafe(
-    `SELECT COUNT(*) AS n FROM CampaignOrder
-     WHERE campaignId = ? AND (publisherId IS NULL OR publisherId = '' OR orderDate IS NULL)`,
-    campaignId,
-  )) as Array<{ n: number }>;
+  // 0828 审计 P0：$queryRawUnsafe → $queryRaw + Prisma.sql（占位符本就安全，统一到 tagged 模板消除 Unsafe 面）
+  const dealRows = (await prisma.$queryRaw(Prisma.sql`
+    SELECT publisherId, DATE_FORMAT(orderDate, '%Y-%m-%d') AS statDate,
+           COUNT(*) AS orders,
+           COALESCE(SUM(saleAmount), 0) AS gmv,
+           COALESCE(SUM(commission), 0) AS commission
+    FROM CampaignOrder
+    WHERE campaignId = ${campaignId} AND publisherId IS NOT NULL AND publisherId != '' AND orderDate IS NOT NULL
+    GROUP BY publisherId, statDate`)) as Array<{ publisherId: string; statDate: string; orders: number; gmv: unknown; commission: unknown }>;
+  const [noPub] = (await prisma.$queryRaw(Prisma.sql`
+    SELECT COUNT(*) AS n FROM CampaignOrder
+    WHERE campaignId = ${campaignId} AND (publisherId IS NULL OR publisherId = '' OR orderDate IS NULL)`)) as Array<{ n: number }>;
 
   // 2) 流量侧：LinkPerformance.daily JSON 合并为 (publisherId, date) → {clicks, impressions}
   const traffic = new Map<string, { clicks: number; impressions: number }>();

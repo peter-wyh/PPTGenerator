@@ -261,7 +261,8 @@ export const campaignService = {
       GROUP BY campaignId, publisherUrl, d`);
     if (!rows.length) return { rows: [], total: 0, page, pageSize };
     // 媒体归因：clickRef 域名众数（单遍 GROUP BY 后取首见——全量模式下行数=URL×日期数，mediaOfUrl 逐行查询会超时）
-    const mediaAgg = await prisma.$queryRawUnsafe<Array<{ campaignId: string; trackingUrl: string; host: string; n: bigint }>>(`
+    // 0828 审计 P0：Unsafe 改 $queryRaw（此查询无外部输入，纯静态 SQL）
+    const mediaAgg = await prisma.$queryRaw<Array<{ campaignId: string; trackingUrl: string; host: string; n: bigint }>>(Prisma.sql`
       SELECT campaignId, publisherUrl AS trackingUrl,
              LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(clickRef, '//', -1), '/', 1)) AS host,
              COUNT(*) AS n
@@ -756,44 +757,41 @@ async function aggregateTrackingLinks(opts: { campaignId?: string; creatorId?: s
   }>;
 }> {
   // creatorId → campaignCreatorId 过滤（合作详情浮窗跳转按达人筛选 tracking link）
-  let ccFilter = '';
+  // 0828 审计 P0：手写转义改 Prisma.sql 参数化（与 listLinkDailyStats 同模式）
+  let ccFilter = Prisma.empty;
   if (opts.creatorId) {
     const cc = await prisma.campaignCreator.findFirst({
       where: { campaignId: opts.campaignId ?? undefined, creatorId: opts.creatorId },
       select: { id: true },
     });
-    ccFilter = cc
-      ? ` AND campaignCreatorId = '${cc.id.replace(/'/g, "''")}'`
-      : ` AND 1 = 0`; // 无合作行 → 空结果
+    ccFilter = cc ? Prisma.sql` AND campaignCreatorId = ${cc.id}` : Prisma.sql` AND 1 = 0`; // 无合作行 → 空结果
   }
-  const campFilter = opts.campaignId
-    ? `AND campaignId = '${opts.campaignId.replace(/'/g, "''")}'`
-    : '';
-  const urlFilter = `publisherUrl IS NOT NULL AND publisherUrl != ''${ccFilter}`;
+  const campFilter = opts.campaignId ? Prisma.sql` AND campaignId = ${opts.campaignId}` : Prisma.empty;
+  const urlFilter = Prisma.sql`publisherUrl IS NOT NULL AND publisherUrl != ''${ccFilter}`;
 
   // ① 订单聚合：campaign × publisherUrl 一行（单遍全表 GROUP BY）
-  const agg = await prisma.$queryRawUnsafe<Array<{
+  const agg = await prisma.$queryRaw<Array<{
     campaignId: string; trackingUrl: string; cnt: bigint; sale: unknown; comm: unknown;
     firstOrderAt: Date | null; lastOrderAt: Date | null;
-  }>>(`
+  }>>(Prisma.sql`
     SELECT campaignId, publisherUrl AS trackingUrl,
            COUNT(*) AS cnt,
            COALESCE(SUM(saleAmount), 0) AS sale,
            COALESCE(SUM(commission), 0) AS comm,
            MIN(orderDate) AS firstOrderAt, MAX(orderDate) AS lastOrderAt
     FROM CampaignOrder
-    WHERE ${urlFilter} ${campFilter}
+    WHERE ${urlFilter}${campFilter}
     GROUP BY campaignId, publisherUrl`);
 
   // ② mediaHost：独立单遍 GROUP BY（每 campaign×URL 取 clickRef 域名计数最高者——众数归因）
-  const mediaAgg = await prisma.$queryRawUnsafe<Array<{
+  const mediaAgg = await prisma.$queryRaw<Array<{
     campaignId: string; trackingUrl: string; host: string; n: bigint;
-  }>>(`
+  }>>(Prisma.sql`
     SELECT campaignId, publisherUrl AS trackingUrl,
            LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(clickRef, '//', -1), '/', 1)) AS host,
            COUNT(*) AS n
     FROM CampaignOrder
-    WHERE ${urlFilter} ${campFilter} AND clickRef IS NOT NULL AND clickRef != ''
+    WHERE ${urlFilter}${campFilter} AND clickRef IS NOT NULL AND clickRef != ''
     GROUP BY campaignId, publisherUrl, host
     ORDER BY n DESC`);
   const mediaMap = new Map<string, string>(); // key: campIdurl → host（首见即众数）
