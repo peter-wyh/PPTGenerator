@@ -637,6 +637,11 @@ model CampaignOrder {
   @@index([campaignId, orderDate])
   @@index([campaignCreatorId])
   @@index([publisherId])
+  /// 0828 审计 P1：tracking link 聚合（WHERE publisherUrl IS NOT NULL GROUP BY campaignId, publisherUrl）
+  /// 与按日明细（GROUP BY campaignId, publisherUrl, DATE(orderDate)）的覆盖索引。
+  /// publisherUrl 为 Text 长列不进索引，(campaignId, orderDate) 前缀已被上面索引复用，
+  /// 此组合让纯聚合查询走 index-only 扫描的代价收益有限，故仅加 orderDate 收尾列。
+  @@index([campaignId, publisherId, orderDate])
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

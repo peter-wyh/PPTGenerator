@@ -14,11 +14,15 @@ function pageCount(pages: unknown): number {
   return Array.isArray(pages) ? pages.length : 0;
 }
 
-function metaOf(p: Project): ProjectMeta | undefined {
+function metaOf(p: Pick<Project, 'meta'>): ProjectMeta | undefined {
   return (p.meta as unknown as ProjectMeta | null) ?? undefined;
 }
 
-function toSummary(p: Project): ProjectSummary {
+/** 列表 summary 载荷：列裁剪查询结果的形状（htmlContent/hasHtml 二选一提供）。 */
+type SummaryInput = Pick<Project, 'id' | 'ownerId' | 'name' | 'width' | 'height' | 'pages' | 'meta' | 'createdAt' | 'updatedAt'>
+  & Partial<Pick<Project, 'htmlContent'>> & { hasHtml?: boolean };
+
+function toSummary(p: SummaryInput): ProjectSummary {
   return {
     id: p.id,
     ownerId: p.ownerId,
@@ -27,7 +31,7 @@ function toSummary(p: Project): ProjectSummary {
     height: p.height,
     pageCount: pageCount(p.pages),
     meta: metaOf(p),
-    hasHtml: !!p.htmlContent,
+    hasHtml: p.hasHtml ?? !!p.htmlContent,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -193,11 +197,22 @@ export const projectsService = {
       : businessLineCode
         ? { OR: [{ ownerId }, { meta: { path: '$.businessLine', equals: businessLineCode } }] }
         : { ownerId };
+    // 0828 审计 P1：ADMIN/业务线全量模式拖整行（含 htmlContent LongText 大列）
+    // → 列裁剪只取 summary 所需字段；hasHtml 用只取 id 的轻量查询补（NULL 判定不传 LongText 全文）
     const projects = await prisma.project.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true, ownerId: true, name: true, width: true, height: true,
+        pages: true, meta: true, createdAt: true, updatedAt: true,
+      },
     });
-    return projects.map(toSummary);
+    const withHtml = await prisma.project.findMany({
+      where: { ...where, htmlContent: { not: null } },
+      select: { id: true },
+    });
+    const htmlIds = new Set(withHtml.map((p) => p.id));
+    return projects.map((p) => ({ ...toSummary(p), hasHtml: htmlIds.has(p.id) }));
   },
 
   async create(
