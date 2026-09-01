@@ -37,7 +37,17 @@ export function createApp(): express.Express {
   app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
 
   // 本地上传文件静态托管（OSS 驱动下不依赖此路径）。
-  app.use('/uploads', express.static(config.storage.uploadDir));
+  // CORP 放宽为 cross-origin：报告预览 iframe 是 sandbox="allow-scripts"（opaque origin），
+  // helmet 默认的 same-origin 会让 Chrome 拒绝其加载 /uploads 图片（logo 不显示根因）。
+  // 上传图片本为报告内公开展示资源，无敏感读取面；API 响应仍保持全局 same-origin。
+  app.use(
+    '/uploads',
+    (_req, res, next) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      next();
+    },
+    express.static(config.storage.uploadDir),
+  );
 
   app.use('/api/v1', globalLimiter, apiRouter);
 

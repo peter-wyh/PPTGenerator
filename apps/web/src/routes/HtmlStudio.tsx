@@ -689,7 +689,9 @@ export function HtmlStudio() {
             <div className="flex flex-1 items-start justify-center overflow-auto p-4">
               {/* 审计#25：不带 allow-same-origin——srcDoc 内容（AI 生成 HTML）不可信，
                   opaque origin 阻断其读取父页 cookie/内存 token、以用户身份调 API。
-                  相对路径资源（/uploads、/vendor）不受影响：srcdoc 文档 base URL 继承父页。
+                  注意：相对路径的 base URL 虽继承父页，但 /uploads 响应带
+                  Cross-Origin-Resource-Policy: same-origin（helmet 默认）时 opaque origin
+                  仍会被 Chrome 拒载——服务端已对 /uploads 放宽 CORP（见 server app.ts）。
                   若未来需 iframe→父页通信，用 postMessage + origin 校验，无需同源。 */}
               <iframe
                 ref={iframeRef}
