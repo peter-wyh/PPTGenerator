@@ -1849,7 +1849,7 @@ export const aiGenerateService = {
     // glm-5.2 推理过程消耗大量 token，需要更大 max_tokens 确保 content 有足够空间
     // ★ 16K 实测不够：编辑 28KB HTML 报告时 reasoning 吃满 16K，content 为空（0821 MOTION 实测）
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
-    const maxTokens = isReasoningModel ? 32768 : 8192;
+    const maxTokens = isReasoningModel ? 32768 : 16384;
 
     // 超时保护：AI 生成耗时不稳定（复杂报告 2-5 分钟，偶发更久）。
     // 设 290s 主动中断，略早于 vite proxy 超时（600s）——确保 server 先返回
@@ -2139,7 +2139,7 @@ Rules:
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     // ★ 32K：GLM reasoning 吃满 16K 致 content 为空（见 generateHtml 注释）
-    const maxTokens = isReasoningModel ? 32768 : 8192;
+    const maxTokens = isReasoningModel ? 32768 : 16384;
 
     // 构建 messages：如果有图片，user message 使用 OpenAI vision 多模态格式
     const userMessage: any = params.images && params.images.length > 0
@@ -2297,7 +2297,7 @@ Rules:
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     // ★ 32K：GLM reasoning 吃满 16K 致 content 为空（见 generateHtml 注释）
-    const maxTokens = isReasoningModel ? 32768 : 8192;
+    const maxTokens = isReasoningModel ? 32768 : 16384;
 
     const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
       method: 'POST',
@@ -2423,7 +2423,7 @@ Rules:
 
     const isReasoningModel = DEEPSEEK_MODEL.includes('reason') || DEEPSEEK_MODEL.includes('v4') || DEEPSEEK_MODEL.includes('glm');
     // ★ 32K：GLM reasoning 吃满 16K 致 content 为空（见 generateHtml 注释）
-    const maxTokens = isReasoningModel ? 32768 : 8192;
+    const maxTokens = isReasoningModel ? 32768 : 16384;
 
     const userMessage: any = params.images && params.images.length > 0
       ? {
