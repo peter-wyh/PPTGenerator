@@ -2299,44 +2299,47 @@ Rules:
     // ★ 32K：GLM reasoning 吃满 16K 致 content 为空（见 generateHtml 注释）
     const maxTokens = isReasoningModel ? 32768 : 16384;
 
-    const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: DEEPSEEK_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: maxTokens,
-        stream: true,
-      }),
-      signal: params.signal,
-    }).catch((err: any) => {
-      const msg = String(err?.message || '');
-      const isAbort = err?.name === 'AbortError' ||
-        /abort|terminated|other side closed|fetch failed|socket|ECONNRESET/i.test(msg);
-      if (isAbort) {
-        throw new Error('AI 生成超时或连接中断，请稍后重试');
-      }
-      throw err;
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => 'Unknown error');
-      yield { type: 'error', message: `DeepSeek API 调用失败 (${response.status}): ${errText}` };
-      return;
-    }
-
+    // ★ 0902 自动重试：glm flash 思考模型偶发推理耗尽 token → content 为空。
+    //   服务端内部自动重跑一轮（最多 2 次），重试提示走 reasoning 流，前端零改动。
     let fullContent = '';
     let hasReasoning = false;
     let finishReason = '';
     let endUsage: StreamUsage | undefined;
     const startedAt = Date.now();
+
+    for (let attemptNo = 1; attemptNo <= 2; attemptNo++) {
+      const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: DEEPSEEK_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: maxTokens,
+          stream: true,
+        }),
+        signal: params.signal,
+      }).catch((err: any) => {
+        const msg = String(err?.message || '');
+        const isAbort = err?.name === 'AbortError' ||
+          /abort|terminated|other side closed|fetch failed|socket|ECONNRESET/i.test(msg);
+        if (isAbort) {
+          throw new Error('AI 生成超时或连接中断，请稍后重试');
+        }
+        throw err;
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => 'Unknown error');
+        yield { type: 'error', message: `DeepSeek API 调用失败 (${response.status}): ${errText}` };
+        return;
+      }
 
     try {
       let streamUsage: StreamUsage | undefined;
@@ -2358,6 +2361,13 @@ Rules:
         return;
       }
       throw err;
+    }
+
+    // ★ 0902 重试判定：content 为空且还有重试名额 → 重跑（提示走 reasoning 流）
+    if (!fullContent.trim() && attemptNo < 2) {
+      yield { type: 'reasoning', text: `\n\n[系统提示] 本次推理耗尽 token 未产出内容，正在自动重试（第 ${attemptNo + 1} 次）...\n` };
+      hasReasoning = false;
+      continue;
     }
 
     // 检测截断
@@ -2388,6 +2398,8 @@ Rules:
     });
 
     yield { type: 'done', html: processedHtml, truncated, usage: endUsage, guideUsed, ...(dataCoverage ? { dataCoverage } : {}) };
+    break; // ★ 0902 重试环收口：成功即跳出
+    } // for attemptNo
   },
 
   /**
@@ -2435,40 +2447,42 @@ Rules:
         }
       : { role: 'user', content: userPrompt };
 
-    const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: DEEPSEEK_MODEL,
-        messages: [
-          { role: 'system', content: buildSystemPrompt({ base: EDIT_SYSTEM_PROMPT, guideContent: params.guideContent, businessLineName: params.businessLineName }) },
-          userMessage,
-        ],
-        temperature: 0.3,
-        max_tokens: maxTokens,
-        stream: true,
-      }),
-      signal: params.signal,
-    }).catch((err: any) => {
-      const msg = String(err?.message || '');
-      const isAbort = err?.name === 'AbortError' ||
-        /abort|terminated|other side closed|fetch failed|socket|ECONNRESET/i.test(msg);
-      if (isAbort) throw new Error('AI 编辑超时或连接中断，请稍后重试');
-      throw err;
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => 'Unknown error');
-      yield { type: 'error', message: `DeepSeek API 调用失败 (${response.status}): ${errText}` };
-      return;
-    }
-
+    // ★ 0902 自动重试：同 generateHtmlStream（推理耗尽 token → content 空 → 内部重跑一轮）
     let fullContent = '';
     let endUsage: StreamUsage | undefined;
     const startedAt = Date.now();
+
+    for (let attemptNo = 1; attemptNo <= 2; attemptNo++) {
+      const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: DEEPSEEK_MODEL,
+          messages: [
+            { role: 'system', content: buildSystemPrompt({ base: EDIT_SYSTEM_PROMPT, guideContent: params.guideContent, businessLineName: params.businessLineName }) },
+            userMessage,
+          ],
+          temperature: 0.3,
+          max_tokens: maxTokens,
+          stream: true,
+        }),
+        signal: params.signal,
+      }).catch((err: any) => {
+        const msg = String(err?.message || '');
+        const isAbort = err?.name === 'AbortError' ||
+          /abort|terminated|other side closed|fetch failed|socket|ECONNRESET/i.test(msg);
+        if (isAbort) throw new Error('AI 编辑超时或连接中断，请稍后重试');
+        throw err;
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => 'Unknown error');
+        yield { type: 'error', message: `DeepSeek API 调用失败 (${response.status}): ${errText}` };
+        return;
+      }
 
     try {
       for await (const chunk of readSSEStream(response, params.signal)) {
@@ -2487,6 +2501,12 @@ Rules:
         return;
       }
       throw err;
+    }
+
+    // ★ 0902 重试判定：content 为空且还有重试名额 → 重跑
+    if (!fullContent.trim() && attemptNo < 2) {
+      yield { type: 'reasoning', text: `\n\n[系统提示] 本次推理耗尽 token 未产出内容，正在自动重试（第 ${attemptNo + 1} 次）...\n` };
+      continue;
     }
 
     const truncated = !fullContent.includes('</html>') && fullContent.length > 1000;
@@ -2513,5 +2533,7 @@ Rules:
 
     // edit 流无 campaignId 概念(纯 HTML 编辑),不附 dataCoverage
     yield { type: 'done', html: processedHtml, truncated, usage: endUsage };
+    break; // ★ 0902 重试环收口
+    } // for attemptNo
   },
 };
