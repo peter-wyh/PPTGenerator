@@ -2308,22 +2308,28 @@ Rules:
     const startedAt = Date.now();
 
     for (let attemptNo = 1; attemptNo <= 2; attemptNo++) {
+      // ★ 0902 重试降级：第 2 轮关闭 thinking（GLM 推理偶发吃光 token 致 content 空；
+      //   关闭后无 reasoning 开销，正文空间充足，实测网关透传生效）
+      const retryBody: Record<string, unknown> = {
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokens,
+        stream: true,
+      };
+      if (attemptNo === 2 && /glm/i.test(DEEPSEEK_MODEL)) {
+        retryBody.thinking = { type: 'disabled' };
+      }
       const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: DEEPSEEK_MODEL,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-          max_tokens: maxTokens,
-          stream: true,
-        }),
+        body: JSON.stringify(retryBody),
         signal: params.signal,
       }).catch((err: any) => {
         const msg = String(err?.message || '');
@@ -2363,15 +2369,17 @@ Rules:
       throw err;
     }
 
-    // ★ 0902 重试判定：content 为空且还有重试名额 → 重跑（提示走 reasoning 流）
-    if (!fullContent.trim() && attemptNo < 2) {
-      yield { type: 'reasoning', text: `\n\n[系统提示] 本次推理耗尽 token 未产出内容，正在自动重试（第 ${attemptNo + 1} 次）...\n` };
-      hasReasoning = false;
-      continue;
-    }
-
     // 检测截断
     const truncated = finishReason === 'length' || (!fullContent.includes('</html>') && fullContent.length > 1000);
+
+    // ★ 0902 重试判定：content 空或截断，且还有重试名额 → 重跑（第 2 轮自动关 thinking，32K 全给正文）。
+    //   前端 content 阶段不渲染画布（done 才落），残件流过无 UI 影响；fullContent 必须清零防拼接残件。
+    if ((!fullContent.trim() || truncated) && attemptNo < 2) {
+      yield { type: 'reasoning', text: `\n\n[系统提示] 本轮${truncated ? '输出被截断' : '推理耗尽 token 未产出内容'}，正在自动重试（第 ${attemptNo + 1} 次，关闭思考模式）...\n` };
+      hasReasoning = false;
+      fullContent = '';
+      continue;
+    }
 
     if (!fullContent.trim()) {
       const msg = hasReasoning
@@ -2453,22 +2461,27 @@ Rules:
     const startedAt = Date.now();
 
     for (let attemptNo = 1; attemptNo <= 2; attemptNo++) {
+      // ★ 0902 重试降级：同 generateHtmlStream（第 2 轮关 thinking）
+      const retryBody: Record<string, unknown> = {
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: buildSystemPrompt({ base: EDIT_SYSTEM_PROMPT, guideContent: params.guideContent, businessLineName: params.businessLineName }) },
+          userMessage,
+        ],
+        temperature: 0.3,
+        max_tokens: maxTokens,
+        stream: true,
+      };
+      if (attemptNo === 2 && /glm/i.test(DEEPSEEK_MODEL)) {
+        retryBody.thinking = { type: 'disabled' };
+      }
       const response = await fetch(`${DEEPSEEK_API_URL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: DEEPSEEK_MODEL,
-          messages: [
-            { role: 'system', content: buildSystemPrompt({ base: EDIT_SYSTEM_PROMPT, guideContent: params.guideContent, businessLineName: params.businessLineName }) },
-            userMessage,
-          ],
-          temperature: 0.3,
-          max_tokens: maxTokens,
-          stream: true,
-        }),
+        body: JSON.stringify(retryBody),
         signal: params.signal,
       }).catch((err: any) => {
         const msg = String(err?.message || '');
@@ -2503,13 +2516,15 @@ Rules:
       throw err;
     }
 
-    // ★ 0902 重试判定：content 为空且还有重试名额 → 重跑
-    if (!fullContent.trim() && attemptNo < 2) {
-      yield { type: 'reasoning', text: `\n\n[系统提示] 本次推理耗尽 token 未产出内容，正在自动重试（第 ${attemptNo + 1} 次）...\n` };
+    // ★ 0902 重试判定：content 空或截断 → 重跑（第 2 轮关 thinking；fullContent 清零防拼接残件）
+    const truncatedEdit = !fullContent.includes('</html>') && fullContent.length > 1000;
+    if ((!fullContent.trim() || truncatedEdit) && attemptNo < 2) {
+      yield { type: 'reasoning', text: `\n\n[系统提示] 本轮${truncatedEdit ? '输出被截断' : '推理耗尽 token 未产出内容'}，正在自动重试（第 ${attemptNo + 1} 次，关闭思考模式）...\n` };
+      fullContent = '';
       continue;
     }
 
-    const truncated = !fullContent.includes('</html>') && fullContent.length > 1000;
+    const truncated = truncatedEdit;
 
     if (!fullContent.trim()) {
       yield { type: 'error', message: 'AI 返回内容为空，请重试' };
