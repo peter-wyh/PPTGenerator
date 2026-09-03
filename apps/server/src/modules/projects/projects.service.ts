@@ -199,20 +199,32 @@ export const projectsService = {
         : { ownerId };
     // 0828 审计 P1：ADMIN/业务线全量模式拖整行（含 htmlContent LongText 大列）
     // → 列裁剪只取 summary 所需字段；hasHtml 用只取 id 的轻量查询补（NULL 判定不传 LongText 全文）
-    const projects = await prisma.project.findMany({
+    // 0902：MySQL 1038 "Out of sort memory" — filesort buffer 携带 SELECT 的全部列，
+    // pages/meta JSON 大列 + 34 行塞不进默认 256KB sort buffer → 列表接口 500 → 前端看起来"数据全没了"。
+    // 修复：先按 id+updatedAt 只排序列（窄行 filesort），再按 id 取整行。
+    const sorted = await prisma.project.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
+      select: { id: true },
+    });
+    const ids = sorted.map((p) => p.id);
+    if (ids.length === 0) return [];
+    const rows = await prisma.project.findMany({
+      where: { ...where, id: { in: ids } },
       select: {
         id: true, ownerId: true, name: true, width: true, height: true,
         pages: true, meta: true, createdAt: true, updatedAt: true,
       },
     });
+    // restore the sorted order from the narrow pass
+    const order = new Map(ids.map((id, i) => [id, i]));
+    rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
     const withHtml = await prisma.project.findMany({
       where: { ...where, htmlContent: { not: null } },
       select: { id: true },
     });
     const htmlIds = new Set(withHtml.map((p) => p.id));
-    return projects.map((p) => ({ ...toSummary(p), hasHtml: htmlIds.has(p.id) }));
+    return rows.map((p) => ({ ...toSummary(p), hasHtml: htmlIds.has(p.id) }));
   },
 
   async create(
