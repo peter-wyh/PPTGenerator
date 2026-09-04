@@ -58,8 +58,12 @@ export function Canvas() {
   const glassOn = theme.glass === true;
 
   // 业务线 Logo（右上角渲染）— 位置/尺寸可由 theme.branding.blBadge 配置
+  // ★ Hooks 规则修复（0904）：原来 `useBusinessLineInfo(...)?.title || useBusinessLineInfo(...)?.code`
+  //   在 || 短路下第二个 hook 调用数随数据变化（title 有值=1 次，无值=2 次）→ React 报
+  //   "change in the order of Hooks" 并连锁崩溃画布。hook 必须无条件只调一次，再取字段。
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
-  const blName = useBusinessLineInfo(businessLine)?.title || useBusinessLineInfo(businessLine)?.code;
+  const blInfo = useBusinessLineInfo(businessLine);
+  const blName = blInfo?.title || blInfo?.code;
   const blBadge = theme.branding?.blBadge;
   const blLogoFromDb = useBusinessLineLogo(businessLine);
   const blLogoSrc = blBadge?.logo || blLogoFromDb;

@@ -292,7 +292,15 @@ export function Projects() {
                     <td className="px-3 py-2">
                       <button
                         className="text-left font-medium text-foreground-primary hover:text-accent-primary"
-                        onClick={() => navigate(`/projects/${p.id}`)}
+                        onClick={() => {
+                          // ★ 与操作列「编辑」按钮一致（0904）：ai-html 报告点名称进 HTML 工作台，
+                          //   否则空 pages 落进 PPT 编辑器只能看到空白页。
+                          if (p.meta?.styleType === 'ai-html') {
+                            navigate(`/projects/${p.id}/html-studio`);
+                            return;
+                          }
+                          navigate(`/projects/${p.id}`);
+                        }}
                       >
                         {p.name}
                       </button>

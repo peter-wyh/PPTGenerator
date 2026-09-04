@@ -28,7 +28,9 @@ export function PageView({ page, canvasWidth, canvasHeight, scale }: Props) {
 
   // 业务线 Logo（与编辑器 Canvas 同步渲染，右上角）— 位置/尺寸由 theme.branding.blBadge 配置
   const businessLine = useEditorStore((s) => s.projectMeta?.businessLine);
-  const blName = useBusinessLineInfo(businessLine)?.title || useBusinessLineInfo(businessLine)?.code;
+  // ★ Hooks 规则修复（0904）：同 Canvas.tsx —— || 短路使 hook 调用数不稳定，先无条件调一次再取字段。
+  const blInfo = useBusinessLineInfo(businessLine);
+  const blName = blInfo?.title || blInfo?.code;
   const blBadge = useEditorStore((s) => s.projectMeta?.theme?.branding?.blBadge);
   const blLogoFromDb = useBusinessLineLogo(businessLine);
   const blLogoSrc = blBadge?.logo || blLogoFromDb;
