@@ -157,7 +157,11 @@ export function CreateProjectDialog({
     const initH = initial?.height ?? PPT_SIZE.h;
 
     setName(initial?.name ?? '');
-    setScenario((m?.scenario ?? '') as Scenario | '');
+    // ★ 回显归一:存量脏 scenario(枚举外值,如早期 API 落库的 'proposal')不进 state——
+    //   TEMPLATE_TYPES[scenario] 会 undefined,进 state 即白屏。落不到合法值时清空待选。
+    const validScenarios = SCENARIOS.map((s) => s.id) as string[];
+    const initScenario = validScenarios.includes(m?.scenario ?? '') ? (m?.scenario as Scenario) : '';
+    setScenario(initScenario);
     setScenarioSub(m?.scenarioSub ?? 'weekly');
     setCreator(m?.creator ?? '');
     setStyleType((m?.styleType as 'ppt' | 'ai-html') ?? 'ppt');
@@ -399,7 +403,8 @@ export function CreateProjectDialog({
                 onChange={(e) => setTemplateType(e.target.value)}
               >
                 <option value="">（请选择模版类型）</option>
-                {TEMPLATE_TYPES[scenario as Scenario].map(([id, label]) => (
+                {/* 402 守卫:存量脏 scenario(枚举外值)会让 TEMPLATE_TYPES[scenario] 为 undefined → .map 白屏。归一不到合法场景时不渲染该下拉。 */}
+                {(TEMPLATE_TYPES[scenario as Scenario] ?? []).map(([id, label]) => (
                   <option key={id} value={id}>
                     {label}
                   </option>
