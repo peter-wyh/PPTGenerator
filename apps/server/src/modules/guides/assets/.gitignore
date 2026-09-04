@@ -1,0 +1,3 @@
+# 样张资产不入 git(44MB 二进制会拖垮仓库);DB revision.assets 登记引用+hash,DB 为真源。
+# 部署机如需样张,从 templates/ 原目录或 OSS 取,不放 src 树。
+apps/server/src/modules/guides/assets/

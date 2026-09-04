@@ -29,7 +29,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
   const [blCode, setBlCode] = useState('');
   const [designMdExpanded, setDesignMdExpanded] = useState(false);
   // ★ 结构指南下拉动态化:该业务线可选指南(拉不到=空数组隐藏字段);选中即注入,无需字符串匹配
-  const [structuralGuides, setStructuralGuides] = useState<{ id: string; name: string }[]>([]);
+  const [structuralGuides, setStructuralGuides] = useState<{ id: string; name: string; overridesVisual?: boolean; checksCount?: number; assetsCount?: number }[]>([]);
 
   const [systemPrompt, setSystemPrompt] = useState('');
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -151,11 +151,14 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
         </div>
       </div>
 
-      {/* ★ 数据覆盖预检——生成前展示哪些模块有数据/缺数据 */}
-      {campaignId && (coverageLoading || moduleCoverage) && (
+      {/* ★ ④ 工具层(四维架构之「工具」)——生成前后自动执行的代码关卡,不进提示词 */}
+      {mode === 'ai' && campaignId && (coverageLoading || moduleCoverage) && (
         <div className="mb-4 rounded-lg border border-border-default">
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-xs font-medium text-foreground-secondary">📊 数据覆盖预检</span>
+            <span className="flex items-center gap-1.5 text-xs font-medium text-foreground-secondary">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-surface-hover text-[10px] font-semibold text-foreground-muted">④</span>
+              工具 · 生成前数据检查（自动执行，不用 AI）
+            </span>
             {moduleCoverage && (
               <span className="text-[10px] text-foreground-muted">
                 {moduleCoverage.modules.filter((m) => m.status === 'ok').length}/{moduleCoverage.modules.length} 模块有数据
@@ -198,10 +201,11 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
       {/* Mode-specific config */}
       {mode === 'ai' ? (
         <div className="space-y-4">
-          {/* ══ 提示词构成:①系统 ②指南 ③用户 —— 三层同框,顺序=实际拼装顺序 ══ */}
+          {/* ══ 提示词构成:四维架构(提示词/文件/skills/工具)中「注入 LLM」的三层,顺序=实际拼装顺序 ══ */}
           <div>
-            <div className="mb-2 px-0.5">
+            <div className="mb-2 flex items-center justify-between px-0.5">
               <span className="text-sm font-bold text-foreground-primary">🧱 提示词</span>
+              <span className="text-[10px] text-foreground-muted">四步走：①②③ 是给 AI 的提示词 → ④ 是生成后自动跑的工具检查 → 出报告</span>
             </div>
 
             {/* ① 系统提示词 — 平台规则,自动注入,只读 */}
@@ -209,8 +213,8 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
               <div className="flex items-center justify-between px-3 py-2 hover:bg-surface-hover">
                 <button onClick={triggerSystemPrompt} className="flex min-w-0 items-center gap-1.5 text-xs text-foreground-secondary">
                   <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-surface-hover text-[10px] font-semibold text-foreground-muted">①</span>
-                  <span className="shrink-0">系统提示词</span>
-                  <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted">平台规则 · 自动注入 · 只读</span>
+                  <span className="shrink-0">Skill · 平台规则</span>
+                  <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted" title="提示词:所有业务线通用的生成规则(技术栈/样式规范/响应式/图表/表格),存放在代码库,自动带上,无需配置">提示词 · 所有报告通用 · 自动带上</span>
                 </button>
                 <div className="flex shrink-0 items-center gap-2">
                   {showSystemPrompt && systemPrompt && (
@@ -246,11 +250,11 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
               >
                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-foreground-secondary">
                   <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-surface-hover text-[10px] font-semibold text-foreground-muted">②</span>
-                  <span className="shrink-0">业务线指南</span>
+                  <span className="shrink-0">Skill · 品牌样式</span>
                   {guides.length > 0 ? (
                     <span
                       className="max-w-[220px] truncate rounded bg-accent-primary/10 px-1.5 py-0.5 text-[10px] text-accent-primary"
-                      title={guides.map((g) => g.name).join(' + ')}
+                      title={guides.map((g) => `${g.layer === 'visual' ? '固定样式' : '附加样式'}：${g.name}`).join('\n')}
                     >
                       📎 {guides.map((g) => g.name).join(' + ')}
                     </span>
@@ -259,7 +263,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
                       {campaignId ? '本业务线未配置' : '未绑定 Campaign'}
                     </span>
                   )}
-                  <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted">自动注入 · 只读</span>
+                  <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted" title="Skill:某类报告的成套做法——本业务线每次生成都自动带上;在「指南配置」里维护">自动带上 · 在指南配置维护</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   {structuralGuideId !== '' && (
@@ -275,7 +279,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
                   {/* 叠加结构指南 — 按指南直接选(id 精确);视觉层规范恒注入 */}
                   <div>
                     <label className="mb-1 block text-[10px] font-medium text-foreground-muted">
-                      叠加结构指南（选中即注入；视觉规范恒注入）
+                      Skill · 选用整套模板（某类报告的成套做法，含配色、字体、页面结构，可附参考文件；选用后不再叠加上面的品牌样式）
                     </label>
                     {campaignId && structuralGuides.length > 0 ? (
                       <select
@@ -283,15 +287,19 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
                         onChange={(e) => setStructuralGuideId(e.target.value)}
                         className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary"
                       >
-                        <option value="">不叠加（仅视觉规范）</option>
+                        <option value="">不选用（按上面的品牌样式生成）</option>
                         {structuralGuides.map((g) => (
-                          <option key={g.id} value={g.id}>{g.name}</option>
+                          <option key={g.id} value={g.id}>
+                            {g.name}{g.overridesVisual ? '（成套样式）' : ''}
+                            {g.assetsCount ? ` · 附 ${g.assetsCount} 个参考文件` : ''}
+                            {g.checksCount ? ` · 生成后 ${g.checksCount} 项工具自动检查` : ''}
+                          </option>
                         ))}
                       </select>
                     ) : (
                       <p className="text-[11px] text-foreground-muted">
                         {campaignId
-                          ? '当前业务线暂无可叠加的结构指南——生成仅注入默认设计规范。'
+                          ? '当前业务线暂无成套模板——将按默认品牌样式生成。'
                           : '未绑定 Campaign，无业务线指南。'}
                       </p>
                     )}
@@ -304,7 +312,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
                         ★ 生成时双层注入（只读）：
                         {guides.map((g) => (
                           <span key={g.id}>
-                            {' '}· {g.layer === 'visual' ? '视觉规范' : '结构指南'}：
+                            {' '}· {g.layer === 'visual' ? '固定样式' : '附加样式'}：
                             <b className="text-foreground-secondary">{g.name}</b>
                           </span>
                         ))}
@@ -339,14 +347,8 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-foreground-secondary">
                   <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-accent-primary/10 text-[10px] font-semibold text-accent-primary">③</span>
-                  <span className="shrink-0">用户提示词</span>
-                  <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted">
-                    {prompt.trim() === ''
-                      ? 'AI 自主决策'
-                      : prompt.trim() === (presets[selectedPresetIdx]?.requirement ?? '').trim()
-                        ? `模板填充：${presets[selectedPresetIdx].label}`
-                        : '自定义'}
-                  </span>
+                  <span className="shrink-0">提示词 · 你的要求</span>
+                  <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-muted" title="提示词:本次生成想强调什么——留空=AI 自己决定,选模板=快速填充,手写=自定义">留空 = AI 自主决策</span>
                 </span>
                 <button
                   onClick={() => setPromptFullscreen(true)}
@@ -396,12 +398,15 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
             </div>
           </div>
 
-          {/* 合成指示 — 三层如何变成最终提示词 */}
+          {/* 合成指示 — 三组要求 + 一道检查如何变成最终报告 */}
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] text-foreground-muted">
-            <span className="rounded bg-surface-hover px-1.5 py-0.5">① 系统</span>+
-            <span className="rounded bg-surface-hover px-1.5 py-0.5">② 指南</span>+
-            <span className="rounded bg-surface-hover px-1.5 py-0.5">③ 指令</span>
-            <span className="text-accent-primary">→ 自动合成 → 生成报告</span>
+            <span className="rounded bg-surface-hover px-1.5 py-0.5">① 平台规则</span>+
+            <span className="rounded bg-surface-hover px-1.5 py-0.5">② 品牌样式</span>
+            <span className="text-foreground-muted">→ 系统要求</span> ｜
+            <span className="rounded bg-surface-hover px-1.5 py-0.5">③ 你的要求</span>
+            <span className="text-foreground-muted">→ 单独传入</span> ｜
+            <span className="rounded bg-surface-hover px-1.5 py-0.5">④ 工具检查</span>
+            <span className="text-accent-primary">→ 生成报告</span>
           </div>
         </div>
       ) : (

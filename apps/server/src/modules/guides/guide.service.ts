@@ -53,15 +53,24 @@ export const guideService = {
    * ★ 该业务线可选的结构指南列表(isDefault 视觉规范之外的启用指南)——
    * 前端「叠加结构指南」下拉动态化用。所见即所得:列 name,选 id。
    */
-  async listStructural(businessLineId: string): Promise<Array<{ id: string; name: string; updatedAt: Date }>> {
+  async listStructural(businessLineId: string): Promise<Array<{ id: string; name: string; updatedAt: Date; overridesVisual: boolean; checksCount: number; assetsCount: number }>> {
     if (!businessLineId) return [];
     const rows = await prisma.guide.findMany({
       // isDefault=视觉层恒注入,不在结构下拉重复出现
       where: { businessLineId, isActive: true, isDefault: { not: true } },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, name: true, updatedAt: true },
+      select: { id: true, name: true, updatedAt: true, overridesVisual: true, activeRevision: { select: { checks: true, assets: true } } },
     });
-    return rows.filter((r) => r.name?.trim());
+    return rows
+      .filter((r) => r.name?.trim())
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        updatedAt: r.updatedAt,
+        overridesVisual: r.overridesVisual,
+        checksCount: Array.isArray(r.activeRevision?.checks) ? (r.activeRevision!.checks as unknown[]).length : 0,
+        assetsCount: Array.isArray(r.activeRevision?.assets) ? (r.activeRevision!.assets as unknown[]).length : 0,
+      }));
   },
 
   async list(opts?: { businessLineId?: string }) {
@@ -109,6 +118,125 @@ export const guideService = {
     return prisma.guide.update({ where: { id }, data });
   },
   // 无 remove:软停用走 PATCH isActive=false(指南被线上报告引用过,留痕)。
+
+  /**
+   * ★ S1 Agent 四维架构:确保指南有 activeRevision,无则惰性回填 v1(存量数据迁移)。
+   * 返回生效 revision(含 content/assets/checks/toolParams 快照)。
+   * 惰性语义:首次读取时回填,失败抛错由调用方降级——生成链路永不因 revision 缺失而失败。
+   */
+  async ensureActiveRevision(guide: Guide) {
+    if (guide.activeRevisionId) {
+      const rev = await prisma.guideRevision.findUnique({ where: { id: guide.activeRevisionId } });
+      if (rev) return rev;
+      // 指针悬空(理论上不该发生):走回填路径重建
+    }
+    const existing = await prisma.guideRevision.findMany({
+      where: { guideId: guide.id },
+      orderBy: { version: 'desc' },
+      take: 1,
+    });
+    // 已有版本但指针丢了 → 指回最新
+    if (existing.length) {
+      await prisma.guide.update({ where: { id: guide.id }, data: { activeRevisionId: existing[0].id } });
+      return existing[0];
+    }
+    // 全新/存量未回填 → 以当前 content 建 v1
+    const rev = await prisma.guideRevision.create({
+      data: {
+        guideId: guide.id,
+        version: 1,
+        content: guide.content ?? '',
+        createdBy: 'migration:lazy-v1',
+        changelog: '惰性回填:存量正文迁移为 v1',
+      },
+    });
+    await prisma.guide.update({ where: { id: guide.id }, data: { activeRevisionId: rev.id } });
+    return rev;
+  },
+
+  /** 版本列表(旧→新),供前端版本侧栏/diff 预览。isActiveRev=Guide.activeRevisionId 匹配项(供编辑器载入生效版 checks)。 */
+  async listRevisions(guideId: string) {
+    const revs = await prisma.guideRevision.findMany({
+      where: { guideId },
+      orderBy: { version: 'asc' },
+      select: {
+        id: true, version: true, changelog: true, createdBy: true, createdAt: true,
+        assets: true, checks: true, toolParams: true,
+      },
+    });
+    const g = await prisma.guide.findUnique({ where: { id: guideId }, select: { activeRevisionId: true } });
+    return revs.map((r) => ({ ...r, isActive: r.id === g?.activeRevisionId }));
+  },
+
+  async getRevision(guideId: string, version: number) {
+    const rev = await prisma.guideRevision.findUnique({
+      where: { guideId_version: { guideId, version } },
+    });
+    if (!rev) throw ApiError.notFound('GuideRevision not found');
+    return rev;
+  },
+
+  /**
+   * 保存新版本(不自动激活):正文+assets+checks+toolParams 同快照。
+   * content 变更才建新版本;纯 checks/params 调整 force=true 也可建。
+   */
+  async saveRevision(guideId: string, data: {
+    content: string;
+    assets?: unknown;
+    checks?: unknown;
+    toolParams?: unknown;
+    changelog?: string;
+    createdBy?: string;
+    force?: boolean;
+  }) {
+    const last = await prisma.guideRevision.findFirst({
+      where: { guideId },
+      orderBy: { version: 'desc' },
+    });
+    // 内容与最新版完全一致且非强制 → 不重复建版
+    if (last && last.content === data.content && !data.force) {
+      return { revision: last, deduped: true };
+    }
+    const rev = await prisma.guideRevision.create({
+      data: {
+        guideId,
+        version: (last?.version ?? 0) + 1,
+        content: data.content,
+        assets: (data.assets ?? []) as Prisma.InputJsonValue,
+        checks: (data.checks ?? []) as Prisma.InputJsonValue,
+        toolParams: (data.toolParams ?? {}) as Prisma.InputJsonValue,
+        changelog: data.changelog,
+        createdBy: data.createdBy,
+      },
+    });
+    // 同步 Guide.content 冗余字段(兼容旧读取路径)
+    await prisma.guide.update({ where: { id: guideId }, data: { content: data.content } });
+    return { revision: rev, deduped: false };
+  },
+
+  /** 激活指定版本(回滚 = 激活旧版本号)。 */
+  async activateRevision(guideId: string, version: number) {
+    const rev = await this.getRevision(guideId, version);
+    await prisma.guide.update({ where: { id: guideId }, data: { activeRevisionId: rev.id } });
+    return rev;
+  },
+
+  /**
+   * S2 干跑靶子:该业务线最近一次生成的 htmlContent。
+   * 业务线存 Project.meta JSON(无独立列),按 JSON 路径近似过滤 + 全量兜底——
+   * 只取 1 条作干跑靶子,规模可控。
+   */
+  async listRecentGeneratedHtml(businessLineId: string): Promise<string | null> {
+    if (!businessLineId) return null;
+    const rows = await prisma.project.findMany({
+      where: { htmlContent: { not: null } },
+      orderBy: { updatedAt: 'desc' },
+      take: 30,
+      select: { htmlContent: true, meta: true },
+    });
+    const hit = rows.find((r) => (r.meta as { businessLineId?: string } | null)?.businessLineId === businessLineId);
+    return hit?.htmlContent ?? null;
+  },
 };
 
 /**
@@ -214,7 +342,7 @@ export function mergeGuideLayers(visual: Guide | null, structural: Guide | null)
  */
 export async function resolveStructuralForCampaign(
   campaignId: string,
-): Promise<Array<{ id: string; name: string; updatedAt: Date }>> {
+): Promise<Array<{ id: string; name: string; updatedAt: Date; overridesVisual: boolean; checksCount: number; assetsCount: number }>> {
   try {
     const camp = await prisma.campaign.findUnique({
       where: { id: campaignId },

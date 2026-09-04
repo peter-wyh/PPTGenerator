@@ -42,8 +42,8 @@ describe('AiGenerateForm', () => {
     await waitFor(() => expect((screen.getByDisplayValue('默认要求') as HTMLTextAreaElement)).toBeTruthy());
 
     expect(screen.getByText('生成方式')).toBeTruthy();
-    expect(screen.getByText('用户提示词')).toBeTruthy();
-    expect(screen.getByText('系统提示词')).toBeTruthy();
+    expect(screen.getByText('提示词 · 你的要求')).toBeTruthy();
+    expect(screen.getByText('Skill · 平台规则')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /生成报告/ }));
     expect(onGenerate).toHaveBeenCalledTimes(1);
@@ -53,10 +53,10 @@ describe('AiGenerateForm', () => {
     expect(arg.designMd).toContain('brand guide');
   });
 
-  it('点击「系统提示词」加载并展示 SYSTEM_PROMPT', async () => {
+  it('点击「平台规则」加载并展示 SYSTEM_PROMPT', async () => {
     render(<AiGenerateForm campaignId="c1" onGenerate={() => {}} />);
     expect(htmlTemplatesApi.getSystemPrompt).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByText('系统提示词'));
+    fireEvent.click(screen.getByText('Skill · 平台规则'));
     await waitFor(() => expect(htmlTemplatesApi.getSystemPrompt).toHaveBeenCalled());
   });
 
@@ -65,8 +65,8 @@ describe('AiGenerateForm', () => {
     render(<AiGenerateForm campaignId="c1" onGenerate={onGenerate} />);
     await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', undefined));
     // 展开指南折叠面板（结构指南下拉在面板内;默认不叠加）
-    fireEvent.click(screen.getByText('业务线指南'));
-    fireEvent.change(screen.getByDisplayValue('不叠加（仅视觉规范）'), { target: { value: 'g2' } });
+    fireEvent.click(screen.getByText('Skill · 品牌样式'));
+    fireEvent.change(screen.getByDisplayValue('不选用（按上面的品牌样式生成）'), { target: { value: 'g2' } });
     fireEvent.click(screen.getByRole('button', { name: /生成报告/ }));
     const arg = onGenerate.mock.calls[0][0];
     expect(arg.guideId).toBe('g2');

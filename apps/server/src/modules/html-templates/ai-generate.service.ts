@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError';
 import { config } from '../../config';
 import { fetchChatCompletionWithRetry, type ChatMessage } from './ai-client';
 import { resolvePairForCampaign, mergeGuideLayers } from '../guides/guide.service';
+import { extractGuideChecks, runGuideChecks } from './guide-checks.bridge';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { loadCreatorCps } from './cps-source';
 import { devSafeBase } from '../../utils/dev-safe-base';
@@ -63,7 +64,49 @@ export function rewriteExternalAssets(html: string, baseUrl: string): string {
   return out;
 }
 
-export const SYSTEM_PROMPT = `You are a senior front-end engineer. You produce beautiful, self-contained B2B marketing report pages in pure HTML, styled like a modern SaaS dashboard.
+/**
+ * ★ S3 提示词瘦身(Agent 四维架构 · ③文件层):
+ * 6 段大而稳定的模板从硬编码外置为 prompt-assets/*.md,运行时拼装,字节级等价(有验证测试)。
+ * 留守:铁律/禁应用UI/数据忠实/设计系统契约/语言规则/锚点/输出约束 = 平台宪法,不外置。
+ */
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM 无 __filename,从 import.meta.url 推导(tsx/esm 兼容)
+const __filename_esm = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
+const PROMPT_ASSETS_DIR = join(dirname(__filename_esm), 'prompt-assets');
+const PROMPT_ASSETS = [
+  'tech-stack',
+  'tailwind-config',
+  'css-classes',
+  'responsive',
+  'chartjs-rules',
+  'table-alignment',
+] as const;
+
+function loadPromptAsset(name: string): string {
+  // 编译产物在 dist,源在 src——两处都找
+  for (const base of [PROMPT_ASSETS_DIR, join(process.cwd(), 'src/modules/html-templates/prompt-assets'), join(process.cwd(), 'dist/modules/html-templates/prompt-assets')]) {
+    try {
+     // 资产文件无尾随换行;模板占位符行自身提供前导 \n、其后的空行提供段间空行,
+     // 因此原样返回即可与原版逐字节一致(等价测试守护)
+     return readFileSync(join(base, `${name}.md`), 'utf-8').replace(/\n$/, '');
+    } catch { /* try next */ }
+  }
+  throw new Error(`prompt asset not found: ${name}.md`);
+}
+
+function assembleSystemPromptTemplate(): string {
+  let tpl = SYSTEM_PROMPT_TEMPLATE_RAW;
+  for (const name of PROMPT_ASSETS) {
+    tpl = tpl.replace(`{{ASSET:${name}}}`, () => loadPromptAsset(name));
+  }
+  return tpl;
+}
+
+// ★ 模板先声明、后拼装(const 模板字面量必须在使用前初始化)
+const SYSTEM_PROMPT_TEMPLATE_RAW = `You are a senior front-end engineer. You produce beautiful, self-contained B2B marketing report pages in pure HTML, styled like a modern SaaS dashboard.
 
 ═══ ABSOLUTE PROHIBITION — 禁止伪造数据 (HIGHEST PRIORITY, 铁律) ═══
 You MUST NOT fabricate, construct, or invent any fake data whatsoever. Every number, name, date, metric, and business value in your output MUST originate from the campaign data JSON provided in the user message. If a required data point is missing from the JSON, render an explicit "Data Unavailable" placeholder (grey card, dashed border, label "Data Unavailable") — never invent, estimate, round, or extrapolate a value. This rule overrides ALL other instructions. Violating this rule is the single most serious error you can make: a report with fabricated numbers is worse than no report at all.
@@ -128,60 +171,15 @@ A dedicated business-line guide section (business-line visual/structure/voice ru
 
 If the design guide is not provided or is empty, use a neutral light theme (#f5f7fa background, #ffffff cards, #ebebeb borders, #999 grey text).
 
-═══ TECH STACK (ALWAYS USE) ═══
-1. HTML5 + Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-2. FontAwesome 6 CDN: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-3. Chart.js CDN (for line/bar/doughnut charts): <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-   NOTE: If the brand design guide explicitly says "use inline canvas" OR "use inline SVG" (no external chart library, e.g., dark settlement dashboards), follow that instruction instead.
-4. Google Fonts: import the font families specified in the brand design guide.
-5. All CSS inline in a single <style> tag in <head>. No external CSS files.
-6. All JS inline in a single <script> tag at end of <body>. No external JS files.
+{{ASSET:tech-stack}}
 
-═══ TAILWIND CONFIG ═══
-Extend tailwind.config with brand color tokens from the design guide. Read the hex values from the design guide and inject them:
-<script>tailwind.config = { theme: { extend: { colors: {
-  'brand-primary': '<EXACT hex from design guide>',
-  'grey-primary': '<EXACT hex from design guide>',
-  'grey-secondary': '<EXACT hex from design guide>',
-  'grey-tertiary': '<EXACT hex from design guide>',
-  'bg-layout': '<EXACT hex from design guide>',
-  'bg-card': '<EXACT hex from design guide>',
-  'stroke-card': '<EXACT hex from design guide>',
-} } } };</script>
+{{ASSET:tailwind-config}}
 
-═══ CSS CLASS SYSTEM (DEFINE IN <style>) ═══
-Define these reusable classes. Use colors from the design guide, NOT hardcoded values:
-.card { background:<card bg from design guide>; border-radius:<radius from guide, default 8px>; border:1px solid <border from guide>; padding:20px; box-shadow:<shadow from guide or 0 1px 3px rgba(0,0,0,0.04)>; }
-.module-title { font-size:<heading size from guide, default 18px>; font-weight:bold; position:relative; padding-left:12px; }
-.module-title::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:4px; height:16px; background:<brand color from design guide>; border-radius:2px; }
-.data-table { width:100%; border-collapse:collapse; }
-.data-table th { font-size:12px; color:<grey from guide>; font-weight:500; text-align:left; padding:10px 12px; border-bottom:1px solid <border from guide>; white-space:nowrap; vertical-align:middle; }
-.data-table td { padding:12px; border-bottom:1px solid <light border from guide>; vertical-align:middle; }
-.data-table thead tr { border-bottom:1px solid <border from guide>; }
-.data-table tbody tr:hover { background:<light brand tint from guide, e.g. rgba(brand, 0.05)>; }
-/* Numeric columns: right-align for better scannability */
-.data-table td.num, .data-table th.num { text-align:right; }
-.tag { padding:2px 8px; border-radius:4px; font-size:12px; font-weight:500; display:inline-block; }
+{{ASSET:css-classes}}
 
-═══ RESPONSIVE LAYOUT ═══
-1. Max-width from design guide (default 1280px), centered.
-2. Use Tailwind responsive prefixes: grid-cols-2 lg:grid-cols-5 for KPI grids, grid-cols-1 lg:grid-cols-3 for analysis grids.
-3. Section spacing: space-y-6 (24px between sections).
-4. Numbers (KPI values, revenue figures): use the design guide's numeric font at 28-32px, font-weight:bold.
+{{ASSET:responsive}}
 
-═══ CHART.JS RULES ═══
-1. Create <canvas> in HTML, then write new Chart() with REAL data from campaign context.
-2. CRITICAL: Wrap ALL Chart.js init in window.addEventListener('load', function() { ... }) — NOT DOMContentLoaded.
-3. CRITICAL: Always set animation:false, responsive:true, maintainAspectRatio:false in options.
-4. For mixed charts: use dual Y-axes — y (left, revenue) + y1 (right, clicks/orders, grid:{drawOnChartArea:false}).
-5. Line tension: 0.4 for smooth curves. Use brand color (from design guide) for primary line.
-6. CRITICAL — DYNAMIC AXIS RANGE: Do NOT hardcode axis max values or tick arrays. Compute them from the actual data:
-   - const maxOrders = Math.ceil(Math.max(...data.map(d => d.orders)) / 50) * 50;
-   - const maxRoas = Math.ceil(Math.max(...data.map(d => d.roas)) + 0.5);
-   - Y-axis ticks: Array.from({length: 6}, (_, i) => Math.round(maxOrders * i / 5))
-   - For inline canvas (no Chart.js), use Array.from(...) for tick generation — never write literal arrays like [0, 70, 140, 210, 280, 350].
-   - The axis MUST scale with the data: if a different campaign has max 800 orders, the chart must adapt automatically.
-7. CRITICAL — SCRIPT PLACEMENT & SURVIVABILITY: ALL Chart.js initialization code (every \`new Chart(...)\` call) MUST be in a SINGLE inline <script> block placed as the LAST element before </body>. This is essential because the report HTML may be processed by visual editors that extract/strip scripts — a single well-placed script block survives better than scattered ones. Never put Chart.js init code inside <head> or scattered across multiple script tags.
+{{ASSET:chartjs-rules}}
 
 ═══ REPORT STRUCTURE (DEFAULT) ═══
 Unless the user's instruction specifies a fixed section layout, generate a report by analyzing the campaign data and choosing the most informative modules:
@@ -230,12 +228,7 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
 
 4. If the user's instruction includes specific section requirements (§1, §2, ...), follow those INSTEAD of the default structure above.
 
-═══ TABLE ALIGNMENT RULES (CRITICAL) ═══
-Tables in the report MUST have perfect column alignment between headers and cells:
-1. Every <th> and <td> in the same column MUST have the same text-align and vertical-align.
-2. Add class="num" to numeric <th> and <td> pairs (Posts, Engagement, Impressions, Eng. Rate, etc.) so they right-align together.
-3. Do NOT wrap cell content in extra <div> containers that break vertical alignment — use inline-flex or simple spans instead.
-4. Ensure the Creator column (with avatar + name) uses vertical-align:middle and aligns the avatar baseline with the text baseline.
+{{ASSET:table-alignment}}
 
 ═══ LAYOUT PROHIBITIONS (CRITICAL — ZERO TOLERANCE) ═══
 This is a single-page STATIC report — NOT a web app. The report will be embedded inside an <iframe>. ANY interactive navigation will break the host page.
@@ -326,6 +319,8 @@ Every number MUST come from the campaign JSON. If a creator has no \`cps.orders\
 
 ═══ OUTPUT CONSTRAINT ═══
 Keep HTML concise but complete. Do not exceed 14000 tokens of output.`;
+
+export const SYSTEM_PROMPT = assembleSystemPromptTemplate();
 
 /**
  * 系统提示词的 Markdown 展示版（仅用于前端回显，不影响 AI 生成）。
@@ -1836,6 +1831,8 @@ export const aiGenerateService = {
       : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
     const { content: guideContent, used: guidesUsed } = mergeGuideLayers(pair.visual, pair.structural);
     const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));
+    // ★ S2 Agent 四维架构:装配结构指南的 checks 断言(active revision 快照),完成后 validate(报告不拦截)
+    const guideChecks = extractGuideChecks(pair.structural);
     const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent });
 
     let userPrompt = USER_PROMPT_TEMPLATE
@@ -2052,7 +2049,13 @@ export const aiGenerateService = {
     // 9) 海外公共 CDN → 自托管（国内不可达，否则报告无样式/无图表）
     processedHtml = rewriteExternalAssets(processedHtml, SELF_HOST_BASE);
 
-    return { html: processedHtml, guideUsed };
+    // ★ S2 validate(报告不拦截):非流式路径同样附 checkReport
+    const resolvedChecks = await guideChecks;
+    const validateReport = resolvedChecks.length ? runGuideChecks(processedHtml, resolvedChecks) : null;
+    if (validateReport && !validateReport.ok) {
+      console.warn('[AI Generate] guide checks 报告(不拦截):', JSON.stringify(validateReport.results.filter((r) => !r.passed)));
+    }
+    return { html: processedHtml, guideUsed, ...(validateReport ? { checkReport: validateReport } : {}) };
   },
 
   /**
@@ -2289,6 +2292,8 @@ Rules:
       : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
     const { content: guideContent, used: guidesUsed } = mergeGuideLayers(pair.visual, pair.structural);
     const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));
+    // ★ S2 Agent 四维架构:装配结构指南的 checks 断言(active revision 快照),完成后 validate(报告不拦截)
+    const guideChecks = extractGuideChecks(pair.structural);
     const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent });
 
     let userPrompt = USER_PROMPT_TEMPLATE
@@ -2405,7 +2410,14 @@ Rules:
       model: DEEPSEEK_MODEL,
     });
 
-    yield { type: 'done', html: processedHtml, truncated, usage: endUsage, guideUsed, ...(dataCoverage ? { dataCoverage } : {}) };
+    // ★ S2 validate(报告不拦截):断言结果附在 done chunk,前端 toast 展示;不阻塞交付
+    const resolvedChecks = await guideChecks;
+    const validateReport = resolvedChecks.length ? runGuideChecks(processedHtml, resolvedChecks) : null;
+    if (validateReport && !validateReport.ok) {
+      console.warn('[AI Generate Stream] guide checks 报告(不拦截):', JSON.stringify(validateReport.results.filter((r) => !r.passed)));
+    }
+
+    yield { type: 'done', html: processedHtml, truncated, usage: endUsage, guideUsed, ...(validateReport ? { checkReport: validateReport } : {}), ...(dataCoverage ? { dataCoverage } : {}) };
     break; // ★ 0902 重试环收口：成功即跳出
     } // for attemptNo
   },

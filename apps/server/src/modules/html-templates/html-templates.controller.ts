@@ -89,6 +89,7 @@ export const htmlTemplateController = {
     const { mode, recipeId, prompt, campaignId, theme, reportPeriod } = req.body;
     let html: string;
     let guideUsed: { id: string; name: string }[] = [];
+    let checkReport: unknown;
     if (mode === 'recipe') {
       const { getRecipe } = await import('./recipe');
       html = await getRecipe(recipeId ?? 'campaign-report').render({ campaignId, theme, reportPeriod });
@@ -101,8 +102,10 @@ export const htmlTemplateController = {
       });
       html = out.html;
       guideUsed = out.guideUsed;
+      if ('checkReport' in out) checkReport = out.checkReport;
     }
-    res.json({ html, guideUsed });
+    // ★ S2 checkReport 随响应透出(报告不拦截,前端 toast)
+    res.json({ html, guideUsed, ...(checkReport ? { checkReport } : {}) });
   }),
 
   /** 保存生成的 HTML 到项目（兼容旧接口，同时写入 HtmlVersion 表） */

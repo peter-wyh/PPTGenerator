@@ -297,10 +297,10 @@ export const htmlTemplatesApi = {
       )
       .then((r) => r.data),
 
-  /** ★ 该 campaign 业务线可选的结构指南列表（「叠加结构指南」下拉动态化） */
+  /** ★ 该 campaign 业务线可选的结构指南列表（「选用整套模板」下拉动态化） */
   getStructuralGuides: (campaignId: string) =>
     api
-      .get<{ guides: { id: string; name: string; updatedAt: string }[] }>(`/html-templates/campaign/${campaignId}/structural-guides`)
+      .get<{ guides: { id: string; name: string; updatedAt: string; overridesVisual?: boolean; checksCount?: number; assetsCount?: number }[] }>(`/html-templates/campaign/${campaignId}/structural-guides`)
       .then((r) => r.data.guides),
 
   /** ★ 模块级数据覆盖预检（生成前）：标准模块清单逐项判定数据可用性 */

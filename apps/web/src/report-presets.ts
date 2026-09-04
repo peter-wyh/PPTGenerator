@@ -138,7 +138,7 @@ const DM_PRESETS: ReportPreset[] = [
   },
 ];
 
-// FT (Feitian) — 结算复盘，深色台账风格
+// FT (Fanstoshop) — 结算复盘 + 增长提案 + 年度绩效
 const FT_PRESETS: ReportPreset[] = [
   {
     label: '业务复盘看板',
@@ -151,6 +151,43 @@ const FT_PRESETS: ReportPreset[] = [
 §3 按月分析 — 12 行月度明细表：月份 | 收入 | 成本 | 毛利 | 毛利率 | 完成率。数字列右对齐，表格底部汇总行加粗
 §4 佣金预估 — grid-cols-1 lg:grid-cols-2：左侧品类佣金饼图，右侧佣金明细表（品类 | GMV | 佣金率 | 预估佣金）
 §5 运营动作 — 编号列表（01-05）：下阶段重点运营动作，每项含标题+描述+负责人 Tag。每个 section 顶部含序号 + 大标题`,
+  },
+  {
+    label: '增长提案（Growth Proposal）',
+    description: '面向广告主的季度增长提案 deck：上期绩效 → 机会点 → 达人推荐 → 玩法 → 报价套餐',
+    reportType: 'campaign',
+    requirement: `生成一份面向广告主的季度增长提案（Growth Proposal deck 风格，低饱和玫瑰调），配合「选用整套模板」中的「FT Campaign Growth Proposal（增长提案）」使用，12 个 section 按提案叙事推进：
+
+§1 Cover — 客户品牌名 + 提案标题 + 日期，超大衬线标题
+§2 Agenda — 编号目录
+§3 Performance Overview — 上一周期核心指标巨型数字 + 环比标签
+§4 Campaign Detail — 分活动明细表（周期/渠道/花费/结果）
+§5 Opportunity — 本季机会点论述（要点+数据支撑）
+§6 Influencer Analysis — 达人分层占比 + 代表达人
+§7 Recommended Talent — 推荐达人名单（≤6 人卡片网格，含粉丝量级与推荐理由）
+§8 Activation Strategy — 合作玩法矩阵（内容形式 × 平台）
+§9 Learnings — what worked / what to improve
+§10 Packages — 三档报价卡片（中档高亮 Most Popular）
+§11 Next Steps — 时间线
+§12 Thank You — 极简致谢`,
+  },
+  {
+    label: '年度绩效报告（Annual Report）',
+    description: '面向广告主的年度绩效 deck：趋势 KPI → 明细 → 达人占比 → 套餐对比 → 资源位展示',
+    reportType: 'campaign',
+    requirement: `生成一份面向广告主的年度绩效报告 deck（DM Sans 巨型标题 + 品牌粉/黄高亮），配合「选用整套模板」中的「FT Performance Report（年度绩效报告）」使用，11 个 section：
+
+§1 Cover — FANSTOSHOP + 报告标题 + 年份，巨型字
+§2 Contents — 9 项编号目录
+§3 Yearly Trend — 年度趋势：DAU/GMV 巨型数字（100K+ 量级）+ 月度趋势图
+§4 Detail Tables — 分阶段明细双表并列
+§5 Influencer Share — 达人占比分析
+§6 Q3 vs Q4 Packages — 季度套餐对比双卡片（CPA %+金额大数字）
+§7 Competitor Review — 竞品投放复盘
+§8 Campaign Recap — 主题营销活动复盘（活动×周期表）
+§9 APP Exposure — APP 端资源位（Rotation Banner / What's New / Essentials）
+§10 Hub & Social Groups — 流量枢纽与社群
+§11 Seasonal Campaign — 季节活动预告（大标题+月份+活动卡片）`,
   },
 ];
 

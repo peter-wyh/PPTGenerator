@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DUOMAI × WANDER · Performance Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#0A0C16; --ink-2:#12142380; --panel:#14172A; --panel-2:#1B1F38; --panel-3:#20244A;
+  --line: rgba(245,243,237,0.14); --line-strong: rgba(245,243,237,0.28);
+  --gold:#FFC24B; --gold-dim:#B98F3A; --magenta:#FF4D6D; --cyan:#5FD3C4; --blue:#5EA8FF;
+  --text:#F5F3ED; --text-muted:#9298B0; --text-dim:#6B7189;
+  --font-display:'Bebas Neue', sans-serif; --font-body:'Inter', sans-serif; --font-mono:'JetBrains Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05060B;font-family:var(--font-body);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 500px at 15% 8%, rgba(255,194,75,0.08), transparent 60%), radial-gradient(700px 500px at 90% 92%, rgba(94,168,255,0.08), transparent 60%)}
+.stage-wrap{width:min(1360px,96vw);aspect-ratio:16/9;position:relative}
+@media(max-height:840px){.stage-wrap{width:min(1360px,96vw,calc((100vh - 84px)*16/9))}}
+.deck{position:absolute;inset:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);box-shadow:0 34px 90px rgba(0,0,0,.6);background:linear-gradient(165deg,#161930 0%,var(--ink) 60%)}
+.slide{position:absolute;inset:0;display:flex;opacity:0;visibility:hidden;transform:translateX(26px);transition:opacity .45s ease,transform .45s ease,visibility .45s;pointer-events:none}
+.slide.active{opacity:1;visibility:visible;transform:none;pointer-events:auto}
+/* ── ticket stub ── */
+.stub{width:96px;flex:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:22px 0;background:repeating-linear-gradient(135deg,rgba(255,255,255,0.025) 0 2px,transparent 2px 10px),linear-gradient(180deg,var(--panel-2),var(--panel));border-right:2px dashed var(--line-strong)}
+.stub::before,.stub::after{content:'';position:absolute;right:-12px;width:22px;height:22px;border-radius:50%;background:#05060B;box-shadow:0 0 0 2px var(--line-strong) inset}
+.stub::before{top:-11px}.stub::after{bottom:-11px}
+.v-text{writing-mode:vertical-rl;transform:rotate(180deg)}
+.brand{font-family:var(--font-display);font-size:20px;letter-spacing:4px;color:var(--gold)}
+.admit{font-family:var(--font-mono);font-size:10px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase}
+.stub-num{text-align:center}
+.stub-num .num{font-family:var(--font-display);font-size:34px;line-height:1;color:var(--text)}
+.stub-num .of{font-family:var(--font-mono);font-size:9px;color:var(--text-dim);letter-spacing:1px}
+/* ── content ── */
+.content{flex:1;min-width:0;padding:30px 44px 26px 40px;display:flex;flex-direction:column;gap:13px;position:relative;overflow:hidden}
+.eyebrow{font:500 10.5px/1 var(--font-mono);letter-spacing:3px;color:var(--gold);text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';width:16px;height:1px;background:var(--gold);flex:none}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:34px;line-height:1.02;letter-spacing:.5px;margin-top:6px}
+h1.title em{color:var(--gold);font-style:normal}
+.subtitle{font-size:12px;color:var(--text-muted);margin-top:4px}
+.hdr-logos{position:absolute;top:30px;right:44px;display:flex;align-items:center;gap:10px;background:#F5F3ED;border-radius:8px;padding:6px 14px;box-shadow:0 0 0 1px var(--line),0 6px 18px rgba(0,0,0,.4)}
+.hdr-logos img{height:20px;object-fit:contain;display:block}
+.hdr-logos .x{font:500 10px var(--font-mono);color:#6B7189}
+/* ── kpi ── */
+.kpi-row{display:grid;gap:10px}
+.kpi-row.c7{grid-template-columns:repeat(7,1fr)}.kpi-row.c4{grid-template-columns:repeat(4,1fr)}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 10px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
+.kpi .l{font:500 8px/1.3 var(--font-mono);letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;display:block}
+.kpi .v{font-family:var(--font-display);font-size:19px;line-height:1.15;display:block;margin-top:3px}
+.kpi .v.up{color:var(--cyan)}.kpi .v.gold{color:var(--gold)}
+/* ── panels ── */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;min-height:0}
+.panel-title{font:500 9.5px/1 var(--font-mono);letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.panel-title .tag{font:500 8.5px/1 var(--font-mono);letter-spacing:1px;color:var(--gold);border:1px solid var(--gold-dim);border-radius:4px;padding:2.5px 6px;text-transform:uppercase}
+.main-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:13px;flex:1;min-height:0}
+.stack{display:flex;flex-direction:column;gap:13px;min-height:0}
+.chart-box{position:relative;flex:1;min-height:0}
+.chart-fixed{position:relative;height:188px}
+/* ── day cards ── */
+.month-strip{display:grid;grid-template-columns:1fr 1fr;gap:9px;flex:1}
+.month-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.month-card .m{font-family:var(--font-display);font-size:14px;letter-spacing:1px;color:var(--gold)}
+.month-card .row{display:flex;justify-content:space-between;font:400 8.6px/1.7 var(--font-mono);color:var(--text-muted)}
+.month-card .row b{color:var(--text);font-weight:500}
+.strip-total{margin-top:9px;font:500 9px var(--font-mono);color:var(--gold);letter-spacing:1px;border-top:1px dashed var(--line);padding-top:8px}
+.strip-note{font:400 8px var(--font-mono);color:var(--text-dim);margin-top:5px;letter-spacing:.5px}
+/* ── pub list ── */
+.pub-list{display:flex;flex-direction:column;gap:6px;flex:1;justify-content:space-between}
+.pub-item{display:grid;grid-template-columns:20px 26px 1fr auto auto;gap:10px;align-items:center;padding:6px 9px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px}
+.pub-rank{font:500 10px var(--font-mono);color:var(--text-dim)}
+.pub-ava{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid var(--line-strong);display:block}
+.pub-name{font:600 11.5px/1.2 var(--font-body);color:var(--text)}
+.pub-sub{font:400 7.8px/1.4 var(--font-mono);color:var(--text-dim);letter-spacing:.3px;margin-top:2px}
+.platform-pill{font:600 7.5px/1 var(--font-mono);letter-spacing:.8px;text-transform:uppercase;padding:3px 8px;border-radius:999px;color:#fff;white-space:nowrap}
+.pub-right{text-align:right}
+.pub-ord{font:500 12px var(--font-mono);color:var(--gold)}
+.pub-fin{font:400 8px var(--font-mono);color:var(--text-dim);margin-top:2px;white-space:nowrap}
+/* ── mini bars ── */
+.bar-row{display:grid;grid-template-columns:50px 1fr 52px;gap:8px;align-items:center;font:400 8.5px var(--font-mono);color:var(--text-muted);margin-bottom:7px}
+.bar-row:last-child{margin-bottom:0}
+.bar-row .val{text-align:right;color:var(--text);white-space:nowrap}
+.bar{height:5px;background:rgba(245,243,237,.08);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--gold)}
+.bar i.c{background:var(--cyan)}.bar i.b{background:var(--blue)}.bar i.m{background:var(--magenta)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* ── creator spotlight ── */
+.creator-grid{display:grid;grid-template-columns:.92fr 1.08fr;gap:13px}
+.creator-head{display:flex;gap:14px;align-items:center;margin-bottom:11px}
+.avatar-ring{width:62px;height:62px;border-radius:50%;padding:3px;background:linear-gradient(135deg,var(--gold),var(--magenta));box-shadow:0 0 0 1px var(--line-strong),0 0 18px rgba(255,194,75,.18);flex:none}
+.avatar-ring img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid var(--panel);display:block}
+.creator-name{font-family:var(--font-display);font-size:20px;letter-spacing:.6px;line-height:1}
+.creator-meta{font:400 8.5px/1.6 var(--font-mono);color:var(--text-dim);letter-spacing:.8px;text-transform:uppercase;margin-top:4px}
+.stat-grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-box{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.stat-box .v{font-family:var(--font-display);font-size:19px;line-height:1.1;display:block}
+.stat-box .l{font:500 8px/1.3 var(--font-mono);letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;display:block;margin-top:3px}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font:500 8px/1 var(--font-mono);letter-spacing:.6px;color:var(--gold);border:1px solid var(--gold-dim);border-radius:4px;padding:4px 7px;background:rgba(255,194,75,.07)}
+.demo-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:6px 0 5px}
+.demo-f{background:var(--magenta)}.demo-m{background:var(--blue)}
+.demo-legend{display:flex;justify-content:space-between;font:400 8.5px var(--font-mono);color:var(--text-muted)}
+.aud-col h4{font:500 8.5px/1 var(--font-mono);letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px}
+.cloud{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:10px;border-top:1px dashed var(--line);padding-top:9px}
+.cloud .w{font-family:var(--font-body);font-weight:600;color:var(--text-muted)}
+.cloud .w.top{color:var(--text)}
+.cloud-l{font:500 8px var(--font-mono);color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-right:2px}
+/* ── placement wall ── */
+.wall{display:flex;flex-wrap:wrap;gap:9px 12px;align-items:center}
+.wall-group{display:flex;gap:6px;align-items:center}
+.wall-label{width:56px;flex:none}
+.wall-label .n{font:600 8.5px/1.25 var(--font-body);color:var(--text);display:block}
+.wall-label .p{font:400 7px var(--font-mono);color:var(--text-dim);letter-spacing:.5px;text-transform:uppercase}
+.wall-thumb{width:84px;height:52px;border-radius:8px;overflow:hidden;position:relative;border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,.35);transition:transform .2s;flex:none}
+.wall-thumb:hover{transform:translateY(-2px)}
+.wall-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.wall-cap{position:absolute;left:0;right:0;bottom:0;padding:9px 5px 3px;background:linear-gradient(transparent,rgba(5,6,11,.92));font:500 6.5px/1.2 var(--font-mono);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ── products table ── */
+.p-table{width:100%;border-collapse:collapse}
+.p-table th{font:500 8px var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);text-align:left;padding:0 8px 7px;border-bottom:1px solid var(--line-strong)}
+.p-table td{padding:7.5px 8px;border-bottom:1px solid rgba(245,243,237,.07);font-size:10.5px;color:var(--text-muted);vertical-align:middle}
+.p-table tr:last-child td{border-bottom:none}
+.p-table td.pn{color:var(--text);font-weight:500}
+.p-table .num,.p-table th.num{text-align:right}
+.p-table td.rev{font:500 10px var(--font-mono);color:var(--gold)}
+.p-table td.od{font:500 10px var(--font-mono);color:var(--text)}
+.cat{font:500 7.5px/1 var(--font-mono);letter-spacing:.5px;color:var(--text-muted);border:1px solid var(--line);border-radius:4px;padding:2.5px 6px;text-transform:uppercase;white-space:nowrap}
+/* ── status bar ── */
+.seg{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:9px}
+.seg i{display:block;height:100%}
+.legend-row{display:flex;justify-content:space-between;font:400 8.5px var(--font-mono);color:var(--text-muted);margin-bottom:6px}
+.legend-row b{color:var(--text);font-weight:500}
+.dot-key{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:6px;vertical-align:middle}
+/* ── notes ── */
+.note-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.note{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text-muted);line-height:1.5;display:flex;gap:10px;align-items:flex-start}
+.note-label{flex:none;font:600 8.5px/1 var(--font-mono);letter-spacing:1px;text-transform:uppercase;border-radius:4px;padding:3.5px 7px;margin-top:1px}
+.note-label.insight{background:rgba(94,168,255,.15);color:var(--blue)}
+.note-label.opportunity{background:rgba(255,194,75,.15);color:var(--gold)}
+.note b{color:var(--text);font-weight:600}
+/* ── nav ── */
+.arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:20;width:38px;height:38px;border-radius:50%;background:var(--panel-3);border:1px solid var(--line-strong);color:var(--text);font:400 17px/1 var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.arrow:hover{border-color:var(--gold);color:var(--gold)}
+.arrow.left{left:-16px}.arrow.right{right:-16px}
+.arrow.off{opacity:.22;pointer-events:none}
+.deck-bottom{display:flex;flex-direction:column;align-items:center;gap:9px}
+.nav-dots{display:flex;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:rgba(245,243,237,.18);border:none;cursor:pointer;padding:0;transition:.2s}
+.dot.on{background:var(--gold);box-shadow:0 0 8px rgba(255,194,75,.5)}
+.deck-foot{font:400 9px var(--font-mono);color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="stage-wrap">
+  <button class="arrow left" id="prevBtn" aria-label="Previous slide">‹</button>
+  <button class="arrow right" id="nextBtn" aria-label="Next slide">›</button>
+  <div class="deck">
+
+    <!-- ═══ SLIDE 1 · OVERVIEW ═══ -->
+    <section class="slide active">
+      <aside class="stub">
+        <span class="brand v-text">DUOMAI</span>
+        <span class="admit v-text">ADMIT ONE</span>
+        <div class="stub-num"><div class="num">01</div><div class="of">/ 03</div></div>
+      </aside>
+      <div class="content">
+        <div class="hdr-logos">
+          <img src="/uploads/8e6624151be0b09d-7b1221c9.png" alt="Duomai">
+          <span class="x">×</span>
+          <img src="/uploads/b26123b4f55b4b29-bfe2f1da.png" alt="WANDER">
+        </div>
+        <div>
+          <div class="eyebrow">DUOMAI × WANDER · PERFORMANCE DECK</div>
+          <h1 class="title">WANDER SUMMER TRAVEL CONTENT MARKETING <em>· 2026</em></h1>
+          <p class="subtitle">Campaign window <span data-field="period.display">2026-07-01 ~ 2026-07-08</span> · Platform YouTube · Status Active · Budget $360K · Activity: WANDER Summer Travel Content (2026-07-01 ~ 2026-08-31)</p>
+        </div>
+        <div class="kpi-row c7">
+          <div class="kpi"><span class="l">Total Revenues</span><span class="v gold" data-field="revenue">$126</span></div>
+          <div class="kpi"><span class="l">Clicks</span><span class="v" data-field="clicks">9.9K</span></div>
+          <div class="kpi"><span class="l">Orders</span><span class="v up" data-field="orders">10</span></div>
+          <div class="kpi"><span class="l">New Customer Acquisition</span><span class="v up" data-field="newCustomers">6</span></div>
+          <div class="kpi"><span class="l">AOV</span><span class="v" data-field="aov">$13</span></div>
+          <div class="kpi"><span class="l">Approved Orders</span><span class="v" data-field="approvedOrders">9</span></div>
+          <div class="kpi"><span class="l">ROAS</span><span class="v" data-field="roas">0.1</span></div>
+        </div>
+        <div class="main-grid">
+          <div class="panel">
+            <div class="panel-title">Revenue &amp; Orders <span class="tag">Daily Trend</span></div>
+            <div class="chart-box"><canvas data-field="dailyTrend"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Daily Detail <span class="tag">Jul 2026</span></div>
+            <div class="month-strip">
+              <div class="month-card"><div class="m">JUL 01</div>
+                <div class="row"><span>REV</span><b data-field="day.revenue" data-date="2026-07-01">$35.39</b></div>
+                <div class="row"><span>ORD</span><b data-field="day.orders" data-date="2026-07-01">3</b></div>
+                <div class="row"><span>CLK</span><b data-field="day.clicks" data-date="2026-07-01">1,193</b></div></div>
+              <div class="month-card"><div class="m">JUL 02</div>
+                <div class="row"><span>REV</span><b data-field="day.revenue" data-date="2026-07-02">$44.79</b></div>
+                <div class="row"><span>ORD</span><b data-field="day.orders" data-date="2026-07-02">4</b></div>
+                <div class="row"><span>CLK</span><b data-field="day.clicks" data-date="2026-07-02">1,213</b></div></div>
+              <div class="month-card"><div class="m">JUL 07</div>
+                <div class="row"><span>REV</span><b data-field="day.revenue" data-date="2026-07-07">$9.00</b></div>
+                <div class="row"><span>ORD</span><b data-field="day.orders" data-date="2026-07-07">1</b></div>
+                <div class="row"><span>CLK</span><b data-field="day.clicks" data-date="2026-07-07">1,202</b></div></div>
+              <div class="month-card"><div class="m">JUL 08</div>
+                <div class="row"><span>REV</span><b data-field="day.revenue" data-date="2026-07-08">$36.79</b></div>
+                <div class="row"><span>ORD</span><b data-field="day.orders" data-date="2026-07-08">2</b></div>
+                <div class="row"><span>CLK</span><b data-field="day.clicks" data-date="2026-07-08">1,199</b></div></div>
+            </div>
+            <div class="strip-total">Σ DAILY · $125.97 REV · 10 ORD</div>
+            <div class="strip-note">4 tracked days · no recorded activity Jul 03–06</div>
+          </div>
+        </div>
+        <div class="note-row">
+          <div class="note"><span class="note-label insight">Insight</span><span><b>7 of 10 orders (70%) landed in the first 48 hours</b> — Jul 01–02 drove $80.18 of the $125.97 tracked daily revenue.</span></div>
+          <div class="note"><span class="note-label opportunity">Opportunity</span><span>Clicks held a ~1.2K/day baseline through Jul 07–08 ($45.78 revenue after the gap) — <b>scheduling mid-period posts</b> can convert that steady traffic.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 2 · CHANNELS ═══ -->
+    <section class="slide">
+      <aside class="stub">
+        <span class="brand v-text">DUOMAI</span>
+        <span class="admit v-text">ADMIT ONE</span>
+        <div class="stub-num"><div class="num">02</div><div class="of">/ 03</div></div>
+      </aside>
+      <div class="content">
+        <div>
+          <div class="eyebrow">CHANNEL PERFORMANCE</div>
+          <h1 class="title">TOP PUBLISHERS <em>&amp; CHANNEL MIX</em></h1>
+          <p class="subtitle">7 media partners · Instagram / YouTube / Douyin / Community / Web · ranked by attributed orders</p>
+        </div>
+        <div class="kpi-row c4">
+          <div class="kpi"><span class="l">Active Media</span><span class="v">7</span></div>
+          <div class="kpi"><span class="l">Total Clicks</span><span class="v" data-field="clicks">9.9K</span></div>
+          <div class="kpi"><span class="l">Conv. Rate</span><span class="v">0.10%</span></div>
+          <div class="kpi"><span class="l">Top1 Click Share</span><span class="v gold">23.8%</span></div>
+        </div>
+        <div class="main-grid">
+          <div class="panel">
+            <div class="panel-title">Media Breakdown <span class="tag">All Publishers</span></div>
+            <div class="pub-list" data-field="allMedia">
+              <div class="pub-item" data-creator="Yuki Tanaka">
+                <span class="pub-rank">01</span>
+                <img class="pub-ava" src="https://picsum.photos/seed/Yuki%20Tanaka/200/200" alt="Yuki Tanaka">
+                <div><div class="pub-name">Yuki Tanaka</div><div class="pub-sub">CREATOR · 1 POST · 885 CLK · 8,906 ENG · 89,060 IMP · 10.0% ER</div></div>
+                <span class="platform-pill" style="background:#E1306C">Instagram</span>
+                <div class="pub-right"><div class="pub-ord">4 ORD</div><div class="pub-fin">$459.86 GMV · $45.99 COM</div></div>
+              </div>
+              <div class="pub-item" data-creator="Leo Sato">
+                <span class="pub-rank">02</span>
+                <img class="pub-ava" src="https://picsum.photos/seed/Leo%20Sato/200/200" alt="Leo Sato">
+                <div><div class="pub-name">Leo Sato</div><div class="pub-sub">CREATOR · 1 POST · 1,944 CLK · 3,099 ENG · 61,972 IMP · 5.0% ER</div></div>
+                <span class="platform-pill" style="background:#FF0000">YouTube</span>
+                <div class="pub-right"><div class="pub-ord">3 ORD</div><div class="pub-fin">$530.88 GMV · $53.09 COM</div></div>
+              </div>
+              <div class="pub-item" data-creator="GlowLab Fans">
+                <span class="pub-rank">03</span>
+                <img class="pub-ava" src="https://picsum.photos/seed/GlowLab%20Fans/200/200" alt="GlowLab Fans">
+                <div><div class="pub-name">GlowLab Fans</div><div class="pub-sub">COMMUNITY · 0 POSTS · 2,357 CLK</div></div>
+                <span class="platform-pill" style="background:#9298B0">Community</span>
+                <div class="pub-right"><div class="pub-ord">1 ORD</div><div class="pub-fin">$65.97 GMV · $6.60 COM</div></div>
+              </div>
+              <div class="pub-item" data-creator="Stella Zhou">
+                <span class="pub-rank">04</span>
+                <img class="pub-ava" src="https://picsum.photos/seed/Stella%20Zhou/200/200" alt="Stella Zhou">
+                <div><div class="pub-name">Stella Zhou</div><div class="pub-sub">CREATOR · 4 POSTS · 1,093 CLK · 14,446 ENG · 206,375 IMP · 7.0% ER</div></div>
+                <span class="platform-pill" style="background:#FE2C55">Douyin</span>
+                <div class="pub-right"><div class="pub-ord">1 ORD</div><div class="pub-fin">$89.99 GMV · $9.00 COM</div></div>
+              </div>
+              <div class="pub-item" data-creator="Trend Report">
+                <span class="pub-rank">05</span>
+                <img class="pub-ava" src="https://picsum.photos/seed/Trend%20Report/200/200" alt="Trend Report">
+                <div><div class="pub-name">Trend Report</div><div class="pub-sub">CONTENT SITE · 0 POSTS · 687 CLK</div></div>
+                <span class="platform-pill" style="background:#9298B0">Web</span>
+                <div class="pub-right"><div class="pub-ord">1 ORD</div><div class="pub-fin">$112.95 GMV · $11.29 COM</div></div>
+              </div>
+              <div class="pub-item" data-creator="Marcus Webb">
+                <span class="pub-rank">06</span>
+                <img class="pub-ava" src="https://picsum.photos/seed/Marcus%20Bell/200/200" alt="Marcus Webb">
+                <div><div class="pub-name">Marcus Webb</div><div class="pub-sub">CREATOR · 4 POSTS · 1,631 CLK · 16,555 ENG · 236,499 IMP · 7.0% ER</div></div>
+                <span class="platform-pill" style="background:#FF0000">YouTube</span>
+                <div class="pub-right"><div class="pub-ord">0 ORD</div><div class="pub-fin">$0.00 GMV · $0.00 COM</div></div>
+              </div>
+              <div class="pub-item" data-creator="Nora Kim">
+                <span class="pub-rank">07</span>
+                <img class="pub-ava" src="https://picsum.photos/seed/Nora%20Kim/200/200" alt="Nora Kim">
+                <div><div class="pub-name">Nora Kim</div><div class="pub-sub">CREATOR · 3 POSTS · 1,311 CLK · 6,232 ENG · 155,802 IMP · 4.0% ER</div></div>
+                <span class="platform-pill" style="background:#E1306C">Instagram</span>
+                <div class="pub-right"><div class="pub-ord">0 ORD</div><div class="pub-fin">$0.00 GMV · $0.00 COM</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-title">Click Share by Platform <span class="tag">9,908 Clicks</span></div>
+              <div class="chart-fixed"><canvas data-field="platformClicks"></canvas></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title">Geo &amp; Device <span class="tag">Orders</span></div>
+              <div class="two-col">
+                <div>
+                  <div class="bar-row"><span>US</span><span class="bar"><i style="width:80%"></i></span><span class="val">8 · $77.37</span></div>
+                  <div class="bar-row"><span>GB</span><span class="bar"><i class="b" style="width:20%"></i></span><span class="val">2 · $48.60</span></div>
+                </div>
+                <div>
+                  <div class="bar-row"><span>Desktop</span><span class="bar"><i class="c" style="width:100%"></i></span><span class="val">5</span></div>
+                  <div class="bar-row"><span>Android</span><span class="bar"><i class="c" style="width:60%"></i></span><span class="val">3</span></div>
+                  <div class="bar-row"><span>iOS</span><span class="bar"><i class="c" style="width:40%"></i></span><span class="val">2</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="note-row">
+          <div class="note"><span class="note-label insight">Insight</span><span><b>YouTube led click share at 36.1% (3,575 clicks)</b>, yet Yuki Tanaka took 4 of 10 orders from just 885 Instagram clicks — a 0.45% click-to-order rate.</span></div>
+          <div class="note"><span class="note-label opportunity">Opportunity</span><span><b>US delivered 8 of 10 orders ($77.37 commission)</b>; GB added 2 orders at $48.60 — a $24.30 commission-per-order market worth dedicated creative.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 3 · CREATOR ═══ -->
+    <section class="slide">
+      <aside class="stub">
+        <span class="brand v-text">DUOMAI</span>
+        <span class="admit v-text">ADMIT ONE</span>
+        <div class="stub-num"><div class="num">03</div><div class="of">/ 03</div></div>
+      </aside>
+      <div class="content">
+        <div>
+          <div class="eyebrow">CREATOR SPOTLIGHT</div>
+          <h1 class="title">YUKI TANAKA <em>· TOP CREATOR</em></h1>
+          <p class="subtitle">Top order driver — 4 of 10 campaign orders from a single Instagram post · @yukitanaka</p>
+        </div>
+        <div class="creator-grid">
+          <div class="panel">
+            <div class="panel-title">Creator Snapshot <span class="tag">Instagram</span></div>
+            <div class="creator-head">
+              <div class="avatar-ring"><img src="https://picsum.photos/seed/Yuki%20Tanaka/200/200" alt="Yuki Tanaka"></div>
+              <div>
+                <div class="creator-name">YUKI TANAKA</div>
+                <div class="creator-meta">@yukitanaka · 1.55M Followers · Profile ER 4.8%</div>
+              </div>
+            </div>
+            <div class="stat-grid4">
+              <div class="stat-box"><span class="v">1.55M</span><span class="l">Followers</span></div>
+              <div class="stat-box"><span class="v">89.1K</span><span class="l">Post Impressions</span></div>
+              <div class="stat-box"><span class="v gold">10.0%</span><span class="l">Post Engagement</span></div>
+              <div class="stat-box"><span class="v up">4</span><span class="l">Orders Driven</span></div>
+            </div>
+            <div class="chip-row">
+              <span class="chip">1 POST</span>
+              <span class="chip">885 CLICKS</span>
+              <span class="chip">$459.86 GMV</span>
+              <span class="chip">$45.99 COMMISSION</span>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Audience <span class="tag">DEMO</span></div>
+            <div class="aud-col">
+              <h4>Gender Split · Sample Layout</h4>
+              <div class="demo-bar"><i class="demo-f" style="width:62%"></i><i class="demo-m" style="width:38%"></i></div>
+              <div class="demo-legend"><span>62% Female · demo</span><span>38% Male · demo</span></div>
+            </div>
+            <div class="note" style="margin-top:12px"><span class="note-label insight">Note</span><span>Audience demographics are not tracked for this campaign — figures above are placeholder demo data, not real measurements.</span></div>
+          </div>
+        </div>
+        <div class="note-row">
+          <div class="note"><span class="note-label insight">Insight</span><span><b>Yuki turned 8.9% of campaign clicks into 40% of orders</b> — 885 clicks, 4 orders, a 0.45% click-to-order rate vs the 0.10% campaign average (~4.5×).</span></div>
+          <div class="note"><span class="note-label opportunity">Opportunity</span><span><b>Deepen the top-creator partnership</b> — extend from 1 post to a 2–3 post series; her audience converts at ~4.5× the campaign rate, and every incremental order carries ~$11.50 commission against proven demand.</span></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+<div class="deck-bottom">
+  <div class="nav-dots" id="navDots"></div>
+  <div class="deck-foot">DUOMAI × WANDER · PERFORMANCE DECK · 2026-07-01 ~ 2026-07-08</div>
+</div>
+<script>
+  // ---------- Slide navigation ----------
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('navDots');
+  let current = 0;
+  function goTo(i){
+    if(i < 0) i = slides.length - 1;
+    if(i >= slides.length) i = 0;
+    if(i === current) return;
+    slides[current].classList.remove('active');
+    slides[i].classList.add('active');
+    if(dots[current]) dots[current].classList.remove('on');
+    if(dots[i]) dots[i].classList.add('on');
+    current = i;
+  }
+  slides.forEach((_, i) => {
+    const d = document.createElement('button');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    d.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    d.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+  document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
+  document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowRight') goTo(current + 1);
+    if(e.key === 'ArrowLeft') goTo(current - 1);
+  });
+
+  // ---------- Chart.js ----------
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = '#9298B0';
+  const tip = { backgroundColor:'#1B1F38', titleColor:'#F5F3ED', bodyColor:'#F5F3ED', borderColor:'#2a2f4d', borderWidth:1 };
+
+  // Slide 1 · revenue bars + orders line
+  new Chart(document.querySelector('canvas[data-field="dailyTrend"]'), {
+    data: {
+      labels: ['Jul 01','Jul 02','Jul 07','Jul 08'],
+      datasets: [
+        { type:'bar', label:'Revenue (USD)', data:[35.39,44.79,9.00,36.79],
+          backgroundColor:'rgba(255,194,75,.8)', borderRadius:3, barPercentage:0.55, yAxisID:'y' },
+        { type:'line', label:'Orders', data:[3,4,1,2],
+          borderColor:'#5FD3C4', backgroundColor:'#5FD3C4', borderWidth:2, pointRadius:0, tension:0.35, yAxisID:'y1' }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ position:'top', align:'end', labels:{ boxWidth:8, boxHeight:8, font:{size:9.5} } }, tooltip:tip },
+      scales:{
+        x:{ grid:{ display:false }, ticks:{ font:{size:10} } },
+        y:{ position:'left', grid:{ color:'rgba(255,255,255,.06)' }, ticks:{ font:{size:9}, callback:(v)=>'$'+v } },
+        y1:{ position:'right', grid:{ display:false }, ticks:{ font:{size:9}, stepSize:1 } }
+      }
+    }
+  });
+
+  // Slide 2 · platform click share doughnut
+  new Chart(document.querySelector('canvas[data-field="platformClicks"]'), {
+    type:'doughnut',
+    data:{
+      labels:['YouTube','Community','Instagram','Douyin','Web'],
+      datasets:[{ data:[3575,2357,2196,1093,687], backgroundColor:['#FFC24B','#5FD3C4','#FF4D6D','#5EA8FF','#B98F3A'], borderWidth:0 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{
+        legend:{ position:'right', labels:{ boxWidth:8, boxHeight:8, font:{ size:10, family:"'JetBrains Mono', monospace" } } },
+        tooltip:{ ...tip, callbacks:{ label:(c)=>' ' + c.label + ': ' + c.raw.toLocaleString() + ' clicks (' + (c.raw/9908*100).toFixed(1) + '%)' } }
+      }
+    }
+  });
+</script>
+</body>
+</html>

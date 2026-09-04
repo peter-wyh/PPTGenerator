@@ -300,6 +300,7 @@ model Guide {
   /// 展示名,如 "DG 月报指南"。
   name           String
   /// Markdown 指南正文(约定分节:品牌视觉/章节结构/展示形式偏好/语调与术语)。
+  /// 注意:生成链路读取的是 activeRevision.content(惰性回填),本字段仅为兼容保留。
   content        String       @db.Text
   /// 结构指南自带全套视觉规范时置 true:生成时跳过 LAYER 1 视觉层注入,由本指南完全接管视觉(deck 场景)。
   overridesVisual Boolean      @default(false)
@@ -307,10 +308,42 @@ model Guide {
   isDefault      Boolean      @default(false)
   /// 停用后不参与匹配(软停用,不物理删除)。
   isActive       Boolean      @default(true)
+  /// 当前生效版本(聚合根指针:正文+assets+checks+toolParams 随 revision 一体回滚)。
+  activeRevisionId String? @unique
+  activeRevision GuideRevision? @relation("guideActiveRevision", fields: [activeRevisionId], references: [id], onDelete: SetNull)
+  revisions      GuideRevision[] @relation("guideRevisions")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([businessLineId])
+}
+
+/// 指南版本(不可变):每次保存 = 新 revision;回滚 = 切 activeRevisionId 指针。
+/// assets/checks/toolParams 与正文同快照——"四个一致"(版本/回滚/权限/A-B)的落点。
+model GuideRevision {
+  id          String   @id @default(cuid())
+  guideId     String
+  guide       Guide    @relation("guideRevisions", fields: [guideId], references: [id], onDelete: Cascade)
+  /// guide 内递增序号。
+  version     Int
+  /// 指南正文快照(skill 内容)。
+  content     String   @db.Text
+  /// 文件资产引用快照: [{kind: sample|tokens|checklist, ref, hash, name}]
+  assets      Json     @default("[]")
+  /// 校验断言快照(机器可读自查清单): [{assert, severity: report|block, message?}]
+  checks      Json     @default("[]")
+  /// 工具参数覆盖: {max_tokens?, retries?, disabled_tools?[]}
+  toolParams  Json     @default("{}")
+  /// 人工变更说明(可选)。
+  changelog   String?  @db.Text
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  /// 指向本 revision 为生效版本的 Guide(0..1)。
+  activeForGuide Guide? @relation("guideActiveRevision")
+
+  @@unique([guideId, version])
+  @@index([guideId, createdAt])
 }
 
 /// 投放活动。
