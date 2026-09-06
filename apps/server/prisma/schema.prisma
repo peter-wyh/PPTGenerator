@@ -675,6 +675,9 @@ model CampaignOrder {
   /// publisherUrl 为 Text 长列不进索引，(campaignId, orderDate) 前缀已被上面索引复用，
   /// 此组合让纯聚合查询走 index-only 扫描的代价收益有限，故仅加 orderDate 收尾列。
   @@index([campaignId, publisherId, orderDate])
+  /// 0905 审计 P1-6：cps-source / campaigns.service 的
+  /// LEFT JOIN LinkPerformance lp ON o.linkPerformanceId = lp.id 走此索引（此前全表扫）。
+  @@index([linkPerformanceId])
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -703,6 +706,8 @@ model CampaignOrderItem {
 
   @@index([campaignOrderId])
   @@index([productName])
+  /// 0905 审计 P1-6：商品主档关联/按 productId 聚合预留（导入 upsert Product 匹配走此索引）。
+  @@index([productId])
 }
 
 /// 订单日级统计中间层（recomputeOrderStats 从 CampaignOrder 物化）。

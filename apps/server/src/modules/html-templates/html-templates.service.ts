@@ -1,8 +1,24 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
-import type { TemplateStatus } from '@prisma/client';
+import type { TemplateStatus, Project } from '@prisma/client';
 import { getRecipe } from './recipe';
 import { mapCampaign } from './recipe/campaign-report/mapper';
+
+/**
+ * 项目归属守卫（0905 审计 P0-1）：owner / ADMIN / 同业务线 三分支，
+ * 与 projectsService.canManageProject 同一判定口径。不满足 → 404（不泄露存在性）。
+ */
+async function assertProjectManageable(ownerId: string, projectId: string): Promise<Project> {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) throw ApiError.notFound('报告不存在');
+  if (project.ownerId === ownerId) return project;
+  const u = await prisma.user.findUnique({ where: { id: ownerId }, select: { role: true, businessLineCode: true } });
+  if (!u) throw ApiError.notFound('报告不存在');
+  if (u.role === 'ADMIN') return project;
+  const bl = (project.meta as Record<string, unknown> | null)?.businessLine;
+  if (typeof bl === 'string' && bl.length > 0 && u.businessLineCode === bl) return project;
+  throw ApiError.notFound('报告不存在');
+}
 
 export interface HtmlTemplateSummary {
   id: string;
@@ -135,7 +151,8 @@ export const htmlTemplateService = {
   },
 
   /** 保存生成的 HTML 到项目（向后兼容旧字段 + 新 HtmlVersion 表） */
-  async saveHtmlToProject(projectId: string, _ownerId: string, html: string): Promise<void> {
+  async saveHtmlToProject(projectId: string, ownerId: string, html: string): Promise<void> {
+    await assertProjectManageable(ownerId, projectId); // 0905 P0-1：归属校验
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw ApiError.notFound('报告不存在');
     await prisma.project.update({
@@ -157,12 +174,14 @@ export const htmlTemplateService = {
    * 同时更新 meta.updatedAt 时间戳，使报告列表按编辑时间排序。
    */
   async autoSaveHtml(
+    ownerId: string,
     projectId: string,
     html?: string,
     agentHistory?: unknown[],
     aiPrompt?: string,
     designMd?: string,
   ): Promise<{ ok: true; updatedAt: string }> {
+    await assertProjectManageable(ownerId, projectId); // 0905 P0-1：归属校验
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw ApiError.notFound('报告不存在');
 
@@ -204,6 +223,7 @@ export const htmlTemplateService = {
     html: string,
     opts: { name?: string; source?: string; mode?: 'overwrite' | 'new' },
   ) {
+    await assertProjectManageable(ownerId, projectId); // 0905 P0-1：归属校验
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw ApiError.notFound('报告不存在');
 

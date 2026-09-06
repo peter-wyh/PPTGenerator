@@ -16,5 +16,14 @@
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter @mediakit/server prisma migrate deploy",
     "db:seed": "pnpm --filter @mediakit/server db:seed"
+  },
+  "pnpm": {
+    "overrides": {
+      "brace-expansion": "^5.0.9",
+      "qs": "^6.16.0",
+      "body-parser": "^1.20.6",
+      "react-router": "6.30.6",
+      "react-router-dom": "6.30.6"
+    }
   }
 }

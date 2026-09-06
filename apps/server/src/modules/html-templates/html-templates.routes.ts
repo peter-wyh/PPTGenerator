@@ -63,6 +63,7 @@ router.post(
 router.post(
   '/generate-stream',
   aiGenerateLimiter,
+  validate({ body: generateHtmlSchema }), // 0905 审计 P0-3：SSE 端点与非流式同 schema
   htmlTemplateController.generateStream,
 );
 
@@ -78,6 +79,7 @@ router.post(
 router.post(
   '/agent-edit-stream',
   aiGenerateLimiter,
+  validate({ body: agentEditSchema }), // 0905 审计 P0-3：SSE 端点与非流式同 schema
   htmlTemplateController.agentEditStream,
 );
 

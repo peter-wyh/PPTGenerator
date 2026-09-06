@@ -13,6 +13,17 @@ import {
   createCampaignCreatorSchema,
   updateCampaignCreatorSchema,
 } from './campaigns.schema';
+import {
+  importCreatorsSchema,
+  importCreatorAudienceSchema,
+  importCreatorWorksSchema,
+  importCollaborationDailySchema,
+  importLinkPerformanceSchema,
+  importOrdersSchema,
+  updateAnalyticsBodySchema,
+  upsertPerformanceBodySchema,
+  upsertCollaborationBodySchema,
+} from './campaigns.import.schema';
 
 const router = Router();
 
@@ -36,7 +47,7 @@ router.delete('/:id', validate({ params: idParamSchema }), campaignController.re
 
 // ─── Analytics (Campaign 级分析数据) ──────────────────────────────────────────
 router.get('/:campaignId/analytics', campaignController.getAnalytics);
-router.put('/:campaignId/analytics', campaignController.updateAnalytics);
+router.put('/:campaignId/analytics', validate({ body: updateAnalyticsBodySchema }), campaignController.updateAnalytics);
 
 // ─── Creator ─────────────────────────────────────────────────────────────────
 router.get('/creators/list', validate({ query: listCreatorsQuerySchema }), campaignController.listCreators);
@@ -54,19 +65,20 @@ router.delete('/links/:id', validate({ params: idParamSchema }), campaignControl
 // ─── Performance / Collaboration ─────────────────────────────────────────────
 // 路由: /:campaignId/creators/:creatorId/performance | /collaboration
 router.get('/:campaignId/creators/:creatorId/performance', campaignController.getPerformance);
-router.put('/:campaignId/creators/:creatorId/performance', campaignController.upsertPerformance);
+router.put('/:campaignId/creators/:creatorId/performance', validate({ body: upsertPerformanceBodySchema }), campaignController.upsertPerformance);
 router.get('/:campaignId/creators/:creatorId/collaboration', campaignController.getCollaboration);
 /** 合作行每日 CPS 真源现算（0827 整合，只读） */
 router.get('/:campaignId/creators/:creatorId/cps-daily', campaignController.getCreatorCpsDaily);
-router.put('/:campaignId/creators/:creatorId/collaboration', campaignController.upsertCollaboration);
+router.put('/:campaignId/creators/:creatorId/collaboration', validate({ body: upsertCollaborationBodySchema }), campaignController.upsertCollaboration);
 
 // ─── Batch Import (structured tables) ────────────────────────────────────────
-router.post('/import/creators', campaignController.importCreators);
-router.post('/import/creator-audience', campaignController.importCreatorAudience);
-router.post('/import/creator-works', campaignController.importCreatorWorks);
-router.post('/import/collaboration-daily', campaignController.importCollaborationDaily);
-router.post('/import/link-performance', campaignController.importLinkPerformance);
-router.post('/import/orders', campaignController.importOrders);
+// 0905 审计 P1-5：批量导入端点补 zod 信封校验（items 非空 + 行数上限 5000）
+router.post('/import/creators', validate({ body: importCreatorsSchema }), campaignController.importCreators);
+router.post('/import/creator-audience', validate({ body: importCreatorAudienceSchema }), campaignController.importCreatorAudience);
+router.post('/import/creator-works', validate({ body: importCreatorWorksSchema }), campaignController.importCreatorWorks);
+router.post('/import/collaboration-daily', validate({ body: importCollaborationDailySchema }), campaignController.importCollaborationDaily);
+router.post('/import/link-performance', validate({ body: importLinkPerformanceSchema }), campaignController.importLinkPerformance);
+router.post('/import/orders', validate({ body: importOrdersSchema }), campaignController.importOrders);
 router.get('/:id/cps-overview', campaignController.cpsOverview);
 router.get('/orders/list', campaignController.listOrders);
 router.get('/:id/order-insights', campaignController.getOrderInsights);
