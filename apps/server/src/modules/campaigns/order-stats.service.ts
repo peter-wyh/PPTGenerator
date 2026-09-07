@@ -2,7 +2,10 @@
 // 订单日级统计中间层：recomputeOrderStats 从 CampaignOrder 物化到 OrderDailyStat，
 // getRange 供报告链路（buildCampaignContext / mapCampaign）消费。
 // 口径：Revenue = commission（Lead 模式 saleAmount 恒 £1 占位）；
-//       日期 = 订单表已存 UTC 值 DATE_FORMAT 截断，不做二次时区转换；
+//       日期 = 订单表 orderDate 为 +8 墙钟字面量（datetime 无 tz 语义），
+//       统一 DATE_SUB(8h) 归一为 UTC 日分桶（★ 0907 与 cps-source.ts 同步统一；
+//       历史两套口径并存：08-21 批 seed 的 ODS 为 -8h、08-26 批 recompute 为字面量，
+//       后者经 recompute 迁移到 -8h。判断依据：LinkPerformance.daily 日期集=UTC 日）；
 //       customerAcquisition 标签缺失时 newCustomerOrders 恒 0 且 hasNewCustomerTag=false
 //       （消费侧据此渲染 N/A，而非编造 0）。
 import { prisma } from '../../prisma';
@@ -57,7 +60,7 @@ export async function recomputeOrderStats(campaignId: string): Promise<{ rows: n
     newCustomers: bigint;
   }[]>(Prisma.sql`
     SELECT campaignCreatorId,
-           DATE_FORMAT(orderDate, '%Y-%m-%d') AS statDate,
+           DATE_FORMAT(DATE_SUB(orderDate, INTERVAL 8 HOUR), '%Y-%m-%d') AS statDate,
            orderStatus,
            COUNT(*) AS cnt,
            SUM(commission) AS commission,
@@ -75,7 +78,7 @@ export async function recomputeOrderStats(campaignId: string): Promise<{ rows: n
     cnt: bigint;
     commission: unknown;
   }[]>(Prisma.sql`
-    SELECT DATE_FORMAT(orderDate, '%Y-%m-%d') AS statDate,
+    SELECT DATE_FORMAT(DATE_SUB(orderDate, INTERVAL 8 HOUR), '%Y-%m-%d') AS statDate,
            customerCountry AS country,
            COUNT(*) AS cnt,
            SUM(commission) AS commission
@@ -101,7 +104,7 @@ export async function recomputeOrderStats(campaignId: string): Promise<{ rows: n
     device: string;
     cnt: bigint;
   }[]>(Prisma.sql`
-    SELECT DATE_FORMAT(orderDate, '%Y-%m-%d') AS statDate,
+    SELECT DATE_FORMAT(DATE_SUB(orderDate, INTERVAL 8 HOUR), '%Y-%m-%d') AS statDate,
            clickDevice AS device,
            COUNT(*) AS cnt
     FROM CampaignOrder

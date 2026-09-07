@@ -162,10 +162,15 @@ export async function loadCreatorCps(campaignId: string): Promise<{
   // ── 成交侧：CampaignOrder 逐单按日聚合（含新客标签计数）──
   // 归因：订单自身 campaignCreatorId 优先；缺失时经 linkPerformanceId -> LP.campaignCreatorId
   // （闭环兜底）。注意 CampaignOrder 无软删列（勿写 deletedAt--历史 bug：列不存在 SQL 必炸）。
+  // ★ 0907 分桶口径修复：orderDate 为 +8 墙钟字面量（datetime 无 tz 语义，ORDER-STATS
+  //   同源约定：-8h 归一为 UTC 日）。此前直接 DATE_FORMAT(orderDate) 字面量分桶 → 末日
+  //   +8 深夜单（UTC 已次日）被错切进下一日，报告期过滤后达人表合计 ≠ 头部 KPI（ODS 口径），
+  //   GlowLab Q4 实测丢 10 单/$576（11-11 00:19~04:37 的 11-10 深夜单）。统一 -8h 分桶
+  //   后与 OrderDailyStat/LinkPerformance.daily 日期集完全对齐。
   const rows: Array<{ ccId: string | null; d: string; cnt: bigint; sale: unknown; comm: unknown; nc: bigint }> =
     await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(o.campaignCreatorId, lp.campaignCreatorId) AS ccId,
-             DATE_FORMAT(o.orderDate, '%Y-%m-%d') AS d,
+             DATE_FORMAT(DATE_SUB(o.orderDate, INTERVAL 8 HOUR), '%Y-%m-%d') AS d,
              COUNT(*) AS cnt,
              COALESCE(SUM(o.saleAmount), 0) AS sale,
              COALESCE(SUM(o.commission), 0) AS comm,
