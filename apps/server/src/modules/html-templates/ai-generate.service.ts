@@ -835,7 +835,13 @@ export const aiGenerateService = {
     if (!campaignId) return undefined;
     const campaign = await prisma.campaign.findUnique({
       where: { id: campaignId },
-      include: { campaignCreators: { include: { cpsPerformances: true } } },
+      // ★ 0907 修复：computeCoverage 日期真源已切换为 linkPerformances[].daily（cps-daily 废弃），
+      //   此前漏 include linkPerformances → 日期集恒空 → covered=null/missingDays=全区间，
+      //   done chunk 误报数据缺失 + 前端 toast 误导。与 buildCampaignContext 同口径补齐。
+      include: {
+        campaignCreators: { include: { cpsPerformances: true } },
+        linkPerformances: true,
+      },
     });
     if (!campaign) return undefined;
     const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
