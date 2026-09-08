@@ -15,6 +15,7 @@ import {
   createMarketingEventSchema,
   updateMarketingEventSchema,
   listMarketingEventsQuerySchema,
+  importMarketingEventsSchema,
 } from './lookup.schema';
 
 const router = Router();
@@ -46,5 +47,7 @@ router.delete('/advertisers/:id', validate({ params: idParamSchema }), lookupCon
 router.post('/marketing-events', validate({ body: createMarketingEventSchema }), lookupController.createMarketingEvent);
 router.patch('/marketing-events/:id', validate({ params: idParamSchema, body: updateMarketingEventSchema }), lookupController.updateMarketingEvent);
 router.delete('/marketing-events/:id', validate({ params: idParamSchema }), lookupController.removeMarketingEvent);
+/** 0908 批量导入：Awin/内部活动日历 CSV → MarketingEvent（幂等 name+startTime） */
+router.post('/marketing-events/import', validate({ body: importMarketingEventsSchema }), lookupController.importMarketingEvents);
 
 export const lookupRoutes = router;

@@ -40,12 +40,12 @@ export interface ChangelogEntry {
   changes: { kind: '新增' | '变更' | '修复' | '下线'; text: string }[];
 }
 
-export const API_DOC_VERSION = '1.4.0';
-export const API_DOC_UPDATED = '2026-08-28';
+export const API_DOC_VERSION = '1.5.0';
+export const API_DOC_UPDATED = '2026-09-08';
 
 /** 接口分组（按数据链路排序）：达人 → 合作 → 订单 → 链接 → 统计中间层 → CPS。 */
-export type DocEndpointGroup = '达人数据' | '合作数据' | '订单数据' | '链接数据' | '统计中间层' | 'CPS 真源';
-export const DOC_GROUPS: DocEndpointGroup[] = ['达人数据', '合作数据', '订单数据', '链接数据', '统计中间层', 'CPS 真源'];
+export type DocEndpointGroup = '达人数据' | '合作数据' | '订单数据' | '链接数据' | '统计中间层' | 'CPS 真源' | '运营数据';
+export const DOC_GROUPS: DocEndpointGroup[] = ['达人数据', '合作数据', '订单数据', '链接数据', '统计中间层', 'CPS 真源', '运营数据'];
 
 export const API_DOC_CONVENTIONS = [
   'Base URL：http://<server>:4000/api/v1（生产环境以部署域名为准）。',
@@ -301,6 +301,7 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       '媒体归因（2026-08-25 起）：publisherUrl/siteName 域名归一化 → 自动 upsert Publisher（媒体主档）→ 挂 publisherId；订单先归因到媒体维度，达人只是媒体类型之一。',
       '商品主档（2026-08-25 起）：每商品行按 (productName, sku) 自动 upsert Product 主档并挂 productId。',
       'Awin 镜像字段：ORDER_MIRROR_FIELDS 字典处理 40 个可选字段，空串统一转 null；saleAmount/commission/oldSaleAmount/oldCommission 自动转 Decimal，validationDate/clickThroughTime 自动转 DateTime。',
+      '表头别名归一（2026-09-08 起）：Awin 原始 CSV 导出的 snake_case 表头（如 customer_acquisition、click_device、site_name、transaction_device、customer_country、publisher_url、voucher_code）自动映射为 camelCase 字段——Awin 导出文件可直接导入，无需手工改列名。',
     ],
     fields: [
       { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
@@ -387,6 +388,83 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
   ]
 }`,
     response: '{ "updated": 1, "skipped": 0 }（updated 计订单数，非商品行数）',
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'marketing-events-import',
+    method: 'POST',
+    path: '/lookup/marketing-events/import',
+    title: '营销活动批量导入',
+    group: '运营数据',
+    purpose: 'CSV 批量创建营销活动（大促/节日/平台活动），补齐此前只能逐条手录的缺口。',
+    source: '营销活动排期表 CSV（前端「营销活动」页下载模板填写，或运营现有排期表映射列名）。',
+    prerequisites: ['业务线已创建（businessLineId 或 businessLineCode 填其一）'],
+    prerequisiteSummary: '业务线',
+    semantics: [
+      '幂等键 (name, startTime)：重导同批数据 upsert 不重复。',
+      'businessLineCode 支持简写（如 FT）；businessLineId 与 code 均给时以 id 为准。',
+      'startTime/endTime 缺失的行整行跳过（计入 skipped）。',
+      '上限 5000 行/批。',
+    ],
+    fields: [
+      { name: 'items', type: 'array', required: true, desc: '营销活动数组（≤5000 行）' },
+      { name: 'items[].name', type: 'string', required: true, desc: '活动名（幂等键之一）' },
+      { name: 'items[].startTime', type: 'string', required: true, desc: '开始时间（幂等键之一；日期或日期时间）' },
+      { name: 'items[].endTime', type: 'string', required: true, desc: '结束时间' },
+      { name: 'items[].businessLineId', type: 'string', required: false, desc: '业务线 ID（与 code 二选一）' },
+      { name: 'items[].businessLineCode', type: 'string', required: false, desc: '业务线编码，支持简写（如 FT）' },
+      { name: 'items[].type', type: 'string', required: false, desc: '活动类型' },
+      { name: 'items[].level', type: 'string', required: false, desc: '活动级别' },
+      { name: 'items[].region', type: 'string', required: false, desc: '地区' },
+      { name: 'items[].note', type: 'string', required: false, desc: '备注' },
+    ],
+    requestExample: `{
+  "items": [
+    { "name": "黑五预热", "startTime": "2026-11-17", "endTime": "2026-11-26", "businessLineCode": "FT", "type": "promo", "level": "S", "region": "US" },
+    { "name": "双十二", "startTime": "2026-12-05", "endTime": "2026-12-12", "businessLineCode": "FT", "type": "promo", "level": "A", "region": "CN" }
+  ]
+}`,
+    response: '{ "created": 2, "updated": 0, "skipped": 0 }',
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'commission-plans',
+    method: 'GET',
+    path: '/campaigns/commission-plans/list',
+    title: '佣金方案管理',
+    group: '运营数据',
+    purpose: 'CommissionPlan CRUD 管理入口——模型早已被 AI 报告生成消费（campaign.commissionPlans 叙事素材），本次补齐数据管理界面与接口。',
+    source: '商务合同/调价记录（人工录入或 CSV 透传）。',
+    prerequisites: ['Campaign 已创建'],
+    prerequisiteSummary: 'Campaign',
+    semantics: [
+      'GET /campaigns/commission-plans/list?campaignId=：列表（campaignId 可选=全部），含 campaign 展开与按 campaignId+生效日排序。',
+      'POST /campaigns/commission-plans：创建（campaignId+startDate 必填）。',
+      'PATCH /campaigns/commission-plans/:id：部分更新（空串→null 清空可选数值）。',
+      'DELETE /campaigns/commission-plans/:id：删除（204）。',
+      'endDate 空=开放式（至今有效）；cpaRate 存小数（0.10=10%）。',
+    ],
+    fields: [
+      { name: 'campaignId', type: 'string', required: true, desc: '所属 Campaign ID' },
+      { name: 'name', type: 'string', required: false, desc: '方案名（如 Q1 冲量方案）' },
+      { name: 'startDate', type: 'YYYY-MM-DD', required: true, desc: '生效日（含）' },
+      { name: 'endDate', type: 'YYYY-MM-DD', required: false, desc: '失效日（含；空=至今有效）' },
+      { name: 'cpaRate', type: 'string | number', required: false, desc: 'CPA 佣金率（小数，0.10=10%）' },
+      { name: 'flatFee', type: 'string | number', required: false, desc: '固定费用（配 flatFeeFrequency）' },
+      { name: 'flatFeeFrequency', type: 'monthly | one_time', required: false, desc: '固定费用周期' },
+      { name: 'note', type: 'string', required: false, desc: '备注（调价原因，DM 叙事素材）' },
+    ],
+    requestExample: `{
+  "campaignId": "camp-everyday-bf",
+  "name": "Q4 冲量方案",
+  "startDate": "2026-11-01",
+  "endDate": "2026-12-31",
+  "cpaRate": 0.12,
+  "flatFee": 5000,
+  "flatFeeFrequency": "one_time",
+  "note": "黑五档期 CPA 上调至 12%"
+}`,
+    response: '{ "plan": { "id": "…", "campaignId": "…", "cpaRate": "0.12", … } }',
   },
   // ─────────────────────────────────────────────────────────────────────────
   {
@@ -724,6 +802,17 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
 ];
 
 export const API_DOC_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.5.0',
+    date: '2026-09-08',
+    changes: [
+      { kind: '变更', text: '订单导入支持 Awin 原始表头直导：snake_case 别名自动归一（customer_acquisition→customerAcquisition 等 40+ 映射），Awin 导出 CSV 无需改列名即可上传。' },
+      { kind: '变更', text: '订单导入前端不再丢弃模板外列——白名单外的非空列原样透传给服务端（必填校验保留），40 个 Awin 镜像字段（设备/国家/新客标识等）随 CSV 进入订单表。' },
+      { kind: '新增', text: '营销活动批量导入（POST /lookup/marketing-events/import）：CSV 批量建营销活动，幂等键 name+startTime，支持 businessLineCode 简写（如 FT）；前端营销活动页新增「批量导入」+「下载导入模板」。' },
+      { kind: '新增', text: '佣金方案管理 4 端点（GET /campaigns/commission-plans/list、POST /campaigns/commission-plans、PATCH/DELETE /campaigns/commission-plans/:id）——CommissionPlan 模型早已被 AI 报告消费，本次补齐管理入口；前端数据管理新增「佣金方案」页。' },
+      { kind: '新增', text: '达人 tags 落库：Creator 表新增 tags JSON 列（migration 20260908090000），导入 CSV tags 列（分号分隔）不再被服务端丢弃；达人详情抽屉展示标签。' },
+    ],
+  },
   {
     version: '1.4.0',
     date: '2026-08-28',

@@ -429,7 +429,58 @@ export const campaignService = {
     });
     return pubs.sort((a, b) => a.name.localeCompare(b.name));
   },
+  // ─── CommissionPlan（佣金方案，0908 补管理入口）──────────────────────────────
+  async listCommissionPlans(_ownerId: string, campaignId?: string) {
+    return prisma.commissionPlan.findMany({
+      where: campaignId ? { campaignId } : undefined,
+      orderBy: [{ campaignId: 'asc' }, { startDate: 'desc' }],
+      include: { campaign: { select: { id: true, name: true } } },
+    });
+  },
+
+  async createCommissionPlan(_ownerId: string, data: {
+    campaignId: string; name?: string; startDate: string; endDate?: string;
+    cpaRate?: string | number; flatFee?: string | number; flatFeeFrequency?: string; note?: string;
+  }) {
+    // 归属校验：campaign 存在即可（owner 隔离由路由 authenticate + ownerId 传递保证）
+    const campaign = await prisma.campaign.findUnique({ where: { id: data.campaignId }, select: { id: true } });
+    if (!campaign) throw ApiError.notFound('Campaign not found');
+    const { cpaRate, flatFee, ...rest } = data;
+    return prisma.commissionPlan.create({
+      data: {
+        ...rest,
+        ...cpaRate !== undefined && cpaRate !== '' ? { cpaRate: String(cpaRate) } : {},
+        ...flatFee !== undefined && flatFee !== '' ? { flatFee: String(flatFee) } : {},
+      },
+      include: { campaign: { select: { id: true, name: true } } },
+    });
+  },
+
+  async updateCommissionPlan(id: string, data: Partial<{
+    name: string; startDate: string; endDate?: string | null;
+    cpaRate?: string | number | null; flatFee?: string | number | null; flatFeeFrequency?: string | null; note?: string | null;
+  }>) {
+    const existing = await prisma.commissionPlan.findUnique({ where: { id } });
+    if (!existing) throw ApiError.notFound('CommissionPlan not found');
+    const { cpaRate, flatFee, ...rest } = data;
+    return prisma.commissionPlan.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...cpaRate !== undefined ? { cpaRate: cpaRate === null || cpaRate === '' ? null : String(cpaRate) } : {},
+        ...flatFee !== undefined ? { flatFee: flatFee === null || flatFee === '' ? null : String(flatFee) } : {},
+      },
+      include: { campaign: { select: { id: true, name: true } } },
+    });
+  },
+
+  async removeCommissionPlan(id: string) {
+    const existing = await prisma.commissionPlan.findUnique({ where: { id } });
+    if (!existing) throw ApiError.notFound('CommissionPlan not found');
+    await prisma.commissionPlan.delete({ where: { id } });
+  },
 };
+
 
 export const creatorService = {
   /** 共享字典：所有登录用户可读（无 ownerId 过滤）。写操作仍校验 owner。 */
@@ -726,6 +777,73 @@ function mirrorOrderFields(row: Record<string, unknown>): Record<string, unknown
     if (!(key in row)) continue;
     const v = String(row[key] ?? '').trim();
     out[key] = v === '' ? null : coerce(v);
+  }
+  return out;
+}
+
+// ─── Awin 原始表头归一（0908 页面导入链路打通）─────────────────────────────────
+// 页面导入此前只透传 11 个模板列，Awin 导出的国家/设备/新客等 40 个镜像列被前端
+// 白名单丢弃 → 市场分布/设备分布/新客占比三个报告模块永远无数据。
+// 现前端放开透传，服务端在此把 Awin 原始 snake_case 表头归一到镜像字典的
+// camelCase key——Awin transactions 导出 CSV 可不经列名改写直接上传。
+const ORDER_HEADER_ALIASES: Record<string, string> = {
+  id: 'awinId',
+  advertiser_id: 'advertiserId',
+  sale_amount: 'saleAmount',
+  validation_date: 'validationDate',
+  click_ref: 'clickRef',
+  click_ref2: 'clickRef2',
+  click_ref3: 'clickRef3',
+  click_ref4: 'clickRef4',
+  click_ref5: 'clickRef5',
+  click_ref6: 'clickRef6',
+  site_name: 'siteName',
+  URL: 'url',
+  decline_reason: 'declineReason',
+  click_through_time: 'clickThroughTime',
+  clickThroughTime: 'clickThroughTime',
+  voucher_code_used: 'voucherCodeUsed',
+  lapse_time: 'lapseTime',
+  amend_reason: 'amendReason',
+  old_sale_amount: 'oldSaleAmount',
+  old_commission: 'oldCommission',
+  different_currency: 'differentCurrency',
+  click_device: 'clickDevice',
+  transaction_device: 'transactionDevice',
+  publisher_url: 'publisherUrl',
+  transaction_parts: 'transactionParts',
+  customer_country: 'customerCountry',
+  custom_parameters: 'customParameters',
+  paid_to_publisher: 'paidToPublisher',
+  payment_status: 'paymentStatus',
+  payment_id: 'paymentId',
+  transaction_query_id: 'transactionQueryId',
+  commission_sharing_publisher_id: 'commissionSharingPublisherId',
+  commission_sharing_publisher: 'commissionSharingPublisher',
+  commission_sharing_selected_rate_publisher_id: 'commissionSharingSelectedRatePublisherId',
+  campaign: 'campaignLabel',
+  customer_acquisition: 'customerAcquisition',
+  // 核心三列（镜像字典外）的 Awin 原始名
+  order_reference: 'orderId',
+  date: 'orderDate',
+  commission_status: 'orderStatus',
+  // 商品行常用原始名
+  product_name: 'productName',
+  unit_price: 'unitPrice',
+  line_total: 'lineTotal',
+};
+
+/** 订单导入行别名归一：Awin snake_case 表头 → camelCase（已有 key 不覆盖）。 */
+function normalizeOrderRow(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...row };
+  for (const [alias, canonical] of Object.entries(ORDER_HEADER_ALIASES)) {
+    if (alias in out) {
+      const v = out[alias];
+      if (!(canonical in out) || out[canonical] === undefined || out[canonical] === '') {
+        out[canonical] = v;
+      }
+      if (canonical !== alias) delete out[alias];
+    }
   }
   return out;
 }
@@ -1041,6 +1159,10 @@ export const importService = {
           region: String(item.region ?? ''),
           ...('avatar' in item && item.avatar ? { avatar: String(item.avatar) } : {}),
           ...('profileUrl' in item && item.profileUrl ? { profileUrl: String(item.profileUrl) } : {}),
+          // 0908 tags 落库：前端 buildPreviewFromRows 已把分号分隔解析为数组，服务端原样存 JSON
+          ...(Array.isArray(item.tags) && (item.tags as unknown[]).length
+            ? { tags: (item.tags as string[]).map((t) => String(t).trim()).filter(Boolean) as Prisma.InputJsonValue }
+            : {}),
           ...('bio' in item && item.bio ? { profile: { bio: String(item.bio) } } : {}),
           ...(Object.keys(contact).length ? { contact } : {}),
           ...(Object.keys(rate).length ? { rate } : {}),
@@ -1239,9 +1361,11 @@ export const importService = {
   /** 导入订单商品明细（联盟平台订单导出）。幂等：(campaignId, orderId) 重导覆盖。 */
   async importOrders(_ownerId: string, items: Record<string, unknown>[]) {
     let updated = 0, skipped = 0;
+    // Awin 原始表头（snake_case）→ camelCase 归一（0908：Awin 导出可直接上传）
+    const rows0 = items.map(normalizeOrderRow);
     // 同一订单可能拆多行（每商品一行）——先按 orderId 分组
     const grouped = new Map<string, Record<string, unknown>[]>();
-    for (const item of items) {
+    for (const item of rows0) {
       const campaignId = String(item.campaignId ?? '');
       const orderId = String(item.orderId ?? '');
       if (!campaignId || !orderId) { skipped++; continue; }

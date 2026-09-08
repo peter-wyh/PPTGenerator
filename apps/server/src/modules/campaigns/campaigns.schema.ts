@@ -85,4 +85,22 @@ export const updateCampaignCreatorSchema = createCampaignCreatorSchema.partial()
 // 此查询参数透传 campaignService.list 同款过滤。
 export const collabOverviewQuerySchema = listCampaignsQuerySchema;
 
+// ─── CommissionPlan（佣金方案，0908 补管理入口）───────────────────────────────
+export const createCommissionPlanSchema = z.object({
+  campaignId: z.string().min(1),
+  name: z.string().max(255).optional(),
+  startDate: z.string().min(8, '生效日 YYYY-MM-DD'),
+  endDate: z.string().optional(),
+  cpaRate: z.union([z.string(), z.number()]).optional(),
+  flatFee: z.union([z.string(), z.number()]).optional(),
+  flatFeeFrequency: z.enum(['monthly', 'one_time']).optional(),
+  note: z.string().max(2000).optional(),
+});
+
+export const updateCommissionPlanSchema = createCommissionPlanSchema.partial().omit({ campaignId: true });
+
+export const listCommissionPlansQuerySchema = z.object({
+  campaignId: z.string().optional(),
+});
+
 export { idParamSchema };

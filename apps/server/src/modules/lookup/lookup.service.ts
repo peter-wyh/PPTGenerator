@@ -204,4 +204,74 @@ export const marketingEventService = {
     await this.getOrThrow(id);
     await prisma.marketingEvent.delete({ where: { id } });
   },
+
+  /**
+   * 批量导入（0908 补批量入口）。
+   * 幂等键：name + startTime——同名同开始时间的活动视为同一条，重导更新。
+   * businessLineId / businessLineCode 二选一（code 简写方便 CSV：FT/SM/CX…）。
+   */
+  async importMany(items: Record<string, unknown>[]) {
+    let created = 0, updated = 0, skipped = 0;
+    // businessLineCode → businessLineId 预解析（一次查询建映射）
+    const codes = new Set<string>();
+    for (const it of items) {
+      const c = String(it.businessLineCode ?? '').trim();
+      if (c) codes.add(c);
+    }
+    const blMap = new Map<string, string>();
+    if (codes.size) {
+      const bls = await prisma.businessLine.findMany({ where: { code: { in: [...codes] } }, select: { id: true, code: true } });
+      for (const b of bls) blMap.set(b.code, b.id);
+    }
+
+    for (const it of items) {
+      try {
+        const name = String(it.name ?? '').trim();
+        const startTimeRaw = String(it.startTime ?? '').trim();
+        const endTimeRaw = String(it.endTime ?? '').trim();
+        if (!name || !startTimeRaw || !endTimeRaw) { skipped++; continue; }
+
+        // 业务线归属：businessLineId 直用；否则 businessLineCode 反查（未命中→skipped，宁缺勿假）
+        let businessLineId = String(it.businessLineId ?? '').trim() || null;
+        if (!businessLineId) {
+          const code = String(it.businessLineCode ?? '').trim();
+          if (code) {
+            const id = blMap.get(code);
+            if (!id) { skipped++; continue; }
+            businessLineId = id;
+          }
+        }
+
+        const data: MarketingEventInput = {
+          name,
+          startTime: startTimeRaw,
+          endTime: endTimeRaw,
+          ...businessLineId ? { businessLineId } : {},
+          ...it.type !== undefined && it.type !== '' ? { type: Number(it.type) || 0 } : {},
+          ...it.level !== undefined && it.level !== '' ? { level: Number(it.level) || 0 } : {},
+          ...it.isShowMember !== undefined && it.isShowMember !== '' ? { isShowMember: Number(it.isShowMember) || 0 } : {},
+          ...it.label ? { label: String(it.label) } : {},
+          ...it.info ? { info: String(it.info) } : {},
+          ...it.continent ? { continent: String(it.continent) } : {},
+          ...it.region ? { region: String(it.region) } : {},
+        };
+        const startTime = new Date(startTimeRaw);
+        // 幂等查找：name + startTime
+        const existing = await prisma.marketingEvent.findFirst({
+          where: { name, startTime },
+          select: { id: true },
+        });
+        if (existing) {
+          await prisma.marketingEvent.update({ where: { id: existing.id }, data: coerceMarketingEventTimes(data) });
+          updated++;
+        } else {
+          await prisma.marketingEvent.create({ data: coerceMarketingEventTimes(data) });
+          created++;
+        }
+      } catch {
+        skipped++;
+      }
+    }
+    return { created, updated, skipped };
+  },
 };

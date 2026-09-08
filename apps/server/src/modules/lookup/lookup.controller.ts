@@ -98,4 +98,8 @@ export const lookupController = {
     await marketingEventService.remove(req.params.id);
     res.status(204).end();
   }),
+
+  importMarketingEvents: asyncHandler(async (req: Request, res: Response) => {
+    res.json(await marketingEventService.importMany(req.body.items));
+  }),
 };

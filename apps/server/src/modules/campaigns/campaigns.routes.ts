@@ -12,6 +12,9 @@ import {
   listCreatorsQuerySchema,
   createCampaignCreatorSchema,
   updateCampaignCreatorSchema,
+  createCommissionPlanSchema,
+  updateCommissionPlanSchema,
+  listCommissionPlansQuerySchema,
 } from './campaigns.schema';
 import {
   importCreatorsSchema,
@@ -40,6 +43,11 @@ router.get('/links/list', campaignController.listLinkPerformances);
 router.get('/links/daily', campaignController.listLinkDailyStats);
 /** 0828 批量总览：合作列表页一次拉全（须先于 /:id 注册，否则被吞） */
 router.get('/collab-overview', campaignController.collabOverview);
+/** 0908 佣金方案管理（字面量路由须先于 /:id） */
+router.get('/commission-plans/list', validate({ query: listCommissionPlansQuerySchema }), campaignController.listCommissionPlans);
+router.post('/commission-plans', validate({ body: createCommissionPlanSchema }), campaignController.createCommissionPlan);
+router.patch('/commission-plans/:id', validate({ params: idParamSchema, body: updateCommissionPlanSchema }), campaignController.updateCommissionPlan);
+router.delete('/commission-plans/:id', validate({ params: idParamSchema }), campaignController.removeCommissionPlan);
 router.get('/:id', validate({ params: idParamSchema }), campaignController.get);
 router.post('/', validate({ body: createCampaignSchema }), campaignController.create);
 router.patch('/:id', validate({ params: idParamSchema, body: updateCampaignSchema }), campaignController.update);

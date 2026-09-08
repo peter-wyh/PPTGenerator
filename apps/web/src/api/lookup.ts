@@ -81,4 +81,7 @@ export const lookupApi = {
   updateMarketingEvent: (id: string, data: Partial<MarketingEvent>) =>
     api.patch<{ marketingEvent: MarketingEventDTO }>(`/lookup/marketing-events/${id}`, data).then((r) => r.data.marketingEvent),
   removeMarketingEvent: (id: string) => api.delete(`/lookup/marketing-events/${id}`),
+  /** 0908 批量导入（幂等 name+startTime；businessLineCode 支持 FT 简写）。 */
+  importMarketingEvents: (items: Record<string, unknown>[]) =>
+    api.post<{ created: number; updated: number; skipped: number }>('/lookup/marketing-events/import', { items }).then((r) => r.data),
 };

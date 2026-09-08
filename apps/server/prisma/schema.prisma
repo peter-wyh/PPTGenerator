@@ -419,8 +419,10 @@ model Creator {
 
   /// 达人主页链接（平台个人页 URL）。
   profileUrl String?
+  /// 运营标签（0908 落库：导入 CSV tags 列分号分隔，原此前前端解析后被服务端丢弃）。
+  tags      Json?
   /// MCN / 经纪公司 / 邮箱 / 电话 / 联系人。
-  contact    Json?
+  contact   Json?
 
   /// 合作报价：{ currency, post, video, live, note }。
   rate       Json?

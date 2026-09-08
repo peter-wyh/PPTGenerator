@@ -83,4 +83,9 @@ export const listMarketingEventsQuerySchema = z.object({
   businessLineId: z.string().optional(),
 });
 
+/** POST /api/v1/lookup/marketing-events/import — 批量导入（0908 补批量入口）。 */
+export const importMarketingEventsSchema = z.object({
+  items: z.array(z.record(z.unknown())).min(1, 'items 不能为空').max(5000, '单次导入最多 5000 行'),
+});
+
 export { idParamSchema };

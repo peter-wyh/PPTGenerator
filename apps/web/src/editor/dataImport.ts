@@ -79,6 +79,10 @@ export const COLLAB_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 
 export const ORDERS_FIELDS = [
   'campaignId', 'creatorId', 'orderId', 'orderDate', 'orderStatus',
   'productName', 'category', 'sku', 'qty', 'unitPrice', 'lineTotal',
+  // Awin 镜像列（0908 进模板：模板已含的常用列；导出含更多列直接上传即可）
+  'awinId', 'saleAmount', 'commission', 'clickRef', 'siteName',
+  'clickDevice', 'transactionDevice', 'customerCountry', 'voucherCode',
+  'customerAcquisition', 'publisherUrl',
 ] as const;
 export const ORDERS_REQUIRED = ['campaignId', 'orderId', 'productName'];
 
@@ -182,6 +186,16 @@ export function buildPreviewFromRows(kind: ImportKind, rows: Record<string, stri
         data.featured = v === 'true' || v === '1' || v === 'yes';
       } else {
         data[f] = v;
+      }
+    }
+    // ★ 0908 订单透传：白名单列之外的非空列原样保留（Awin 镜像 40 列——
+    //   国家/设备/新客等报告模块数据源；服务端 ORDER_HEADER_ALIASES 负责表头归一）。
+    //   忽略纯注释列（模板 note 行以 # 开头）与内部列名。
+    if (kind === 'orders') {
+      for (const [k, v] of Object.entries(row)) {
+        if (data[k] !== undefined || v === undefined || v === '') continue;
+        if (k.startsWith('#') || k === 'campaignId') continue;
+        data[k] = v;
       }
     }
     const missing = checkRequired(kind, data);
@@ -292,6 +306,16 @@ function getFieldComments(kind: ImportKind): Record<string, string> {
       qty: '购买件数（多件装默认1）',
       unitPrice: '单价（含$或,自动清洗）',
       lineTotal: '行小计=qty×unitPrice（缺省自动计算）',
+      awinId: 'Awin 交易 ID（镜像列）',
+      saleAmount: 'Awin 订单销售额（镜像列）',
+      clickRef: '点击引用链接（镜像列，媒体归因）',
+      siteName: '发布商站点名（镜像列）',
+      clickDevice: '点击设备（镜像列，设备分布数据源）',
+      transactionDevice: '交易设备（镜像列，设备分布数据源）',
+      customerCountry: '客户国家（镜像列，市场分布数据源）',
+      voucherCode: '优惠券码（镜像列）',
+      customerAcquisition: '新客标识 New/空（镜像列，新客占比数据源）',
+      publisherUrl: '发布商跟踪 URL（镜像列）',
     };
   }
   return base;
@@ -374,15 +398,18 @@ export function downloadTemplate(kind: ImportKind): void {
     ].join('\n');
   } else { // orders
     example = [
-      'camp-001,cre-mia,ord-1001,2026-07-01 14:32,paid,Solids 3 Pack - Black,内裤,PSD-3PK-BLK,1,$35.19,$35.19',
-      'camp-001,cre-mia,ord-1001,2026-07-01 14:32,paid,6 Pack - Baby Blues,内裤,PSD-6PK-BLUE,2,$58.38,$116.76',
-      'camp-001,cre-sofia,ord-1002,2026-07-02 09:15,paid,Solids 3 Pack - Black,内裤,PSD-3PK-BLK,1,$35.19,$35.19',
+      'camp-001,cre-mia,ord-1001,2026-07-01 14:32,paid,Solids 3 Pack - Black,内裤,PSD-3PK-BLK,1,$35.19,$35.19,36954321,$35.19,$5.28,https://instagram.com/mia.example,Mia Picks,iOS,iOS,US,BF26,New,https://dc.example.com/track/mia',
+      'camp-001,cre-mia,ord-1001,2026-07-01 14:32,paid,6 Pack - Baby Blues,内裤,PSD-6PK-BLUE,2,$58.38,$116.76,,,,,,,,,,,',
+      'camp-001,cre-sofia,ord-1002,2026-07-02 09:15,paid,Solids 3 Pack - Black,内裤,PSD-3PK-BLK,1,$35.19,$35.19,,,,,,,,,,,,',
     ].join('\n');
     note = [
       '# 每行=订单×商品（同订单多商品=多行共享同一 orderId）',
       '# 幂等键: campaignId+orderId 重导覆盖（自动清旧商品行重建）',
       '# creatorId 可选——填写则支持达人×商品交叉分析',
       '# qty=件数（Top-Sales QTY 列数据源）; lineTotal 缺省时自动=qty×unitPrice',
+      '# ★ Awin 导出 CSV 可直接上传: 服务端自动识别原始表头（order_reference/click_ref/customer_country 等 snake_case 列名），无需改列名',
+      '# ★ 模板列之外的非空列原样透传入库（Awin 全部 40 个镜像列）',
+      '# 镜像列作用: customerCountry=市场分布, clickDevice/transactionDevice=设备分布, customerAcquisition=新客占比（报告模块数据源）',
       '# 聚合产出: Top-Selling Products 排行(orders/qty/revenue) + 购物篮指标(多件单占比/均件数)',
       '# 必填字段: campaignId,orderId,productName',
     ].join('\n');

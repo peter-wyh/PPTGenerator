@@ -3,8 +3,10 @@
  * 独立路由页面（/data/marketing-events）。
  * 对齐营销系统 sales_activity：业务线归属 / start_time / end_time / 类型 / 适用地区 / 评级。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { lookupApi, type MarketingEventDTO, type BusinessLineDTO } from '@/api/lookup';
+import { parseFile } from '@/editor/datasource/parse';
 import { toast } from '../components/Toast';
 
 /** 类型：0未设置 1节日 2活动日 3特别促销（源 type tinyint）。 */
@@ -68,6 +70,57 @@ export function MarketingEventPage() {
     }
   }
 
+  // ── 批量导入（0908）:CSV/XLSX → 预览 → POST /lookup/marketing-events/import ──
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importPreview, setImportPreview] = useState<{ rows: Record<string, string>[]; invalid: number } | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  function onImportFile(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    parseFile(f)
+      .then((sheets) => {
+        const rows = (sheets[0]?.rows ?? []).filter((r) => {
+          const name = String(r.name ?? '').trim();
+          return name !== '' && !name.startsWith('#');
+        });
+        const invalid = rows.filter((r) => !String(r.startTime ?? '').trim() || !String(r.endTime ?? '').trim()).length;
+        if (!rows.length) { toast.error('未解析到有效行（需 name/startTime/endTime 列）'); return; }
+        setImportPreview({ rows, invalid });
+      })
+      .catch(() => toast.error('文件解析失败'));
+  }
+
+  async function confirmImport() {
+    if (!importPreview) return;
+    setImporting(true);
+    try {
+      const r = await lookupApi.importMarketingEvents(importPreview.rows);
+      toast.success(`导入完成：新增 ${r.created}，更新 ${r.updated}，跳过 ${r.skipped}`);
+      setImportPreview(null);
+      await reload();
+    } catch {
+      toast.error('导入失败');
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function downloadImportTemplate() {
+    const csv = [
+      'name,startTime,endTime,businessLineCode,type,level,continent,region,info',
+      'Black Friday 2026,2026-11-20 00:00,2026-11-30 23:59,FT,3,3,Europe,DE/UK,黑五主推周',
+      'Summer Sale,2026-07-01 00:00,2026-07-15 23:59,FT,2,2,,,夏季促销',
+    ].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'marketing-events-template.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   if (loading) {
     return <p className="rounded-lg border border-border-default bg-surface-primary px-4 py-6 text-sm text-foreground-muted">Loading…</p>;
   }
@@ -78,6 +131,9 @@ export function MarketingEventPage() {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button onClick={() => setAdding(true)} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary">新增营销活动</button>
+        <input ref={importFileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onImportFile} />
+        <button onClick={() => importFileRef.current?.click()} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">批量导入</button>
+        <button onClick={downloadImportTemplate} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">下载导入模板</button>
         <select
           value={filterBL}
           onChange={(e) => setFilterBL(e.target.value)}
@@ -125,6 +181,42 @@ export function MarketingEventPage() {
           </tbody>
         </table>
       </div>
+      {importPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => !importing && setImportPreview(null)}>
+          <div className="flex max-h-[90vh] w-[760px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-semibold text-foreground-primary">
+              导入预览 · 共 {importPreview.rows.length} 行{importPreview.invalid > 0 && <span className="ml-2 text-red">（{importPreview.invalid} 行缺 startTime/endTime，将被跳过）</span>}
+            </div>
+            <div className="overflow-auto rounded-lg border border-border-default">
+              <table className="w-full min-w-[640px] border-collapse text-xs">
+                <thead>
+                  <tr className="bg-surface-hover text-left text-foreground-muted">
+                    {['name', 'startTime', 'endTime', 'businessLineCode', 'type', 'level', 'region'].map((c) => (
+                      <th key={c} className="whitespace-nowrap px-2 py-1.5">{c}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreview.rows.slice(0, 50).map((r, i) => (
+                    <tr key={i} className="border-t border-border-subtle">
+                      {['name', 'startTime', 'endTime', 'businessLineCode', 'type', 'level', 'region'].map((c) => (
+                        <td key={c} className="whitespace-nowrap px-2 py-1 text-foreground-secondary">{String(r[c] ?? '')}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {importPreview.rows.length > 50 && (
+                <div className="px-2 py-1.5 text-xs text-foreground-muted">… 仅预览前 50 行，实际导入 {importPreview.rows.length} 行</div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button disabled={importing} onClick={() => setImportPreview(null)} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover disabled:opacity-50">取消</button>
+              <button disabled={importing} onClick={() => void confirmImport()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">{importing ? '导入中…' : `确认导入(${importPreview.rows.length})`}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {adding && (
         <MarketingEventFormModal
           businessLines={businessLines}

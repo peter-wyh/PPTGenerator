@@ -68,6 +68,8 @@ export interface CreatorDTO {
   region: string;
   avatar: string | null;
   profileUrl: string | null;
+  /** 0908 落库：运营标签（导入 CSV tags 列分号分隔）。 */
+  tags?: string[] | null;
   contact: unknown;
   rate: unknown;
   metrics: unknown;
@@ -105,7 +107,8 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     works: (dto.works as Creator['works']) ?? undefined,
     stats: (dto.stats as Creator['stats']) ?? undefined,
     bio: profile?.bio,
-    tags: profile?.tags,
+    // 0908：tags 已落独立列（导入直接写入）；profile.tags 为历史数据回退
+    tags: dto.tags ?? profile?.tags,
     contact: contact ?? undefined,
     rate: rate ?? undefined,
     recentPostsCount: stats?.recentPostsCount,
@@ -237,6 +240,14 @@ export const campaignsApi = {
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/collaboration-daily', { items }).then((r) => r.data),
   importOrders: (items: Record<string, unknown>[]) =>
     api.post<{ created: number; updated: number; skipped: number }>('/campaigns/import/orders', { items }).then((r) => r.data),
+  // ─── CommissionPlan（佣金方案，0908 补管理入口）──────────────────────────────
+  listCommissionPlans: (campaignId?: string) =>
+    api.get<{ plans: CommissionPlanDTO[] }>('/campaigns/commission-plans/list', { params: { campaignId } }).then((r) => r.data.plans),
+  createCommissionPlan: (data: CommissionPlanInput) =>
+    api.post<{ plan: CommissionPlanDTO }>('/campaigns/commission-plans', data).then((r) => r.data.plan),
+  updateCommissionPlan: (id: string, data: Partial<CommissionPlanInput>) =>
+    api.patch<{ plan: CommissionPlanDTO }>(`/campaigns/commission-plans/${id}`, data).then((r) => r.data.plan),
+  removeCommissionPlan: (id: string) => api.delete(`/campaigns/commission-plans/${id}`),
   /** 订单明细列表（数据管理页）：campaign 筛选 + 分页，含 items/campaign/creator 展开。 */
   listOrders: (params: { campaignId?: string; page?: number; pageSize?: number }) =>
     api.get<OrdersPage>('/campaigns/orders/list', { params }).then((r) => r.data),
@@ -447,4 +458,31 @@ export interface OrderRow {
   products?: string | null;
   campaignLabel?: string | null;
   customerAcquisition?: string | null;
+}
+
+// ─── CommissionPlan（佣金方案，0908 补管理入口）───────────────────────────────
+/** POST/PATCH /campaigns/commission-plans 请求体。 */
+export interface CommissionPlanInput {
+  campaignId: string;
+  name?: string;
+  startDate: string;
+  endDate?: string;
+  cpaRate?: string | number;
+  flatFee?: string | number;
+  flatFeeFrequency?: 'monthly' | 'one_time';
+  note?: string;
+}
+
+/** /campaigns/commission-plans/list 行（含 campaign 展开）。 */
+export interface CommissionPlanDTO {
+  id: string;
+  campaignId: string;
+  campaign?: { id: string; name: string };
+  name?: string | null;
+  startDate: string;
+  endDate?: string | null;
+  cpaRate?: string | null;
+  flatFee?: string | null;
+  flatFeeFrequency?: string | null;
+  note?: string | null;
 }

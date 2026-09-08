@@ -322,4 +322,25 @@ export const campaignController = {
     const publishers = await campaignService.listPublisherStatPublishers(campaignId || '');
     res.json(publishers);
   }),
+
+  // ─── CommissionPlan（佣金方案，0908 补管理入口）──────────────────────────────
+  listCommissionPlans: asyncHandler(async (req: Request, res: Response) => {
+    const v = req.user as AuthPayload;
+    const { campaignId } = req.query as { campaignId?: string };
+    res.json({ plans: await campaignService.listCommissionPlans(v.id, campaignId || undefined) });
+  }),
+
+  createCommissionPlan: asyncHandler(async (req: Request, res: Response) => {
+    const v = req.user as AuthPayload;
+    res.status(201).json({ plan: await campaignService.createCommissionPlan(v.id, req.body) });
+  }),
+
+  updateCommissionPlan: asyncHandler(async (req: Request, res: Response) => {
+    res.json({ plan: await campaignService.updateCommissionPlan(req.params.id, req.body) });
+  }),
+
+  removeCommissionPlan: asyncHandler(async (req: Request, res: Response) => {
+    await campaignService.removeCommissionPlan(req.params.id);
+    res.status(204).end();
+  }),
 };
