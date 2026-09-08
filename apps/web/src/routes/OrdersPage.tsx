@@ -1,6 +1,6 @@
 /**
  * 订单明细页（/data/orders）——数据管理独立菜单。
- * 全字段罗列：CampaignOrder 所有列并入主表（横向滚动），Awin 明细面板保留商品行展开。
+ * 全字段罗列：CampaignOrder 保留列并入主表（0909 瘦身后 18 列），商品行展开。
  * 数据源：GET /campaigns/orders/list（admin 全局视角）。
  */
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
@@ -22,9 +22,12 @@ function fmtDateTime(v: string | null | undefined) {
 function orderTotal(row: OrderRow) {
   return row.items.reduce((s, it) => s + parseFloat(it.lineTotal) * it.qty, 0);
 }
-/** Lead 单（Awin type=lead）金额恒 £1 占位——金额列显示占位标注，佣金才是真实收益。 */
+/** Lead 单（平台 type=lead）金额恒 £1 占位——金额列显示占位标注，佣金才是真实收益。
+ *  0909 type 列已删：按金额占位特征（saleAmount ≤ 1 且佣金 > 0）识别。 */
 function isLead(row: OrderRow) {
-  return String(row.type ?? '').toLowerCase() === 'lead';
+  const amt = parseFloat(row.saleAmount ?? '0');
+  const comm = parseFloat(row.commission ?? '0');
+  return amt > 0 && amt <= 1 && comm > 0;
 }
 function cellText(v: unknown): string {
   if (v === null || v === undefined || v === '') return '—';
@@ -156,44 +159,21 @@ export default function OrdersPage() {
                   <th className="px-3 py-2">Creator</th>
                   <th className="px-3 py-2">Order Date</th>
                   <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2">Source</th>
                   <th className="px-3 py-2 text-right">Items</th>
                   <th className="px-3 py-2 text-right">Amount</th>
                   <th className="px-3 py-2 text-right">Commission</th>
-                  {/* 转化归因区 */}
+                  {/* 转化归因区（0909 瘦身：仅留有消费方的列） */}
                   <th className="px-3 py-2 border-l border-border-subtle">Click Ref</th>
-                  <th className="px-3 py-2">Click Time</th>
-                  <th className="px-3 py-2 text-right">Lag (s)</th>
                   <th className="px-3 py-2">Click Device</th>
-                  <th className="px-3 py-2">Txn Device</th>
                   <th className="px-3 py-2">Country</th>
                   <th className="px-3 py-2">Site Name</th>
                   <th className="px-3 py-2">Tracking URL</th>
-                  <th className="px-3 py-2">Landing Page</th>
-                  <th className="px-3 py-2">Campaign Label</th>
                   {/* 审核支付区 */}
                   <th className="px-3 py-2 border-l border-border-subtle">Approved</th>
-                  <th className="px-3 py-2">Paid to Pub</th>
-                  <th className="px-3 py-2">Payment Status</th>
-                  <th className="px-3 py-2">Payment ID</th>
-                  <th className="px-3 py-2">Query ID</th>
-                  {/* 修改风控区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">Amended</th>
-                  <th className="px-3 py-2">Amend Reason</th>
-                  <th className="px-3 py-2 text-right">Old Amount</th>
-                  <th className="px-3 py-2 text-right">Old Commission</th>
-                  <th className="px-3 py-2">Decline Reason</th>
-                  {/* 佣金用券区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">Commission Group</th>
-                  <th className="px-3 py-2">Sharing Pub</th>
-                  <th className="px-3 py-2">Voucher Used</th>
-                  <th className="px-3 py-2">Voucher Code</th>
-                  {/* Awin 标识区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">Awin Txn ID</th>
-                  <th className="px-3 py-2">Advertiser ID</th>
+                  {/* 其他 */}
+                  <th className="px-3 py-2 border-l border-border-subtle">Txn ID</th>
                   <th className="px-3 py-2">New Customer</th>
-                  <th className="px-3 py-2">Currency Diff</th>
-                  <th className="px-3 py-2">Custom Params</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -214,7 +194,7 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-3 py-2">{fmtDate(row.orderDate)}</td>
                         <td className="px-3 py-2">{row.orderStatus ?? '—'}</td>
-                        <td className="px-3 py-2">{cellText(row.type)}</td>
+                        <td className="px-3 py-2">{cellText(row.source)}</td>
                         <td className="px-3 py-2 text-right">{row.items.length}</td>
                         <td className="px-3 py-2 text-right font-medium">
                           {lead ? (
@@ -230,38 +210,15 @@ export default function OrdersPage() {
                         </td>
                         {/* 转化归因 */}
                         <td className="px-3 py-2 border-l border-border-subtle font-mono text-[11px] max-w-[180px] truncate" title={cellText(row.clickRef)}>{cellText(row.clickRef)}</td>
-                        <td className="px-3 py-2">{fmtDateTime(row.clickThroughTime)}</td>
-                        <td className="px-3 py-2 text-right">{cellText(row.lapseTime)}</td>
                         <td className="px-3 py-2">{cellText(row.clickDevice)}</td>
-                        <td className="px-3 py-2">{cellText(row.transactionDevice)}</td>
                         <td className="px-3 py-2">{cellText(row.customerCountry)}</td>
                         <td className="px-3 py-2">{cellText(row.siteName)}</td>
                         <td className="px-3 py-2 font-mono text-[11px] max-w-[180px] truncate" title={cellText(row.publisherUrl)}>{cellText(row.publisherUrl)}</td>
-                        <td className="px-3 py-2 font-mono text-[11px] max-w-[180px] truncate" title={cellText(row.url)}>{cellText(row.url)}</td>
-                        <td className="px-3 py-2">{cellText(row.campaignLabel)}</td>
                         {/* 审核支付 */}
                         <td className="px-3 py-2 border-l border-border-subtle">{fmtDateTime(row.validationDate)}</td>
-                        <td className="px-3 py-2">{cellText(row.paidToPublisher)}</td>
-                        <td className="px-3 py-2">{cellText(row.paymentStatus)}</td>
-                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.paymentId)}</td>
-                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.transactionQueryId)}</td>
-                        {/* 修改风控 */}
-                        <td className="px-3 py-2 border-l border-border-subtle">{cellText(row.amended)}</td>
-                        <td className="px-3 py-2">{cellText(row.amendReason)}</td>
-                        <td className="px-3 py-2 text-right">{fmtMoney(row.oldSaleAmount)}</td>
-                        <td className="px-3 py-2 text-right">{fmtMoney(row.oldCommission)}</td>
-                        <td className="px-3 py-2">{cellText(row.declineReason)}</td>
-                        {/* 佣金用券 */}
-                        <td className="px-3 py-2 border-l border-border-subtle font-mono text-[11px]">{cellText(row.transactionParts)}</td>
-                        <td className="px-3 py-2">{cellText(row.commissionSharingPublisher)}</td>
-                        <td className="px-3 py-2">{cellText(row.voucherCodeUsed)}</td>
-                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.voucherCode)}</td>
                         {/* 其他 */}
-                        <td className="px-3 py-2 border-l border-border-subtle font-mono text-[11px]">{cellText(row.awinId)}</td>
-                        <td className="px-3 py-2 font-mono text-[11px]">{cellText(row.advertiserId)}</td>
+                        <td className="px-3 py-2 border-l border-border-subtle font-mono text-[11px]">{cellText(row.externalTxnId)}</td>
                         <td className="px-3 py-2">{cellText(row.customerAcquisition)}</td>
-                        <td className="px-3 py-2">{cellText(row.differentCurrency)}</td>
-                        <td className="px-3 py-2 font-mono text-[11px] max-w-[140px] truncate" title={cellText(row.customParameters)}>{cellText(row.customParameters)}</td>
                         <td className="px-3 py-2 text-right">
                           {row.items.length > 0 && (
                             <button

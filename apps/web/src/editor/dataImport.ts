@@ -79,9 +79,9 @@ export const COLLAB_DAILY_REQUIRED = ['campaignId', 'creatorId', 'contentType', 
 export const ORDERS_FIELDS = [
   'campaignId', 'creatorId', 'orderId', 'orderDate', 'orderStatus',
   'productName', 'category', 'sku', 'qty', 'unitPrice', 'lineTotal',
-  // Awin 镜像列（0908 进模板：模板已含的常用列；导出含更多列直接上传即可）
-  'awinId', 'saleAmount', 'commission', 'clickRef', 'siteName',
-  'clickDevice', 'transactionDevice', 'customerCountry', 'voucherCode',
+  // 平台镜像列（0909 通用化瘦身：仅保留有消费方的列；平台导出可直接上传，表头别名自动归一）
+  'source', 'externalTxnId', 'saleAmount', 'commission', 'clickRef', 'siteName',
+  'clickDevice', 'customerCountry',
   'customerAcquisition', 'publisherUrl',
 ] as const;
 export const ORDERS_REQUIRED = ['campaignId', 'orderId', 'productName'];
@@ -188,7 +188,7 @@ export function buildPreviewFromRows(kind: ImportKind, rows: Record<string, stri
         data[f] = v;
       }
     }
-    // ★ 0908 订单透传：白名单列之外的非空列原样保留（Awin 镜像 40 列——
+    // ★ 0908 订单透传：白名单列之外的非空列原样保留（平台镜像列——
     //   国家/设备/新客等报告模块数据源；服务端 ORDER_HEADER_ALIASES 负责表头归一）。
     //   忽略纯注释列（模板 note 行以 # 开头）与内部列名。
     if (kind === 'orders') {
@@ -306,16 +306,15 @@ function getFieldComments(kind: ImportKind): Record<string, string> {
       qty: '购买件数（多件装默认1）',
       unitPrice: '单价（含$或,自动清洗）',
       lineTotal: '行小计=qty×unitPrice（缺省自动计算）',
-      awinId: 'Awin 交易 ID（镜像列）',
-      saleAmount: 'Awin 订单销售额（镜像列）',
+      externalTxnId: '外部平台交易号（镜像列）',
+      saleAmount: '订单销售额（镜像列）',
       clickRef: '点击引用链接（镜像列，媒体归因）',
       siteName: '发布商站点名（镜像列）',
       clickDevice: '点击设备（镜像列，设备分布数据源）',
-      transactionDevice: '交易设备（镜像列，设备分布数据源）',
       customerCountry: '客户国家（镜像列，市场分布数据源）',
-      voucherCode: '优惠券码（镜像列）',
       customerAcquisition: '新客标识 New/空（镜像列，新客占比数据源）',
       publisherUrl: '发布商跟踪 URL（镜像列）',
+      source: '来源平台标识（awin/impact 等，缺省 awin）',
     };
   }
   return base;
@@ -407,9 +406,9 @@ export function downloadTemplate(kind: ImportKind): void {
       '# 幂等键: campaignId+orderId 重导覆盖（自动清旧商品行重建）',
       '# creatorId 可选——填写则支持达人×商品交叉分析',
       '# qty=件数（Top-Sales QTY 列数据源）; lineTotal 缺省时自动=qty×unitPrice',
-      '# ★ Awin 导出 CSV 可直接上传: 服务端自动识别原始表头（order_reference/click_ref/customer_country 等 snake_case 列名），无需改列名',
-      '# ★ 模板列之外的非空列原样透传入库（Awin 全部 40 个镜像列）',
-      '# 镜像列作用: customerCountry=市场分布, clickDevice/transactionDevice=设备分布, customerAcquisition=新客占比（报告模块数据源）',
+      '# ★ 联盟平台导出 CSV 可直接上传: 服务端自动识别原始表头（如 Awin 的 order_reference/click_ref/customer_country 等 snake_case 列名），无需改列名',
+      '# ★ 模板列之外的非空列原样透传；不认识的列忽略（0909 瘦身后仅存有消费方的镜像列）',
+      '# 镜像列作用: customerCountry=市场分布, clickDevice=设备分布, customerAcquisition=新客占比（报告模块数据源）',
       '# 聚合产出: Top-Selling Products 排行(orders/qty/revenue) + 购物篮指标(多件单占比/均件数)',
       '# 必填字段: campaignId,orderId,productName',
     ].join('\n');

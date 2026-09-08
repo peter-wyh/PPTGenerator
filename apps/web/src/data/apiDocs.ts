@@ -40,8 +40,8 @@ export interface ChangelogEntry {
   changes: { kind: '新增' | '变更' | '修复' | '下线'; text: string }[];
 }
 
-export const API_DOC_VERSION = '1.5.0';
-export const API_DOC_UPDATED = '2026-09-08';
+export const API_DOC_VERSION = '1.5.1';
+export const API_DOC_UPDATED = '2026-09-09';
 
 /** 接口分组（按数据链路排序）：达人 → 合作 → 订单 → 链接 → 统计中间层 → CPS。 */
 export type DocEndpointGroup = '达人数据' | '合作数据' | '订单数据' | '链接数据' | '统计中间层' | 'CPS 真源' | '运营数据';
@@ -300,8 +300,8 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       'creatorId 归因键是达人主档 ID（Creator.id），非合作链接 ID。',
       '媒体归因（2026-08-25 起）：publisherUrl/siteName 域名归一化 → 自动 upsert Publisher（媒体主档）→ 挂 publisherId；订单先归因到媒体维度，达人只是媒体类型之一。',
       '商品主档（2026-08-25 起）：每商品行按 (productName, sku) 自动 upsert Product 主档并挂 productId。',
-      'Awin 镜像字段：ORDER_MIRROR_FIELDS 字典处理 40 个可选字段，空串统一转 null；saleAmount/commission/oldSaleAmount/oldCommission 自动转 Decimal，validationDate/clickThroughTime 自动转 DateTime。',
-      '表头别名归一（2026-09-08 起）：Awin 原始 CSV 导出的 snake_case 表头（如 customer_acquisition、click_device、site_name、transaction_device、customer_country、publisher_url、voucher_code）自动映射为 camelCase 字段——Awin 导出文件可直接导入，无需手工改列名。',
+      '平台镜像字段（2026-09-09 瘦身通用化）：ORDER_MIRROR_FIELDS 字典处理 12 个有消费方的可选字段（externalTxnId/saleAmount/commission/validationDate/clickRef/siteName/clickDevice/customerCountry/products/customerAcquisition/publisherUrl/source），空串统一转 null；saleAmount/commission 自动转 Decimal，validationDate 自动转 DateTime。订单广告主关联走 campaignId→Campaign.advertiserId（FK），订单级不再存平台广告商 ID。',
+      '表头别名归一（2026-09-08 起）：平台原始 CSV 导出的 snake_case 表头（如 Awin 的 order_reference/customer_acquisition/click_device/site_name/customer_country/publisher_url）自动映射为 camelCase 字段——导出文件可直接导入，无需手工改列名；新增平台在 ORDER_HEADER_ALIASES 加一组别名即可。',
     ],
     fields: [
       { name: 'campaignId', type: 'string', required: true, desc: 'Campaign ID' },
@@ -315,47 +315,19 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       { name: 'qty', type: 'number', required: false, desc: '件数（缺省 1）' },
       { name: 'unitPrice', type: 'string | number', required: false, desc: '单价（支持 $ 千分位）' },
       { name: 'lineTotal', type: 'string | number', required: false, desc: '行小计（缺省按单价×件数）' },
-      // ── Awin transactions 镜像字段（全部可选，空串→null） ──
-      { name: 'awinId', type: 'string', required: false, desc: 'Awin 交易 ID' },
-      { name: 'advertiserId', type: 'string', required: false, desc: '广告商 ID' },
-      { name: 'saleAmount', type: 'string | number', required: false, desc: 'Awin 销售额（Decimal 自动转换）' },
-      { name: 'commission', type: 'string | number', required: false, desc: 'Awin 佣金（Decimal 自动转换）' },
+      // ── 平台镜像字段（0909 瘦身后保留有消费方的列，全部可选，空串→null） ──
+      { name: 'source', type: 'string', required: false, desc: '来源平台标识（awin/impact…；缺省 awin）' },
+      { name: 'externalTxnId', type: 'string', required: false, desc: '外部平台交易号' },
+      { name: 'saleAmount', type: 'string | number', required: false, desc: '订单销售额（Decimal 自动转换）' },
+      { name: 'commission', type: 'string | number', required: false, desc: '订单佣金（Decimal 自动转换）' },
       { name: 'validationDate', type: 'string', required: false, desc: '验证日期（DateTime 自动转换）' },
       { name: 'clickRef', type: 'string', required: false, desc: '点击引用' },
-      { name: 'type', type: 'string', required: false, desc: '交易类型（Awin 原始值，如 sale/lead）' },
       { name: 'siteName', type: 'string', required: false, desc: '发布商站点名' },
-      { name: 'url', type: 'string', required: false, desc: '落地页 URL' },
-      { name: 'declineReason', type: 'string', required: false, desc: '拒绝原因' },
-      { name: 'clickThroughTime', type: 'string', required: false, desc: '点击时间（DateTime 自动转换）' },
-      { name: 'voucherCodeUsed', type: 'string', required: false, desc: '使用的优惠券码' },
-      { name: 'lapseTime', type: 'number', required: false, desc: '滞后时间（秒，parseInt）' },
-      { name: 'amended', type: 'string', required: false, desc: '是否修改（yes/no）' },
-      { name: 'amendReason', type: 'string', required: false, desc: '修改原因' },
-      { name: 'oldSaleAmount', type: 'string | number', required: false, desc: '原销售额（Decimal 自动转换）' },
-      { name: 'oldCommission', type: 'string | number', required: false, desc: '原佣金（Decimal 自动转换）' },
-      { name: 'differentCurrency', type: 'string', required: false, desc: '是否不同币种' },
       { name: 'clickDevice', type: 'string', required: false, desc: '点击设备' },
-      { name: 'transactionDevice', type: 'string', required: false, desc: '交易设备' },
-      { name: 'publisherUrl', type: 'string', required: false, desc: '发布商 URL' },
-      { name: 'transactionParts', type: 'string', required: false, desc: '交易分账' },
       { name: 'customerCountry', type: 'string', required: false, desc: '客户国家' },
-      { name: 'customParameters', type: 'string', required: false, desc: '自定义参数' },
-      { name: 'paidToPublisher', type: 'string', required: false, desc: '是否已支付给发布商' },
-      { name: 'paymentStatus', type: 'string', required: false, desc: '支付状态' },
-      { name: 'paymentId', type: 'string', required: false, desc: '支付 ID' },
-      { name: 'transactionQueryId', type: 'string', required: false, desc: '交易查询 ID' },
-      { name: 'clickRef2', type: 'string', required: false, desc: '点击引用 2' },
-      { name: 'clickRef3', type: 'string', required: false, desc: '点击引用 3' },
-      { name: 'clickRef4', type: 'string', required: false, desc: '点击引用 4' },
-      { name: 'clickRef5', type: 'string', required: false, desc: '点击引用 5' },
-      { name: 'clickRef6', type: 'string', required: false, desc: '点击引用 6' },
-      { name: 'voucherCode', type: 'string', required: false, desc: '优惠券码' },
-      { name: 'commissionSharingPublisherId', type: 'string', required: false, desc: '佣金分成发布商 ID' },
-      { name: 'commissionSharingPublisher', type: 'string', required: false, desc: '佣金分成发布商' },
-      { name: 'commissionSharingSelectedRatePublisherId', type: 'string', required: false, desc: '佣金分成选中费率发布商 ID' },
       { name: 'products', type: 'string', required: false, desc: '商品信息（JSON）' },
-      { name: 'campaignLabel', type: 'string', required: false, desc: '活动标签' },
       { name: 'customerAcquisition', type: 'string', required: false, desc: '客户获取标识' },
+      { name: 'publisherUrl', type: 'string', required: false, desc: '发布商 URL' },
     ],
     requestExample: `{
   "items": [
@@ -371,11 +343,11 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
       "qty": 2,
       "unitPrice": "$59.99",
       "lineTotal": "$119.98",
-      "awinId": "36954321",
+      "source": "awin",
+      "externalTxnId": "36954321",
       "commission": "17.99",
       "clickDevice": "iOS",
-      "customerCountry": "JP",
-      "voucherCode": "BFCM26"
+      "customerCountry": "JP"
     },
     {
       "campaignId": "camp-everyday-bf",
@@ -802,6 +774,15 @@ export const API_DOC_ENDPOINTS: DocEndpoint[] = [
 ];
 
 export const API_DOC_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.5.1',
+    date: '2026-09-09',
+    changes: [
+      { kind: '变更', text: '订单表瘦身通用化（migration 20260909090000）：CampaignOrder 43→22 列——删除 28 个仅存于「导入回显」管道、无任何报表/统计/AI 消费的镜像列（paymentId/voucherCode/clickRef2-6/transactionDevice/campaignLabel 等）；订单广告主关联一律走 campaignId→Campaign.advertiserId（FK），订单级不再存平台广告商 ID。' },
+      { kind: '变更', text: 'awinId 更名 externalTxnId（平台中立的外部交易号）；新增 source 列标记来源平台（awin/impact…，导入缺省 awin）；表头别名字典去 Awin 化——新增平台只需在 ORDER_HEADER_ALIASES 加一组别名。' },
+      { kind: '变更', text: '订单明细页 43→18 列（保留全部有消费方字段）；Type 列下线，Lead 单改按金额占位特征识别；导入模板与字段批注同步通用化。' },
+    ],
+  },
   {
     version: '1.5.0',
     date: '2026-09-08',

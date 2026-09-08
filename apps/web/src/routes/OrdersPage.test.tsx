@@ -1,6 +1,5 @@
 /**
- * OrdersPage 测试：mock campaignsApi，验证订单行渲染 + 展开后
- * 「Awin 明细」面板显示全部镜像字段（含空值占位 —）。
+ * OrdersPage 测试：mock campaignsApi，验证订单行渲染（0909 瘦身后 18 列主表）。
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -21,46 +20,18 @@ const order = {
   items: [
     { id: 'i1', productName: 'Trivago Lead', category: null, sku: null, qty: 1, unitPrice: '1.00', lineTotal: '1.00' },
   ],
-  // Awin 镜像字段（页面需展示的有值样例）
-  awinId: '7100001',
-  advertiserId: '1442864',
+  // 平台镜像字段（0909 瘦身后保留的有消费方列：有值样例）
+  source: 'awin',
+  externalTxnId: '7100001',
   saleAmount: '1.00',
   commission: '1.50',
   validationDate: '2026-07-16T00:00:00.000Z',
   clickRef: 'creator_a',
-  type: 'Lead',
   siteName: 'example.com',
-  url: 'https://www.trivago.co.uk/',
   clickDevice: 'Desktop',
-  transactionDevice: 'Mobile',
   customerCountry: 'GB',
-  lapseTime: 3200,
-  clickThroughTime: '2026-07-15T09:06:40.000Z',
-  campaignLabel: 'July Promo',
-  // 其余镜像字段为空 → 展示 —
-  declineReason: null,
-  voucherCodeUsed: null,
-  amended: null,
-  amendReason: null,
-  oldSaleAmount: null,
-  oldCommission: null,
-  differentCurrency: null,
+  // 空值 → 展示 —
   publisherUrl: null,
-  transactionParts: null,
-  customParameters: null,
-  paidToPublisher: null,
-  paymentStatus: null,
-  paymentId: null,
-  transactionQueryId: null,
-  clickRef2: null,
-  clickRef3: null,
-  clickRef4: null,
-  clickRef5: null,
-  clickRef6: null,
-  voucherCode: null,
-  commissionSharingPublisherId: null,
-  commissionSharingPublisher: null,
-  commissionSharingSelectedRatePublisherId: null,
   products: null,
   customerAcquisition: null,
 } as unknown as OrdersPageData['rows'][number];
@@ -84,7 +55,7 @@ describe('OrdersPage', () => {
     expect(screen.getByText('£1.50')).toBeTruthy();
   });
 
-  it('主表罗列 Awin 镜像字段列（点击引用/客户国家/交易ID，空值占位 —）', async () => {
+  it('主表罗列保留镜像字段列（点击引用/客户国家/交易ID/来源，空值占位 —）', async () => {
     render(<OrdersPage />);
     await waitFor(() => expect(screen.getByText('REF-1001')).toBeTruthy());
 
@@ -92,10 +63,11 @@ describe('OrdersPage', () => {
     expect(screen.getByText('creator_a')).toBeTruthy();
     expect(screen.getByText('GB')).toBeTruthy();
     expect(screen.getByText('7100001')).toBeTruthy();
-    // 列头（全字段罗列，UI 英文化后口径：5ad5c7a）
+    expect(screen.getByText('awin')).toBeTruthy();
+    // 列头（0909 瘦身后 18 列）
     expect(screen.getByText('Click Ref')).toBeTruthy();
     expect(screen.getByText('Country')).toBeTruthy();
-    expect(screen.getByText('Awin Txn ID')).toBeTruthy();
-    expect(screen.getByText('Decline Reason')).toBeTruthy();
+    expect(screen.getByText('Txn ID')).toBeTruthy();
+    expect(screen.getByText('Source')).toBeTruthy();
   });
 });

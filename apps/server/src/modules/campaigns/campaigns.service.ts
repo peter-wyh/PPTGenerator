@@ -724,50 +724,21 @@ export const collaborationService = {
 
 // ─── Batch Import (structured tables) ────────────────────────────────────────
 
-// Awin transactions 导出字段镜像：camelCase key -> 值 coerce；空串统一转 null。
-// 订单级核心三列（order_reference/date/commission_status）由 orderId/orderDate/orderStatus
-// 承接，不在此字典；镜像值保持原样（yes/no 枚举不转 boolean）。
+// 平台订单导出镜像字段（平台中立；0909 瘦身后仅保留有真实消费方的列）：
+// camelCase key -> 值 coerce；空串统一转 null。
+// 订单级核心三列（orderId/orderDate/orderStatus）与 source 由 importOrders 单独承接，不在此字典。
 const ORDER_MIRROR_FIELDS: Record<string, (v: string) => unknown> = {
-  awinId: (v) => v,
-  advertiserId: (v) => v,
+  externalTxnId: (v) => v,
   saleAmount: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
   commission: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
   validationDate: (v) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d; },
   clickRef: (v) => v,
-  type: (v) => v,
   siteName: (v) => v,
-  url: (v) => v,
-  declineReason: (v) => v,
-  clickThroughTime: (v) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d; },
-  voucherCodeUsed: (v) => v,
-  lapseTime: (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; },
-  amended: (v) => v,
-  amendReason: (v) => v,
-  oldSaleAmount: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
-  oldCommission: (v) => { const f = parseFloat(v); return Number.isFinite(f) ? new Prisma.Decimal(f) : null; },
-  differentCurrency: (v) => v,
   clickDevice: (v) => v,
-  transactionDevice: (v) => v,
-  publisherUrl: (v) => v,
-  transactionParts: (v) => v,
   customerCountry: (v) => v,
-  customParameters: (v) => v,
-  paidToPublisher: (v) => v,
-  paymentStatus: (v) => v,
-  paymentId: (v) => v,
-  transactionQueryId: (v) => v,
-  clickRef2: (v) => v,
-  clickRef3: (v) => v,
-  clickRef4: (v) => v,
-  clickRef5: (v) => v,
-  clickRef6: (v) => v,
-  voucherCode: (v) => v,
-  commissionSharingPublisherId: (v) => v,
-  commissionSharingPublisher: (v) => v,
-  commissionSharingSelectedRatePublisherId: (v) => v,
   products: (v) => v,
-  campaignLabel: (v) => v,
   customerAcquisition: (v) => v,
+  publisherUrl: (v) => v,
 };
 
 /** 从导入行提取 Awin 镜像字段（未出现的 key 跳过，空串 → null）。 */
@@ -781,48 +752,23 @@ function mirrorOrderFields(row: Record<string, unknown>): Record<string, unknown
   return out;
 }
 
-// ─── Awin 原始表头归一（0908 页面导入链路打通）─────────────────────────────────
-// 页面导入此前只透传 11 个模板列，Awin 导出的国家/设备/新客等 40 个镜像列被前端
-// 白名单丢弃 → 市场分布/设备分布/新客占比三个报告模块永远无数据。
-// 现前端放开透传，服务端在此把 Awin 原始 snake_case 表头归一到镜像字典的
-// camelCase key——Awin transactions 导出 CSV 可不经列名改写直接上传。
+// ─── 平台原始表头归一（0909 通用化：Awin 只是已知字典之一）─────────────────────
+// 页面导入此前只透传模板列，平台导出的国家/设备/新客等镜像列被前端白名单丢弃 →
+// 市场分布/设备分布/新客占比三个报告模块永远无数据。
+// 现前端放开透传，服务端在此把各平台原始表头归一到镜像字典的 camelCase key——
+// 平台导出 CSV 可不经列名改写直接上传。新增平台 = 在字典里加一组别名。
 const ORDER_HEADER_ALIASES: Record<string, string> = {
-  id: 'awinId',
-  advertiser_id: 'advertiserId',
+  // ── 通用 camelCase 直传（无需别名，此字典只处理原名≠规范名的场景）──
+  // ── Awin transactions 导出 ──
+  id: 'externalTxnId',
   sale_amount: 'saleAmount',
   validation_date: 'validationDate',
   click_ref: 'clickRef',
-  click_ref2: 'clickRef2',
-  click_ref3: 'clickRef3',
-  click_ref4: 'clickRef4',
-  click_ref5: 'clickRef5',
-  click_ref6: 'clickRef6',
   site_name: 'siteName',
-  URL: 'url',
-  decline_reason: 'declineReason',
-  click_through_time: 'clickThroughTime',
-  clickThroughTime: 'clickThroughTime',
-  voucher_code_used: 'voucherCodeUsed',
-  lapse_time: 'lapseTime',
-  amend_reason: 'amendReason',
-  old_sale_amount: 'oldSaleAmount',
-  old_commission: 'oldCommission',
-  different_currency: 'differentCurrency',
   click_device: 'clickDevice',
-  transaction_device: 'transactionDevice',
-  publisher_url: 'publisherUrl',
-  transaction_parts: 'transactionParts',
   customer_country: 'customerCountry',
-  custom_parameters: 'customParameters',
-  paid_to_publisher: 'paidToPublisher',
-  payment_status: 'paymentStatus',
-  payment_id: 'paymentId',
-  transaction_query_id: 'transactionQueryId',
-  commission_sharing_publisher_id: 'commissionSharingPublisherId',
-  commission_sharing_publisher: 'commissionSharingPublisher',
-  commission_sharing_selected_rate_publisher_id: 'commissionSharingSelectedRatePublisherId',
-  campaign: 'campaignLabel',
   customer_acquisition: 'customerAcquisition',
+  publisher_url: 'publisherUrl',
   // 核心三列（镜像字典外）的 Awin 原始名
   order_reference: 'orderId',
   date: 'orderDate',
@@ -1393,6 +1339,9 @@ export const importService = {
         const orderDate = orderDateRaw ? new Date(orderDateRaw) : null;
         const orderStatus = String(rows[0].orderStatus ?? '').trim() || null;
         const mirrored = mirrorOrderFields(rows[0]);
+        // 来源平台标记（0909 通用化）：显式传 source 优先；Awin 特征表头（order_reference）
+        // 在 normalizeOrderRow 已归一——此处按外部交易号存在与否打默认标记。
+        const source = String(rows[0].source ?? '').trim() || 'awin';
 
         // 媒体归因（publisher 维度）：★ clickRef（媒体实际投放链接）域名归一化 -> Publisher upsert。
         // 不用 publisherUrl 域名--那是业务线跟踪域名（如 dc.digchic.com），全部订单同域，不区分媒体。
@@ -1469,7 +1418,7 @@ export const importService = {
           await prisma.campaignOrder.update({
             where: { id: existing.id },
             data: {
-              campaignCreatorId, orderDate, orderStatus, publisherId, linkPerformanceId,
+              campaignCreatorId, orderDate, orderStatus, publisherId, linkPerformanceId, source,
               ...mirrored,
               items: { deleteMany: {} },   // 清空旧商品行
             },
@@ -1480,7 +1429,7 @@ export const importService = {
         } else {
           await prisma.campaignOrder.create({
             data: {
-              campaignId, orderId, campaignCreatorId, orderDate, orderStatus, publisherId, linkPerformanceId,
+              campaignId, orderId, campaignCreatorId, orderDate, orderStatus, publisherId, linkPerformanceId, source,
               ...mirrored,
               items: { create: itemRows.map((r, i) => ({ ...r, productId: productIds[i] })) },
             },
