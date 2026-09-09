@@ -12,6 +12,7 @@
  */
 import { useEffect, useState, useCallback } from 'react';
 import { campaignsApi } from '@/api/campaignsApi';
+import { uploadImage } from '@/api/uploads';
 import type {
   CampaignAnalytics,
   CampaignTrendPoint,
@@ -24,6 +25,7 @@ import type {
   MarketPerformance,
   PromotionOffer,
   MediaPlacement,
+  CompetitorVoice,
 } from '@mediakit/shared';
 
 interface Props {
@@ -43,6 +45,8 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  /** 0909：截图上传中的行标识（'mp'+name → Media Placement 行）。 */
+  const [uploadingKey, setUploadingKey] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -269,10 +273,23 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
         renderRow={(item, onChange) => (
           <div className="flex flex-col skin-gap-xs w-full">
             <input className="border rounded px-1 py-0.5 text-[11px]" value={item.name}
-              onChange={(e) => onChange({ ...item, name: e.target.value })} placeholder="Placement name (e.g. DigChic Homepage Hero)" />
+              onChange={(e) => onChange({ ...item, name: e.target.value })} placeholder="Placement name（达人组填「Creator — Title」格式，如 Yuki — IG Story 7/15）" />
             <div className="flex skin-gap-xs">
               <input className="flex-1 min-w-0 border rounded px-1 py-0.5 text-[11px]" value={item.screenshotUrl ?? ''}
                 onChange={(e) => onChange({ ...item, screenshotUrl: e.target.value })} placeholder="Screenshot URL (/uploads/... 或 https://...)" />
+              {/* 0909 截图上传按钮——自动传 OSS/local，回填 URL */}
+              <label className="shrink-0 border rounded px-2 py-0.5 text-[11px] text-foreground-muted hover:text-accent hover:border-accent cursor-pointer">
+                {uploadingKey === 'mp' + item.name ? '上传中…' : '上传截图'}
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setUploadingKey('mp' + item.name);
+                    try { onChange({ ...item, screenshotUrl: await uploadImage(f) }); }
+                    catch { setError('截图上传失败，请重试'); }
+                    finally { setUploadingKey(''); e.target.value = ''; }
+                  }} />
+              </label>
             </div>
             {/* 0827 迭代：资源位可点链接——报告 placementGroups 卡片跳转 */}
             <input className="border rounded px-1 py-0.5 text-[11px]" value={item.postUrl ?? ''}
@@ -280,6 +297,29 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
             <input className="border rounded px-1 py-0.5 text-[11px]" value={item.description ?? ''}
               onChange={(e) => onChange({ ...item, description: e.target.value })} placeholder="Description (投放时段 / 位置)" />
           </div>
+        )}
+      />
+
+      {/* Competitor Share of Voice — 竞品声量（0909 新增，FT 提案 deck 竞品屏数据源） */}
+      <ListSection<CompetitorVoice>
+        title="Competitor Share of Voice" desc="竞品声量对比——有数据渲染提案 deck 竞品屏，无数据省略"
+        items={data.competitors ?? []}
+        onChange={(items) => setData({ ...data, competitors: items })}
+        newItem={() => ({ name: '', shareOfVoice: 0 })}
+        renderRow={(item, onChange) => (
+          <>
+            <input className="flex-[2] min-w-0 border rounded px-2 py-1 text-xs" value={item.name}
+              onChange={(e) => onChange({ ...item, name: e.target.value })} placeholder="竞品名（含自家品牌行，如 GlowLab）" />
+            <input className="w-16 border rounded px-2 py-1 text-xs text-right" value={String(item.shareOfVoice ?? '')}
+              onChange={(e) => onChange({ ...item, shareOfVoice: parseFloat(e.target.value) || 0 })} placeholder="32" />
+            <span className="text-xs text-foreground-muted w-6">%</span>
+            <input className="w-24 border rounded px-2 py-1 text-xs text-right" value={item.mentions ? String(item.mentions) : ''}
+              onChange={(e) => onChange({ ...item, mentions: parseInt(e.target.value) || undefined })} placeholder="提及数" />
+            <input className="w-20 border rounded px-2 py-1 text-xs text-right" value={item.trend ?? ''}
+              onChange={(e) => onChange({ ...item, trend: e.target.value })} placeholder="+12%" />
+            <input className="flex-1 min-w-0 border rounded px-2 py-1 text-xs" value={item.source ?? ''}
+              onChange={(e) => onChange({ ...item, source: e.target.value })} placeholder="口径（TikTok mentions, Jul 2026）" />
+          </>
         )}
       />
     </div>

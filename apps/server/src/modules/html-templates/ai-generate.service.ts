@@ -207,6 +207,11 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      whole card clickable (open in new tab). Entries without screenshots are EXCLUDED server-side.
      When "placementGroups" is absent from the context, OMIT the entire Campaign Placements section
      (no placeholder card, no empty wall). Qualitative showcase — no numeric metrics.
+   - Competitor share of voice (competitors, when present) → horizontal sorted bar list: one row per
+     competitor (INCLUDING the brand's own row), bar length proportional to shareOfVoice, % label at
+     bar end, mentions count and trend badge (▲ green / ▼ red) as secondary text. Cite the source
+     note (e.g. "TikTok mentions, Jul 2026") as a small caption under the module. When absent,
+     omit silently (optional module, never fabricate competitor numbers).
    - Ranking (creator performance) → table with avatar, highlighted best values (NO tier column/tags)
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
@@ -964,6 +969,10 @@ export const aiGenerateService = {
     // 4b) 营销活动(MarketingEvent):与 buildCampaignContext marketingEvents 注入同口径
     //     —— 业务线内与报告周期重叠(label≠'1' 废弃)的活动数。
     let marketingEventCount = 0;
+    // 4c) 竞品声量(competitors):analytics JSON 提取（与 buildCampaignContext 同口径，shareOfVoice>0 才数）
+    const competitorCount = ((campaign.analytics as Record<string, unknown> | null)?.competitors as
+      | Array<{ name?: string; shareOfVoice?: number }>
+      | undefined)?.filter((c) => c?.name && typeof c.shareOfVoice === 'number' && c.shareOfVoice > 0).length ?? 0;
     try {
       const evPeriodStart = reportPeriod?.startDate || campaign.startDate;
       const evPeriodEnd = reportPeriod?.endDate || campaign.endDate;
@@ -1054,6 +1063,13 @@ export const aiGenerateService = {
         label: '营销活动',
         status: marketingEventCount > 0 ? 'ok' : 'missing',
         detail: marketingEventCount > 0 ? `${marketingEventCount} 个期内营销活动` : '该业务线报告期内无营销活动（MarketingEvent），模块将省略',
+      },
+      {
+        // ★ 0909 竞品声量：analytics.competitors 提取（宁缺勿假，无数据模块省略）
+        key: 'competitors',
+        label: '竞品声量对比',
+        status: competitorCount > 0 ? 'ok' : 'missing',
+        detail: competitorCount > 0 ? `${competitorCount} 个品牌（含自家）` : '分析数据无 competitors 条目（数据管理→分析数据录入），模块将省略',
       },
       {
         key: 'orderStatusSplit',
@@ -1424,6 +1440,21 @@ export const aiGenerateService = {
     // ★ 0826 资源位回退 → 0827 分组结构：analytics 为空时用达人合作作品截图组 placementGroups
     //   （构建过程见下方 creators 之后的分组回退段）。
 
+    // ★ 0909 竞品声量（analytics.competitors 白名单提取）：FT 提案 deck「COMPETITOR SHARE OF VOICE」屏。
+    //   宁缺勿假：无数据不注入（模块省略）；shareOfVoice<=0 的行剔除。
+    const competitorsRaw = ((campaign.analytics as Record<string, unknown> | null)?.competitors as
+      | Array<{ name?: string; shareOfVoice?: number; mentions?: number; trend?: string; source?: string }>
+      | undefined) ?? [];
+    const competitors = competitorsRaw
+      .filter((c) => c?.name && typeof c.shareOfVoice === 'number' && c.shareOfVoice > 0)
+      .map((c) => ({
+        name: c.name as string,
+        shareOfVoice: c.shareOfVoice as number,
+        ...(c.mentions ? { mentions: c.mentions } : {}),
+        ...(c.trend ? { trend: c.trend } : {}),
+        ...(c.source ? { source: c.source } : {}),
+      }));
+
     // ★ 真源切换(cps-daily 废弃)：creators 无 period 汇总时的聚合列真源（LP 流量+订单表现）。
     //   复用主链路 cpsSource（未查过才现场查）——syncSource 与主查询同源，省一次全表查询。
     if (!cpsSource) cpsSource = await loadCreatorCps(campaignId);
@@ -1624,6 +1655,8 @@ export const aiGenerateService = {
       // ★ 缺口④ 媒体资源位（定性）→ 0827 按达人分组：placementGroups（每组 = 达人/站点 + 其截图列表）。
       //   无图条目已在整形时剔除；全空时字段不注入 → AI 无该模块数据 → 整模块隐藏。
       ...(placementGroups.length ? { placementGroups } : {}),
+      // ★ 0909 竞品声量：analytics.competitors 白名单提取——有数据才注入，FT 提案 deck 渲染竞品屏。
+      ...(competitors.length ? { competitors } : {}),
       // ★ 全媒体表现表（0826）：所有 publisher 的期内 clicks/orders/GMV/Commission——
       //   Creator Breakdown 表的数据源，覆盖 media_site/community/content_site 等非达人媒体。
       ...(allMedia.length ? { allMedia } : {}),

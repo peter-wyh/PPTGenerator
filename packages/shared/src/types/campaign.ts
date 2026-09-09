@@ -843,6 +843,25 @@ export interface CampaignAnalytics {
    * 不含数字指标（数字真源仍是 CPS daily），用于报告的 Media Placement 展示模块。
    */
   mediaPlacements?: MediaPlacement[];
+  /**
+   * 竞品声量对比（campaign 级、定性+数字轻量）。
+   * 0909 新增：FT 提案 deck「COMPETITOR SHARE OF VOICE」屏数据源——有数据渲染条形对比屏，无数据省略（宁缺勿假）。
+   */
+  competitors?: CompetitorVoice[];
+}
+
+/** 竞品声量数据（campaign 级）。 */
+export interface CompetitorVoice {
+  /** 竞品名（如 'Brand A' / 'CeraVe'）。 */
+  name: string;
+  /** 声量份额 %（0-100，与自家品牌对比合计可超 100——非互斥口径）。 */
+  shareOfVoice: number;
+  /** 提及数（社媒 mentions / 帖子数）。 */
+  mentions?: number;
+  /** 环比趋势（如 '+12%' / '-5%'）。 */
+  trend?: string;
+  /** 口径说明（数据来源 / 统计周期，如 'TikTok mentions, Jul 2026'）。 */
+  source?: string;
 }
 
 /** 媒体方站内资源位（campaign 级、定性）。 */

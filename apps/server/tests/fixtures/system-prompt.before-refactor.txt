@@ -144,6 +144,11 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      whole card clickable (open in new tab). Entries without screenshots are EXCLUDED server-side.
      When "placementGroups" is absent from the context, OMIT the entire Campaign Placements section
      (no placeholder card, no empty wall). Qualitative showcase — no numeric metrics.
+   - Competitor share of voice (competitors, when present) → horizontal sorted bar list: one row per
+     competitor (INCLUDING the brand's own row), bar length proportional to shareOfVoice, % label at
+     bar end, mentions count and trend badge (▲ green / ▼ red) as secondary text. Cite the source
+     note (e.g. "TikTok mentions, Jul 2026") as a small caption under the module. When absent,
+     omit silently (optional module, never fabricate competitor numbers).
    - Ranking (creator performance) → table with avatar, highlighted best values (NO tier column/tags)
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
