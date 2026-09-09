@@ -36,6 +36,13 @@ export const generateHtmlSchema = z.object({
   reportPeriod: z.object({ startDate: z.string(), endDate: z.string() }).optional(),
 });
 
+/**
+ * SSE 流式生成专用 schema。generateStream 控制器只消费 prompt/campaignId/guideId/reportPeriod,
+ * 天然只走 AI 路径(mode 无意义)。0905 P0-3 曾复用 generateHtmlSchema(mode 必填)——
+ * 但 web 端 HtmlStudio SSE 调用从不发 mode,导致必被 400 拒绝,属审计回归,故拆出。
+ */
+export const generateStreamSchema = generateHtmlSchema.omit({ mode: true, recipeId: true, theme: true });
+
 /** 从 Campaign 生成 HTML 报告时，直接创建新报告并保存 HTML */
 export const saveHtmlAsProjectSchema = z.object({
   html: z.string().min(1),

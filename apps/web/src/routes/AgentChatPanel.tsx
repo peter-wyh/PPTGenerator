@@ -147,6 +147,8 @@ export function AgentChatPanel({
   const [reasoning, setReasoning] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // ★ 流式预览节流（0909 P0-2 同款修复）：content chunk 高频到达，节流喂画布
+  const streamPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 已选择的图片（base64 data URL 数组），随消息一起发送
   const [pendingImages, setPendingImages] = useState<string[]>([]);
@@ -421,8 +423,13 @@ export function AgentChatPanel({
             } else if (chunk.type === 'content') {
               setIsThinking(false);
               finalHtml += chunk.text;
-              // 取消渐进式渲染：content 阶段不更新画布，等 done 一次性展示
+              // ★ 流式预览（0909 P0-2）：节流喂画布，编辑过程实时可见；done 时冲刷终稿
+              if (streamPreviewTimer.current) clearTimeout(streamPreviewTimer.current);
+              streamPreviewTimer.current = setTimeout(() => {
+                onHtmlChange(finalHtml);
+              }, 800);
             } else if (chunk.type === 'done') {
+              if (streamPreviewTimer.current) { clearTimeout(streamPreviewTimer.current); streamPreviewTimer.current = null; }
               finalHtml = chunk.html;
               onHtmlChange(finalHtml);
             } else if (chunk.type === 'error') {
@@ -469,6 +476,7 @@ export function AgentChatPanel({
           );
         }
       } finally {
+        if (streamPreviewTimer.current) { clearTimeout(streamPreviewTimer.current); streamPreviewTimer.current = null; }
         setLoading(false);
         setIsThinking(false);
         setReasoning('');

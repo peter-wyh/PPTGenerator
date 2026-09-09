@@ -66,6 +66,9 @@ export function HtmlStudio() {
   const [editError, setEditError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  // ★ 流式预览节流：content chunk 高频到达，直接 setState 每次重挂 iframe 会导致闪烁/卡顿。
+  //   节流 800ms 更新 state；done 时立即冲刷（对齐 VisualEditor onHtmlChange 防抖节奏）。
+  const streamPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ★ SSE 流式状态
   const [isThinking, setIsThinking] = useState(false);
@@ -343,8 +346,15 @@ export function HtmlStudio() {
             } else if (chunk.type === 'content') {
               setIsThinking(false);
               streamingHtml += chunk.text;
-              // 取消渐进式渲染：content 阶段不更新画布，等 done 一次性展示
+              // ★ 流式预览（0909 P0-2）：content 阶段节流喂给 iframe——右侧不再是空白 spinner，
+              //   HTML 边生成边渲染（部分标签未闭合时浏览器容错渲染，所见即进度）。
+              //   done 时 clearTimeout + setGeneratedHtml(chunk.html) 冲刷最终稿。
+              if (streamPreviewTimer.current) clearTimeout(streamPreviewTimer.current);
+              streamPreviewTimer.current = setTimeout(() => {
+                setGeneratedHtml(streamingHtml);
+              }, 800);
             } else if (chunk.type === 'done') {
+              if (streamPreviewTimer.current) { clearTimeout(streamPreviewTimer.current); streamPreviewTimer.current = null; }
               setGeneratedHtml(chunk.html);
               setTruncated(chunk.truncated);
               streamingHtml = chunk.html;
@@ -416,6 +426,7 @@ export function HtmlStudio() {
         setIsThinking(false);
         stopStageTimer();
         abortRef.current = null;
+        if (streamPreviewTimer.current) { clearTimeout(streamPreviewTimer.current); streamPreviewTimer.current = null; }
         // ★ 思考流已落历史消息(genMsg.reasoning),清 state 避免残留到下次生成
         setGenReasoning('');
       }

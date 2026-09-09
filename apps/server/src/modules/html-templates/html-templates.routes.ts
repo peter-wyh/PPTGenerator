@@ -8,6 +8,7 @@ import {
   updateHtmlTemplateSchema,
   idParamSchema,
   generateHtmlSchema,
+  generateStreamSchema,
   saveHtmlAsProjectSchema,
   agentEditSchema,
   agentQaSchema,
@@ -63,7 +64,7 @@ router.post(
 router.post(
   '/generate-stream',
   aiGenerateLimiter,
-  validate({ body: generateHtmlSchema }), // 0905 审计 P0-3：SSE 端点与非流式同 schema
+  validate({ body: generateStreamSchema }), // SSE 端点控制器只消费 prompt/campaignId/guideId/reportPeriod,不发 mode(0905 P0-3 复用全量 schema 导致 web SSE 必 400)
   htmlTemplateController.generateStream,
 );
 
