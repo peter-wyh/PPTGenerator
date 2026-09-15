@@ -1,5 +1,6 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
+import { logger } from '../../logger';
 import { Prisma } from '@prisma/client';
 import { recomputeOrderStats } from './order-stats.service';
 import { recomputePublisherStats } from './publisher-stats.service';
@@ -1064,9 +1065,9 @@ export const importService = {
     for (const cid of touched) {
       try {
         const r = await recomputePublisherStats(cid);
-        console.log(`[importLinkPerformance] publisher stats recomputed: campaign=${cid} rows=${r.rows}`);
+        logger.info(`[importLinkPerformance] publisher stats recomputed: campaign=${cid} rows=${r.rows}`);
       } catch (err) {
-        console.warn(`[importLinkPerformance] publisher stats recompute failed for campaign=${cid}:`, err);
+        logger.warn({ err, campaignId: cid }, '[importLinkPerformance] publisher stats recompute failed');
       }
     }
     return { upserted, skipped };
@@ -1449,15 +1450,15 @@ export const importService = {
     for (const cid of campaignIds) {
       try {
         const r = await recomputeOrderStats(cid);
-        console.log(`[importOrders] order stats recomputed: campaign=${cid} rows=${r.rows} dropped=${r.dropped}`);
+        logger.info(`[importOrders] order stats recomputed: campaign=${cid} rows=${r.rows} dropped=${r.dropped}`);
       } catch (err) {
-        console.warn(`[importOrders] order stats recompute failed for campaign=${cid}:`, err);
+        logger.warn({ err, campaignId: cid }, '[importOrders] order stats recompute failed');
       }
       try {
         const r2 = await recomputePublisherStats(cid);
-        console.log(`[importOrders] publisher stats recomputed: campaign=${cid} rows=${r2.rows}`);
+        logger.info(`[importOrders] publisher stats recomputed: campaign=${cid} rows=${r2.rows}`);
       } catch (err) {
-        console.warn(`[importOrders] publisher stats recompute failed for campaign=${cid}:`, err);
+        logger.warn({ err, campaignId: cid }, '[importOrders] publisher stats recompute failed');
       }
     }
     return { updated, skipped };

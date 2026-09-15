@@ -1,0 +1,205 @@
+{
+  "$schema": "pptgenerator/component-contract/v1",
+  "source": "Example/FT.html",
+  "pageModel": {
+    "singlePage": true,
+    "width": 1120,
+    "sections": [
+      "hero",
+      "kpi-row",
+      "numbered chapters 01-05 (.page white cards)",
+      "footer"
+    ]
+  },
+  "classes": {
+    "accent": {
+      "countInSource": 2
+    },
+    "app-slot": {
+      "countInSource": 1
+    },
+    "avatar": {
+      "countInSource": 2
+    },
+    "badge": {
+      "countInSource": 5
+    },
+    "chart-card": {
+      "countInSource": 1
+    },
+    "chart-legend": {
+      "countInSource": 1
+    },
+    "chart-note": {
+      "countInSource": 1
+    },
+    "chart-placeholder": {
+      "countInSource": 1
+    },
+    "chead": {
+      "countInSource": 2
+    },
+    "chip": {
+      "countInSource": 1
+    },
+    "cmetrics": {
+      "countInSource": 2
+    },
+    "compare-note": {
+      "countInSource": 1
+    },
+    "compare-table": {
+      "countInSource": 1
+    },
+    "compare-wrap": {
+      "countInSource": 1
+    },
+    "creator-card": {
+      "countInSource": 2
+    },
+    "creator-grid": {
+      "countInSource": 1
+    },
+    "cshot": {
+      "countInSource": 4
+    },
+    "cshots": {
+      "countInSource": 2
+    },
+    "cwho": {
+      "countInSource": 2
+    },
+    "dot": {
+      "countInSource": 2
+    },
+    "dot-bar": {
+      "countInSource": 1
+    },
+    "dot-line": {
+      "countInSource": 1
+    },
+    "eyebrow": {
+      "countInSource": 1
+    },
+    "footer": {
+      "countInSource": 1
+    },
+    "glass-kpi": {
+      "countInSource": 4
+    },
+    "handle": {
+      "countInSource": 2
+    },
+    "hero": {
+      "countInSource": 3
+    },
+    "hero-left": {
+      "countInSource": 1
+    },
+    "hero-right": {
+      "countInSource": 1
+    },
+    "k": {
+      "countInSource": 6
+    },
+    "kpi-row": {
+      "countInSource": 1
+    },
+    "lbl": {
+      "countInSource": 4
+    },
+    "lilac": {
+      "countInSource": 1
+    },
+    "lime": {
+      "countInSource": 1
+    },
+    "m": {
+      "countInSource": 6
+    },
+    "num": {
+      "countInSource": 4
+    },
+    "page": {
+      "countInSource": 1
+    },
+    "pcol": {
+      "countInSource": 3
+    },
+    "period-pill": {
+      "countInSource": 1
+    },
+    "ph": {
+      "countInSource": 4
+    },
+    "pink": {
+      "countInSource": 1
+    },
+    "pkg-ai-note": {
+      "countInSource": 1
+    },
+    "pkg-card": {
+      "countInSource": 3
+    },
+    "pkg-grid": {
+      "countInSource": 1
+    },
+    "pkg-name": {
+      "countInSource": 3
+    },
+    "pkg-price": {
+      "countInSource": 3
+    },
+    "pkg-reco-tag": {
+      "countInSource": 1
+    },
+    "placeholder": {
+      "countInSource": 4
+    },
+    "placement-card": {
+      "countInSource": 1
+    },
+    "placement-cols": {
+      "countInSource": 1
+    },
+    "platform": {
+      "countInSource": 2
+    },
+    "schedule-tag": {
+      "countInSource": 1
+    },
+    "section": {
+      "countInSource": 15
+    },
+    "section-head": {
+      "countInSource": 5
+    },
+    "section-sub": {
+      "countInSource": 5
+    },
+    "tag": {
+      "countInSource": 3
+    },
+    "top": {
+      "countInSource": 1
+    },
+    "us": {
+      "countInSource": 6
+    },
+    "v": {
+      "countInSource": 6
+    },
+    "violet": {
+      "countInSource": 2
+    },
+    "x": {
+      "countInSource": 1
+    }
+  },
+  "hardRules": [
+    "reuse class names exactly as defined in base.css; inventing new structural classes (e.g. pgroup/ptag) is a defect",
+    ".page card = white bg, radius from --radius token, generous padding",
+    "hero/footer = dark plum (--bg-deep); body sections = light bg",
+    "chart accent palette = --lime/--pink/--violet tokens"
+  ]
+}

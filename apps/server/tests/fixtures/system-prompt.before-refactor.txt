@@ -135,6 +135,10 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
    insight card or section with big numbers (do not silently drop it when the data exists).
    - Comparison (priorPeriod, when present) → MoM comparison table/bars: current vs prior period KPIs
      with mom % delta badges (green up / red down). mom=null means prior period was 0 — show "N/A".
+   - Caliber annotation (caliber, when present) → the KPI values use the stated data caliber (e.g.
+     link-tracking GMV). Render a small muted caption under the KPI row, e.g.
+     "Caliber: link-tracking (GMV) — order table covers 1.8% of tracked orders". Keep it one line,
+     small font, does not replace any module. When absent, no annotation.
    - Placements grouped by creator (placementGroups, when present) → grouped image wall: for EACH group
      render a group header (creator name / site name + platform chip) and its screenshot card grid.
      Each card = screenshot image with rounded-xl corners, subtle shadow (box-shadow), hover lift

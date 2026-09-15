@@ -3,8 +3,10 @@ import { htmlTemplateService } from './html-templates.service';
 import { aiGenerateService, type StreamChunk } from './ai-generate.service';
 import { SYSTEM_PROMPT_DISPLAY } from './ai-generate.service';
 import { resolvePairForCampaign, mergeGuideLayers, resolveStructuralForCampaign } from '../guides/guide.service';
+import { resolveGuideCssBundle } from '../guides/guide-css-asset';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ApiError } from '../../utils/ApiError';
+import { logger } from '../../logger';
 import type { AuthPayload } from '../../types/express';
 import type { TemplateStatus } from '@prisma/client';
 
@@ -221,11 +223,11 @@ export const htmlTemplateController = {
       })) {
         if (chunk.type === 'done' && chunk.usage) {
           // token 用量透传给前端（done chunk 携带 usage 字段），同时落服务端日志供成本审计
-          console.log('[generateStream] token usage', {
+          logger.info({
             user: req.user?.id,
             campaignId,
             ...chunk.usage,
-          });
+          }, '[generateStream] token usage');
         }
         sseWrite(res, chunk);
       }
@@ -258,6 +260,8 @@ export const htmlTemplateController = {
         ? await resolvePairForCampaign(campaignId, guideId)
         : { visual: null, structural: null, businessLineName: '', businessLineCode: '' };
       const { content: mergedGuide } = mergeGuideLayers(pair.visual, pair.structural);
+      // ★ B2 指南 CSS 资产:编辑流同样注入(编辑时保持首稿视觉契约,占位符残留会被清除)
+      const guideCssBundle = await resolveGuideCssBundle(pair.structural);
       for await (const chunk of aiGenerateService.editHtmlStream({
         currentHtml,
         instruction,
@@ -265,6 +269,7 @@ export const htmlTemplateController = {
         dataContext,
         guideContent: mergedGuide,
         businessLineName: pair.businessLineName,
+        guideCssBundle,
         signal: abortCtrl.signal,
       })) {
         sseWrite(res, chunk);

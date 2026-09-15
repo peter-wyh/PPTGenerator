@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en"><head><script>window["__codeletBootstrap__"]=JSON.parse('{"A":"A","B":"20260909-01-9e65989","C":{"Abril Fatface":"YACgEZbkUVE,0","Alfa Slab One":"YACgEYS9sJU,0","Anton":"YACgEcYqQ-A,0","Archivo":"YAHO2-t-jNE,0","Arial":"YAGyDvJ_4Ts,0","Bebas Neue":"YACgESME5ew,0","Bricolage Grotesque":"YAFyMcdwzpc,0","Canva Sans":"YAFLd8sKbwc,2","Caveat":"YALBs2ploWQ,0","Comic Sans MS":"YAHO2VMiyZo,0","Cormorant Garamond":"YAFdJhX-538,0","Courier New":"YAGzXiGs0_8,0","DM Sans":"YAD1aU3sLnI,0","DM Serif Display":"YAD1aYG82rc,0","Forum":"YACgEcnnqB4,0","Fraunces":"YAEul-FRQw4,0","Georgia":"YAGzXkO0pEM,0","Helvetica Neue":"YAFcf6CtJfI,0","Impact":"YAFcfnjI7Vk,0","Inter":"YAFdJvSyp_k,3","Iowan Old Style":"YAGNIFa8j9o,0","Jacques Francois":"YAHO2a5g66Q,0","JetBrains Mono":"YAFdJksXcAk,0","Libre Baskerville":"YACgEUFdPdA,0","Manrope":"YAHO2b2feC4,0","Merriweather":"YACgEXvHxxs,0","Montserrat":"YADLjI9qxTA,0","Nunito":"YACgEX8C5Gg,0","Oleo Script":"YACgEQQ14jI,0","Phantom Sans":"YAHO2E8Pb88,0","Playfair Display":"YACgEYmuCJE,0","Poppins":"YAFdJjbTu24,1","Press Start 2P":"YAFyGr-8pmQ,0","Quicksand":"YADWjpfPmdk,0","Raleway":"YACgEVg3xZg,0","Segoe UI":"YAHNdRD1Klw,0","Source Sans 3":"YAG4lO1Mj10,0","Spectral":"YAHO2rVUHIM,0","Times New Roman":"YAGzXW3gftg,0","Times":"YAGzXW3gftg,0","Ubuntu":"YACgERDU--Q,0","Work Sans":"YAGXhLOKv44,0","Yellowtail":"YACgEYG4kG4,0","ui-monospace":"YADlN8CFZ8Q,0","ui-sans-serif":"YACkoN-xg4g,0"}}');</script><script src="/_sdk/cc55fa1b533807c5.telemetry_sdk.js" integrity="sha512-vW7a0U63BNWyPgkdgvdYnLKXjx/E1nZSXBT1dQT4DrVBh7k4yi55jDX0CvlS9/4Dcuktj9yKi+hEm0rq9hBn1w=="></script>
+<meta charset="UTF-8">
+<title>[[CLIENT_NAME]] × FANSTOSHOP — Performance Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&amp;family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Fonts */
+    --font-display:"Libre Baskerville", Georgia, serif;
+    --font-body:"Inter", Arial, sans-serif;
+    --font-legacy:"Poppins","Inter", sans-serif;
+
+    /* Brand */
+    --color-aubergine:#28223D;
+    --color-aubergine-2:#2C2242;
+    --color-lime:#D5EF9A;
+    --color-lime-bright:#E5FFAA;
+    --color-violet:#6F60A4;
+    --color-lilac:#B798BF;
+    --color-pink:#FFA8CD;
+    --color-pink-active:#FF6B9B;
+
+    /* Supporting */
+    --color-mint:#88DBA5;
+    --color-lavender:#DEACEF;
+    --color-pink-soft:#FEA4CA;
+
+    /* Neutrals */
+    --color-white:#FFFFFF;
+    --color-warm-white:#F9F8F5;
+    --color-black:#000000;
+    --color-ink:#1E1E1E;
+    --color-muted:#C4C3CA;
+    --color-chip:#D9D9D9;
+    --color-surface-soft:#EBEBEB;
+    --color-border:#979797;
+    --color-border-dark:#6E6E6E;
+    --color-divider:#F0F0F0;
+
+    /* Radius */
+    --radius-sm:8px;
+    --radius-md:16px;
+    --radius-lg:20px;
+    --radius-pill-sm:32px;
+    --radius-pill:999px;
+
+    /* Spacing */
+    --space-1:4px;
+    --space-2:8px;
+    --space-3:16px;
+    --space-4:24px;
+    --space-5:32px;
+    --space-6:48px;
+
+    /* Motion */
+    --motion-standard:cubic-bezier(.4,0,.2,1);
+    --motion-cta:cubic-bezier(.2,.8,.2,1);
+    --duration-ui:150ms;
+    --duration-fast:200ms;
+    --duration-base:300ms;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--color-warm-white);
+    font-family:var(--font-body);
+    color:var(--color-ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{
+    max-width:1120px;
+    margin:24px auto;
+    background:var(--color-white);
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+  }
+  p{ margin:0; }
+  ul{ margin:0; padding:0; list-style:none; }
+
+  /* ---------- HERO (aubergine, editorial) ---------- */
+  .hero{
+    position:relative;
+    background:var(--color-aubergine);
+    color:var(--color-white);
+    padding:36px 44px 30px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .hero-left h1{
+    font-family:var(--font-display);
+    font-weight:400;
+    font-size:40px;
+    line-height:1.15;
+    margin:0 0 6px;
+    letter-spacing:-0.02em;
+  }
+  .hero-left .x{
+    font-family:var(--font-body);
+    font-weight:500;
+    font-size:14px;
+    color:var(--color-muted);
+    letter-spacing:0.2px;
+  }
+  .hero-right{ text-align:right; flex:none; }
+  .eyebrow{
+    font-family:var(--font-body);
+    font-size:11px;
+    letter-spacing:2.5px;
+    font-weight:600;
+    text-transform:uppercase;
+    color:var(--color-muted);
+    margin-bottom:10px;
+  }
+  .period-pill{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+    background:var(--color-lime);
+    color:var(--color-aubergine-2);
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:14px;
+    padding:10px 22px;
+    border-radius:var(--radius-pill);
+  }
+  .period-pill span{
+    font-weight:600;
+    font-size:9px;
+    letter-spacing:0.6px;
+    text-transform:uppercase;
+    opacity:0.75;
+  }
+
+  /* ---------- KPI ROW (glass, on aubergine) ---------- */
+  .kpi-row{
+    background:var(--color-aubergine);
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:16px;
+    padding:0 44px 32px;
+  }
+  .glass-kpi{
+    background:rgba(43,43,43,0.20);
+    border-radius:var(--radius-md);
+    box-shadow:14px 15px 25.091px rgba(0,0,0,0.25), inset -9.063px 1.813px 23.563px var(--color-aubergine-2);
+    padding:16px 12px;
+    text-align:center;
+    min-width:0; /* allow grid item to shrink below content width */
+    overflow:hidden;
+  }
+  .glass-kpi .num{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:clamp(11px, 1.6vw, 24px);
+    color:var(--color-lime);
+    display:block;
+    line-height:1.25;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .glass-kpi .lbl{
+    font-family:var(--font-body);
+    font-size:10.5px;
+    font-weight:500;
+    color:var(--color-muted);
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    margin-top:4px;
+    display:block;
+    word-break:break-word;
+  }
+  .glass-kpi.accent .num{ color:var(--color-pink-soft); }
+
+  /* ---------- SECTION ---------- */
+  .section{ padding:40px 44px 8px; }
+  .section-head{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .badge{
+    width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display); font-weight:700; font-size:13px; flex:none;
+    color:var(--color-aubergine-2);
+    background:var(--color-lime);
+  }
+  .badge.violet{ background:var(--color-violet); color:var(--color-warm-white); }
+  .badge.pink{ background:var(--color-pink); color:var(--color-black); }
+  .badge.lilac{ background:var(--color-lilac); color:var(--color-white); }
+  .section-head h2{
+    font-family:var(--font-display); font-size:24px; font-weight:400; margin:0; color:var(--color-ink);
+    letter-spacing:-0.01em;
+  }
+  .section-sub{ font-size:14px; color:#5B5B63; margin:4px 0 20px 42px; line-height:1.55; max-width:640px; }
+
+  /* ---------- EXPOSURE PLACEMENT ---------- */
+  .placement-card{
+    background:var(--color-warm-white);
+    border:1px solid var(--color-divider);
+    border-radius:var(--radius-md);
+    padding:22px 24px;
+    margin-bottom:8px;
+  }
+  .schedule-tag{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--color-aubergine); color:var(--color-lime);
+    font-family:var(--font-body); font-weight:600; font-size:12px;
+    padding:8px 18px; border-radius:var(--radius-pill); margin-bottom:16px;
+  }
+  .placement-cols{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .pcol{
+    background:var(--color-white); border:1px solid var(--color-divider); border-radius:var(--radius-md);
+    padding:16px 16px 18px;
+  }
+  .pcol h4{
+    font-family:var(--font-body); font-size:13px; font-weight:600; margin:0 0 10px; color:var(--color-aubergine-2);
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:8px; border-bottom:1px solid var(--color-divider);
+  }
+  .pcol h4 .tag{ font-size:9px; font-weight:700; background:var(--color-chip); color:var(--color-ink); padding:3px 9px; border-radius:var(--radius-sm); letter-spacing:0.3px; text-transform:uppercase; }
+  .pcol ul{ display:flex; flex-direction:column; gap:8px; }
+  .pcol li{ font-size:12.5px; font-weight:500; color:var(--color-ink); padding-left:14px; position:relative; line-height:1.4; }
+  .pcol li::before{ content:"—"; color:var(--color-violet); position:absolute; left:0; top:0; }
+  .pcol.placeholder li{ color:#8B8B93; font-style:italic; }
+
+  /* APP slot: lime-bright per DS §7.9 APP Exposure convention */
+  .pcol.app-slot{
+    background:var(--color-lime-bright);
+    border:1.5px dashed var(--color-aubergine-2);
+  }
+  .pcol.app-slot h4{ color:var(--color-aubergine-2); border-bottom-color:rgba(44,34,66,0.25); }
+  .pcol.app-slot h4 .tag{ background:var(--color-aubergine-2); color:var(--color-lime); }
+  .pcol.app-slot li::before{ color:var(--color-aubergine-2); }
+
+  /* ---------- CREATOR / INFLUENCER CARDS ---------- */
+  .creator-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:8px; }
+  .creator-card{
+    background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-md);
+    padding:20px;
+  }
+  .creator-card.top{ background:var(--color-lime); border-color:var(--color-lime); }
+  .chead{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .avatar{
+    width:52px;height:52px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-legacy); font-weight:700; font-size:16px; color:var(--color-white);
+    background:var(--color-violet); flex:none; border:1px solid var(--color-border);
+  }
+  .creator-card.top .avatar{ background:var(--color-aubergine-2); }
+  .cwho .handle{ font-family:var(--font-legacy); font-weight:700; font-size:16px; color:var(--color-aubergine-2); display:flex; align-items:center; gap:8px; }
+  .cwho .platform{ font-size:10px; font-weight:600; letter-spacing:0.4px; color:#6B6B72; text-transform:uppercase; margin-top:3px; }
+  .creator-card.top .cwho .platform{ color:rgba(44,34,66,0.65); }
+  .chip{
+    background:var(--color-pink-active); color:var(--color-white); font-size:9px; font-weight:700;
+    letter-spacing:0.5px; padding:3px 9px; border-radius:var(--radius-pill); text-transform:uppercase;
+  }
+  .cmetrics{ display:flex; gap:10px; margin-bottom:16px; }
+  .cmetrics .m{ flex:1; background:var(--color-warm-white); border:1px solid var(--color-divider); border-radius:var(--radius-sm); padding:10px 6px; text-align:center; }
+  .creator-card.top .cmetrics .m{ background:rgba(255,255,255,0.55); border-color:rgba(44,34,66,0.15); }
+  .cmetrics .m .v{ font-family:var(--font-body); font-weight:700; font-size:16px; color:var(--color-aubergine-2); display:block; }
+  .cmetrics .m .k{ font-size:9px; font-weight:600; color:#6B6B72; letter-spacing:0.3px; }
+  .cshots{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .cshot{
+    background:var(--color-surface-soft); border:1px solid var(--color-divider); border-radius:var(--radius-sm);
+    min-height:68px; display:flex; align-items:center; justify-content:center;
+  }
+  .cshot .ph{ font-size:9px; font-weight:600; color:#7B7B82; font-style:italic; }
+
+  /* ---------- TREND CHART ---------- */
+  .chart-card{
+    background:var(--color-warm-white); border:1px solid var(--color-divider); border-radius:var(--radius-md);
+    padding:22px 24px 12px; margin-bottom:8px;
+  }
+  .chart-legend{ display:flex; gap:22px; margin-bottom:10px; font-size:11.5px; font-weight:600; color:#5B5B63; }
+  .chart-legend .dot{ width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:6px; }
+  .dot-bar{ background:var(--color-lime); }
+  .dot-line{ background:var(--color-violet); border-radius:50%; }
+  .chart-note{ font-size:11px; color:#7B7B82; text-align:right; margin-top:6px; }
+  .chart-placeholder{
+    height:260px; border:1.5px dashed var(--color-border); border-radius:var(--radius-md);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:#7B7B82; font-size:12.5px; font-weight:500;
+    background:repeating-linear-gradient(135deg, rgba(111,96,164,0.06) 0 10px, transparent 10px 20px);
+  }
+
+  /* ---------- COMPETITOR ANALYSIS ---------- */
+  .compare-wrap{ overflow-x:auto; border:1px solid var(--color-divider); border-radius:var(--radius-md); }
+  table.compare-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:640px; }
+  .compare-table th, .compare-table td{ padding:13px 16px; text-align:center; border-bottom:1px solid var(--color-divider); }
+  .compare-table th{ font-family:var(--font-body); font-size:12.5px; font-weight:600; color:var(--color-white); background:var(--color-aubergine); }
+  .compare-table td:first-child, .compare-table th:first-child{ text-align:left; font-weight:600; color:#5B5B63; background:var(--color-warm-white); white-space:nowrap; }
+  .compare-table th.us{ background:var(--color-lime); color:var(--color-aubergine-2); }
+  .compare-table td.us{ background:var(--color-lime-bright); font-weight:700; color:var(--color-aubergine-2); }
+  .compare-table tr:last-child td{ border-bottom:none; }
+  .compare-note{ font-size:11px; color:#8B8B93; margin-top:10px; }
+
+  /* ---------- PACKAGE RECOMMENDATION (benefit-card checkerboard) ---------- */
+  .pkg-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:10px; }
+  .pkg-card{
+    border-radius:var(--radius-md); padding:22px 20px; display:flex; flex-direction:column;
+    background:var(--color-white); border:1px solid var(--color-border);
+  }
+  .pkg-card.lime{ background:var(--color-lime); border-color:var(--color-lime); }
+  .pkg-card.violet{ background:var(--color-violet); border-color:var(--color-violet); }
+  .pkg-reco-tag{
+    align-self:center;
+    background:var(--color-pink-active); color:var(--color-white); font-size:9.5px; font-weight:700;
+    letter-spacing:0.4px; padding:4px 14px; border-radius:var(--radius-pill); text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  .pkg-name{ font-family:var(--font-display); font-weight:400; font-size:17px; text-align:center; margin-bottom:4px; color:var(--color-aubergine-2); }
+  .pkg-card.violet .pkg-name{ color:var(--color-warm-white); }
+  .pkg-price{ text-align:center; font-family:var(--font-body); font-weight:700; font-size:19px; color:var(--color-aubergine-2); margin-bottom:14px; }
+  .pkg-card.violet .pkg-price{ color:var(--color-warm-white); }
+  .pkg-price small{ display:block; font-weight:500; font-size:10px; color:#6B6B72; margin-top:3px; text-transform:none; letter-spacing:0; }
+  .pkg-card.violet .pkg-price small{ color:var(--color-muted); }
+  .pkg-card ul{ display:flex; flex-direction:column; gap:9px; flex:1; margin-bottom:6px; }
+  .pkg-card li{ font-size:11.5px; font-weight:500; color:var(--color-ink); padding-left:18px; position:relative; line-height:1.45; }
+  .pkg-card.violet li{ color:var(--color-warm-white); }
+  .pkg-card li::before{ content:"✓"; font-weight:700; position:absolute; left:0; top:0; color:var(--color-aubergine-2); }
+  .pkg-card.violet li::before{ color:var(--color-lime); }
+  .pkg-ai-note{
+    text-align:center; font-size:12.5px; font-weight:600; color:var(--color-aubergine-2);
+    background:var(--color-pink); border-radius:var(--radius-pill); padding:12px 20px; margin-top:6px;
+  }
+  .pkg-ai-note b{ font-weight:700; }
+
+  /* ---------- FOOTER ---------- */
+  .footer{ padding:26px 44px 30px; text-align:center; background:var(--color-aubergine); }
+  .footer p{ font-size:12px; color:var(--color-muted); }
+  .footer b{ color:var(--color-lime); }
+
+  @media print{
+    body{ background:var(--color-white); }
+    .page{ margin:0; border-radius:0; }
+    @page{ size: A4 landscape; margin:10mm; }
+  }
+</style>
+<script src="/_sdk/ad00ce977a5c2ece.resizing_sdk.js" integrity="sha512-bog4wGkBPPOhR0ljLsI2R9w0aS7AHt6iC4MNxsBmTL7IysBG15pB3x/bOQf//NXwh2kdtoBZiW6QfBMagGYlWA=="></script><script src="/_sdk/d87b80b4433bab6b.data_sdk.js" integrity="sha512-JKynAZ3aIUkxrmu1y4Enod3283hZsIIaBhOwwM+go3QT3MqYMvKrAZczNoL1jjjyzi8i7cD2EiXs1sP4BPwZ3g=="></script></head>
+<body data-html-import-id="html-import-0" data-template-id="__page-root" style="background: rgb(249, 248, 245);">
+<div class="page canva-container" data-html-import-id="html-import-1" data-template-id="div-0" style="background: rgb(255, 255, 255);">
+
+  <!-- HERO -->
+  <div class="hero canva-container" data-html-import-id="html-import-2" data-template-id="div-1" style="background: rgb(40, 34, 61); color: rgb(255, 255, 255);">
+    <div class="hero-left" data-html-import-id="html-import-3">
+      <h1 data-html-import-id="html-import-4" data-template-id="h1-2" class="canva-text" style="color: rgb(255, 255, 255); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 40px;">[[CLIENT_NAME]]</h1>
+      <span class="x canva-text" data-html-import-id="html-import-5" data-template-id="span-3" style="color: rgb(196, 195, 202); font-family: Inter; font-weight: 500; font-size: 14px;">× FANSTOSHOP Performance Report</span>
+    </div>
+    <div class="hero-right" data-html-import-id="html-import-6">
+      <div class="eyebrow canva-container" data-html-import-id="html-import-7" data-template-id="div-4" style="color: rgb(196, 195, 202); font-family: Inter; font-weight: 600; font-size: 11px;">Campaign Recap</div>
+      <div class="period-pill canva-container" data-html-import-id="html-import-8" data-template-id="div-5" style="background: rgb(213, 239, 154); color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 14px;"><canva-inline-text data-template-id="canva-inline-text-6" class="canva-text" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 14px;">[[REPORT_START_DATE]] – [[REPORT_END_DATE]]</canva-inline-text><span data-html-import-id="html-import-9" data-template-id="span-7" class="canva-text" style="color: rgb(44, 34, 66); font-weight: 600; font-size: 9px;">REPORT PERIOD</span></div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW (glass KPI on aubergine) -->
+  <div class="kpi-row canva-container" data-html-import-id="html-import-10" data-template-id="div-8" style="background: rgb(40, 34, 61);">
+    <div class="glass-kpi canva-container" data-html-import-id="html-import-11" data-template-id="div-9" style="background: rgba(43, 43, 43, 0.2);"><span class="num canva-text" data-html-import-id="html-import-12" data-template-id="span-10" style="color: rgb(213, 239, 154); font-family: Inter; font-weight: 700; font-size: 18px;">[[TOTAL_CLICKS]]</span><span class="lbl canva-text" data-html-import-id="html-import-13" data-template-id="span-11" style="color: rgb(196, 195, 202); font-family: Inter; font-weight: 500; font-size: 11px;">TOTAL CLICKS</span></div>
+    <div class="glass-kpi canva-container" data-html-import-id="html-import-14" data-template-id="div-12" style="background: rgba(43, 43, 43, 0.2);"><span class="num canva-text" data-html-import-id="html-import-15" data-template-id="span-13" style="color: rgb(213, 239, 154); font-family: Inter; font-weight: 700; font-size: 18px;">[[TOTAL_ORDERS]]</span><span class="lbl canva-text" data-html-import-id="html-import-16" data-template-id="span-14" style="color: rgb(196, 195, 202); font-family: Inter; font-weight: 500; font-size: 11px;">TOTAL ORDERS</span></div>
+    <div class="glass-kpi accent canva-container" data-html-import-id="html-import-17" data-template-id="div-15" style="background: rgba(43, 43, 43, 0.2);"><span class="num canva-text" data-html-import-id="html-import-18" data-template-id="span-16" style="color: rgb(254, 164, 202); font-family: Inter; font-weight: 700; font-size: 18px;">$[[TOTAL_REVENUE]]</span><span class="lbl canva-text" data-html-import-id="html-import-19" data-template-id="span-17" style="color: rgb(196, 195, 202); font-family: Inter; font-weight: 500; font-size: 11px;">TOTAL REVENUE</span></div>
+    <div class="glass-kpi accent canva-container" data-html-import-id="html-import-20" data-template-id="div-18" style="background: rgba(43, 43, 43, 0.2);"><span class="num canva-text" data-html-import-id="html-import-21" data-template-id="span-19" style="color: rgb(254, 164, 202); font-family: Inter; font-weight: 700; font-size: 18px;">[[CPA_RATE]]%</span><span class="lbl canva-text" data-html-import-id="html-import-22" data-template-id="span-20" style="color: rgb(196, 195, 202); font-family: Inter; font-weight: 500; font-size: 11px;">CPA COMMISSION BASIS</span></div>
+  </div>
+
+  <!-- 01 EXPOSURE PLACEMENT -->
+  <div class="section" data-html-import-id="html-import-23">
+    <div class="section-head" data-html-import-id="html-import-24"><div class="badge canva-container" data-html-import-id="html-import-25" data-template-id="div-21" style="background: rgb(213, 239, 154); color: rgb(44, 34, 66); font-family: &quot;Libre Baskerville&quot;; font-weight: 700; font-size: 13px;">01</div><h2 data-html-import-id="html-import-26" data-template-id="h2-22" class="canva-text" style="color: rgb(30, 30, 30); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 24px;">Exposure Placement</h2></div>
+    <p class="section-sub canva-text" data-html-import-id="html-import-27" data-template-id="p-23" style="color: rgb(91, 91, 99); font-size: 14px;">FANSTOSHOP storefront exposure across Premium, App and PC modules throughout the campaign window.</p>
+    <div class="placement-card canva-container" data-html-import-id="html-import-28" data-template-id="div-24" style="background: rgb(249, 248, 245);">
+      <div class="schedule-tag canva-container" data-html-import-id="html-import-29" data-template-id="div-25" style="background: rgb(40, 34, 61); color: rgb(213, 239, 154); font-family: Inter; font-weight: 600; font-size: 12px;">🕶️ Storefront Schedule</div>
+      <div class="placement-cols" data-html-import-id="html-import-30">
+        <div class="pcol placeholder canva-container" data-html-import-id="html-import-31" data-template-id="div-26" style="background: rgb(255, 255, 255);">
+          <h4 data-html-import-id="html-import-32" data-template-id="h4-27" class="canva-text" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 600; font-size: 13px;">Premium</h4>
+          <ul data-html-import-id="html-import-33">
+            <li data-html-import-id="html-import-34" data-template-id="li-28" class="canva-text" style="color: rgb(139, 139, 147); font-weight: 500; font-style: italic; font-size: 13px;">[X days — Placement name]</li>
+          </ul>
+        </div>
+        <!-- APP EXPOSURE SLOT — reserved, styled per Fanstoshop APP Exposure convention (lime-bright) -->
+        <div class="pcol app-slot placeholder canva-container" data-html-import-id="html-import-35" data-template-id="div-29" style="background: rgb(229, 255, 170);">
+          <h4 data-html-import-id="html-import-36" data-template-id="h4-30" class="canva-text" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 600; font-size: 13px;"><canva-inline-text data-template-id="canva-inline-text-31" class="canva-text" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 600; font-size: 13px;">APP</canva-inline-text><span class="tag canva-text" data-html-import-id="html-import-37" data-template-id="span-32" style="background: rgb(44, 34, 66); color: rgb(213, 239, 154); font-weight: 700; font-size: 9px;">FILL IN</span></h4>
+          <ul data-html-import-id="html-import-38">
+            <li data-html-import-id="html-import-39" data-template-id="li-33" class="canva-text" style="color: rgb(139, 139, 147); font-weight: 500; font-style: italic; font-size: 13px;">[X days — App placement 1]</li>
+            <li data-html-import-id="html-import-40" data-template-id="li-34" class="canva-text" style="color: rgb(139, 139, 147); font-weight: 500; font-style: italic; font-size: 13px;">[X days — App placement 2]</li>
+          </ul>
+        </div>
+        <div class="pcol placeholder canva-container" data-html-import-id="html-import-41" data-template-id="div-35" style="background: rgb(255, 255, 255);">
+          <h4 data-html-import-id="html-import-42" data-template-id="h4-36" class="canva-text" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 600; font-size: 13px;">PC</h4>
+          <ul data-html-import-id="html-import-43">
+            <li data-html-import-id="html-import-44" data-template-id="li-37" class="canva-text" style="color: rgb(139, 139, 147); font-weight: 500; font-style: italic; font-size: 13px;">[X days — Placement name]</li>
+            <li data-html-import-id="html-import-45" data-template-id="li-38" class="canva-text" style="color: rgb(139, 139, 147); font-weight: 500; font-style: italic; font-size: 13px;">[X days — Placement name]</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 INFLUENCER PROMOTION -->
+  <div class="section" data-html-import-id="html-import-46">
+    <div class="section-head" data-html-import-id="html-import-47"><div class="badge pink canva-container" data-html-import-id="html-import-48" data-template-id="div-39" style="background: rgb(255, 168, 205); color: rgb(0, 0, 0); font-family: &quot;Libre Baskerville&quot;; font-weight: 700; font-size: 13px;">02</div><h2 data-html-import-id="html-import-49" data-template-id="h2-40" class="canva-text" style="color: rgb(30, 30, 30); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 24px;">Influencer Promotion</h2></div>
+    <p class="section-sub canva-text" data-html-import-id="html-import-50" data-template-id="p-41" style="color: rgb(91, 91, 99); font-size: 14px;">Spotlight on the top performer and the newest creator added to the lineup.</p>
+
+    <div class="creator-grid" data-html-import-id="html-import-51">
+      <div class="creator-card top canva-container" data-html-import-id="html-import-52" data-template-id="div-42" style="background: rgb(213, 239, 154);">
+        <div class="chead" data-html-import-id="html-import-53">
+          <div class="avatar canva-container" data-html-import-id="html-import-54" data-template-id="div-43" style="background: rgb(44, 34, 66); color: rgb(255, 255, 255); font-family: Poppins; font-weight: 700; font-size: 16px;">1</div>
+          <div class="cwho" data-html-import-id="html-import-55">
+            <div class="handle canva-container" data-html-import-id="html-import-56" data-template-id="div-44" style="color: rgb(44, 34, 66); font-family: Poppins; font-weight: 700; font-size: 16px;">@[[TOP_INFLUENCER_HANDLE]]</div>
+            <div class="platform canva-container" data-html-import-id="html-import-57" data-template-id="div-45" style="color: rgba(44, 34, 66, 0.65); font-weight: 600; font-size: 10px;">[[Platform]] · Top Performer</div>
+          </div>
+        </div>
+        <div class="cmetrics" data-html-import-id="html-import-58">
+          <div class="m canva-container" data-html-import-id="html-import-59" data-template-id="div-46" style="background: rgba(255, 255, 255, 0.55);"><span class="v canva-text" data-html-import-id="html-import-60" data-template-id="span-47" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 16px;">[[X]]</span><span class="k canva-text" data-html-import-id="html-import-61" data-template-id="span-48" style="color: rgb(107, 107, 114); font-weight: 600; font-size: 9px;">CLICKS</span></div>
+          <div class="m canva-container" data-html-import-id="html-import-62" data-template-id="div-49" style="background: rgba(255, 255, 255, 0.55);"><span class="v canva-text" data-html-import-id="html-import-63" data-template-id="span-50" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 16px;">[[X]]</span><span class="k canva-text" data-html-import-id="html-import-64" data-template-id="span-51" style="color: rgb(107, 107, 114); font-weight: 600; font-size: 9px;">ORDERS</span></div>
+          <div class="m canva-container" data-html-import-id="html-import-65" data-template-id="div-52" style="background: rgba(255, 255, 255, 0.55);"><span class="v canva-text" data-html-import-id="html-import-66" data-template-id="span-53" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 16px;">$[[X]]</span><span class="k canva-text" data-html-import-id="html-import-67" data-template-id="span-54" style="color: rgb(107, 107, 114); font-weight: 600; font-size: 9px;">REVENUE</span></div>
+        </div>
+        <div class="cshots" data-html-import-id="html-import-68">
+          <div class="cshot canva-container" data-html-import-id="html-import-69" data-template-id="div-55" style="background: rgb(235, 235, 235);"><span class="ph canva-text" data-html-import-id="html-import-70" data-template-id="span-56" style="color: rgb(123, 123, 130); font-weight: 600; font-style: italic; font-size: 9px;">[Post screenshot 1]</span></div>
+          <div class="cshot canva-container" data-html-import-id="html-import-71" data-template-id="div-57" style="background: rgb(235, 235, 235);"><span class="ph canva-text" data-html-import-id="html-import-72" data-template-id="span-58" style="color: rgb(123, 123, 130); font-weight: 600; font-style: italic; font-size: 9px;">[Post screenshot 2]</span></div>
+        </div>
+      </div>
+
+      <div class="creator-card canva-container" data-html-import-id="html-import-73" data-template-id="div-59" style="background: rgb(255, 255, 255);">
+        <div class="chead" data-html-import-id="html-import-74">
+          <div class="avatar canva-container" data-html-import-id="html-import-75" data-template-id="div-60" style="background: rgb(111, 96, 164); color: rgb(255, 255, 255); font-family: Poppins; font-weight: 700; font-size: 16px;">N</div>
+          <div class="cwho" data-html-import-id="html-import-76">
+            <div class="handle canva-container" data-html-import-id="html-import-77" data-template-id="div-61" style="color: rgb(44, 34, 66); font-family: Poppins; font-weight: 700; font-size: 16px;"><canva-inline-text data-template-id="canva-inline-text-62" class="canva-text" style="color: rgb(44, 34, 66); font-family: Poppins; font-weight: 700; font-size: 16px;">@[[NEW_INFLUENCER_HANDLE]]</canva-inline-text><span class="chip canva-text" data-html-import-id="html-import-78" data-template-id="span-63" style="background: rgb(255, 107, 155); color: rgb(255, 255, 255); font-weight: 700; font-size: 9px;">NEW</span></div>
+            <div class="platform canva-container" data-html-import-id="html-import-79" data-template-id="div-64" style="color: rgb(107, 107, 114); font-weight: 600; font-size: 10px;">[[Platform]] · Newest Addition</div>
+          </div>
+        </div>
+        <div class="cmetrics" data-html-import-id="html-import-80">
+          <div class="m canva-container" data-html-import-id="html-import-81" data-template-id="div-65" style="background: rgb(249, 248, 245);"><span class="v canva-text" data-html-import-id="html-import-82" data-template-id="span-66" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 16px;">[[X]]</span><span class="k canva-text" data-html-import-id="html-import-83" data-template-id="span-67" style="color: rgb(107, 107, 114); font-weight: 600; font-size: 9px;">CLICKS</span></div>
+          <div class="m canva-container" data-html-import-id="html-import-84" data-template-id="div-68" style="background: rgb(249, 248, 245);"><span class="v canva-text" data-html-import-id="html-import-85" data-template-id="span-69" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 16px;">[[X]]</span><span class="k canva-text" data-html-import-id="html-import-86" data-template-id="span-70" style="color: rgb(107, 107, 114); font-weight: 600; font-size: 9px;">ORDERS</span></div>
+          <div class="m canva-container" data-html-import-id="html-import-87" data-template-id="div-71" style="background: rgb(249, 248, 245);"><span class="v canva-text" data-html-import-id="html-import-88" data-template-id="span-72" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 16px;">$[[X]]</span><span class="k canva-text" data-html-import-id="html-import-89" data-template-id="span-73" style="color: rgb(107, 107, 114); font-weight: 600; font-size: 9px;">REVENUE</span></div>
+        </div>
+        <div class="cshots" data-html-import-id="html-import-90">
+          <div class="cshot canva-container" data-html-import-id="html-import-91" data-template-id="div-74" style="background: rgb(235, 235, 235);"><span class="ph canva-text" data-html-import-id="html-import-92" data-template-id="span-75" style="color: rgb(123, 123, 130); font-weight: 600; font-style: italic; font-size: 9px;">[Post screenshot 1]</span></div>
+          <div class="cshot canva-container" data-html-import-id="html-import-93" data-template-id="div-76" style="background: rgb(235, 235, 235);"><span class="ph canva-text" data-html-import-id="html-import-94" data-template-id="span-77" style="color: rgb(123, 123, 130); font-weight: 600; font-style: italic; font-size: 9px;">[Post screenshot 2]</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 TREND CHART -->
+  <div class="section" data-html-import-id="html-import-95">
+    <div class="section-head" data-html-import-id="html-import-96"><div class="badge violet canva-container" data-html-import-id="html-import-97" data-template-id="div-78" style="background: rgb(111, 96, 164); color: rgb(249, 248, 245); font-family: &quot;Libre Baskerville&quot;; font-weight: 700; font-size: 13px;">03</div><h2 data-html-import-id="html-import-98" data-template-id="h2-79" class="canva-text" style="color: rgb(30, 30, 30); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 24px;">Performance Trend</h2></div>
+    <p class="section-sub canva-text" data-html-import-id="html-import-99" data-template-id="p-80" style="color: rgb(91, 91, 99); font-size: 14px;">Daily clicks and order amount, [[REPORT_START_DATE]] – [[REPORT_END_DATE]].</p>
+    <div class="chart-card canva-container" data-html-import-id="html-import-100" data-template-id="div-81" style="background: rgb(249, 248, 245);">
+      <div class="chart-legend canva-container" data-html-import-id="html-import-101" data-template-id="div-82" style="color: rgb(91, 91, 99); font-weight: 600; font-size: 12px;">
+        <span data-html-import-id="html-import-102" data-template-id="span-83" class="canva-text" style="color: rgb(91, 91, 99);"><span class="dot dot-bar canva-text" data-html-import-id="html-import-103" data-template-id="span-84" style="background: rgb(213, 239, 154);"></span><canva-inline-text data-template-id="canva-inline-text-85" class="canva-text" style="color: rgb(91, 91, 99);">Clicks (left)</canva-inline-text></span>
+        <span data-html-import-id="html-import-104" data-template-id="span-86" class="canva-text" style="color: rgb(91, 91, 99);"><span class="dot dot-line canva-text" data-html-import-id="html-import-105" data-template-id="span-87" style="background: rgb(111, 96, 164);"></span><canva-inline-text data-template-id="canva-inline-text-88" class="canva-text" style="color: rgb(91, 91, 99);">Order Amount ¥ (right)</canva-inline-text></span>
+      </div>
+      <!-- Replace this placeholder with the generated bar+line trend chart for the campaign period -->
+      <div class="chart-placeholder canva-container" data-html-import-id="html-import-106" data-template-id="div-89" style="color: rgb(123, 123, 130); font-weight: 500; font-size: 13px;">Insert daily clicks / order-amount trend chart here</div>
+      <div class="chart-note canva-container" data-html-import-id="html-import-107" data-template-id="div-90" style="color: rgb(123, 123, 130); font-size: 11px;">Peak clicks: [[date]] ([[value]]) &nbsp;·&nbsp; Peak order amount: [[date]] (¥[[value]])</div>
+    </div>
+  </div>
+
+  <!-- 04 COMPETITOR ANALYSIS -->
+  <div class="section" data-html-import-id="html-import-108">
+    <div class="section-head" data-html-import-id="html-import-109"><div class="badge lilac canva-container" data-html-import-id="html-import-110" data-template-id="div-91" style="background: rgb(183, 152, 191); color: rgb(255, 255, 255); font-family: &quot;Libre Baskerville&quot;; font-weight: 700; font-size: 13px;">04</div><h2 data-html-import-id="html-import-111" data-template-id="h2-92" class="canva-text" style="color: rgb(30, 30, 30); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 24px;">Competitor Analysis</h2></div>
+    <p class="section-sub canva-text" data-html-import-id="html-import-112" data-template-id="p-93" style="color: rgb(91, 91, 99); font-size: 14px;">How [[CLIENT_NAME]]'s campaign on FANSTOSHOP compares against similar brands / channels in the same category.</p>
+    <div class="compare-wrap" data-html-import-id="html-import-113">
+      <table class="compare-table" data-html-import-id="html-import-114">
+        <thead data-html-import-id="html-import-115">
+          <tr data-html-import-id="html-import-116">
+            <th data-html-import-id="html-import-117" data-template-id="th-94" class="canva-text" style="background: rgb(249, 248, 245); color: rgb(91, 91, 99); font-family: Inter; font-weight: 600; font-size: 13px;">Metric</th>
+            <th class="us canva-text" data-html-import-id="html-import-118" data-template-id="th-95" style="background: rgb(213, 239, 154); color: rgb(44, 34, 66); font-family: Inter; font-weight: 600; font-size: 13px;">[[CLIENT_NAME]] (FANSTOSHOP)</th>
+            <th data-html-import-id="html-import-119" data-template-id="th-96" class="canva-text" style="background: rgb(40, 34, 61); color: rgb(255, 255, 255); font-family: Inter; font-weight: 600; font-size: 13px;">Competitor A</th>
+            <th data-html-import-id="html-import-120" data-template-id="th-97" class="canva-text" style="background: rgb(40, 34, 61); color: rgb(255, 255, 255); font-family: Inter; font-weight: 600; font-size: 13px;">Competitor B</th>
+          </tr>
+        </thead>
+        <tbody data-html-import-id="html-import-121">
+          <tr data-html-import-id="html-import-122">
+            <td data-html-import-id="html-import-123" data-template-id="td-98" class="canva-text" style="background: rgb(249, 248, 245); color: rgb(91, 91, 99); font-weight: 600;">Exposure Channels</td>
+            <td class="us canva-text" data-html-import-id="html-import-124" data-template-id="td-99" style="background: rgb(229, 255, 170); color: rgb(44, 34, 66); font-weight: 700;">[[e.g. Premium + APP + PC]]</td>
+            <td data-html-import-id="html-import-125" data-template-id="td-100" class="canva-text" style="color: rgb(30, 30, 30);">[[channels]]</td>
+            <td data-html-import-id="html-import-126" data-template-id="td-101" class="canva-text" style="color: rgb(30, 30, 30);">[[channels]]</td>
+          </tr>
+          <tr data-html-import-id="html-import-127">
+            <td data-html-import-id="html-import-128" data-template-id="td-102" class="canva-text" style="background: rgb(249, 248, 245); color: rgb(91, 91, 99); font-weight: 600;">Avg. CTR</td>
+            <td class="us canva-text" data-html-import-id="html-import-129" data-template-id="td-103" style="background: rgb(229, 255, 170); color: rgb(44, 34, 66); font-weight: 700;">[[X%]]</td>
+            <td data-html-import-id="html-import-130" data-template-id="td-104" class="canva-text" style="color: rgb(30, 30, 30);">[[X%]]</td>
+            <td data-html-import-id="html-import-131" data-template-id="td-105" class="canva-text" style="color: rgb(30, 30, 30);">[[X%]]</td>
+          </tr>
+          <tr data-html-import-id="html-import-132">
+            <td data-html-import-id="html-import-133" data-template-id="td-106" class="canva-text" style="background: rgb(249, 248, 245); color: rgb(91, 91, 99); font-weight: 600;">Avg. CPA</td>
+            <td class="us canva-text" data-html-import-id="html-import-134" data-template-id="td-107" style="background: rgb(229, 255, 170); color: rgb(44, 34, 66); font-weight: 700;">[[X%]]</td>
+            <td data-html-import-id="html-import-135" data-template-id="td-108" class="canva-text" style="color: rgb(30, 30, 30);">[[X%]]</td>
+            <td data-html-import-id="html-import-136" data-template-id="td-109" class="canva-text" style="color: rgb(30, 30, 30);">[[X%]]</td>
+          </tr>
+          <tr data-html-import-id="html-import-137">
+            <td data-html-import-id="html-import-138" data-template-id="td-110" class="canva-text" style="background: rgb(249, 248, 245); color: rgb(91, 91, 99); font-weight: 600;">Influencer Count</td>
+            <td class="us canva-text" data-html-import-id="html-import-139" data-template-id="td-111" style="background: rgb(229, 255, 170); color: rgb(44, 34, 66); font-weight: 700;">[[X]]</td>
+            <td data-html-import-id="html-import-140" data-template-id="td-112" class="canva-text" style="color: rgb(30, 30, 30);">[[X]]</td>
+            <td data-html-import-id="html-import-141" data-template-id="td-113" class="canva-text" style="color: rgb(30, 30, 30);">[[X]]</td>
+          </tr>
+          <tr data-html-import-id="html-import-142">
+            <td data-html-import-id="html-import-143" data-template-id="td-114" class="canva-text" style="background: rgb(249, 248, 245); color: rgb(91, 91, 99); font-weight: 600;">Est. Monthly Spend</td>
+            <td class="us canva-text" data-html-import-id="html-import-144" data-template-id="td-115" style="background: rgb(229, 255, 170); color: rgb(44, 34, 66); font-weight: 700;">$[[X]]</td>
+            <td data-html-import-id="html-import-145" data-template-id="td-116" class="canva-text" style="color: rgb(30, 30, 30);">$[[X]]</td>
+            <td data-html-import-id="html-import-146" data-template-id="td-117" class="canva-text" style="color: rgb(30, 30, 30);">$[[X]]</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="compare-note canva-text" data-html-import-id="html-import-147" data-template-id="p-118" style="color: rgb(139, 139, 147); font-size: 11px;">Data source: [[market research / platform benchmark, cite source and date]].</p>
+  </div>
+
+  <!-- 05 FANSTOSHOP PACKAGE RECOMMENDATION -->
+  <div class="section" data-html-import-id="html-import-148">
+    <div class="section-head" data-html-import-id="html-import-149"><div class="badge canva-container" data-html-import-id="html-import-150" data-template-id="div-119" style="background: rgb(213, 239, 154); color: rgb(44, 34, 66); font-family: &quot;Libre Baskerville&quot;; font-weight: 700; font-size: 13px;">05</div><h2 data-html-import-id="html-import-151" data-template-id="h2-120" class="canva-text" style="color: rgb(30, 30, 30); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 24px;">FANSTOSHOP Package Recommendation</h2></div>
+    <p class="section-sub canva-text" data-html-import-id="html-import-152" data-template-id="p-121" style="color: rgb(91, 91, 99); font-size: 14px;">Suggested next-phase hard-ad packages based on this campaign's performance. Placement mix across Premium / Influencer Hub / PC / APP can be tailored to budget.</p>
+
+    <div class="pkg-grid" data-html-import-id="html-import-153">
+      <div class="pkg-card canva-container" data-html-import-id="html-import-154" data-template-id="div-122" style="background: rgb(255, 255, 255);">
+        <div class="pkg-name canva-container" data-html-import-id="html-import-155" data-template-id="div-123" style="color: rgb(44, 34, 66); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 17px;">Package 01</div>
+        <div class="pkg-price canva-container" data-html-import-id="html-import-156" data-template-id="div-124" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 19px;"><canva-inline-text data-template-id="canva-inline-text-125" class="canva-text" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 19px;">CPA 16%</canva-inline-text><small data-html-import-id="html-import-157" data-template-id="small-126" class="canva-text" style="color: rgb(107, 107, 114); font-weight: 500; font-size: 10px;">Commission-based</small></div>
+        <ul data-html-import-id="html-import-158">
+          <li data-html-import-id="html-import-159" data-template-id="li-127" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">4 days Seasonal Spotlight (Premium)</li>
+          <li data-html-import-id="html-import-160" data-template-id="li-128" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">1 Pre-approved Brand Banner</li>
+          <li data-html-import-id="html-import-161" data-template-id="li-129" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">7 days Essentials (APP)</li>
+          <li data-html-import-id="html-import-162" data-template-id="li-130" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">5 days Rotation Banner (PC)</li>
+        </ul>
+      </div>
+
+      <div class="pkg-card lime canva-container" data-html-import-id="html-import-163" data-template-id="div-131" style="background: rgb(213, 239, 154);">
+        <div class="pkg-reco-tag canva-container" data-html-import-id="html-import-164" data-template-id="div-132" style="background: rgb(255, 107, 155); color: rgb(255, 255, 255); font-weight: 700; font-size: 10px;">Recommended</div>
+        <div class="pkg-name canva-container" data-html-import-id="html-import-165" data-template-id="div-133" style="color: rgb(44, 34, 66); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 17px;">Package 02</div>
+        <div class="pkg-price canva-container" data-html-import-id="html-import-166" data-template-id="div-134" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 19px;"><canva-inline-text data-template-id="canva-inline-text-135" class="canva-text" style="color: rgb(44, 34, 66); font-family: Inter; font-weight: 700; font-size: 19px;">CPA 16% + $3,500</canva-inline-text><small data-html-import-id="html-import-167" data-template-id="small-136" class="canva-text" style="color: rgb(107, 107, 114); font-weight: 500; font-size: 10px;">Commission + flat fee</small></div>
+        <ul data-html-import-id="html-import-168">
+          <li data-html-import-id="html-import-169" data-template-id="li-137" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">5 days Seasonal Spotlight (Premium)</li>
+          <li data-html-import-id="html-import-170" data-template-id="li-138" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">7 days Stylist — collab with influencers on APP</li>
+          <li data-html-import-id="html-import-171" data-template-id="li-139" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">2 Content Creators (AI-Matched Precisely)</li>
+          <li data-html-import-id="html-import-172" data-template-id="li-140" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">7 days Hot Brand Search (PC)</li>
+          <li data-html-import-id="html-import-173" data-template-id="li-141" class="canva-text" style="color: rgb(30, 30, 30); font-weight: 500; font-size: 12px;">1 Newsletter — recruiting influencers</li>
+        </ul>
+      </div>
+
+      <div class="pkg-card violet canva-container" data-html-import-id="html-import-174" data-template-id="div-142" style="background: rgb(111, 96, 164);">
+        <div class="pkg-name canva-container" data-html-import-id="html-import-175" data-template-id="div-143" style="color: rgb(249, 248, 245); font-family: &quot;Libre Baskerville&quot;; font-weight: 400; font-size: 17px;">Package 03 · Hybrid</div>
+        <div class="pkg-price canva-container" data-html-import-id="html-import-176" data-template-id="div-144" style="color: rgb(249, 248, 245); font-family: Inter; font-weight: 700; font-size: 19px;"><canva-inline-text data-template-id="canva-inline-text-145" class="canva-text" style="color: rgb(249, 248, 245); font-family: Inter; font-weight: 700; font-size: 19px;">CPA 20% + $6,000</canva-inline-text><small data-html-import-id="html-import-177" data-template-id="small-146" class="canva-text" style="color: rgb(196, 195, 202); font-weight: 500; font-size: 10px;">Full-funnel coverage</small></div>
+        <ul data-html-import-id="html-import-178">
+          <li data-html-import-id="html-import-179" data-template-id="li-147" class="canva-text" style="color: rgb(249, 248, 245); font-weight: 500; font-size: 12px;">14 days Stylist — collab with influencers on APP</li>
+          <li data-html-import-id="html-import-180" data-template-id="li-148" class="canva-text" style="color: rgb(249, 248, 245); font-weight: 500; font-size: 12px;">8 days Influencer Login Banner + More Opportunity</li>
+          <li data-html-import-id="html-import-181" data-template-id="li-149" class="canva-text" style="color: rgb(249, 248, 245); font-weight: 500; font-size: 12px;">1 Month Discover Banner (Evergreen)</li>
+          <li data-html-import-id="html-import-182" data-template-id="li-150" class="canva-text" style="color: rgb(249, 248, 245); font-weight: 500; font-size: 12px;">5 days New Trend Partners + Curated Campaigns</li>
+          <li data-html-import-id="html-import-183" data-template-id="li-151" class="canva-text" style="color: rgb(249, 248, 245); font-weight: 500; font-size: 12px;">1 Pre-approved Brand Banner (New)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="pkg-ai-note canva-container" data-html-import-id="html-import-184" data-template-id="div-152" style="background: rgb(255, 168, 205); color: rgb(44, 34, 66); font-weight: 600; font-size: 13px;"><canva-inline-text data-template-id="canva-inline-text-153" class="canva-text" style="color: rgb(44, 34, 66); font-weight: 600; font-size: 13px;">💡 Share your budget — </canva-inline-text><b data-html-import-id="html-import-185" data-template-id="b-154" class="canva-text" style="color: rgb(44, 34, 66); font-weight: 700;">FANSTOSHOP's AI system</b><canva-inline-text data-template-id="canva-inline-text-155" class="canva-text" style="color: rgb(44, 34, 66); font-weight: 600; font-size: 13px;"> can calculate the best package mix for you.</canva-inline-text></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer canva-container" data-html-import-id="html-import-186" data-template-id="div-156" style="background: rgb(40, 34, 61);">
+    <p data-html-import-id="html-import-187" data-template-id="p-157" class="canva-text" style="color: rgb(196, 195, 202); font-size: 12px;"><canva-inline-text data-template-id="canva-inline-text-158" class="canva-text" style="color: rgb(196, 195, 202); font-size: 12px;">Combined, the campaign generated </canva-inline-text><b data-html-import-id="html-import-188" data-template-id="b-159" class="canva-text" style="color: rgb(213, 239, 154);">[[TOTAL_CLICKS]] clicks</b><canva-inline-text data-template-id="canva-inline-text-160" class="canva-text" style="color: rgb(196, 195, 202); font-size: 12px;">, </canva-inline-text><b data-html-import-id="html-import-189" data-template-id="b-161" class="canva-text" style="color: rgb(213, 239, 154);">[[TOTAL_ORDERS]] orders</b><canva-inline-text data-template-id="canva-inline-text-162" class="canva-text" style="color: rgb(196, 195, 202); font-size: 12px;"> and </canva-inline-text><b data-html-import-id="html-import-190" data-template-id="b-163" class="canva-text" style="color: rgb(213, 239, 154);">$[[TOTAL_REVENUE]]</b><canva-inline-text data-template-id="canva-inline-text-164" class="canva-text" style="color: rgb(196, 195, 202); font-size: 12px;"> in revenue.</canva-inline-text></p>
+  </div>
+
+</div>
+
+
+<script src="/_sdk/8b7c4717bafbcf62.editing_sdk.js" integrity="sha512-/t3Rjm/TVHx0TUFevsNeqgNF0PQm8F5l+hyiCjrHCLbsauhvNMY9XpbPM3BPm27R9/KnzXCuMA6HMwrgyWM8WQ=="></script></body></html>

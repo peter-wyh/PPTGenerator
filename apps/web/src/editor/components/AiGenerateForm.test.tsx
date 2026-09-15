@@ -19,8 +19,8 @@ vi.mock('@/api/htmlTemplates', () => ({
       guideId: 'g1',
     }),
     getStructuralGuides: vi.fn().mockResolvedValue([
-      { id: 'g1', name: 'campaign-report 结构指南', updatedAt: '2026-08-27' },
-      { id: 'g2', name: '月报结构指南', updatedAt: '2026-08-27' },
+      { id: 'g1', name: 'campaign-report 结构指南', updatedAt: '2026-08-27', checksCount: 3, assetsCount: 0, palette: ['#28223D', '#D5EF9A'] },
+      { id: 'g2', name: '月报结构指南', updatedAt: '2026-08-27', checksCount: 5, assetsCount: 2, palette: ['#28223D', '#D5EF9A'] },
     ]),
     getSystemPrompt: vi.fn().mockResolvedValue('# SYSTEM_PROMPT\nUse exact data.'),
   },
@@ -60,13 +60,18 @@ describe('AiGenerateForm', () => {
     await waitFor(() => expect(htmlTemplatesApi.getSystemPrompt).toHaveBeenCalled());
   });
 
-  it('结构指南选择器:切「月报结构指南」→ onGenerate 携带 guideId', async () => {
+  it('结构指南选择器:切「月报结构指南」→ onGenerate 携带 guideId(自定义下拉+palette 预览)', async () => {
     const onGenerate = vi.fn();
     render(<AiGenerateForm campaignId="c1" onGenerate={onGenerate} />);
     await waitFor(() => expect(htmlTemplatesApi.getDesignGuide).toHaveBeenCalledWith('c1', undefined));
     // 展开指南折叠面板（结构指南下拉在面板内;默认不叠加）
     fireEvent.click(screen.getByText('Skill · 品牌样式'));
-    fireEvent.change(screen.getByDisplayValue('不选用（按上面的品牌样式生成）'), { target: { value: 'g2' } });
+    // g7 自定义下拉:点开 → 应渲染色板条(palette 色块) → 点「月报结构指南」
+    fireEvent.click(screen.getByRole('button', { name: /不选用/ }));
+    expect(screen.getByText('月报结构指南')).toBeTruthy();
+    const swatch = document.querySelector('[data-testid="guide-palette-g2"]');
+    expect(swatch).toBeTruthy();
+    fireEvent.click(screen.getByText('月报结构指南'));
     fireEvent.click(screen.getByRole('button', { name: /生成报告/ }));
     const arg = onGenerate.mock.calls[0][0];
     expect(arg.guideId).toBe('g2');

@@ -3,6 +3,8 @@ import { asyncHandler } from '../../utils/asyncHandler';
 import { guideService } from './guide.service';
 import { validateHtml, lintChecks } from './html-validator';
 import type { GuideCheck } from './html-validator';
+import { readGuideAssetText } from './guide-asset-read';
+import { ApiError } from '../../utils/ApiError';
 
 export const guideController = {
   list: asyncHandler(async (req: Request, res: Response) => {
@@ -27,6 +29,19 @@ export const guideController = {
   getRevision: asyncHandler(async (req: Request, res: Response) => {
     const rev = await guideService.getRevision(req.params.id, Number(req.params.version));
     res.json({ revision: rev });
+  }),
+
+  /* ★ g6 参考文件回显 */
+  listRevisionAssets: asyncHandler(async (req: Request, res: Response) => {
+    const rev = await guideService.getRevision(req.params.id, Number(req.params.version));
+    res.json({ assets: Array.isArray(rev.assets) ? rev.assets : [] });
+  }),
+
+  getRevisionAssetContent: asyncHandler(async (req: Request, res: Response) => {
+    const ref = String(req.query.ref || '');
+    const file = readGuideAssetText(ref);
+    if (!file) throw ApiError.notFound('Guide asset not found');
+    res.json({ ref, ...file });
   }),
 
   saveRevision: asyncHandler(async (req: Request, res: Response) => {

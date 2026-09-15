@@ -78,6 +78,10 @@ export const guidesApi = {
   activateRevision: (id: string, version: number) =>
     api.post<{ revision: GuideRevisionDTO }>(`/guides/${id}/revisions/activate`, { version }).then((r) => r.data.revision),
 
+  // ── g6 参考文件回显 ──
+  getRevisionAssetContent: (id: string, version: number, ref: string) =>
+    api.get<{ ref: string; content: string; truncated: boolean }>(`/guides/${id}/revisions/${version}/asset-content`, { params: { ref } }).then((r) => r.data),
+
   // ── S2 干跑校验 ──
   dryRun: (id: string, checks: CheckDTO[], html?: string) =>
     api.post<DryRunResultDTO>(`/guides/${id}/revisions/dry-run`, { checks, ...(html ? { html } : {}) }).then((r) => r.data),

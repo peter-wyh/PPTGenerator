@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { jsonSchema, jsonTokenOverridesSchema } from '../../utils/json-schema';
 
 export const createHtmlTemplateSchema = z.object({
   name: z.string().min(1).max(100),
@@ -90,8 +91,8 @@ export const agentQaSchema = z.object({
  * 触发重渲染并写回 html。所有字段 optional — 未传则沿用 version 现值。
  */
 export const saveRecipeConfigSchema = z.object({
-  reportContent: z.any().optional(),
-  tokenOverrides: z.record(z.any()).optional(),
+  reportContent: jsonSchema.optional(),
+  tokenOverrides: jsonTokenOverridesSchema.optional(),
   manifestOverrides: z
     .object({
       order: z.array(z.string()).optional(),
@@ -106,8 +107,8 @@ export const saveRecipeConfigSchema = z.object({
 export const reRenderSchema = z.object({
   recipeId: z.string().optional(),
   campaignId: z.string().optional(),
-  reportContent: z.any().optional(),
-  tokenOverrides: z.record(z.any()).optional(),
+  reportContent: jsonSchema.optional(),
+  tokenOverrides: jsonTokenOverridesSchema.optional(),
   manifestOverrides: z
     .object({
       order: z.array(z.string()).optional(),

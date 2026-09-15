@@ -10,6 +10,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   campaign: { findUnique: vi.fn() },
   businessLine: { findUnique: vi.fn() },
+  guideRevision: { findFirst: vi.fn(), create: vi.fn() },
   $transaction: vi.fn(),
 }));
 vi.mock('../../prisma', () => ({ prisma: prismaMock }));
@@ -174,5 +175,33 @@ describe('mergeGuideLayers · overridesVisual 视觉接管', () => {
     const r = mergeGuideLayers(both, both);
     expect(r.content).toContain('一份两职');
     expect(r.used).toHaveLength(1);
+  });
+});
+
+describe('saveRevision · P0 未传字段继承上一版(0911 资产清零防护)', () => {
+  it('未传 assets/checks/toolParams → 继承上一版,不清零', async () => {
+    const lastAssets = [{ kind: 'tokens', ref: 'ft-recap/design-tokens.json', hash: 'abc12345', name: 'FT recap design tokens' }];
+    prismaMock.guideRevision = { findFirst: vi.fn().mockResolvedValue({ id: 'r1', version: 4, assets: lastAssets, checks: [{ type: 'contains_text', arg: 'GMV' }], toolParams: { retries: 2 } }) , create: vi.fn().mockImplementation(({ data }) => ({ id: 'r2', ...data })) };
+    prismaMock.guide.update = vi.fn().mockResolvedValue({});
+    const out = await guideService.saveRevision('g1', { content: '# 新正文', changelog: '编辑:测试' });
+    expect(out.deduped).toBe(false);
+    const created = (prismaMock.guideRevision.create as ReturnType<typeof vi.fn>).mock.calls[0][0].data;
+    expect(created.assets).toEqual(lastAssets);
+    expect(created.checks).toEqual([{ type: 'contains_text', arg: 'GMV' }]);
+    expect(created.toolParams).toEqual({ retries: 2 });
+  });
+
+  it('显式传 assets=[] → 尊重清空意图(不是继承)', async () => {
+    prismaMock.guideRevision = { findFirst: vi.fn().mockResolvedValue({ id: 'r1', version: 4, assets: [{ kind: 'tokens', ref: 'x' }], checks: [], toolParams: {} }), create: vi.fn().mockImplementation(({ data }) => ({ id: 'r2', ...data })) };
+    prismaMock.guide.update = vi.fn().mockResolvedValue({});
+    await guideService.saveRevision('g1', { content: '# x', assets: [] });
+    const created = (prismaMock.guideRevision.create as ReturnType<typeof vi.fn>).mock.calls[0][0].data;
+    expect(created.assets).toEqual([]);
+  });
+
+  it('内容与最新版一致 → deduped,不建新版', async () => {
+    prismaMock.guideRevision = { findFirst: vi.fn().mockResolvedValue({ id: 'r1', version: 4, content: '# 同文', assets: [], checks: [], toolParams: {} }), create: vi.fn() };
+    await guideService.saveRevision('g1', { content: '# 同文' });
+    expect(prismaMock.guideRevision.create).not.toHaveBeenCalled();
   });
 });

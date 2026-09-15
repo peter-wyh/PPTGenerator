@@ -20,6 +20,7 @@ const CommissionPlanPage = lazy(() => import('./routes/CommissionPlanPage').then
 const GuidePage = lazy(() => import('./routes/GuidePage').then((m) => ({ default: m.GuidePage })));
 const ApiDocsPage = lazy(() => import('./routes/ApiDocsPage'));
 const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m) => ({ default: m.BusinessLinePage })));
+const PlacementsPage = lazy(() => import('./routes/PlacementsPage').then((m) => ({ default: m.PlacementsPage })));
 const CampaignCollabPage = lazy(() => import('./routes/CampaignCollabPage').then((m) => ({ default: m.CampaignCollabPage })));
 const SchemesPage = lazy(() => import('./routes/SchemesPage').then((m) => ({ default: m.SchemesPage })));
 const HtmlStudio = lazy(() => import('./routes/HtmlStudio').then((m) => ({ default: m.HtmlStudio })));
@@ -61,6 +62,7 @@ export function App() {
               <Route path="commission-plans" element={<CommissionPlanPage />} />
               <Route path="guides" element={<GuidePage />} />
               <Route path="business-lines" element={<BusinessLinePage />} />
+              <Route path="placements" element={<PlacementsPage />} />
               <Route path="api-docs" element={<ApiDocsPage />} />
             </Route>
           </Route>

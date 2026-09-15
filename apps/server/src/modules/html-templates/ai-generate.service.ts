@@ -1,14 +1,36 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
+import { logger } from '../../logger';
 import { config } from '../../config';
 import { fetchChatCompletionWithRetry, type ChatMessage } from './ai-client';
 import { resolvePairForCampaign, mergeGuideLayers } from '../guides/guide.service';
+import { resolveGuideCssBundle, injectGuideCss, guideCssPromptSection } from '../guides/guide-css-asset';
+import type { GuideCssBundle } from '../guides/guide-css-asset';
 import { extractGuideChecks, runGuideChecks } from './guide-checks.bridge';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { loadCreatorCps } from './cps-source';
 import { devSafeBase } from '../../utils/dev-safe-base';
 import { campaignService } from '../campaigns/campaigns.service';
 import { orderStatsService } from '../campaigns/order-stats.service';
+// ★ 0911 覆盖度感知口径裁决（C 方案）：订单中间层覆盖不足 LP 标尺 80% 时，
+//   KPI 回落 LP 口径（GMV/单量 = 链接追踪真源），并向 AI 声明口径与切换原因。
+//   背景 wander 实测：订单表仅导入 60/3398 单（1.8%）却因「存在即优先」静默接管，
+//   Total Revenues $118.4K(GMV) → $538(佣金)、ROAS 8.6 → 0.04x 数量级畸变。
+/** LP 聚合列订单侧标尺（orders>0 才可作标尺；空 LP 返回 null = 不裁决）。 */
+export function lpScale(lp: { orders: number; gmv: number } | null): { orders: number; gmv: number } | null {
+  if (!lp || !(lp.orders > 0)) return null;
+  return { orders: lp.orders, gmv: lp.gmv };
+}
+/**
+ * 口径裁决：orderTableOrders vs lpOrders。
+ * - use-order-table：订单表覆盖 LP ≥80%（或 LP 无订单侧数据不构成标尺）→ 维持订单表口径
+ * - fall-back-to-lp：订单表覆盖 <80%（含订单表为空）→ 回落 LP 口径（KPI 用 GMV/链接单量）
+ */
+export function coverageAdvisory(orderTableOrders: number, lpOrders: number): 'use-order-table' | 'fall-back-to-lp' {
+  if (!(lpOrders > 0)) return 'use-order-table'; // LP 无订单侧 → 订单表(哪怕残缺)仍是唯一成交真源
+  if (orderTableOrders >= lpOrders * 0.8) return 'use-order-table';
+  return 'fall-back-to-lp';
+}
 
 /**
  * AI HTML 报告生成服务。
@@ -198,6 +220,10 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
    insight card or section with big numbers (do not silently drop it when the data exists).
    - Comparison (priorPeriod, when present) → MoM comparison table/bars: current vs prior period KPIs
      with mom % delta badges (green up / red down). mom=null means prior period was 0 — show "N/A".
+   - Caliber annotation (caliber, when present) → the KPI values use the stated data caliber (e.g.
+     link-tracking GMV). Render a small muted caption under the KPI row, e.g.
+     "Caliber: link-tracking (GMV) — order table covers 1.8% of tracked orders". Keep it one line,
+     small font, does not replace any module. When absent, no annotation.
    - Placements grouped by creator (placementGroups, when present) → grouped image wall: for EACH group
      render a group header (creator name / site name + platform chip) and its screenshot card grid.
      Each card = screenshot image with rounded-xl corners, subtle shadow (box-shadow), hover lift
@@ -1150,8 +1176,17 @@ export const aiGenerateService = {
       orderStats = null;
     }
     if (orderStats) {
-      console.log(`[buildCampaignContext] orderStats available: ${orderStats.days.length} days, orders=${orderStats.totals.orders} (order-table sourced)`);
+      logger.info(`[buildCampaignContext] orderStats available: ${orderStats.days.length} days, orders=${orderStats.totals.orders} (order-table sourced)`);
     }
+
+    // ★ 0911 覆盖度感知口径裁决（C 方案）：LP 聚合列（链接追踪真源）作订单侧标尺。
+    //   orderStats 存在但订单量覆盖 LP <80%（wander 实测 1.8%）→ 成交口径回落 LP：
+    //   revenue=GMV、orders=链接单量、AOV=GMV/单，并声明 caliber 块让 AI 在报告里标注口径。
+    //   LP 无订单侧（orders=0，如纯流量链接）不构成标尺，维持订单表口径不动。
+    //   ★ 聚合列是全周期口径：period != campaign 全周期时标尺失真（子区间 LP 单量未知），
+    //   不做覆盖度比较——宁缺勿假，只在口径匹配（全周期报告）时裁决。
+    let caliberAdvisory: 'use-order-table' | 'fall-back-to-lp' | null = null;
+    let caliber: { basis: string; note: string } | null = null;
 
     // ★ 当指定 reportPeriod 且有 CPS daily 数据时，按日期切片重新计算 KPI / trend / creators CPS
     // 这使得 AI 在生成新周期报告时获得的是该周期内的真实数据，而非整个 campaign 的汇总数据
@@ -1173,7 +1208,7 @@ export const aiGenerateService = {
     type DailySum = { clicks: number; impressions: number; orders: number; gmv: number; spend: number; commission: number; newCustomers: number };
     const total: DailySum = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
     const perCreatorSums = new Map<string, DailySum>();
-    const byDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
+    const byDate = new Map<string, { revenue: number; clicks: number; orders: number; commission: number }>();
     // ★ clicks 回退聚合列:daily 无 clicks 键 + 报告周期完整覆盖 campaign 生命周期 → 用
     //   CpsPerformance 顶层聚合列(importCpsPerformance 导入的链接全周期汇总,真源 Awin
     //   Click References)。周期切片不全覆盖时口径不符,不回退;全 0 视为无数据。
@@ -1202,10 +1237,11 @@ export const aiGenerateService = {
           ccSum.commission += cell.commission;
           ccSum.newCustomers += cell.newCustomers;
 
-          const entry = byDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0 };
+          const entry = byDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0, commission: 0 };
           entry.revenue += cell.gmv;
           entry.clicks += cell.clicks;
           entry.orders += cell.orders;
+          entry.commission += cell.commission;
           byDate.set(date, entry);
         }
         perCreatorSums.set(ccId, ccSum);
@@ -1243,6 +1279,40 @@ export const aiGenerateService = {
       const fmtMoney = (n: number) => `$${n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toFixed(0)}`;
 
       if (orderStats) {
+        // ★ 0911 口径裁决执行点：全周期报告才比较覆盖度（聚合列口径匹配前提）。
+        //   fall-back-to-lp：LP 标尺存在且订单表覆盖 <80% → KPI 用 LP（GMV/单量/AOV=GMV/单），
+        //   订单表状态拆分等富维度继续注入（trend/明细仍订单表——KPI 声明块引导 AI 口径一致）。
+        const coversAll = (!reportPeriod?.startDate || !campaign.startDate || reportPeriod.startDate <= campaign.startDate)
+          && (!reportPeriod?.endDate || !campaign.endDate || reportPeriod.endDate >= campaign.endDate);
+        let lpAgg: { orders: number; gmv: number } | null = null;
+        if (coversAll && cpsSource) {
+          // ★ 标尺 = LP 聚合列（链接追踪真源）：byCc 顶层 orders/gmv 是订单表现算（成交侧），
+          //   LP 聚合列只在 e.links[] 里（loadCreatorCps 流量侧只入 links 不入顶层聚合）。
+          let o = 0, g = 0;
+          for (const [, e] of cpsSource.byCc) for (const l of e.links) { o += l.orders; g += l.gmv; }
+          lpAgg = lpScale({ orders: o, gmv: g });
+        }
+        caliberAdvisory = lpAgg ? coverageAdvisory(orderStats.totals.orders, lpAgg.orders) : null;
+        if (caliberAdvisory === 'fall-back-to-lp') {
+          const ot = orderStats.totals;
+          const aovL = lpAgg!.orders ? lpAgg!.gmv / lpAgg!.orders : 0;
+          periodKpis = [
+            { label: 'Total Revenues', value: fmtMoney(lpAgg!.gmv) },
+            { label: 'Clicks', value: (clicksKeySeen || clicksFallback) ? fmtNum(total.clicks) : 'N/A' },
+            { label: 'Orders', value: fmtNum(lpAgg!.orders) },
+            { label: 'New Customer Acquisition', value: ot.hasNewCustomerTag ? fmtNum(ot.newCustomers) : 'N/A' },
+            { label: 'AOV', value: fmtMoney(aovL) },
+            ...(ot.approvedOrders > 0 ? [{ label: 'Approved Orders', value: fmtNum(ot.approvedOrders) }] : []),
+            ...(total.spend > 0 ? [{ label: 'ROAS', value: (lpAgg!.gmv / total.spend).toFixed(1) }] : []),
+          ];
+          caliber = {
+            basis: 'link-tracking (GMV, LinkPerformance aggregate)',
+            note: `order table covers ${(orderStats.totals.orders / lpAgg!.orders * 100).toFixed(1)}% of tracked orders — KPIs use link-tracking caliber; order-table derived modules reflect the imported subset only`,
+          };
+          if (!ot.hasNewCustomerTag) periodDataGaps.push('newCustomers');
+          if (!clicksKeySeen && !clicksFallback) periodDataGaps.push('clicks');
+          logger.info(`[buildCampaignContext] caliber fall-back-to-lp: orderTable=${orderStats.totals.orders} vs lp=${lpAgg!.orders}, KPI GMV=$${lpAgg!.gmv.toFixed(0)}`);
+        } else {
         // ★ 中间层口径（订单表真源）：revenue/orders/newCustomers(标签判定)来自 OrderDailyStat，
         //   clicks/impressions/spend 保持 daily（中间层无此维度）。
         const ot = orderStats.totals;
@@ -1264,6 +1334,7 @@ export const aiGenerateService = {
         if (!ot.hasNewCustomerTag) periodDataGaps.push('newCustomers');
         // ★ clicks 聚合列回退生效时不声明缺口(fallback 数据真实可用)
         if (!clicksKeySeen && !clicksFallback) periodDataGaps.push('clicks');
+        }
       } else {
         const aov = total.orders ? total.gmv / total.orders : 0;
         periodKpis = [
@@ -1294,7 +1365,7 @@ export const aiGenerateService = {
             ...(clicksKeySeen ? { clicks: byDate.get(d)?.clicks ?? 0 } : {}),
           };
         });
-        console.log(`[buildCampaignContext] Period-aware data (order-table sourced): ${dates.length} days, revenue=$${orderStats.totals.commission.toFixed(0)}, orders=${orderStats.totals.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
+        logger.info(`[buildCampaignContext] Period-aware data (order-table sourced): ${dates.length} days, revenue=$${orderStats.totals.commission.toFixed(0)}, orders=${orderStats.totals.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
       } else {
         const dates = [...byDate.keys()].sort();
         dailyTrend = dates.map((d) => {
@@ -1306,7 +1377,7 @@ export const aiGenerateService = {
             orders: e.orders,
           };
         });
-        console.log(`[buildCampaignContext] Period-aware data computed: ${dates.length} days, GMV=$${total.gmv.toFixed(0)}, orders=${total.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
+        logger.info(`[buildCampaignContext] Period-aware data computed: ${dates.length} days, GMV=$${total.gmv.toFixed(0)}, orders=${total.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
       }
 
       // ── 缺口① MoM 环比：前一期 = 报告周期往前推同样长度（宁缺勿假：前一期无数据不注入）──
@@ -1439,6 +1510,15 @@ export const aiGenerateService = {
 
     // ★ 0826 资源位回退 → 0827 分组结构：analytics 为空时用达人合作作品截图组 placementGroups
     //   （构建过程见下方 creators 之后的分组回退段）。
+
+    // ★ 0915 DM Deck tier-pill 真源：mediaPlacements 轻量注入（仅 name+description，无图条目也保留）。
+    //   此前 analytics blob 整体不进上下文 → 指南「tier 从 description 提取」无从执行 → tier-pill 全缺。
+    //   只注入白名单字段，宁缺勿假：无 mediaPlacements 不注入。
+    const mediaPlacementsLite = analyticsPlacements.length
+      ? analyticsPlacements
+          .filter((m) => m?.name)
+          .map((m) => ({ name: m.name as string, description: m.description ?? null }))
+      : null;
 
     // ★ 0909 竞品声量（analytics.competitors 白名单提取）：FT 提案 deck「COMPETITOR SHARE OF VOICE」屏。
     //   宁缺勿假：无数据不注入（模块省略）；shareOfVoice<=0 的行剔除。
@@ -1639,8 +1719,37 @@ export const aiGenerateService = {
       // ★ 扁平化关键分析数据到顶层，降低 AI 忽略概率。
       // dailyTrend 仅有期内切片时非 null；weeklyTrend 等已废弃维度（analytics blob）完全不序列化。
       ...(dailyTrend ? { dailyTrend } : {}),
+      // ★ 0915 DM Deck 月卡注入：**双源聚合**——优先 byDate（LP GMV 口径，与 KPI Total Sales 同源），
+      //   回退 orderStats.days（订单表 commission 口径）。原挂在 dailyTrend 上但 dailyTrend 仅
+      //   hasPeriod 分支构建——无 period 生成恒 null，月卡假阴性「require the monthlyTrend feed」即此因。
+      ...((byDate.size || orderStats?.days?.length) ? { monthlyTrend: (() => {
+        const byM = new Map<string, { month: string; orders: number; revenue: number; clicks?: number; commission?: number }>();
+        if (byDate.size) {
+          for (const [date, e] of byDate) {
+            const m = String(date || '').slice(0, 7);
+            if (!/^\d{4}-\d{2}$/.test(m)) continue;
+            const cur = byM.get(m) ?? { month: m, orders: 0, revenue: 0 };
+            cur.orders += e.orders; cur.revenue += e.revenue; cur.clicks = (cur.clicks ?? 0) + e.clicks;
+            cur.commission = Math.round(((cur.commission ?? 0) + (e.commission ?? 0)) * 100) / 100;
+            byM.set(m, cur);
+          }
+        } else if (orderStats?.days?.length) {
+          for (const d of orderStats.days) {
+            const m = String(d.date || '').slice(0, 7);
+            if (!/^\d{4}-\d{2}$/.test(m)) continue;
+            const cur = byM.get(m) ?? { month: m, orders: 0, revenue: 0 };
+            cur.orders += d.orders; cur.revenue += d.commission;
+            cur.commission = Math.round(((cur.commission ?? 0) + (d.commission ?? 0)) * 100) / 100;
+            byM.set(m, cur);
+          }
+        }
+        return [...byM.values()].sort((a, b) => a.month.localeCompare(b.month));
+      })() } : {}),
       // ★ 期内 KPI 总量（当存在时，AI 应使用这些而非 campaign.metrics）
       ...(periodKpis ? { periodKpis } : {}),
+      // ★ 0911 口径声明：KPI 数据口径与（如发生）回落原因。AI 应在 KPI 区以小字标注
+      //   口径（如 "Caliber: link-tracking (GMV)"），让读者知道数字的计量基准。
+      ...(caliber ? { caliber } : {}),
       // ★ 订单商品聚合：Top-Sales 排行（orders/qty/revenue）+ 购物篮结构。
       //   含义：topProducts.orders = 含该商品的订单数；qty = 售出件数（多件装一件多 qty）。
       //   basket = 购物篮指标（multiItemRate/threePlusRate 单位 %，avgItemsPerOrder 件/单）。
@@ -1655,6 +1764,8 @@ export const aiGenerateService = {
       // ★ 缺口④ 媒体资源位（定性）→ 0827 按达人分组：placementGroups（每组 = 达人/站点 + 其截图列表）。
       //   无图条目已在整形时剔除；全空时字段不注入 → AI 无该模块数据 → 整模块隐藏。
       ...(placementGroups.length ? { placementGroups } : {}),
+      // ★ 0915 DM Deck：tier-pill 提取真源（Slide2 榜单分层标签）。
+      ...(mediaPlacementsLite ? { mediaPlacements: mediaPlacementsLite } : {}),
       // ★ 0909 竞品声量：analytics.competitors 白名单提取——有数据才注入，FT 提案 deck 渲染竞品屏。
       ...(competitors.length ? { competitors } : {}),
       // ★ 全媒体表现表（0826）：所有 publisher 的期内 clicks/orders/GMV/Commission——
@@ -1745,6 +1856,12 @@ export const aiGenerateService = {
             // ★ 达人主页链接（0827 迭代）：Creator 表 schema 字段。报告指南 Creator Breakdown
             //   story 合作行跳主页用；无值保持 null，AI 端宁缺勿假不编造。
             profileUrl: cc.creator?.profileUrl ?? null,
+            // ★ 0915 DM Deck Slide3 补注入：达人档案字段（此前缺失→Followers 显示「—」）。
+            //   followers/engagement 为 String（如 "1.55M"/"4.8%"），原样注入 AI 端直接渲染，不换算。
+            followers: cc.creator?.followers ?? null,
+            engagementRate: cc.creator?.engagement ?? null,
+            creatorCategory: cc.creator?.category ?? null,
+            creatorRegion: cc.creator?.region ?? null,
             // ★ tier 不再注入（0826 用户要求：报告不透出 TIER 字段）
             contentType: cc.contentType,
             collabType: cc.collabType,
@@ -1836,7 +1953,7 @@ export const aiGenerateService = {
       }
       placementGroups = [...byCreator.values()];
       if (placementGroups.length) {
-        console.log(`[buildCampaignContext] placementGroups fallback: ${placementGroups.length} creator groups injected`);
+        logger.info(`[buildCampaignContext] placementGroups fallback: ${placementGroups.length} creator groups injected`);
       }
     }
     if (placementGroups.length) {
@@ -1872,7 +1989,9 @@ export const aiGenerateService = {
     const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));
     // ★ S2 Agent 四维架构:装配结构指南的 checks 断言(active revision 快照),完成后 validate(报告不拦截)
     const guideChecks = extractGuideChecks(pair.structural);
-    const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent });
+    // ★ B2 指南 CSS 资产:LLM 只写结构+占位符,服务端注入权威 CSS(色值不经过 LLM)
+    const guideCssBundle = await resolveGuideCssBundle(pair.structural);
+    const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent: guideCssBundle ? guideContent + '\n\n' + guideCssPromptSection(guideCssBundle) : guideContent });
 
     let userPrompt = USER_PROMPT_TEMPLATE
       .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')
@@ -1914,14 +2033,14 @@ export const aiGenerateService = {
       attempts = result.attempts;
     } catch (err: any) {
       // 诊断：记录中断类型 + 耗时，区分网关 ~180s 关连接 / 本地 290s AbortError / 其它网络层
-      console.error('[AI Generate] 网络中断（含重试后仍失败）', {
+      logger.error({
         elapsedMs: Date.now() - startedAt,
         name: err?.name,
         code: err?.code,
         message: String(err?.message || ''),
         model: DEEPSEEK_MODEL,
         promptChars: userPrompt.length,
-      });
+      }, '[AI Generate] 网络中断（含重试后仍失败）');
       // 覆盖 DeepSeek 各类连接中断：
       //  - AbortError/abort：本地 290s 超时主动中断（重试不划算，直接报错）
       //  - terminated/other side closed：DeepSeek 服务端 ~180s 主动关 socket（实测偶发，复杂报告易触发）
@@ -1937,12 +2056,12 @@ export const aiGenerateService = {
       }
       throw err;
     }
-    console.log('[AI Generate] 成功', {
+    logger.info({
       elapsedMs: Date.now() - startedAt,
       attempts,
       httpStatus: response.status,
       model: DEEPSEEK_MODEL,
-    });
+    }, '[AI Generate] 成功');
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
@@ -1993,7 +2112,7 @@ export const aiGenerateService = {
     if (html && html.startsWith('<') && !html.includes('</html>')) {
       // 检测 finish_reason 判断是否因 token 限制截断
       const truncated = choice?.finish_reason === 'length';
-      console.warn('[AI Generate] HTML possibly truncated:', truncated ? 'token limit' : 'unknown', 'length:', html.length);
+      logger.warn({ truncated, reason: truncated ? 'token limit' : 'unknown', length: html.length }, '[AI Generate] HTML possibly truncated');
       // 简单补全：关闭未关闭的标签
       const openBody = (html.match(/<body/gi) || []).length;
       const closeBody = (html.match(/<\/body/gi) || []).length;
@@ -2005,10 +2124,11 @@ export const aiGenerateService = {
 
     // 5) 最终验证
     if (!html || !html.startsWith('<')) {
-      console.error('[AI Generate] HTML parse failed.',
-        'content length:', content.length,
-        'finish_reason:', choice?.finish_reason,
-        'first 300 chars:', content.substring(0, 300));
+      logger.error({
+        contentLength: content.length,
+        finishReason: choice?.finish_reason,
+        head: content.substring(0, 300),
+      }, '[AI Generate] HTML parse failed');
       throw ApiError.internal(
         `AI 生成的 HTML 格式异常${choice?.finish_reason === 'length' ? '（输出被截断，请减少内容复杂度后重试）' : ''}`
       );
@@ -2042,7 +2162,7 @@ export const aiGenerateService = {
     const openScripts = (processedHtml.match(/<script/gi) || []).length;
     const closeScripts = (processedHtml.match(/<\/script>/gi) || []).length;
     if (openScripts > closeScripts) {
-      console.warn('[AI Generate] HTML truncated inside <script>, attempting to close. script tags: open=' + openScripts + ' close=' + closeScripts);
+      logger.warn('[AI Generate] HTML truncated inside <script>, attempting to close. script tags: open=' + openScripts + ' close=' + closeScripts);
       // 移除末尾可能已追加的 </body></html>
       processedHtml = processedHtml.replace(/<\/body>\s*<\/html>\s*$/i, '');
       // 移除末尾不完整的 JS 代码（从最后一个完整语句后截断）
@@ -2066,7 +2186,7 @@ export const aiGenerateService = {
       processedHtml += ')'.repeat(Math.max(0, parens));
       processedHtml += '}'.repeat(Math.max(0, braces));
       processedHtml += ';\n    </script>\n</body>\n</html>';
-      console.warn('[AI Generate] Auto-closed script tags. braces:' + braces + ' parens:' + parens + ' brackets:' + brackets + ' Final length:', processedHtml.length);
+      logger.warn({ braces, parens, brackets, length: processedHtml.length }, '[AI Generate] Auto-closed script tags');
     }
 
     // 8) Logo 修复：AI 可能生成 <img style="display:none"> 并用 onerror 回调切换到文字 fallback span。
@@ -2092,7 +2212,7 @@ export const aiGenerateService = {
     const resolvedChecks = await guideChecks;
     const validateReport = resolvedChecks.length ? runGuideChecks(processedHtml, resolvedChecks) : null;
     if (validateReport && !validateReport.ok) {
-      console.warn('[AI Generate] guide checks 报告(不拦截):', JSON.stringify(validateReport.results.filter((r) => !r.passed)));
+      logger.warn({ failed: validateReport.results.filter((r) => !r.passed) }, '[AI Generate] guide checks 报告(不拦截)');
     }
     return { html: processedHtml, guideUsed, ...(validateReport ? { checkReport: validateReport } : {}) };
   },
@@ -2221,14 +2341,14 @@ Rules:
       attempts = result.attempts;
     } catch (err: any) {
       // 诊断：记录中断类型 + 耗时
-      console.error('[AI Edit] 网络中断（含重试后仍失败）', {
+      logger.error({
         elapsedMs: Date.now() - startedAt,
         name: err?.name,
         code: err?.code,
         message: String(err?.message || ''),
         model: DEEPSEEK_MODEL,
         promptChars: userPrompt.length,
-      });
+      }, '[AI Edit] 网络中断（含重试后仍失败）');
       const msg = String(err?.message || '');
       const isNetworkAbort =
         err?.name === 'AbortError' ||
@@ -2240,12 +2360,12 @@ Rules:
       }
       throw err;
     }
-    console.log('[AI Edit] 成功', {
+    logger.info({
       elapsedMs: Date.now() - startedAt,
       attempts,
       httpStatus: response.status,
       model: DEEPSEEK_MODEL,
-    });
+    }, '[AI Edit] 成功');
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
@@ -2333,7 +2453,9 @@ Rules:
     const guideUsed = guidesUsed.map((g) => ({ id: g.id, name: g.name }));
     // ★ S2 Agent 四维架构:装配结构指南的 checks 断言(active revision 快照),完成后 validate(报告不拦截)
     const guideChecks = extractGuideChecks(pair.structural);
-    const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent });
+    // ★ B2 指南 CSS 资产:LLM 只写结构+占位符,服务端注入权威 CSS(色值不经过 LLM)
+    const guideCssBundle = await resolveGuideCssBundle(pair.structural);
+    const systemPrompt = buildSystemPrompt({ businessLineName: pair.businessLineName, guideContent: guideCssBundle ? guideContent + '\n\n' + guideCssPromptSection(guideCssBundle) : guideContent });
 
     let userPrompt = USER_PROMPT_TEMPLATE
       .replace('{{PROMPT}}', params.prompt?.trim() || '(No additional user instructions — use autonomous mode: analyze the campaign data and choose the best 4-8 modules and visualizations.)')
@@ -2433,27 +2555,27 @@ Rules:
       return;
     }
 
-    // 后处理
-    const processedHtml = postProcessHtml(fullContent);
+    // 后处理(★ B2:先常规后处理,再注入指南 CSS 资产——占位符/兜底插入均字节级)
+    const processedHtml = injectGuideCss(postProcessHtml(fullContent), await guideCssBundle);
 
     if (!processedHtml || !processedHtml.startsWith('<')) {
       yield { type: 'error', message: `AI 生成的 HTML 格式异常${truncated ? '（输出被截断，请减少内容复杂度后重试）' : ''}` };
       return;
     }
 
-    console.log('[AI Generate Stream] 完成', {
+    logger.info({
       elapsedMs: Date.now() - startedAt,
       htmlChars: processedHtml.length,
       truncated,
       usage: endUsage,
       model: DEEPSEEK_MODEL,
-    });
+    }, '[AI Generate Stream] 完成');
 
     // ★ S2 validate(报告不拦截):断言结果附在 done chunk,前端 toast 展示;不阻塞交付
     const resolvedChecks = await guideChecks;
     const validateReport = resolvedChecks.length ? runGuideChecks(processedHtml, resolvedChecks) : null;
     if (validateReport && !validateReport.ok) {
-      console.warn('[AI Generate Stream] guide checks 报告(不拦截):', JSON.stringify(validateReport.results.filter((r) => !r.passed)));
+      logger.warn({ failed: validateReport.results.filter((r) => !r.passed) }, '[AI Generate Stream] guide checks 报告(不拦截)');
     }
 
     yield { type: 'done', html: processedHtml, truncated, usage: endUsage, guideUsed, ...(validateReport ? { checkReport: validateReport } : {}), ...(dataCoverage ? { dataCoverage } : {}) };
@@ -2473,6 +2595,7 @@ Rules:
     dataContext?: string;
     guideContent?: string;
     businessLineName?: string;
+    guideCssBundle?: GuideCssBundle | null;
     signal?: AbortSignal;
   }): AsyncGenerator<StreamChunk> {
     if (!DEEPSEEK_API_KEY) {
@@ -2582,20 +2705,20 @@ Rules:
       return;
     }
 
-    const processedHtml = postProcessHtml(fullContent);
+    const processedHtml = injectGuideCss(postProcessHtml(fullContent), params.guideCssBundle ?? null);
 
     if (!processedHtml || !processedHtml.startsWith('<')) {
       yield { type: 'error', message: `AI 编辑后的 HTML 格式异常${truncated ? '（输出被截断）' : ''}` };
       return;
     }
 
-    console.log('[AI Edit Stream] 完成', {
+    logger.info({
       elapsedMs: Date.now() - startedAt,
       htmlChars: processedHtml.length,
       truncated,
       usage: endUsage,
       model: DEEPSEEK_MODEL,
-    });
+    }, '[AI Edit Stream] 完成');
 
     // edit 流无 campaignId 概念(纯 HTML 编辑),不附 dataCoverage
     yield { type: 'done', html: processedHtml, truncated, usage: endUsage };

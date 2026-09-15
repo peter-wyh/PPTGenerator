@@ -30,6 +30,7 @@ const MENUS: MenuItem[] = [
   { path: '/data/commission-plans', label: '佣金方案' },
   { path: '/data/guides', label: '指南' },
   { path: '/data/business-lines', label: '业务线' },
+  { path: '/data/placements', label: '广告位截图' },
   { path: '/data/api-docs', label: '接口文档' },
 ];
 

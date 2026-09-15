@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { jsonSchema } from '../../utils/json-schema';
 
 /**
  * 历史遗留：旧编辑器版本曾把页面「大类」（PageCategory）误当作 pageType 持久化。
@@ -53,7 +54,7 @@ export const pageSchema = z.object({
     .optional(),
   /** 页面背景图 URL（cover 铺满）；优先于 bgColor。 */
   bgImage: z.string().max(2048).optional(),
-  components: z.array(z.any()),
+  components: z.array(jsonSchema).max(500), // 0827 #33：组件节点受限 JSON；上限 500 组件
   /** 页面业务类型。 */
   pageType: pageTypeSchema,
   /** 绑定的 Campaign ID（campaign-report / creator-collab 类型用）。 */

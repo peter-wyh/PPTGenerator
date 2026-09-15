@@ -65,6 +65,7 @@ export const htmlTemplateService = {
     if (filters?.category) where.category = filters.category;
     const templates = await prisma.htmlTemplate.findMany({
       where,
+      take: 500, // 0827 审计二轮 #31：列表兜底
       orderBy: { updatedAt: 'desc' },
     });
     return templates.map(toSummary);

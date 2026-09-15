@@ -21,6 +21,36 @@ describe('validateHtml · 4 类断言', () => {
     expect(fail.results[0].actual).toBe('4 slides');
   });
 
+  // ★ B4: count_class 数量断言(FT recap 资产化配套)
+  it('count_class==N 单类精确计数:1 个 kpi-card(通过)/==2(失败)', () => {
+    const pass = validateHtml(deckHtml, [{ assert: 'count_class==1 .kpi-card', severity: 'block' }]);
+    expect(pass.results[0].passed).toBe(true);
+    expect(pass.results[0].actual).toBe('1 (want 1)');
+    const fail = validateHtml(deckHtml, [{ assert: 'count_class==2 .kpi-card', severity: 'block' }]);
+    expect(fail.results[0].passed).toBe(false);
+    expect(fail.results[0].actual).toBe('1 (want 2)');
+  });
+
+  it('count_class==N 复合类 .slide-2.pub-kpi 交集计数', () => {
+    const r = validateHtml(deckHtml, [{ assert: 'count_class==1 .pub-kpi.slide-2', severity: 'block' }]);
+    expect(r.results[0].passed).toBe(true);
+    const miss = validateHtml(deckHtml, [{ assert: 'count_class==1 .pub-kpi.slide-9', severity: 'block' }]);
+    expect(miss.results[0].passed).toBe(false);
+    expect(miss.results[0].actual).toBe('0 (want 1)');
+  });
+
+  it('count_class==4 逐 slide 计数(data-slide 4 节)', () => {
+    const r = validateHtml(deckHtml, [{ assert: 'count_class==4 .slide-1,.slide-2', severity: 'report' }]);
+    // .cls1,.cls2 逗号形态不支持(语法不匹配) → invalid;单类逐个测才准
+    expect(r.results[0].actual).toBe('invalid assertion syntax');
+  });
+
+  it('count_class 不支持的选择器形态 → unsupported selector 而非崩溃', () => {
+    const r = validateHtml(deckHtml, [{ assert: 'count_class==1 div > p', severity: 'report' }]);
+    expect(r.results[0].passed).toBe(false);
+    expect(['unsupported selector', 'invalid assertion syntax']).toContain(r.results[0].actual);
+  });
+
   it('has_class 必含类:存在通过/缺失失败(BEM 复合类名分词)', () => {
     const pass = validateHtml(deckHtml, [{ assert: 'has_class pub-ratio', severity: 'report' }]);
     expect(pass.results[0].passed).toBe(true);
@@ -39,6 +69,20 @@ describe('validateHtml · 4 类断言', () => {
     expect(fail.ok).toBe(false);
     const noBlankLink = validateHtml(deckHtml, [{ assert: 'no_element a[href="#"]', severity: 'report' }]);
     expect(noBlankLink.results[0].passed).toBe(true);
+  });
+
+  it('no_element 裸 token 连字符标签 + class 属性双扫(防 class="pgroup" 绕过;CSS 文本不算)', () => {
+    // 裸 token 出现在 class 属性 → 算命中(即使无对应标签)
+    const withCls = deckHtml.replace('<body>', '<body><div class="pgroup">x</div>');
+    const failCls = validateHtml(withCls, [{ assert: 'no_element pgroup', severity: 'block' }]);
+    expect(failCls.results[0].passed).toBe(false);
+    // 连字符标签名(如 compare-table)→ 纯标签分支可识别,无标签且无 class → 通过
+    const passHyphen = validateHtml(deckHtml, [{ assert: 'no_element compare-table', severity: 'block' }]);
+    expect(passHyphen.results[0].passed).toBe(true);
+    // CSS <style> 里的 .compare-table 定义文本 → 不算命中(只扫标签与 class 属性)
+    const withCss = deckHtml.replace('<body>', '<body><style>table.compare-table{color:red}</style>');
+    const passCss = validateHtml(withCss, [{ assert: 'no_element compare-table', severity: 'block' }]);
+    expect(passCss.results[0].passed).toBe(true);
   });
 
   it('contains_text 大小写不敏感', () => {

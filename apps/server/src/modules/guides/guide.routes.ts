@@ -31,4 +31,8 @@ router.post('/:id/revisions/activate', validate({ params: idParamSchema, body: a
 // S2 干跑校验:保存前对 checks 做 lint + 对样张/最近生成执行断言。
 router.post('/:id/revisions/dry-run', validate({ params: idParamSchema, body: dryRunSchema }), guideController.dryRunChecks);
 
+// ★ g6 参考文件回显:按 revision assets 的 ref 读文本资产内容(sample 类为外链,前端直接开)。
+router.get('/:id/revisions/:version/assets', validate({ params: revisionParamsSchema }), guideController.listRevisionAssets);
+router.get('/:id/revisions/:version/asset-content', validate({ params: revisionParamsSchema }), guideController.getRevisionAssetContent);
+
 export const guideRoutes = router;

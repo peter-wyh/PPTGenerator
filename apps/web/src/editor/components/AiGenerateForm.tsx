@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { htmlTemplatesApi, type ModuleCoverageResult } from '@/api/htmlTemplates';
 import { Button } from '@/components/Button';
 import { MarkdownPreview } from '@/components/MarkdownEditor';
@@ -29,7 +29,8 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
   const [blCode, setBlCode] = useState('');
   const [designMdExpanded, setDesignMdExpanded] = useState(false);
   // ★ 结构指南下拉动态化:该业务线可选指南(拉不到=空数组隐藏字段);选中即注入,无需字符串匹配
-  const [structuralGuides, setStructuralGuides] = useState<{ id: string; name: string; overridesVisual?: boolean; checksCount?: number; assetsCount?: number }[]>([]);
+  //   previewUrl/palette 为 g7 预览增强(样张图优先,无样张用 tokens 色板条)
+  const [structuralGuides, setStructuralGuides] = useState<StructuralGuideOption[]>([]);
 
   const [systemPrompt, setSystemPrompt] = useState('');
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -282,20 +283,7 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
                       Skill · 选用整套模板（某类报告的成套做法，含配色、字体、页面结构，可附参考文件；选用后不再叠加上面的品牌样式）
                     </label>
                     {campaignId && structuralGuides.length > 0 ? (
-                      <select
-                        value={structuralGuideId}
-                        onChange={(e) => setStructuralGuideId(e.target.value)}
-                        className="w-full rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-sm text-foreground-primary outline-none focus:border-accent-primary"
-                      >
-                        <option value="">不选用（按上面的品牌样式生成）</option>
-                        {structuralGuides.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.name}{g.overridesVisual ? '（成套样式）' : ''}
-                            {g.assetsCount ? ` · 附 ${g.assetsCount} 个参考文件` : ''}
-                            {g.checksCount ? ` · 生成后 ${g.checksCount} 项工具自动检查` : ''}
-                          </option>
-                        ))}
-                      </select>
+                      <GuideSelect value={structuralGuideId} guides={structuralGuides} onChange={setStructuralGuideId} />
                     ) : (
                       <p className="text-[11px] text-foreground-muted">
                         {campaignId
@@ -512,5 +500,96 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
         </div>
       )}
     </>
+  );
+}
+
+/* ========================= g7 指南选择(带预览) ========================= */
+
+/** 结构指南条目(listStructural 返回;previewUrl/palette 为 g7 预览增强) */
+interface StructuralGuideOption {
+  id: string;
+  name: string;
+  overridesVisual?: boolean;
+  checksCount?: number;
+  assetsCount?: number;
+  previewUrl?: string;
+  palette?: string[];
+}
+
+/**
+ * 带预览的指南下拉:原生 select 不支持图片,改为自定义下拉。
+ * 每项左侧预览块:样张图(previewUrl)或色板条(palette 前6色)或占位图标;
+ * 右侧名称+元信息。点击选中,Esc/外点关闭。
+ */
+function GuideSelect({ value, guides, onChange }: {
+  value: string;
+  guides: StructuralGuideOption[];
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = guides.find((g) => g.id === value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  const Preview = ({ g, big }: { g: StructuralGuideOption; big?: boolean }) => {
+    const w = big ? 'h-14 w-20' : 'h-9 w-14';
+    if (g.previewUrl) return <img src={g.previewUrl} alt={g.name} className={`${w} shrink-0 rounded object-cover`} loading="lazy" />;
+    if (g.palette?.length) return (
+      <div data-testid={`guide-palette-${g.id}`} className={`${w} flex shrink-0 overflow-hidden rounded border border-border-subtle`}>
+        {g.palette.map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}
+      </div>
+    );
+    return <div className={`${w} flex shrink-0 items-center justify-center rounded bg-surface-hover text-foreground-muted`}>🎨</div>;
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 rounded-lg border border-border-default bg-surface-primary px-3 py-2 text-left text-sm text-foreground-primary outline-none focus:border-accent-primary"
+      >
+        {selected ? <Preview g={selected} /> : <span className="flex h-9 w-14 shrink-0 items-center justify-center rounded bg-surface-hover text-[10px] text-foreground-muted">默认</span>}
+        <span className="min-w-0 flex-1 truncate">{selected ? selected.name : '不选用（按上面的品牌样式生成）'}</span>
+        <span className="shrink-0 text-foreground-muted">{open ? '▴' : '▾'}</span>
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-border-default bg-surface-primary shadow-lg">
+          <button
+            type="button"
+            onClick={() => { onChange(''); setOpen(false); }}
+            className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover ${value === '' ? 'bg-surface-hover' : ''}`}
+          >
+            <span className="flex h-9 w-14 shrink-0 items-center justify-center rounded bg-surface-hover text-[10px] text-foreground-muted">默认</span>
+            <span className="min-w-0 flex-1 text-sm text-foreground-primary">不选用（按上面的品牌样式生成）</span>
+          </button>
+          {guides.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => { onChange(g.id); setOpen(false); }}
+              className={`flex w-full items-center gap-2 border-t border-border-subtle px-3 py-2 text-left hover:bg-surface-hover ${value === g.id ? 'bg-surface-hover' : ''}`}
+            >
+              <Preview g={g} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-foreground-primary">{g.name}{g.overridesVisual ? '（成套样式）' : ''}</span>
+                <span className="block truncate text-[10px] text-foreground-muted">
+                  {g.assetsCount ? `附 ${g.assetsCount} 个参考文件` : '无参考文件'}
+                  {g.checksCount ? ` · 生成后 ${g.checksCount} 项工具自动检查` : ''}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

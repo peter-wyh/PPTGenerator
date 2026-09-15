@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
+import { logger } from '../../logger';
 import type { Project, Prisma } from '@prisma/client';
 import type { Page, ProjectDetail, ProjectMeta, ProjectSummary } from '@mediakit/shared';
 import { templatesService } from '../templates/templates.service';
@@ -204,6 +205,7 @@ export const projectsService = {
     // 修复：先按 id+updatedAt 只排序列（窄行 filesort），再按 id 取整行。
     const sorted = await prisma.project.findMany({
       where,
+      take: 500, // 0827 审计二轮 #31：列表兜底（真实分页需 API+前端配套，后续迭代）
       orderBy: { updatedAt: 'desc' },
       select: { id: true },
     });
@@ -556,7 +558,7 @@ export const projectsService = {
       // 这里清除旧 metrics，让前端在打开时如果有 campaignId 可以重新拉取
       if (rd?.campaign?.metrics) {
         // 保留 metrics 结构但标记需要刷新
-        console.log('[duplicate] reportData.campaign.metrics will be refreshed on next generation');
+        logger.info('[duplicate] reportData.campaign.metrics will be refreshed on next generation');
       }
     }
 
@@ -615,10 +617,10 @@ export const projectsService = {
       if (isTemplatedHtml(html)) {
         try {
           const out = await renderTemplate(html, campaignId, reportPeriod);
-          console.log('[refreshHtmlForPeriod] Template rendered (data-field) for period', JSON.stringify(reportPeriod));
+          logger.info({ reportPeriod }, '[refreshHtmlForPeriod] Template rendered (data-field)');
           return out;
         } catch (err) {
-          console.error('[refreshHtmlForPeriod] Template render failed, falling back to AI/snapshot:', err);
+          logger.error({ err }, '[refreshHtmlForPeriod] Template render failed, falling back to AI/snapshot');
         }
       }
       // 2) 非 data-field 模板 → AI 重新生成 or 快照替换（内部最终兜底日期替换）
@@ -650,10 +652,10 @@ export const projectsService = {
           reportPeriod,
         });
         html = out.html;
-        console.log('[duplicate] AI regenerated HTML for period', JSON.stringify(reportPeriod));
+        logger.info({ reportPeriod }, '[duplicate] AI regenerated HTML for period');
         return html;
       } catch (err) {
-        console.error('[duplicate] AI re-generation failed, trying snapshot:', err);
+        logger.error({ err }, '[duplicate] AI re-generation failed, trying snapshot');
       }
     }
 
@@ -667,10 +669,10 @@ export const projectsService = {
       const pairs = buildValueReplacementPairs(oldSnapshot.rawValues, newSnapshot.rawValues);
       if (pairs.length > 0) {
         html = replaceMetricsBySnapshot(html, pairs);
-        console.log(`[duplicate] Snapshot fallback: ${pairs.length} value pairs replaced`);
+        logger.info(`[duplicate] Snapshot fallback: ${pairs.length} value pairs replaced`);
       }
     } catch (err) {
-      console.error('[duplicate] Snapshot replacement also failed, keeping date-only replacement:', err);
+      logger.error({ err }, '[duplicate] Snapshot replacement also failed, keeping date-only replacement');
     }
     return html;
   },

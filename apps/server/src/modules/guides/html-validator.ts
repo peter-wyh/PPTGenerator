@@ -36,17 +36,29 @@ export interface ValidateReport {
   results: CheckResult[];
 }
 
-/** 解析 "slide_count==4" / "has_class pub-ratio" 等 DSL。非法语法返回 null(调用方记为断言配置错误)。 */
-function parseAssertion(dsl: string): { op: string; arg: string } | null {
+/** 解析 "slide_count==4" / "count_class==4 .glass-kpi" 等 DSL。非法语法返回 null(调用方记为断言配置错误)。 */
+function parseAssertion(dsl: string): { op: string; arg: string; num?: number; nums?: number[] } | null {
   const s = dsl.trim();
   let m = s.match(/^slide_count\s*==\s*(\d+)$/);
   if (m) return { op: 'slide_count', arg: m[1] };
+  // ★ B4: 数量级断言 count_class==N(.cls 精确 / tag.cls / .cls1.cls2 复合)
+  m = s.match(/^count_class\s*==\s*(\d+)\s+([\w\-.#]+)$/);
+  if (m) return { op: 'count_class', arg: m[2], num: Number(m[1]) };
+  // ★ 可选章节数量范围:count_class in [5,6,7] .badge → 命中集合内任一数即过
+  m = s.match(/^count_class\s+in\s+\[([\d,\s]+)\]\s+([\w\-.#]+)$/);
+  if (m) return { op: 'count_class_in', arg: m[2], nums: m[1].split(',').map((x) => Number(x.trim())) };
+  // ★ h2 含文断言(可选章节场景,不锁顺序):h2_contains Monthly Performance Trend
+  m = s.match(/^h2_contains\s+(.+)$/);
+  if (m) return { op: 'h2_contains', arg: m[1].trim() };
   m = s.match(/^has_class\s+([A-Za-z0-9_\-:.\\[\]="'() ]+)$/);
   if (m) return { op: 'has_class', arg: m[1].trim() };
   m = s.match(/^no_element\s+([A-Za-z0-9_\-:.\\[\]="'()*# ,>+~]+)$/);
   if (m) return { op: 'no_element', arg: m[1].trim() };
   m = s.match(/^contains_text\s+(.+)$/);
   if (m) return { op: 'contains_text', arg: m[1].trim() };
+  // ★ 章节标题序列契约:h2_texts == ['A','B','C'] → 文档 h2 文本须与序列完全一致(顺序+数量)
+  m = s.match(/^h2_texts\s*==\s*\[(.+)\]$/);
+  if (m) return { op: 'h2_texts', arg: m[1].trim() };
   return null;
 }
 
@@ -84,15 +96,23 @@ function countSelector(html: string, selector: string): number {
   if (m) return (html.match(new RegExp(`\\s${m[1]}(=|\\s|>)`, 'gi')) ?? []).length;
   m = s.match(/^#([A-Za-z0-9_-]+)$/);
   if (m) return (html.match(new RegExp(`id="${m[1]}"`, 'gi')) ?? []).length;
-  m = s.match(/^\.([A-Za-z0-9_-]+)$/);
-  if (m) return hasCssClass(html, m[1]) ? 1 : 0;
+  // ★ B4: .cls / .cls1.cls2 → 真实计数(原 0/1 布尔语义升级;no_element 的 n===0 语义不变)
+  m = s.match(/^\.([A-Za-z0-9_-]+)(?:\.([A-Za-z0-9_-]+))?$/);
+  if (m) {
+    const tokens = [m[1], m[2]].filter(Boolean) as string[];
+    const attrs = html.match(/class="([^"]*)"/g) ?? [];
+    return attrs.filter((attr) => {
+      const parts = attr.slice(7, -1).split(/\s+/);
+      return tokens.every((t) => parts.includes(t));
+    }).length;
+  }
   m = s.match(/^([a-zA-Z][a-zA-Z0-9]*)\.([A-Za-z0-9_-]+)$/);
   if (m) {
     const re = new RegExp(`<${m[1]}\\b[^>]*class="[^"]*\\b${m[2]}\\b[^"]*"`, 'gi');
     return html.match(re)?.length ?? 0;
   }
-  // 纯标签
-  if (/^[a-zA-Z][a-zA-Z0-9]*$/.test(s)) {
+  // 纯标签(含连字符标签名,如 compare-table / custom-card)
+  if (/^[a-zA-Z][a-zA-Z0-9-]*$/.test(s)) {
     return (html.match(new RegExp(`<${s}\\b`, 'gi')) ?? []).length;
   }
   return -1; // 无法识别的选择器
@@ -111,6 +131,28 @@ function runCheck(html: string, check: GuideCheck): CheckResult {
       const got = countSlides(html);
       return { ...base, passed: got === want, actual: `${got} slides`, message: check.message };
     }
+    // ★ B4: count_class==N selector —— 复用 countSelector(支持 .cls / tag.cls / .cls1.cls2)
+    case 'count_class': {
+      const got = countSelector(html, parsed.arg);
+      if (got < 0) return { ...base, actual: 'unsupported selector', message: check.message ?? '选择器暂不支持' };
+      const want = parsed.num ?? 0;
+      return { ...base, passed: got === want, actual: `${got} (want ${want})`, message: check.message };
+    }
+    // ★ 可选章节数量范围(如 Journey/Competitor 可选时 badge∈[5,6,7])
+    case 'count_class_in': {
+      const got = countSelector(html, parsed.arg);
+      if (got < 0) return { ...base, actual: 'unsupported selector', message: check.message ?? '选择器暂不支持' };
+      const want = parsed.nums ?? [];
+      return { ...base, passed: want.includes(got), actual: `${got} (want one of [${want.join(',')}])`, message: check.message };
+    }
+    // ★ h2 含文断言(不锁顺序,可选章节场景)
+    case 'h2_contains': {
+      const h2s = [...html.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)].map((mm) =>
+        mm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+      );
+      const got = h2s.some((t) => t.toLowerCase().includes(parsed.arg.toLowerCase()));
+      return { ...base, passed: got, actual: got ? 'found' : 'not found', message: check.message };
+    }
     case 'has_class': {
       const got = hasCssClass(html, parsed.arg);
       return { ...base, passed: got, actual: got ? 'found' : 'not found', message: check.message };
@@ -118,11 +160,30 @@ function runCheck(html: string, check: GuideCheck): CheckResult {
     case 'no_element': {
       const n = countSelector(html, parsed.arg);
       if (n < 0) return { ...base, actual: 'unsupported selector', message: check.message ?? '选择器暂不支持' };
-      return { ...base, passed: n === 0, actual: `${n} found`, message: check.message };
+      // 裸 token(如 pgroup / compare-table):除标签外同时扫 class 属性,
+      // 防 LLM 写 class="pgroup" 绕过(v4 自创类事故);CSS <style> 文本不算。
+      const bare = parsed.arg.match(/^[A-Za-z0-9_-]+$/);
+      const clsN = bare
+        ? (html.match(new RegExp(`class="[^"]*\\b${bare[0]}\\b[^"]*"`, 'gi')) ?? []).length
+        : 0;
+      const total = n + clsN;
+      return { ...base, passed: total === 0, actual: `${total} found`, message: check.message };
     }
     case 'contains_text': {
       const got = html.toLowerCase().includes(parsed.arg.toLowerCase());
       return { ...base, passed: got, actual: got ? 'found' : 'not found', message: check.message };
+    }
+    case 'h2_texts': {
+      // arg 形如 'A','B','C' → 解析期望序列;提取文档 h2 文本(去内联标签+解码常见实体)比对顺序+数量
+      const unescape = (t: string) => t
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+      const want = (parsed.arg.match(/'([^']*)'/g) ?? []).map((x) => unescape(x.slice(1, -1)));
+      const h2s = [...html.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)].map((mm) =>
+        unescape(mm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()),
+      );
+      const pass = want.length === h2s.length && want.every((w, i) => w === h2s[i]);
+      return { ...base, passed: pass, actual: `got [${h2s.join(' | ')}]`, message: check.message };
     }
     default:
       return { ...base, actual: 'unknown op', message: check.message };

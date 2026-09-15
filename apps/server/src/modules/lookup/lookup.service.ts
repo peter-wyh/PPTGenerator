@@ -2,11 +2,15 @@ import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { Prisma } from '@prisma/client';
 
+// 0827 审计二轮 #31：lookup 全表 findMany 加 take 兜底（当前数据量小，防线性劣化）
+const LOOKUP_TAKE = 500;
+
 // ─── Merchant ────────────────────────────────────────────────────────────────
 
 export const merchantService = {
   async list() {
     return prisma.merchant.findMany({
+      take: LOOKUP_TAKE,
       orderBy: { name: 'asc' },
       include: { _count: { select: { businessLines: true, advertisers: true } } },
     });
@@ -62,6 +66,7 @@ export const businessLineService = {
     const where: Prisma.BusinessLineWhereInput = {};
     if (opts?.merchantId) where.merchantId = opts.merchantId;
     return prisma.businessLine.findMany({
+      take: LOOKUP_TAKE,
       where,
       orderBy: { code: 'asc' },
       include: {
@@ -109,6 +114,7 @@ export const advertiserService = {
       where.businessLineId = bl.id;
     }
     return prisma.advertiser.findMany({
+      take: LOOKUP_TAKE,
       where,
       orderBy: { name: 'asc' },
       include: {
@@ -177,6 +183,7 @@ export const marketingEventService = {
     const where: Prisma.MarketingEventWhereInput = {};
     if (opts?.businessLineId) where.businessLineId = opts.businessLineId;
     return prisma.marketingEvent.findMany({
+      take: LOOKUP_TAKE,
       where,
       orderBy: [{ startTime: 'desc' }],
       include: {

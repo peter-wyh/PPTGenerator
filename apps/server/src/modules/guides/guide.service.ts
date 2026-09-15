@@ -1,6 +1,41 @@
 import { prisma } from '../../prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { Prisma, Guide } from '@prisma/client';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename_esm = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
+
+/**
+ * g7 预览:从 tokens 资产 JSON 提色板(前 6 个 hex 值,按 key 顺序稳定)。
+ * 读取失败返回 undefined——预览是增强,不阻塞列表。
+ */
+function extractPaletteFromTokens(ref: string): string[] | undefined {
+  if (!ref || ref.startsWith('/') || ref.split('/').includes('..')) return undefined;
+  try {
+    // 与 guide-asset-read 同源策略:模块旁 assets / src / dist 三处找
+    const bases = [
+      join(dirname(__filename_esm), 'assets'),
+      join(process.cwd(), 'src/modules/guides/assets'),
+      join(process.cwd(), 'dist/modules/guides/assets'),
+    ];
+    let raw = '';
+    for (const b of bases) {
+      try { raw = readFileSync(join(b, ref), 'utf-8'); if (raw.trim()) break; } catch { /* next */ }
+    }
+    if (!raw.trim()) return undefined;
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const colors: string[] = [];
+    const walk = (v: unknown) => {
+      if (colors.length >= 6) return;
+      if (typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v)) colors.push(v);
+      else if (v && typeof v === 'object') for (const x of Object.values(v as Record<string, unknown>)) walk(x);
+    };
+    walk(obj);
+    return colors.length ? colors : undefined;
+  } catch { return undefined; }
+}
 
 /**
  * 指南匹配(确定性,不依赖 AI):
@@ -53,7 +88,7 @@ export const guideService = {
    * ★ 该业务线可选的结构指南列表(isDefault 视觉规范之外的启用指南)——
    * 前端「叠加结构指南」下拉动态化用。所见即所得:列 name,选 id。
    */
-  async listStructural(businessLineId: string): Promise<Array<{ id: string; name: string; updatedAt: Date; overridesVisual: boolean; checksCount: number; assetsCount: number }>> {
+  async listStructural(businessLineId: string): Promise<Array<{ id: string; name: string; updatedAt: Date; overridesVisual: boolean; checksCount: number; assetsCount: number; previewUrl?: string; palette?: string[] }>> {
     if (!businessLineId) return [];
     const rows = await prisma.guide.findMany({
       // isDefault=视觉层恒注入,不在结构下拉重复出现
@@ -63,14 +98,26 @@ export const guideService = {
     });
     return rows
       .filter((r) => r.name?.trim())
-      .map((r) => ({
-        id: r.id,
-        name: r.name,
-        updatedAt: r.updatedAt,
-        overridesVisual: r.overridesVisual,
-        checksCount: Array.isArray(r.activeRevision?.checks) ? (r.activeRevision!.checks as unknown[]).length : 0,
-        assetsCount: Array.isArray(r.activeRevision?.assets) ? (r.activeRevision!.assets as unknown[]).length : 0,
-      }));
+      .map((r) => {
+        const assets = (Array.isArray(r.activeRevision?.assets) ? r.activeRevision!.assets : []) as Array<{ kind?: string; ref?: string }>;
+        // g7 预览:样张图 URL 优先;无样张时从 tokens 资产提色板(前6色)
+        const sample = assets.find((a) => a.kind === 'sample' && a.ref && /^https?:/.test(a.ref));
+        let palette: string[] | undefined;
+        if (!sample) {
+          const tokensRef = assets.find((a) => a.kind === 'tokens' && a.ref)?.ref;
+          if (tokensRef) palette = extractPaletteFromTokens(tokensRef);
+        }
+        return {
+          id: r.id,
+          name: r.name,
+          updatedAt: r.updatedAt,
+          overridesVisual: r.overridesVisual,
+          checksCount: Array.isArray(r.activeRevision?.checks) ? (r.activeRevision!.checks as unknown[]).length : 0,
+          assetsCount: assets.length,
+          ...(sample ? { previewUrl: sample.ref } : {}),
+          ...(palette ? { palette } : {}),
+        };
+      });
   },
 
   async list(opts?: { businessLineId?: string }) {
@@ -202,9 +249,11 @@ export const guideService = {
         guideId,
         version: (last?.version ?? 0) + 1,
         content: data.content,
-        assets: (data.assets ?? []) as Prisma.InputJsonValue,
-        checks: (data.checks ?? []) as Prisma.InputJsonValue,
-        toolParams: (data.toolParams ?? {}) as Prisma.InputJsonValue,
+        // P0(0911):未传 assets/checks = 继承上一版——弹窗保存只传 content+checks,
+        // 若置空会清掉参考文件,色板预览与 CSS 注入随之失效(资产化防线被误删)。
+        assets: (data.assets ?? last?.assets ?? []) as Prisma.InputJsonValue,
+        checks: (data.checks ?? last?.checks ?? []) as Prisma.InputJsonValue,
+        toolParams: (data.toolParams ?? last?.toolParams ?? {}) as Prisma.InputJsonValue,
         changelog: data.changelog,
         createdBy: data.createdBy,
       },

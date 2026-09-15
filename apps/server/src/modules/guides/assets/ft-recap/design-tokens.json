@@ -1,0 +1,63 @@
+{
+  "$schema": "pptgenerator/design-tokens/v1",
+  "source": "Example/FT.html (Fanstoshop 官网设计系统, 0910 真源)",
+  "sourceHash": "sha256:0b25f1bf520d21b3",
+  "cssVars": {
+    "font-display": "\"Libre Baskerville\", Georgia, serif",
+    "font-body": "\"Inter\", Arial, sans-serif",
+    "font-legacy": "\"Poppins\",\"Inter\", sans-serif",
+    "color-aubergine": "#28223D",
+    "color-aubergine-2": "#2C2242",
+    "color-lime": "#D5EF9A",
+    "color-lime-bright": "#E5FFAA",
+    "color-violet": "#6F60A4",
+    "color-lilac": "#B798BF",
+    "color-pink": "#FFA8CD",
+    "color-pink-active": "#FF6B9B",
+    "color-mint": "#88DBA5",
+    "color-lavender": "#DEACEF",
+    "color-pink-soft": "#FEA4CA",
+    "color-white": "#FFFFFF",
+    "color-warm-white": "#F9F8F5",
+    "color-black": "#000000",
+    "color-ink": "#1E1E1E",
+    "color-muted": "#C4C3CA",
+    "color-chip": "#D9D9D9",
+    "color-surface-soft": "#EBEBEB",
+    "color-border": "#979797",
+    "color-border-dark": "#6E6E6E",
+    "color-divider": "#F0F0F0",
+    "radius-sm": "8px",
+    "radius-md": "16px",
+    "radius-lg": "20px",
+    "radius-pill-sm": "32px",
+    "radius-pill": "999px",
+    "space-1": "4px",
+    "space-2": "8px",
+    "space-3": "16px",
+    "space-4": "24px",
+    "space-5": "32px",
+    "space-6": "48px",
+    "motion-standard": "cubic-bezier(.4,0,.2,1)",
+    "motion-cta": "cubic-bezier(.2,.8,.2,1)",
+    "duration-ui": "150ms",
+    "duration-fast": "200ms",
+    "duration-base": "300ms"
+  },
+  "fonts": {
+    "links": [
+      "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">",
+      "<link href=\"https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&amp;family=Inter:wght@400;500;600;700&amp;family=Poppins:wght@500;600;700&amp;display=swap\" rel=\"stylesheet\">"
+    ],
+    "roles": {
+      "heading": "Libre Baskerville",
+      "body": "Inter",
+      "accent-handle": "Poppins"
+    }
+  },
+  "radii": {
+    "card": "14px",
+    "kpi": "12px"
+  },
+  "notes": "color-aubergine = hero/footer 深梅紫主色(0910 漂移事故的根因键)"
+}

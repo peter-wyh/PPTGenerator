@@ -110,6 +110,9 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
   const [revisions, setRevisions] = useState<GuideRevisionDTO[]>([]);
   const [revBusy, setRevBusy] = useState(false);
   const [viewRev, setViewRev] = useState<{ version: number; content: string } | null>(null);
+  // g6 参考文件查看器:点资产名打开内容(css/tokens/checklist 文本;sample 外链新窗口开)
+  const [assetView, setAssetView] = useState<{ name: string; ref: string; content: string; truncated: boolean } | null>(null);
+  const [assetLoading, setAssetLoading] = useState(false);
   const [checks, setChecks] = useState<CheckDTO[]>([]);
   const [dryRun, setDryRun] = useState<DryRunResultDTO | null>(null);
 
@@ -212,6 +215,21 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
     }
   }
 
+  /** g6:查看参考文件内容。sample=外链样张直接新窗开;其余文本资产走 asset-content 端点。 */
+  async function openAsset(version: number, a: { kind: string; ref: string; hash?: string; name?: string }) {
+    if (a.kind === 'sample' && /^https?:/.test(a.ref)) { window.open(a.ref, '_blank'); return; }
+    if (!guideId) return;
+    setAssetLoading(true);
+    try {
+      const d = await guidesApi.getRevisionAssetContent(guideId, version, a.ref);
+      setAssetView({ name: a.name || a.ref, ref: a.ref, content: d.content, truncated: d.truncated });
+    } catch {
+      toast.error('参考文件加载失败');
+    } finally {
+      setAssetLoading(false);
+    }
+  }
+
   /** S2:干跑校验——对当前 checks 跑 lint + 断言(靶子=该业务线最近一次生成)。 */
   async function runDryRun() {
     if (!guideId) return;
@@ -247,6 +265,27 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
         <div className="rounded-lg border border-border-default bg-surface-secondary px-3 py-2 text-[11px] leading-relaxed text-foreground-muted">
           保存后如何生效：<b className="text-foreground-secondary">品牌样式</b>（业务线默认）→ 该业务线每次生成报告都自动带上，管「长什么样」（配色、字体、组件、动效）；<b className="text-foreground-secondary">成套模板</b> → 生成报告时在「选用整套模板」下拉中手动选用才生效，管「分几章怎么讲」（页面结构、展示形式、语气），可附参考文件（原版 PPT/PDF 等样张），不与品牌样式冲突时同时生效。
         </div>
+
+        {/* 0911:生效版参考文件主区展示(原来只挤在版本侧栏小字里不显眼) */}
+        {isEdit && (() => {
+          const activeRev = revisions.length ? revisions[revisions.length - 1] : null;
+          const acts = activeRev?.assets ?? [];
+          const kindLabel = (k: string) => (k === 'sample' ? '样张' : k === 'tokens' ? '色彩字体' : k === 'checklist' ? '清单' : k);
+          return (
+            <div className="flex flex-col gap-1.5">
+              <div className="text-xs font-medium text-foreground-secondary">参考文件 <span className="text-foreground-muted">（{acts.length} 个 · 随生效版 v{activeRev?.version ?? '–'} 带上，点「查看」看内容）</span></div>
+              {acts.length === 0 && <p className="text-[11px] text-foreground-muted">本指南暂无参考文件</p>}
+              {acts.map((a, i) => (
+                <div key={a.ref + i} className="flex items-center gap-2 rounded border border-border-default bg-surface-secondary px-2.5 py-1.5">
+                  <span className="shrink-0 rounded bg-accent-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">{kindLabel(a.kind)}</span>
+                  <button onClick={() => void openAsset(activeRev!.version, a)} disabled={assetLoading} className="min-w-0 truncate text-left text-sm font-medium text-foreground-primary hover:underline disabled:opacity-40" title={a.ref}>{a.name || a.ref}</button>
+                  {a.hash && <span className="shrink-0 text-[10px] text-foreground-muted" title={`内容指纹 ${a.hash}`}>指纹 {a.hash.slice(0, 8)}</span>}
+                  <button onClick={() => void openAsset(activeRev!.version, a)} disabled={assetLoading} className="ml-auto shrink-0 text-xs text-accent-primary hover:underline disabled:opacity-40">查看</button>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
           <span>业务线 <span className="text-red">*</span></span>
@@ -287,7 +326,20 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
                         <div className="truncate text-[10px] text-foreground-muted">{r.changelog || (r.createdAt ? String(r.createdAt).slice(0, 10) : '')}</div>
                         {r.assets && r.assets.length > 0 && (
                           <div className="truncate text-[10px] text-accent-primary" title={r.assets.map((a) => `${a.kind === 'sample' ? '样张' : a.kind === 'tokens' ? '色彩字体' : a.kind === 'checklist' ? '清单' : a.kind}: ${a.name || a.ref}${a.hash ? ` (指纹 ${a.hash.slice(0, 8)})` : ''}`).join('\n')}>
-                            📎 {r.assets.length} 个参考文件：{r.assets.map((a) => a.name || a.ref).join('、')}
+                            📎 {r.assets.length} 个参考文件：
+                            {r.assets.map((a, ai) => (
+                              <span key={a.ref + ai}>
+                                {ai > 0 && '、'}
+                                <button
+                                  onClick={() => void openAsset(r.version, a)}
+                                  disabled={assetLoading}
+                                  className="hover:underline disabled:opacity-40"
+                                  title={`查看 ${a.name || a.ref} 内容`}
+                                >
+                                  {a.name || a.ref}
+                                </button>
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -369,6 +421,19 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
               <button onClick={() => setViewRev(null)} className="text-xs text-foreground-muted hover:text-foreground-primary">✕ 关闭</button>
             </div>
             <pre className="flex-1 overflow-auto whitespace-pre-wrap rounded border border-border-default bg-surface-primary p-3 font-mono text-xs text-foreground-primary">{viewRev.content}</pre>
+          </div>
+        </div>
+      )}
+      {/* g6:参考文件内容查看器(只读文本) */}
+      {assetView && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40" onClick={() => setAssetView(null)}>
+          <div className="flex max-h-[85vh] w-[760px] flex-col gap-2 rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-foreground-primary">参考文件：{assetView.name}</span>
+              <button onClick={() => setAssetView(null)} className="text-xs text-foreground-muted hover:text-foreground-primary">✕ 关闭</button>
+            </div>
+            <p className="text-[10px] text-foreground-muted">{assetView.ref}{assetView.truncated ? ' · 文件超过 512KB,已截断显示' : ''}</p>
+            <pre className="flex-1 overflow-auto whitespace-pre-wrap rounded border border-border-default bg-surface-primary p-3 font-mono text-xs text-foreground-primary">{assetView.content}</pre>
           </div>
         </div>
       )}

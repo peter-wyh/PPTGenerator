@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { idParamSchema } from '../lookup/lookup.schema';
+import { jsonSchema } from '../../utils/json-schema';
 
 // ─── Campaign ────────────────────────────────────────────────────────────────
 
@@ -20,8 +21,8 @@ export const createCampaignSchema = z.object({
   advertiserId: z.string().optional(),
   businessLineCode: z.string().optional(),
   advertiserName: z.string().optional(),
-  metrics: z.any().optional(),
-  analytics: z.any().optional(),
+  metrics: jsonSchema.optional(),
+  analytics: jsonSchema.optional(),
 });
 
 export const updateCampaignSchema = createCampaignSchema.partial();
@@ -48,11 +49,11 @@ export const createCreatorSchema = z.object({
   region: z.string(),
   avatar: z.string().optional(),
   profileUrl: z.string().optional(),
-  contact: z.any().optional(),
-  rate: z.any().optional(),
-  metrics: z.any().optional(),
-  audience: z.any().optional(),
-  works: z.any().optional(),
+  contact: jsonSchema.optional(),
+  rate: jsonSchema.optional(),
+  metrics: jsonSchema.optional(),
+  audience: jsonSchema.optional(),
+  works: jsonSchema.optional(),
 });
 
 export const updateCreatorSchema = createCreatorSchema.partial();
