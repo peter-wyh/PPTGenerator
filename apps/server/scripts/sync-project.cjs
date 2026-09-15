@@ -122,8 +122,12 @@ async function apiLogin() {
         continue;
       }
       // multipart 上传（fetch + FormData，node18 原生）
+      // 0915 实测：Blob 必须带显式 MIME type——远端 multer fileFilter 按 mimetype 前缀过滤，
+      // 无 type 的 Blob 会以 application/octet-stream 进 fileFilter 被 cb(null,false) 丢弃 → 「未提供文件」
+      const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
+      const ext = path.extname(localPath).toLowerCase();
       const fd = new FormData();
-      fd.append('file', new Blob([fs.readFileSync(localPath)]), path.basename(localPath));
+      fd.append('file', new Blob([fs.readFileSync(localPath)], { type: MIME[ext] || 'application/octet-stream' }), path.basename(localPath));
       const r = await fetch(`${TEST_API}/api/v1/uploads`, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'User-Agent': 'sync-project.cjs/1.0' },
