@@ -61,4 +61,12 @@ RUN chmod +x /app/apps/server/docker-entrypoint.sh
 
 WORKDIR /app/apps/server
 EXPOSE 4000
+
+# Seed runtime uploads: chart.js vendor file referenced by guides as
+# /uploads/vendor/chart.umd.min.js. The runtime uploads/ dir is ephemeral on
+# Sealos (wiped on pod reset), so we bake a seed copy in the image and the
+# entrypoint copies it in on every start. Keep the file in sync with the
+# reference named in GuideRevision content (currently chart.umd.min.js v4.4.1).
+COPY apps/server/uploads-seed/vendor/chart.umd.min.js /app/apps/server/uploads-seed/vendor/chart.umd.min.js
+
 ENTRYPOINT ["/app/apps/server/docker-entrypoint.sh"]

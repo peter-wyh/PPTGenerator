@@ -31,5 +31,17 @@ node "$PRISMA_BIN" migrate deploy || {
   exit 1
 }
 
+# Seed vendor uploads: guides reference /uploads/vendor/chart.umd.min.js, but
+# runtime uploads/ is wiped on every Sealos pod reset. Bake a seed copy in the
+# image (Dockerfile COPY) and restore it here on every start (no-clobber so
+# local dev uploads are never overwritten).
+VENDOR_SEED_DIR="$REPO_ROOT/apps/server/uploads-seed/vendor"
+VENDOR_DEST_DIR="$REPO_ROOT/apps/server/uploads/vendor"
+if [ -d "$VENDOR_SEED_DIR" ]; then
+  mkdir -p "$VENDOR_DEST_DIR"
+  cp -Rn "$VENDOR_SEED_DIR/." "$VENDOR_DEST_DIR/" || true
+  echo "[entrypoint] vendor uploads seeded: $(ls "$VENDOR_DEST_DIR" | wc -l | tr -d ' ') file(s)"
+fi
+
 echo "[entrypoint] starting server (tsx)..."
 exec node "$TSX_BIN" src/index.ts
