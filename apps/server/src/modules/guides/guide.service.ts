@@ -277,13 +277,17 @@ export const guideService = {
    */
   async listRecentGeneratedHtml(businessLineId: string): Promise<string | null> {
     if (!businessLineId) return null;
+    // meta.businessLine 存的是 code(如 'FT'),非业务线 id——先解析成 code 再比对(0915 实测修正)。
+    const bl = await prisma.businessLine.findUnique({ where: { id: businessLineId }, select: { code: true } });
+    const code = bl?.code;
+    if (!code) return null;
     const rows = await prisma.project.findMany({
       where: { htmlContent: { not: null } },
       orderBy: { updatedAt: 'desc' },
       take: 30,
       select: { htmlContent: true, meta: true },
     });
-    const hit = rows.find((r) => (r.meta as { businessLineId?: string } | null)?.businessLineId === businessLineId);
+    const hit = rows.find((r) => (r.meta as { businessLine?: string } | null)?.businessLine === code);
     return hit?.htmlContent ?? null;
   },
 };

@@ -65,4 +65,11 @@ export const dryRunSchema = z.object({
   html: z.string().min(1).max(2_000_000).optional(),
 });
 
+/** POST /guides/distill — 从 HTML 样例提炼指南草稿 */
+export const distillSchema = z.object({
+  html: z.string().min(1).max(2_000_000).optional(),
+  businessLineId: z.string().min(1).max(191).optional(),
+  guideName: z.string().min(1).max(191).optional(),
+}).refine((d) => d.html || d.businessLineId, { message: 'html 或 businessLineId 至少提供一个' });
+
 export { idParamSchema };

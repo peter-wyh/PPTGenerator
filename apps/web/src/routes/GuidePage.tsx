@@ -103,6 +103,8 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
   const [isActive, setIsActive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // P1 指南提炼:从该业务线最近生成的报告 HTML 提炼指南草稿(约 1-2 分钟)
+  const [distilling, setDistilling] = useState(false);
   // 0827：指南内容支持全屏编辑（Esc 关闭，与 AiGenerateForm 同交互）
   const [fullscreen, setFullscreen] = useState(false);
   // S1/S2：版本侧栏 + checks 编辑 + 干跑（编辑态专属）
@@ -180,6 +182,22 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
       toast.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** P1:从该业务线最近生成的报告提炼指南草稿,就地填充编辑区(草稿须人工修订后再保存)。 */
+  async function distillFromRecent() {
+    if (!businessLineId) { setError('请先选择业务线'); return; }
+    if (content.trim() && !window.confirm('当前已有内容,提炼将整体替换,确定?')) return;
+    setDistilling(true); setError('');
+    try {
+      const d = await guidesApi.distill({ businessLineId, guideName: name.trim() || undefined });
+      setContent(d.draft);
+      toast.success(`提炼完成(来源:${d.sourceFrom === 'recentHtml' ? '该业务线最近生成' : '上传样例'},请修订后保存)`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '提炼失败');
+    } finally {
+      setDistilling(false);
     }
   }
 
@@ -304,7 +322,10 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
           <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-foreground-secondary">
             <span className="flex items-center justify-between">
               <span>指南内容（Markdown，约定分节：品牌视觉 / 章节结构 / 展示形式偏好 / 语调与术语） <span className="text-red">*</span></span>
-              <button onClick={() => setFullscreen(true)} title="全屏编辑" className="text-[10px] text-foreground-muted hover:text-foreground-primary">⛶ 全屏</button>
+              <span className="flex items-center gap-3">
+                <button onClick={() => void distillFromRecent()} disabled={distilling} title="用该业务线最近生成的报告提炼指南草稿" className="text-[10px] text-accent-primary hover:underline disabled:opacity-40">{distilling ? '⏳ 提炼中(约 1-2 分钟)…' : '✨ 从 HTML 提炼'}</button>
+                <button onClick={() => setFullscreen(true)} title="全屏编辑" className="text-[10px] text-foreground-muted hover:text-foreground-primary">⛶ 全屏</button>
+              </span>
             </span>
             <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} spellCheck={false}
               placeholder={'# {业务线名} 报告指南\n\n## 品牌视觉\n主色 #xxxxxx / 字体 …\n\n## 章节结构\n必须包含 …；不提 …\n\n## 展示形式偏好\n达人列表 ≤6 人卡片，>6 人表格\n\n## 语调与术语\n自称「团队」；用「推广」不用「投放」'}

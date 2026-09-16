@@ -85,4 +85,8 @@ export const guidesApi = {
   // ── S2 干跑校验 ──
   dryRun: (id: string, checks: CheckDTO[], html?: string) =>
     api.post<DryRunResultDTO>(`/guides/${id}/revisions/dry-run`, { checks, ...(html ? { html } : {}) }).then((r) => r.data),
+
+  // ── P1 指南提炼:从 HTML 样例(或业务线最近生成)提炼指南草稿,不入库 ──
+  distill: (data: { html?: string; businessLineId?: string; guideName?: string }) =>
+    api.post<{ draft: string; sourceBytes: number; sourceFrom: 'body' | 'recentHtml' }>('/guides/distill', data).then((r) => r.data),
 };

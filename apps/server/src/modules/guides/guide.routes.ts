@@ -11,7 +11,10 @@ import {
   activateRevisionSchema,
   revisionParamsSchema,
   dryRunSchema,
+  distillSchema,
 } from './guide.schema';
+import { distillGuideFromHtml } from './guide-distill.service';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 const router = Router();
 
@@ -34,5 +37,12 @@ router.post('/:id/revisions/dry-run', validate({ params: idParamSchema, body: dr
 // ★ g6 参考文件回显:按 revision assets 的 ref 读文本资产内容(sample 类为外链,前端直接开)。
 router.get('/:id/revisions/:version/assets', validate({ params: revisionParamsSchema }), guideController.listRevisionAssets);
 router.get('/:id/revisions/:version/asset-content', validate({ params: revisionParamsSchema }), guideController.getRevisionAssetContent);
+
+// ★ P1 指南提炼:从 HTML 样例提炼结构指南草稿(不入库,返回给编辑页人工修订)。
+//    html 直接传或 businessLineId 自动取该业务线最近生成的报告。
+router.post('/distill', validate({ body: distillSchema }), asyncHandler(async (req, res) => {
+  const result = await distillGuideFromHtml(req.body as { html?: string; businessLineId?: string; guideName?: string });
+  res.json(result);
+}));
 
 export const guideRoutes = router;
