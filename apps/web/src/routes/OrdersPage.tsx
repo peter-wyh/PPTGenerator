@@ -104,9 +104,9 @@ export default function OrdersPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="font-headings text-lg font-semibold text-foreground-primary">Orders</h1>
+          <h1 className="font-headings text-lg font-semibold text-foreground-primary">订单明细</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
-            Imported orders (order id · item rows · attributed creator) — data foundation for Top-Sales / basket analysis
+            导入的订单流水（订单号 · 商品行 · 归因达人）——Top 销售 / 篮子分析的数据底座
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -115,21 +115,21 @@ export default function OrdersPage() {
             className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-secondary hover:bg-surface-hover"
             defaultValue=""
           >
-            <option value="" disabled>Download template</option>
-            <option value="orders">Orders template</option>
+            <option value="" disabled>下载模板</option>
+            <option value="orders">订单模板</option>
           </select>
           <button
             onClick={() => ordersCsvRef.current?.click()}
             className="rounded bg-accent-primary px-3 py-1.5 text-xs text-foreground-inverse hover:bg-accent-secondary"
           >
-            Import Orders CSV
+            导入订单 CSV
           </button>
           <select
             value={campaignId}
             onChange={(e) => { setCampaignId(e.target.value); setPage(1); }}
             className="rounded border border-border-default bg-surface-primary px-2 py-1.5 text-xs text-foreground-primary min-w-[220px]"
           >
-            <option value="">All Campaigns</option>
+            <option value="">全部 Campaign</option>
             {campaigns.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -144,7 +144,7 @@ export default function OrdersPage() {
         <div className="py-12 text-center text-sm text-foreground-secondary">Loading…</div>
       ) : rows.length === 0 ? (
         <div className="py-12 text-center text-sm text-foreground-secondary">
-          No orders yet. Go to <span className="text-accent-primary">Collaborations</span> and import the Orders CSV.
+          暂无订单。请到「合作列表」或本页导入订单 CSV。
         </div>
       ) : (
         <>
@@ -152,28 +152,28 @@ export default function OrdersPage() {
             <table className="w-full text-xs whitespace-nowrap">
               <thead>
                 <tr className="border-b border-border-default bg-surface-secondary text-left text-foreground-secondary">
-                  {/* 核心区 */}
-                  <th className="px-3 py-2">Order ID</th>
+                  {/* 核心区（0917 表头中文化） */}
+                  <th className="px-3 py-2">订单号</th>
                   <th className="px-3 py-2">Campaign</th>
-                  <th className="px-3 py-2">Media</th>
-                  <th className="px-3 py-2">Creator</th>
-                  <th className="px-3 py-2">Order Date</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Source</th>
-                  <th className="px-3 py-2 text-right">Items</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                  <th className="px-3 py-2 text-right">Commission</th>
+                  <th className="px-3 py-2">媒体</th>
+                  <th className="px-3 py-2">归因达人</th>
+                  <th className="px-3 py-2">下单时间</th>
+                  <th className="px-3 py-2">状态</th>
+                  <th className="px-3 py-2">来源</th>
+                  <th className="px-3 py-2 text-right">件数</th>
+                  <th className="px-3 py-2 text-right">金额</th>
+                  <th className="px-3 py-2 text-right">佣金</th>
                   {/* 转化归因区（0909 瘦身：仅留有消费方的列） */}
-                  <th className="px-3 py-2 border-l border-border-subtle">Click Ref</th>
-                  <th className="px-3 py-2">Click Device</th>
-                  <th className="px-3 py-2">Country</th>
-                  <th className="px-3 py-2">Site Name</th>
-                  <th className="px-3 py-2">Tracking URL</th>
+                  <th className="px-3 py-2 border-l border-border-subtle">点击Ref</th>
+                  <th className="px-3 py-2">点击设备</th>
+                  <th className="px-3 py-2">国家</th>
+                  <th className="px-3 py-2">站点</th>
+                  <th className="px-3 py-2">跟踪链接</th>
                   {/* 审核支付区 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">Approved</th>
+                  <th className="px-3 py-2 border-l border-border-subtle">核销时间</th>
                   {/* 其他 */}
-                  <th className="px-3 py-2 border-l border-border-subtle">Txn ID</th>
-                  <th className="px-3 py-2">New Customer</th>
+                  <th className="px-3 py-2 border-l border-border-subtle">上游交易号</th>
+                  <th className="px-3 py-2">新客</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -225,7 +225,7 @@ export default function OrdersPage() {
                               onClick={() => setExpanded({ ...expanded, [row.id]: !isOpen })}
                               className="rounded px-1.5 py-0.5 text-[11px] text-accent-primary hover:bg-accent-primary/10"
                             >
-                              {isOpen ? 'Hide' : 'Items'}
+                              {isOpen ? '收起' : '商品'}
                             </button>
                           )}
                         </td>
@@ -236,12 +236,12 @@ export default function OrdersPage() {
                             <table className="w-full text-[11px]">
                               <thead>
                                 <tr className="text-left text-foreground-muted">
-                                  <th className="py-1 pr-2">Item</th>
-                                  <th className="py-1 pr-2">Category</th>
+                                  <th className="py-1 pr-2">商品</th>
+                                  <th className="py-1 pr-2">类目</th>
                                   <th className="py-1 pr-2">SKU</th>
-                                  <th className="py-1 pr-2 text-right">QTY</th>
-                                  <th className="py-1 pr-2 text-right">Unit Price</th>
-                                  <th className="py-1 text-right">Subtotal</th>
+                                  <th className="py-1 pr-2 text-right">数量</th>
+                                  <th className="py-1 pr-2 text-right">单价</th>
+                                  <th className="py-1 text-right">小计</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border-subtle">
@@ -268,19 +268,19 @@ export default function OrdersPage() {
           </div>
 
           <div className="mt-3 flex items-center justify-between text-xs text-foreground-secondary">
-            <span>{total} orders</span>
+            <span>{total} 条订单</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page <= 1}
                 className="rounded border border-border-default px-2 py-1 disabled:opacity-40 hover:bg-surface-hover"
-              >Prev</button>
+              >上一页</button>
               <span>{page} / {totalPages}</span>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
                 className="rounded border border-border-default px-2 py-1 disabled:opacity-40 hover:bg-surface-hover"
-              >Next</button>
+              >下一页</button>
             </div>
           </div>
         </>

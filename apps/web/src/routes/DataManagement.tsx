@@ -7,31 +7,54 @@ interface MenuItem {
   children?: { path: string; label: string }[];
 }
 
-const MENUS: MenuItem[] = [
+/** 0917 归类: 顶层按职能分组(投放数据/基础数据/配置),组内原菜单平铺。
+ *  全部一级组默认展开;二级组(Campaign 等)默认展开。 */
+const MENUS: { group: string; items: MenuItem[] }[] = [
   {
-    label: 'Campaign',
-    children: [
-      { path: '/data/campaigns', label: 'Campaign 列表' },
-      { path: '/data/campaign-collabs', label: '合作列表' },
+    group: '投放数据',
+    items: [
+      {
+        label: 'Campaign',
+        children: [
+          { path: '/data/campaigns', label: 'Campaign 列表' },
+          { path: '/data/campaign-collabs', label: '合作列表' },
+        ],
+      },
+      { path: '/data/orders', label: '订单明细' },
+      {
+        label: 'TrackingLink',
+        children: [
+          { path: '/data/links', label: '链接统计' },
+          { path: '/data/links/daily', label: '按日明细' },
+        ],
+      },
+      {
+        label: '数据统计',
+        children: [
+          { path: '/data/stats/orders', label: '订单按日' },
+          { path: '/data/stats/publisher', label: '媒体×日' },
+        ],
+      },
     ],
   },
-  { path: '/data/orders', label: '订单明细' },
   {
-    label: 'TrackingLink',
-    children: [
-      { path: '/data/links', label: '链接统计' },
-      { path: '/data/links/daily', label: '按日明细' },
+    group: '基础数据',
+    items: [
+      { path: '/data/creators', label: '达人库' },
+      { path: '/data/advertisers', label: '广告主' },
+      { path: '/data/marketing-events', label: '营销活动' },
+      { path: '/data/commission-plans', label: '佣金方案' },
+      { path: '/data/placements', label: '广告位截图' },
     ],
   },
-  { path: '/data/stats', label: '数据统计' },
-  { path: '/data/creators', label: '达人库' },
-  { path: '/data/advertisers', label: '广告主' },
-  { path: '/data/marketing-events', label: '营销活动' },
-  { path: '/data/commission-plans', label: '佣金方案' },
-  { path: '/data/guides', label: '指南' },
-  { path: '/data/business-lines', label: '业务线' },
-  { path: '/data/placements', label: '广告位截图' },
-  { path: '/data/api-docs', label: '接口文档' },
+  {
+    group: '系统配置',
+    items: [
+      { path: '/data/guides', label: '指南' },
+      { path: '/data/business-lines', label: '业务线' },
+      { path: '/data/api-docs', label: '接口文档' },
+    ],
+  },
 ];
 
 function isActive(path: string, pathname: string) {
@@ -41,11 +64,13 @@ function isActive(path: string, pathname: string) {
 export function DataManagement() {
   const location = useLocation();
   const navigate = useNavigate();
-  // 通用多组展开：初始展开所有「含活跃子项」的组（当前路径命中即保持展开）
+  // 0917 归类: 二级组默认全展开(原「仅活跃组展开」);初始集合=全部含 children 的组
   const [expandedLabels, setExpandedLabels] = useState<Set<string>>(() => {
     const s = new Set<string>();
-    for (const m of MENUS) {
-      if (m.children?.some((c) => isActive(c.path, location.pathname))) s.add(m.label);
+    for (const g of MENUS) {
+      for (const m of g.items) {
+        if (m.children) s.add(m.label);
+      }
     }
     return s;
   });
@@ -63,11 +88,14 @@ export function DataManagement() {
         <div className="px-4 py-4">
           <h1 className="font-headings text-lg font-semibold text-foreground-primary">数据管理</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
-            Campaign · 订单 · TrackingLink · 达人 · 业务线
+            投放数据 · 基础数据 · 系统配置
           </p>
         </div>
         <nav className="flex-1 overflow-auto px-2">
-          {MENUS.map((menu) => {
+          {MENUS.map(({ group, items }) => (
+            <div key={group} className="mb-3">
+              <p className="px-3 pb-1 pt-2 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">{group}</p>
+              {items.map((menu) => {
             if (menu.children) {
               // 有子菜单（可展开组）
               const anyActive = menu.children.some((c) => isActive(c.path, location.pathname));
@@ -118,6 +146,8 @@ export function DataManagement() {
               </button>
             );
           })}
+            </div>
+          ))}
         </nav>
       </aside>
 

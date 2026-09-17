@@ -5,10 +5,12 @@
  * 数据由 recompute 接口从真源（订单表 / LinkPerformance.daily）物化——页面只读。
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   campaignsApi,
   type OrderDailyRow,
   type PublisherDailyRow,
+  type StatsPageResp,
 } from '@/api/campaignsApi';
 
 function fmtMoney(v: number | string | null | undefined) {
@@ -18,7 +20,9 @@ function fmtMoney(v: number | string | null | undefined) {
 }
 
 export default function StatsPage() {
-  const [tab, setTab] = useState<'order' | 'publisher'>('order');
+  // 0916 d2：tab 改由 URL 驱动（/data/stats/orders | /data/stats/publisher），左侧三级菜单高亮同步
+  const location = useLocation();
+  const tab: 'order' | 'publisher' = location.pathname.endsWith('/publisher') ? 'publisher' : 'order';
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [campaignId, setCampaignId] = useState('');
   const [creatorBreakdown, setCreatorBreakdown] = useState(false);
@@ -28,6 +32,7 @@ export default function StatsPage() {
   const [dateTo, setDateTo] = useState('');
   const [orderRows, setOrderRows] = useState<OrderDailyRow[]>([]);
   const [pubRows, setPubRows] = useState<PublisherDailyRow[]>([]);
+  const [pubSummary, setPubSummary] = useState<StatsPageResp<PublisherDailyRow>['summary']>(undefined);
   const [orderTotal, setOrderTotal] = useState(0);
   const [pubTotal, setPubTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -65,6 +70,7 @@ export default function StatsPage() {
         });
         setPubRows(r.rows);
         setPubTotal(r.total);
+        setPubSummary(r.summary);
       }
       setError('');
     } catch {
@@ -95,12 +101,22 @@ export default function StatsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="font-headings text-lg font-semibold text-foreground-primary">数据统计</h1>
+          <h1 className="font-headings text-lg font-semibold text-foreground-primary">{tab === 'order' ? '数据统计 · 订单按日' : '数据统计 · 媒体×日'}</h1>
           <p className="mt-0.5 text-xs text-foreground-secondary">
             中间层统计表透出——订单按日（OrderDailyStat）与媒体×日（PublisherDailyStat），从订单真源/TrackingLink 物化
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {tab === 'order' && (
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground-secondary">
+              <input
+                type="checkbox"
+                checked={creatorBreakdown}
+                onChange={(e) => { setCreatorBreakdown(e.target.checked); setPage(1); }}
+              />
+              按达人拆分行
+            </label>
+          )}
           <select
             value={campaignId}
             onChange={(e) => { setCampaignId(e.target.value); setPage(1); setPublisherId(''); }}
@@ -121,26 +137,7 @@ export default function StatsPage() {
         </div>
       </div>
 
-      <div className="mb-3 flex items-center gap-4 border-b border-border-default">
-        <button
-          onClick={() => { setTab('order'); setPage(1); }}
-          className={`px-3 py-2 text-sm ${tab === 'order' ? 'border-b-2 border-accent-primary font-medium text-foreground-primary' : 'text-foreground-secondary hover:text-foreground-primary'}`}
-        >订单按日</button>
-        <button
-          onClick={() => { setTab('publisher'); setPage(1); }}
-          className={`px-3 py-2 text-sm ${tab === 'publisher' ? 'border-b-2 border-accent-primary font-medium text-foreground-primary' : 'text-foreground-secondary hover:text-foreground-primary'}`}
-        >媒体×日</button>
-        {tab === 'order' && (
-          <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-foreground-secondary">
-            <input
-              type="checkbox"
-              checked={creatorBreakdown}
-              onChange={(e) => { setCreatorBreakdown(e.target.checked); setPage(1); }}
-            />
-            按达人拆分行（creator × date）
-          </label>
-        )}
-      </div>
+      {/* 0916 d2：页内 tab 已移除——视图由左侧三级菜单（订单按日/媒体×日）切换 */}
 
       {tab === 'publisher' && campaignId && (
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-foreground-secondary">
@@ -176,6 +173,19 @@ export default function StatsPage() {
               清除筛选
             </button>
           )}
+        </div>
+      )}
+
+      {/* 0916 d3：媒体×日筛选范围汇总（跨分页全量，来自后端 aggregate） */}
+      {tab === 'publisher' && campaignId && pubSummary && pubTotal > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-border-default bg-surface-secondary px-4 py-2 text-xs text-foreground-secondary">
+          <span className="font-medium text-foreground-primary">筛选范围汇总</span>
+          <span>Clicks <b className="tabular-nums text-foreground-primary">{pubSummary.clicks.toLocaleString()}</b></span>
+          <span>Impressions <b className="tabular-nums text-foreground-primary">{pubSummary.impressions.toLocaleString()}</b></span>
+          <span>Orders <b className="tabular-nums text-foreground-primary">{pubSummary.orders.toLocaleString()}</b></span>
+          <span>CVR <b className="tabular-nums text-foreground-primary">{pubSummary.clicks ? `${((pubSummary.orders / pubSummary.clicks) * 100).toFixed(2)}%` : '—'}</b></span>
+          <span>GMV <b className="tabular-nums text-foreground-primary">{fmtMoney(pubSummary.gmv)}</b></span>
+          <span>Commission <b className="tabular-nums text-foreground-primary">{fmtMoney(pubSummary.commission)}</b></span>
         </div>
       )}
 

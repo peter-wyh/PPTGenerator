@@ -321,12 +321,13 @@ export function RecordFormModal({ kind, record, onSaved, onCancel }: Props) {
         {isCampaign ? (
           /* ─── Campaign 表单 ─── */
           <div className="grid grid-cols-2 skin-gap-sm">
-            {/* 名称占整行 */}
+            {/* 名称占整行（0916 d1：提示名称取计划名称，便于后续按计划对账） */}
             <label className="col-span-2 flex flex-col skin-gap-xs text-xs text-foreground-secondary">
-              <span>名称 <span className="text-red">*</span></span>
+              <span>名称 <span className="text-red">*</span> <span className="text-foreground-muted">（取广告后台的计划名称，如 Netshoes WL-FTCPS推广计划）</span></span>
               <input
                 value={vals.name ?? ''}
                 onChange={(e) => setVals((p) => ({ ...p, name: e.target.value }))}
+                placeholder="如 Netshoes WL-FTCPS推广计划"
                 className={inputCls}
               />
             </label>
