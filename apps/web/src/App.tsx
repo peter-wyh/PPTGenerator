@@ -18,6 +18,7 @@ const AdvertiserPage = lazy(() => import('./routes/AdvertiserPage').then((m) => 
 const MarketingEventPage = lazy(() => import('./routes/MarketingEventPage').then((m) => ({ default: m.MarketingEventPage })));
 const CommissionPlanPage = lazy(() => import('./routes/CommissionPlanPage').then((m) => ({ default: m.CommissionPlanPage })));
 const GuidePage = lazy(() => import('./routes/GuidePage').then((m) => ({ default: m.GuidePage })));
+const GuideEditPage = lazy(() => import('./routes/GuideEditPage').then((m) => ({ default: m.GuideEditPage })));
 const ApiDocsPage = lazy(() => import('./routes/ApiDocsPage'));
 const BusinessLinePage = lazy(() => import('./routes/BusinessLinePage').then((m) => ({ default: m.BusinessLinePage })));
 const PlacementsPage = lazy(() => import('./routes/PlacementsPage').then((m) => ({ default: m.PlacementsPage })));
@@ -53,14 +54,18 @@ export function App() {
               <Route path="campaigns" element={<CampaignPage />} />
               <Route path="campaign-collabs" element={<CampaignCollabPage />} />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="creator-cps-stats" element={<Navigate to="/data/stats/publisher" replace />} />
               <Route path="links" element={<LinksPage />} />
               <Route path="links/daily" element={<LinksPage />} />
-              <Route path="stats" element={<StatsPage />} />
+              <Route path="stats" element={<Navigate to="/data/stats/orders" replace />} />
+              <Route path="stats/orders" element={<StatsPage />} />
+              <Route path="stats/publisher" element={<StatsPage />} />
               <Route path="creators" element={<CreatorPage />} />
               <Route path="advertisers" element={<AdvertiserPage />} />
               <Route path="marketing-events" element={<MarketingEventPage />} />
               <Route path="commission-plans" element={<CommissionPlanPage />} />
               <Route path="guides" element={<GuidePage />} />
+              <Route path="guides/:id/edit" element={<GuideEditPage />} />
               <Route path="business-lines" element={<BusinessLinePage />} />
               <Route path="placements" element={<PlacementsPage />} />
               <Route path="api-docs" element={<ApiDocsPage />} />

@@ -2,20 +2,24 @@
  * 业务线报告指南管理 —— /data/guides。
  * 指南 = 拼进 AI 系统提示词的业务线差异配置(品牌视觉/章节结构/展示形式/语调术语)。
  * 0827 ID 方案:结构指南在生成表单直接按 id 选中,scenario 匹配已消灭;isDefault=视觉规范兜底;停用不删除。
+ * 0916 g5：合格校验独立弹窗（列表行直接进入）。
+ * 0916 #3：编辑指南独立页面（/data/guides/:id/edit），新增仍用弹窗。
  */
-import { useCallback, useEffect, useState } from 'react';
-import { guidesApi, type GuideDTO, type GuideRevisionDTO, type CheckDTO, type DryRunResultDTO } from '@/api/guides';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { guidesApi, type GuideDTO, type CheckDTO, type DryRunResultDTO } from '@/api/guides';
 import { lookupApi, type BusinessLineDTO } from '@/api/lookup';
 import { toast } from '../components/Toast';
-
+import { MarkdownPreview } from '../components/MarkdownEditor';
 
 export function GuidePage() {
   const [list, setList] = useState<GuideDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [checksGuide, setChecksGuide] = useState<GuideDTO | null>(null);
   const [businessLines, setBusinessLines] = useState<BusinessLineDTO[]>([]);
   const [filterBl, setFilterBl] = useState('');
+  const navigate = useNavigate();
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -73,7 +77,8 @@ export function GuidePage() {
                 <td className="px-3 py-2 text-foreground-secondary">{g.isActive ? '启用' : '已停用'}</td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs tabular-nums text-foreground-muted">{g.updatedAt ? String(g.updatedAt).slice(0, 10) : '—'}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-right">
-                  <button onClick={() => setEditingId(g.id)} className="text-xs text-accent-primary hover:underline">编辑</button>
+                  <button onClick={() => navigate(`/data/guides/${g.id}/edit`)} className="text-xs text-accent-primary hover:underline">编辑</button>
+                  <button onClick={() => setChecksGuide(g)} className="ml-3 text-xs text-accent-primary hover:underline">合格校验</button>
                 </td>
               </tr>
             ))}
@@ -84,17 +89,16 @@ export function GuidePage() {
         </table>
       </div>
       {adding && <GuideFormModal businessLines={businessLines} onSaved={async () => { setAdding(false); await reload(); }} onCancel={() => setAdding(false)} />}
-      {editingId && <GuideFormModal businessLines={businessLines} guideId={editingId} onSaved={async () => { setEditingId(null); await reload(); }} onCancel={() => setEditingId(null)} />}
+      {checksGuide && <ChecksModal guide={checksGuide} onClose={() => setChecksGuide(null)} />}
     </div>
   );
 }
 
-/* ========================= Form Modal ========================= */
+/* ========================= 新增弹窗（创建用；编辑走独立页面） ========================= */
 
-function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
-  guideId?: string; businessLines: BusinessLineDTO[]; onSaved: () => void; onCancel: () => void;
+function GuideFormModal({ businessLines, onSaved, onCancel }: {
+  businessLines: BusinessLineDTO[]; onSaved: () => void; onCancel: () => void;
 }) {
-  const isEdit = !!guideId;
   const [businessLineId, setBusinessLineId] = useState('');
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
@@ -103,89 +107,10 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
   const [isActive, setIsActive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  // P1 指南提炼:从该业务线最近生成的报告 HTML 提炼指南草稿(约 1-2 分钟)
   const [distilling, setDistilling] = useState(false);
-  // 0827：指南内容支持全屏编辑（Esc 关闭，与 AiGenerateForm 同交互）
-  const [fullscreen, setFullscreen] = useState(false);
-  // S1/S2：版本侧栏 + checks 编辑 + 干跑（编辑态专属）
-  const [tab, setTab] = useState<'content' | 'checks'>('content');
-  const [revisions, setRevisions] = useState<GuideRevisionDTO[]>([]);
-  const [revBusy, setRevBusy] = useState(false);
-  const [viewRev, setViewRev] = useState<{ version: number; content: string } | null>(null);
-  // g6 参考文件查看器:点资产名打开内容(css/tokens/checklist 文本;sample 外链新窗口开)
-  const [assetView, setAssetView] = useState<{ name: string; ref: string; content: string; truncated: boolean } | null>(null);
-  const [assetLoading, setAssetLoading] = useState(false);
-  const [checks, setChecks] = useState<CheckDTO[]>([]);
-  const [dryRun, setDryRun] = useState<DryRunResultDTO | null>(null);
+  const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    if (!fullscreen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [fullscreen]);
-
-  useEffect(() => {
-    if (!guideId) return;
-    guidesApi.list().then((all) => {
-      const g = all.find((x) => x.id === guideId);
-      if (!g) { setError('加载失败'); return; }
-      setBusinessLineId(g.businessLineId);
-      setName(g.name);
-      setContent(g.content ?? '');
-      setIsDefault(!!g.isDefault);
-      setOverridesVisual(!!g.overridesVisual);
-      setIsActive(g.isActive !== false);
-    }).catch(() => setError('加载失败'));
-    // S1:版本侧栏数据(activeRevisionId 匹配的版本在侧栏标"生效中")；同时载入当前生效版的 checks 进编辑器
-    guidesApi.listRevisions(guideId).then((revs) => {
-      setRevisions(revs);
-      // 生效版=activeRevisionId 匹配项;无标记时回退最新版(侧栏一致:isActiveRev = i === revisions.length - 1)
-      const active = revs.find((r) => r.isActive) ?? revs[revs.length - 1];
-      if (active?.checks) setChecks(active.checks);
-    }).catch(() => {});
-  }, [guideId]);
-
-  /** S1:保存 = 产生新版本(内容/检查同快照);成功后刷新侧栏。 */
-  async function save() {
-    if (!businessLineId) { setError('请选择业务线'); return; }
-    if (!name.trim()) { setError('名称不能为空'); return; }
-    if (!content.trim()) { setError('指南内容不能为空'); return; }
-    setBusy(true); setError('');
-    try {
-      const payload = {
-        businessLineId,
-        name: name.trim(),
-        content,
-        isDefault,
-        overridesVisual: !isDefault && overridesVisual,
-        isActive,
-      };
-      let firstVersion = false;
-      if (isEdit) {
-        // 元数据走 PATCH;正文变化才建新版本(后端幂等:与最新版一致时返回旧版不重复建)
-        await guidesApi.update(guideId!, payload);
-        try {
-          await guidesApi.saveRevision(guideId!, {
-            content,
-            checks: checks.length ? checks : undefined,
-            changelog: `编辑:${name.trim()}`,
-          });
-        } catch { /* 与最新版一致等幂等情况不阻断保存 */ }
-      } else {
-        await guidesApi.create(payload);
-        firstVersion = true;
-      }
-      toast.success(firstVersion ? '创建成功' : '已保存为新版本');
-      onSaved();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '保存失败');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** P1:从该业务线最近生成的报告提炼指南草稿,就地填充编辑区(草稿须人工修订后再保存)。 */
   async function distillFromRecent() {
     if (!businessLineId) { setError('请先选择业务线'); return; }
     if (content.trim() && !window.confirm('当前已有内容,提炼将整体替换,确定?')) return;
@@ -201,64 +126,46 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
     }
   }
 
-  /** S1:回滚 = 激活历史版本。 */
-  async function activate(version: number) {
-    if (!guideId) return;
-    if (!window.confirm(`回滚到 v${version} 将立即生效(下次生成即用该版本),确定?`)) return;
-    setRevBusy(true);
+  async function distillFromUpload(file: File | undefined) {
+    if (!file) return;
+    if (!/\.html?$/i.test(file.name) && file.type !== 'text/html') { toast.error('请上传 .html 文件'); return; }
+    if (file.size > 4.5 * 1024 * 1024) { toast.error('文件超过 4.5MB 上限，请精简后重试'); return; }
+    if (content.trim() && !window.confirm('当前已有内容，提炼将整体替换，确定?')) return;
+    setDistilling(true); setError('');
     try {
-      await guidesApi.activateRevision(guideId, version);
-      toast.success(`已激活 v${version}`);
-      // 正文区同步切到该版本内容,所见即所得
-      const rev = await guidesApi.getRevision(guideId, version);
-      setContent(rev.content);
-      if (rev.checks) setChecks(rev.checks);
-      const fresh = await guidesApi.listRevisions(guideId);
-      setRevisions(fresh);
+      const html = await file.text();
+      const d = await guidesApi.distill({ html, guideName: name.trim() || undefined });
+      setContent(d.draft);
+      setEditMode('edit');
+      toast.success('提炼完成（来源:上传样例），请修订后保存');
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '回滚失败');
+      toast.error(e instanceof Error ? e.message : '提炼失败');
     } finally {
-      setRevBusy(false);
+      setDistilling(false);
+      if (fileRef.current) fileRef.current.value = '';
     }
   }
 
-  /** S1:查看历史版本全文(只读)。 */
-  async function viewVersion(version: number) {
-    if (!guideId) return;
+  async function save() {
+    if (!businessLineId) { setError('请选择业务线'); return; }
+    if (!name.trim()) { setError('名称不能为空'); return; }
+    if (!content.trim()) { setError('指南内容不能为空'); return; }
+    setBusy(true); setError('');
     try {
-      const rev = await guidesApi.getRevision(guideId, version);
-      setViewRev({ version, content: rev.content });
-    } catch {
-      toast.error('版本内容加载失败');
-    }
-  }
-
-  /** g6:查看参考文件内容。sample=外链样张直接新窗开;其余文本资产走 asset-content 端点。 */
-  async function openAsset(version: number, a: { kind: string; ref: string; hash?: string; name?: string }) {
-    if (a.kind === 'sample' && /^https?:/.test(a.ref)) { window.open(a.ref, '_blank'); return; }
-    if (!guideId) return;
-    setAssetLoading(true);
-    try {
-      const d = await guidesApi.getRevisionAssetContent(guideId, version, a.ref);
-      setAssetView({ name: a.name || a.ref, ref: a.ref, content: d.content, truncated: d.truncated });
-    } catch {
-      toast.error('参考文件加载失败');
-    } finally {
-      setAssetLoading(false);
-    }
-  }
-
-  /** S2:干跑校验——对当前 checks 跑 lint + 断言(靶子=该业务线最近一次生成)。 */
-  async function runDryRun() {
-    if (!guideId) return;
-    if (!checks.length) { toast.error('请先添加至少一条断言'); return; }
-    setRevBusy(true); setDryRun(null);
-    try {
-      setDryRun(await guidesApi.dryRun(guideId, checks));
+      await guidesApi.create({
+        businessLineId,
+        name: name.trim(),
+        content,
+        isDefault,
+        overridesVisual: !isDefault && overridesVisual,
+        isActive,
+      });
+      toast.success('创建成功');
+      onSaved();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '干跑失败');
+      toast.error(e instanceof Error ? e.message : '保存失败');
     } finally {
-      setRevBusy(false);
+      setBusy(false);
     }
   }
 
@@ -266,48 +173,13 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div className="flex max-h-[90vh] w-[880px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <div className="font-headings text-sm font-semibold text-foreground-primary">{isEdit ? '编辑指南' : '新增指南'}</div>
-          {/* S1/S2:编辑态标签页——正文 / 合格校验 */}
-          {isEdit && (
-            <div className="flex gap-1 text-xs">
-              <button onClick={() => setTab('content')} className={`rounded px-2 py-0.5 ${tab === 'content' ? 'bg-accent-primary text-foreground-inverse' : 'text-foreground-secondary hover:bg-surface-hover'}`}>正文</button>
-              <button onClick={() => setTab('checks')} className={`rounded px-2 py-0.5 ${tab === 'checks' ? 'bg-accent-primary text-foreground-inverse' : 'text-foreground-secondary hover:bg-surface-hover'}`}>合格校验</button>
-            </div>
-          )}
+          <div className="font-headings text-sm font-semibold text-foreground-primary">新增指南</div>
         </div>
         {error && <p className="text-xs text-red">{error}</p>}
 
-        {tab === 'content' && (
-          <>
-        {/* 双层模型说明:解释「这份指南怎么生效」——配置页最大的理解成本 */}
-        <div className="rounded-lg border border-border-default bg-surface-secondary px-3 py-2 text-[11px] leading-relaxed text-foreground-muted">
-          保存后如何生效：<b className="text-foreground-secondary">品牌样式</b>（业务线默认）→ 该业务线每次生成报告都自动带上，管「长什么样」（配色、字体、组件、动效）；<b className="text-foreground-secondary">成套模板</b> → 生成报告时在「选用整套模板」下拉中手动选用才生效，管「分几章怎么讲」（页面结构、展示形式、语气），可附参考文件（原版 PPT/PDF 等样张），不与品牌样式冲突时同时生效。
-        </div>
-
-        {/* 0911:生效版参考文件主区展示(原来只挤在版本侧栏小字里不显眼) */}
-        {isEdit && (() => {
-          const activeRev = revisions.length ? revisions[revisions.length - 1] : null;
-          const acts = activeRev?.assets ?? [];
-          const kindLabel = (k: string) => (k === 'sample' ? '样张' : k === 'tokens' ? '色彩字体' : k === 'checklist' ? '清单' : k);
-          return (
-            <div className="flex flex-col gap-1.5">
-              <div className="text-xs font-medium text-foreground-secondary">参考文件 <span className="text-foreground-muted">（{acts.length} 个 · 随生效版 v{activeRev?.version ?? '–'} 带上，点「查看」看内容）</span></div>
-              {acts.length === 0 && <p className="text-[11px] text-foreground-muted">本指南暂无参考文件</p>}
-              {acts.map((a, i) => (
-                <div key={a.ref + i} className="flex items-center gap-2 rounded border border-border-default bg-surface-secondary px-2.5 py-1.5">
-                  <span className="shrink-0 rounded bg-accent-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-primary">{kindLabel(a.kind)}</span>
-                  <button onClick={() => void openAsset(activeRev!.version, a)} disabled={assetLoading} className="min-w-0 truncate text-left text-sm font-medium text-foreground-primary hover:underline disabled:opacity-40" title={a.ref}>{a.name || a.ref}</button>
-                  {a.hash && <span className="shrink-0 text-[10px] text-foreground-muted" title={`内容指纹 ${a.hash}`}>指纹 {a.hash.slice(0, 8)}</span>}
-                  <button onClick={() => void openAsset(activeRev!.version, a)} disabled={assetLoading} className="ml-auto shrink-0 text-xs text-accent-primary hover:underline disabled:opacity-40">查看</button>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
         <label className="flex flex-col gap-1 text-xs text-foreground-secondary">
           <span>业务线 <span className="text-red">*</span></span>
-          <select value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} disabled={isEdit} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
+          <select value={businessLineId} onChange={(e) => setBusinessLineId(e.target.value)} className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary">
             <option value="">请选择业务线…</option>
             {businessLines.map((b) => <option key={b.id} value={b.id}>{b.title || b.code}（{b.code}）</option>)}
           </select>
@@ -318,151 +190,135 @@ function GuideFormModal({ guideId, businessLines, onSaved, onCancel }: {
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如 DG 月报指南" className="rounded border border-border-default bg-surface-primary px-2 py-1 text-sm text-foreground-primary" />
         </label>
 
-        <div className="flex items-start gap-3">
-          <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-foreground-secondary">
-            <span className="flex items-center justify-between">
-              <span>指南内容（Markdown，约定分节：品牌视觉 / 章节结构 / 展示形式偏好 / 语调与术语） <span className="text-red">*</span></span>
-              <span className="flex items-center gap-3">
-                <button onClick={() => void distillFromRecent()} disabled={distilling} title="用该业务线最近生成的报告提炼指南草稿" className="text-[10px] text-accent-primary hover:underline disabled:opacity-40">{distilling ? '⏳ 提炼中(约 1-2 分钟)…' : '✨ 从 HTML 提炼'}</button>
-                <button onClick={() => setFullscreen(true)} title="全屏编辑" className="text-[10px] text-foreground-muted hover:text-foreground-primary">⛶ 全屏</button>
-              </span>
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-foreground-secondary">
+          <span className="flex items-center justify-between">
+            <span>指南内容（Markdown，约定分节：品牌视觉 / 章节结构 / 展示形式偏好 / 语调与术语） <span className="text-red">*</span></span>
+            <span className="flex items-center gap-3">
+              {editMode === 'edit' ? (
+                <button onClick={() => setEditMode('preview')} title="渲染预览 Markdown" className="text-[10px] text-foreground-muted hover:text-foreground-primary">👁 预览</button>
+              ) : (
+                <button onClick={() => setEditMode('edit')} title="回到源码编辑" className="text-[10px] text-accent-primary hover:underline">✏️ 编辑源码</button>
+              )}
+              <button onClick={() => void distillFromRecent()} disabled={distilling} title="用该业务线最近生成的报告提炼指南草稿" className="text-[10px] text-accent-primary hover:underline disabled:opacity-40">{distilling ? '⏳ 提炼中(约 1-2 分钟)…' : '✨ 从 HTML 提炼'}</button>
+              <button onClick={() => fileRef.current?.click()} disabled={distilling} title="上传本地 HTML 文件提炼指南草稿" className="text-[10px] text-foreground-muted hover:text-foreground-primary disabled:opacity-40">📂 上传提炼</button>
+              <input ref={fileRef} type="file" accept=".html,.htm,text/html" className="hidden" onChange={(e) => void distillFromUpload(e.target.files?.[0])} />
             </span>
+          </span>
+          {editMode === 'edit' ? (
             <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} spellCheck={false}
               placeholder={'# {业务线名} 报告指南\n\n## 品牌视觉\n主色 #xxxxxx / 字体 …\n\n## 章节结构\n必须包含 …；不提 …\n\n## 展示形式偏好\n达人列表 ≤6 人卡片，>6 人表格\n\n## 语调与术语\n自称「团队」；用「推广」不用「投放」'}
               className="resize-y rounded border border-border-default bg-surface-primary px-2 py-1.5 font-mono text-xs text-foreground-primary" />
-          </label>
-
-          {/* S1 版本侧栏:旧→新,当前生效高亮;查看=只读全文,激活=回滚 */}
-          {isEdit && (
-            <div className="flex w-44 shrink-0 flex-col gap-1">
-              <div className="text-[10px] font-medium uppercase tracking-wide text-foreground-muted">版本（旧→新）</div>
-              <div className="max-h-72 overflow-auto rounded border border-border-default">
-                {revisions.length === 0 && <p className="px-2 py-3 text-[11px] text-foreground-muted">暂无版本——保存后生成 v1</p>}
-                {revisions.map((r, i) => {
-                  const isActiveRev = i === revisions.length - 1;
-                  return (
-                    <div key={r.id} className={`flex items-center justify-between gap-1 border-b border-border-subtle px-2 py-1.5 last:border-0 ${isActiveRev ? 'bg-surface-hover' : ''}`}>
-                      <div className="min-w-0">
-                        <div className="text-[11px] font-medium text-foreground-primary">v{r.version}{isActiveRev && <span className="ml-1 rounded bg-green/15 px-1 text-[9px] text-green">生效中</span>}</div>
-                        <div className="truncate text-[10px] text-foreground-muted">{r.changelog || (r.createdAt ? String(r.createdAt).slice(0, 10) : '')}</div>
-                        {r.assets && r.assets.length > 0 && (
-                          <div className="truncate text-[10px] text-accent-primary" title={r.assets.map((a) => `${a.kind === 'sample' ? '样张' : a.kind === 'tokens' ? '色彩字体' : a.kind === 'checklist' ? '清单' : a.kind}: ${a.name || a.ref}${a.hash ? ` (指纹 ${a.hash.slice(0, 8)})` : ''}`).join('\n')}>
-                            📎 {r.assets.length} 个参考文件：
-                            {r.assets.map((a, ai) => (
-                              <span key={a.ref + ai}>
-                                {ai > 0 && '、'}
-                                <button
-                                  onClick={() => void openAsset(r.version, a)}
-                                  disabled={assetLoading}
-                                  className="hover:underline disabled:opacity-40"
-                                  title={`查看 ${a.name || a.ref} 内容`}
-                                >
-                                  {a.name || a.ref}
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <button onClick={() => void viewVersion(r.version)} className="text-[10px] text-accent-primary hover:underline">查看</button>
-                        {!isActiveRev && (
-                          <button disabled={revBusy} onClick={() => void activate(r.version)} className="text-[10px] text-foreground-secondary hover:text-red disabled:opacity-40">回滚</button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] leading-snug text-foreground-muted">保存即产生新版本;回滚立即生效,可再滚回。</p>
+          ) : (
+            <div className="h-[19rem] overflow-auto rounded border border-border-default bg-surface-primary px-3 py-2">
+              {content.trim() ? <MarkdownPreview content={content} /> : <p className="text-xs text-foreground-muted">暂无内容——切回编辑源码填写。</p>}
             </div>
           )}
-        </div>
+        </label>
 
-        {/* 0827：指南内容全屏编辑器（Esc 关闭） */}
-        {tab === 'content' && fullscreen && (
-          <div className="fixed inset-0 z-[70] flex flex-col bg-surface-primary">
-            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border-default px-4">
-              <span className="text-sm font-medium text-foreground-primary">指南内容编辑器</span>
-              <button onClick={() => setFullscreen(false)} className="rounded-md px-2 py-1 text-xs text-foreground-muted hover:bg-surface-hover">
-                ✕ 关闭 (Esc)
-              </button>
-            </div>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              spellCheck={false}
-              autoFocus
-              placeholder={'# {业务线名} 报告指南\n\n## 品牌视觉\n主色 #xxxxxx / 字体 …\n\n## 章节结构\n必须包含 …；不提 …\n\n## 展示形式偏好\n达人列表 ≤6 人卡片，>6 人表格\n\n## 语调与术语\n自称「团队」；用「推广」不用「投放」'}
-              className="flex-1 resize-none bg-surface-primary p-6 font-mono text-sm leading-relaxed text-foreground-primary focus:outline-none"
-            />
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-4 text-xs text-foreground-secondary">
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={isDefault} onChange={(e) => { setIsDefault(e.target.checked); if (e.target.checked) setOverridesVisual(false); }} />
-              品牌样式（业务线默认，每次生成自动使用；同业务线唯一，勾选后自动取消其他默认）
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-              启用（停用后不参与匹配，不删除）
-            </label>
-          </div>
-          {/* overridesVisual:结构指南声明自带全套视觉 → 生成时跳过视觉规范层。仅非默认指南可勾 */}
-          {!isDefault && (
-            <label className="flex items-start gap-1.5 rounded border border-border-default bg-surface-secondary px-2 py-1.5 text-[11px] leading-relaxed text-foreground-muted">
-              <input type="checkbox" checked={overridesVisual} onChange={(e) => setOverridesVisual(e.target.checked)} className="mt-0.5" />
+        {/* 0916 g1：样式选择——两档单选 */}
+        <div className="flex flex-col gap-2 rounded-lg border border-border-default bg-surface-secondary px-3 py-2.5">
+          <div className="text-xs font-medium text-foreground-secondary">样式选择 <span className="text-foreground-muted">（决定生成报告时颜色字体怎么来）</span></div>
+          <div className="flex flex-col gap-1.5">
+            <label className="flex items-start gap-2 text-xs text-foreground-secondary">
+              <input type="radio" name="style-choice-new" checked={isDefault} onChange={() => { setIsDefault(true); setOverridesVisual(false); }} className="mt-0.5" />
               <span>
-                <b className="text-foreground-secondary">样式独立</b>——本 Skill 自带全套配色与字体（如完整 PPT/PDF 模板复刻）。勾选后生成时<b className="text-foreground-secondary">不再叠加业务线品牌样式</b>，颜色字体完全以本模板为准。仅在内容含完整色板+字体规范时勾选。
+                <b className="text-foreground-primary">业务线样式</b>——随该业务线每次生成自动使用的品牌样式（配色、字体、组件、动效）。同业务线唯一，选此项后原默认指南自动取消默认。
               </span>
             </label>
-          )}
+            <label className="flex items-start gap-2 text-xs text-foreground-secondary">
+              <input type="radio" name="style-choice-new" checked={!isDefault && overridesVisual} onChange={() => { setIsDefault(false); setOverridesVisual(true); }} className="mt-0.5" />
+              <span>
+                <b className="text-foreground-primary">样式独立</b>——本指南自带全套配色与字体（如完整 PPT/PDF 模板复刻），生成时<b className="text-foreground-secondary">不再叠加业务线品牌样式</b>，在「选用整套模板」下拉中按需选用。仅在内容含完整色板+字体规范时选此项。
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-xs text-foreground-secondary">
+              <input type="radio" name="style-choice-new" checked={!isDefault && !overridesVisual} onChange={() => { setIsDefault(false); setOverridesVisual(false); }} className="mt-0.5" />
+              <span>
+                <b className="text-foreground-primary">样式叠加</b>——成套模板但不带独立视觉，生成选用时与业务线品牌样式同时生效。仅在内容不含完整视觉规范时选此项。
+              </span>
+            </label>
+          </div>
         </div>
-          </>
-        )}
 
-        {/* S2:合格校验标签——4 类断言模板下拉 + 干跑 */}
-        {isEdit && tab === 'checks' && (
-          <ChecksEditor checks={checks} onChange={setChecks} dryRun={dryRun} onDryRun={() => void runDryRun()} busy={revBusy} />
-        )}
+        <label className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+          启用（停用后不参与匹配，不删除）
+        </label>
 
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>
-          <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">{isEdit ? '保存为新版本' : '创建'}</button>
+          <button disabled={busy} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">创建</button>
         </div>
       </div>
-      {/* S1:历史版本只读全文 */}
-      {viewRev && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40" onClick={() => setViewRev(null)}>
-          <div className="flex max-h-[85vh] w-[720px] flex-col gap-2 rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground-primary">v{viewRev.version} 内容（只读）</span>
-              <button onClick={() => setViewRev(null)} className="text-xs text-foreground-muted hover:text-foreground-primary">✕ 关闭</button>
-            </div>
-            <pre className="flex-1 overflow-auto whitespace-pre-wrap rounded border border-border-default bg-surface-primary p-3 font-mono text-xs text-foreground-primary">{viewRev.content}</pre>
-          </div>
-        </div>
-      )}
-      {/* g6:参考文件内容查看器(只读文本) */}
-      {assetView && (
-        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40" onClick={() => setAssetView(null)}>
-          <div className="flex max-h-[85vh] w-[760px] flex-col gap-2 rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground-primary">参考文件：{assetView.name}</span>
-              <button onClick={() => setAssetView(null)} className="text-xs text-foreground-muted hover:text-foreground-primary">✕ 关闭</button>
-            </div>
-            <p className="text-[10px] text-foreground-muted">{assetView.ref}{assetView.truncated ? ' · 文件超过 512KB,已截断显示' : ''}</p>
-            <pre className="flex-1 overflow-auto whitespace-pre-wrap rounded border border-border-default bg-surface-primary p-3 font-mono text-xs text-foreground-primary">{assetView.content}</pre>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-/* ========================= S2 Checks Editor ========================= */
+/* ========================= S2 Checks Modal（合格校验，沿用） ========================= */
+
+/** 0916 g5：合格校验独立弹窗——载入当前生效版 checks → 模板化编辑 + 干跑 → 保存为新版本（正文不变）。 */
+function ChecksModal({ guide, onClose }: { guide: GuideDTO; onClose: () => void }) {
+  const [checks, setChecks] = useState<CheckDTO[]>([]);
+  const [dryRun, setDryRun] = useState<DryRunResultDTO | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    guidesApi.listRevisions(guide.id).then((revs) => {
+      const active = revs.find((r) => r.isActive) ?? revs[revs.length - 1];
+      if (active?.checks) setChecks(active.checks);
+      setLoaded(true);
+    }).catch(() => { toast.error('断言加载失败'); setLoaded(true); });
+  }, [guide.id]);
+
+  async function runDryRun() {
+    if (!checks.length) { toast.error('请先添加至少一条断言'); return; }
+    setBusy(true); setDryRun(null);
+    try {
+      setDryRun(await guidesApi.dryRun(guide.id, checks));
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '干跑失败');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const all = await guidesApi.list();
+      const g = all.find((x) => x.id === guide.id);
+      const content = g?.content ?? '';
+      await guidesApi.saveRevision(guide.id, { content, checks, changelog: '合格校验更新' });
+      toast.success('合格校验已保存为新版本');
+      onClose();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="flex max-h-[90vh] w-[720px] flex-col gap-3 overflow-auto rounded-xl bg-surface-primary p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div className="font-headings text-sm font-semibold text-foreground-primary">合格校验 <span className="font-normal text-foreground-muted">— {guide.name}</span></div>
+          <button onClick={onClose} className="text-xs text-foreground-muted hover:text-foreground-primary">✕ 关闭</button>
+        </div>
+        <p className="text-[11px] leading-snug text-foreground-muted">生成后自动核对（先只报告不拦截）。保存即产生新版本（指南正文不变），版本切换在编辑页顶部下拉。</p>
+        {!loaded ? <p className="text-xs text-foreground-muted">加载断言中…</p> : (
+          <ChecksEditor checks={checks} onChange={setChecks} dryRun={dryRun} onDryRun={() => void runDryRun()} busy={busy} />
+        )}
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded border border-border-default px-3 py-1 text-xs text-foreground-secondary hover:bg-surface-hover">取消</button>
+          <button disabled={saving || !loaded} onClick={() => void save()} className="rounded bg-accent-primary px-3 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">{saving ? '保存中…' : '保存'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** 断言模板:业务"选规则填参数",不手写 DSL */
 const CHECK_TEMPLATES = [
@@ -481,11 +337,7 @@ function parseTemplate(assert: string): { tpl: string; param: string } {
 }
 
 function ChecksEditor({ checks, onChange, dryRun, onDryRun, busy }: {
-  checks: CheckDTO[];
-  onChange: (c: CheckDTO[]) => void;
-  dryRun: DryRunResultDTO | null;
-  onDryRun: () => void;
-  busy: boolean;
+  checks: CheckDTO[]; onChange: (c: CheckDTO[]) => void; dryRun: DryRunResultDTO | null; onDryRun: () => void; busy: boolean;
 }) {
   const update = (i: number, patch: Partial<CheckDTO>) => onChange(checks.map((c, j) => (j === i ? { ...c, ...patch } : c)));
   return (
@@ -528,7 +380,6 @@ function ChecksEditor({ checks, onChange, dryRun, onDryRun, busy }: {
         <button disabled={busy || !checks.length} onClick={onDryRun} className="rounded bg-accent-primary px-2 py-1 text-xs text-foreground-inverse hover:bg-accent-secondary disabled:opacity-50">干跑校验</button>
       </div>
 
-      {/* 干跑结果 */}
       {dryRun && (
         <div className="flex flex-col gap-1 rounded border border-border-default p-2">
           {dryRun.lintErrors.length > 0 && (
