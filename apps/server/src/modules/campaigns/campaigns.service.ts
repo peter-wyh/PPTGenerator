@@ -4,6 +4,8 @@ import { logger } from '../../logger';
 import { Prisma } from '@prisma/client';
 import { recomputeOrderStats } from './order-stats.service';
 import { recomputePublisherStats } from './publisher-stats.service';
+// 0917 合并：recomputeCreatorCpsStats 退役——达人 CPS 切片由 recomputePublisherStats
+// 一并重算（主表 PublisherDailyStat 粒度 campaign × publisher × collab? × date）。
 
 // ─── 导入链帮手（媒体归因 / 商品主档） ────────────────────────────────────────
 
@@ -389,7 +391,7 @@ export const campaignService = {
       ...(opts.publisherId ? { publisherId: opts.publisherId } : {}),
       ...(dateRange ? { statDate: dateRange } : {}),
     };
-    const [rows, total] = await Promise.all([
+    const [rows, total, agg] = await Promise.all([
       prisma.publisherDailyStat.findMany({
         where,
         orderBy: [{ statDate: 'asc' }, { publisherId: 'asc' }],
@@ -398,6 +400,11 @@ export const campaignService = {
         include: { publisher: { select: { id: true, name: true, domain: true, type: true, creatorId: true } } },
       }),
       prisma.publisherDailyStat.count({ where }),
+      // 0916 d3：同筛选条件全量汇总（跨分页）——供前端「筛选后统计」行展示
+      prisma.publisherDailyStat.aggregate({
+        where,
+        _sum: { clicks: true, impressions: true, orders: true, gmv: true, commission: true },
+      }),
     ]);
     return {
       rows: rows.map((r) => ({
@@ -412,6 +419,14 @@ export const campaignService = {
         recomputedAt: r.recomputedAt,
       })),
       total, page, pageSize,
+      // 0916 d3：筛选范围汇总（gmv/commission 是 Decimal→toNumber；Int 列 SUM 直接是 number；SUM 可能 null→0）
+      summary: {
+        clicks: agg._sum.clicks ?? 0,
+        impressions: agg._sum.impressions ?? 0,
+        orders: agg._sum.orders ?? 0,
+        gmv: agg._sum.gmv?.toNumber() ?? 0,
+        commission: agg._sum.commission?.toNumber() ?? 0,
+      },
     };
   },
 
@@ -712,13 +727,53 @@ export const collaborationService = {
         })
       : [];
     const legacyMap = new Map(legacyRecords.map((r) => [r.id, r.data as Record<string, unknown>]));
+    // 0917 反馈：合作列表需 CPS 汇总独立列（主表切片）+ 合作链接 URL（该合作 1:1 的
+    // LinkPerformance.linkUrl）——原先表格 CPS 混在作品列、链接藏在详情浮窗，均不可扫视。
+    const linkIds = links.map((l) => l.id);
+    const [cpsSlices, trackingLps] = await Promise.all([
+      linkIds.length
+        ? prisma.publisherDailyStat.groupBy({
+            by: ['campaignCreatorId'],
+            where: { campaignCreatorId: { in: linkIds } },
+            _sum: {
+              clicks: true,
+              orders: true,
+              gmv: true,
+              commission: true,
+              newCustomerOrders: true,
+            },
+          })
+        : Promise.resolve([]),
+      linkIds.length
+        ? prisma.linkPerformance.findMany({
+            where: { campaignCreatorId: { in: linkIds } },
+            select: { campaignCreatorId: true, linkUrl: true, clicks: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const cpsMap = new Map(cpsSlices.map((s) => [s.campaignCreatorId as string, s._sum]));
+    const trackingMap = new Map(trackingLps.map((l) => [l.campaignCreatorId!, l.linkUrl]));
+    // 0917 一致性修复：PDS 流量侧按日重建，LP 无 daily 明细的合作（Trivago Awin 导入只有聚合 clicks）
+    // 主表 clicks=0 而抽屉/浮窗读 LP 聚合列 → 表格 0 vs 抽屉 33163。点击数改用 LP 聚合列
+    //（PDS 流量侧的源头，两者同真值；实测全库一致），订单/GMV/佣金/新客仍用 PDS 订单侧真源。
+    const lpClicksMap = new Map(trackingLps.map((l) => [l.campaignCreatorId!, l.clicks]));
     return {
       campaigns,
-      links: links.map((l) => ({
-        ...l,
-        collaboration: l.collaboration ?? null,
-        legacyCollab: legacyMap.get(`collab:${l.campaignId}:${l.creatorId}`) ?? null,
-      })),
+      links: links.map((l) => {
+        const pds = cpsMap.get(l.id);
+        return {
+          ...l,
+          collaboration: l.collaboration ?? null,
+          legacyCollab: legacyMap.get(`collab:${l.campaignId}:${l.creatorId}`) ?? null,
+          cpsTotals: pds || lpClicksMap.has(l.id)
+            ? {
+                ...pds,
+                clicks: lpClicksMap.get(l.id) ?? pds?.clicks ?? 0,
+              }
+            : null,
+          trackingUrl: trackingMap.get(l.id) ?? null,
+        };
+      }),
     };
   },
 };
@@ -738,8 +793,16 @@ const ORDER_MIRROR_FIELDS: Record<string, (v: string) => unknown> = {
   clickDevice: (v) => v,
   customerCountry: (v) => v,
   products: (v) => v,
-  customerAcquisition: (v) => v,
+  customerAcquisition: (v) => {
+    // 值域归一（0916 LinkSynergy）：新客→NEW / 老客→RETURNING / 未知等其余→原样透传（不虚构）。
+    const s = v.trim();
+    if (s === '新客' || s === '是') return 'NEW';
+    if (s === '老客' || s === '否') return 'RETURNING';
+    return s || null;
+  },
   publisherUrl: (v) => v,
+  publisherName: (v) => v,
+  mediaName: (v) => v,
 };
 
 /** 从导入行提取 Awin 镜像字段（未出现的 key 跳过，空串 → null）。 */
@@ -778,6 +841,25 @@ const ORDER_HEADER_ALIASES: Record<string, string> = {
   product_name: 'productName',
   unit_price: 'unitPrice',
   line_total: 'lineTotal',
+  // ── LinkSynergy 导出（中文表头，2026-09-16 接入）──
+  // 佣金口径（用户定稿 0916）：commission = 「广告主佣金」（我方流量主身份的毛收入），
+  //   「流量主佣金」是经我方平台分佣后流量主的净收益，不进订单表。
+  '数据ID': 'externalTxnId',
+  '订单编号': 'orderId',
+  '下单时间': 'orderDate',
+  '系统订单状态': 'orderStatus',
+  '商品ID/SKU': 'sku',
+  '商品名称': 'productName',
+  '商品类目名称': 'category',
+  '商品数量': 'qty',
+  '商品单价（元）': 'unitPrice',
+  '商品总价（元）': 'lineTotal',
+  '订单金额（元）': 'saleAmount',
+  '广告主佣金（元）': 'commission',
+  '数据来源': 'source',
+  '是否新客': 'customerAcquisition',
+  '流量主名称': 'publisherName',
+  '媒体/推广位': 'mediaName',
 };
 
 /** 订单导入行别名归一：Awin snake_case 表头 → camelCase（已有 key 不覆盖）。 */
@@ -1059,13 +1141,14 @@ export const importService = {
         skipped++;
       }
     }
-    // ★ 链接每日明细导入成功 → 重算媒体日统计中间层（PublisherDailyStat 流量侧）。
+    // ★ 链接每日明细导入成功 → 重算媒体日统计中间层（PublisherDailyStat 流量侧）
+    //   + 达人 CPS 日统计（CreatorCpsDailyStat 流量侧）。
     //   对齐 importOrders 尾部模式：每 campaign 一次、失败不阻塞导入仅告警；
     //   亦可 POST /campaigns/:id/publisher-stats/recompute 手动补算。
     for (const cid of touched) {
       try {
         const r = await recomputePublisherStats(cid);
-        logger.info(`[importLinkPerformance] publisher stats recomputed: campaign=${cid} rows=${r.rows}`);
+        logger.info(`[importLinkPerformance] publisher stats recomputed (incl. cps slices): campaign=${cid} rows=${r.rows}`);
       } catch (err) {
         logger.warn({ err, campaignId: cid }, '[importLinkPerformance] publisher stats recompute failed');
       }
@@ -1342,7 +1425,9 @@ export const importService = {
         const mirrored = mirrorOrderFields(rows[0]);
         // 来源平台标记（0909 通用化）：显式传 source 优先；Awin 特征表头（order_reference）
         // 在 normalizeOrderRow 已归一——此处按外部交易号存在与否打默认标记。
-        const source = String(rows[0].source ?? '').trim() || 'awin';
+        // 0916：LinkSynergy「数据来源」列经别名归一为 source——「未知」等无效值不落库。
+        const sourceRaw = String(rows[0].source ?? '').trim();
+        const source = sourceRaw && sourceRaw !== '未知' ? sourceRaw : 'awin';
 
         // 媒体归因（publisher 维度）：★ clickRef（媒体实际投放链接）域名归一化 -> Publisher upsert。
         // 不用 publisherUrl 域名--那是业务线跟踪域名（如 dc.digchic.com），全部订单同域，不区分媒体。
@@ -1359,6 +1444,23 @@ export const importService = {
           if (lp) { linkPerformanceId = lp.id; publisherId = lp.publisherId; }
         }
         //   优先级 2（合作行无链接/无合作行）：clickRef 域名 -> Publisher upsert。
+        //   0917 优先级 0（LinkSynergy）：「媒体/推广位」（mediaName）→ 按名 upsert——
+        //   与 Publisher 同维度（用户确认一对一；数据管理中达人和媒体均为媒体维度）；
+        //   「流量主名称」（publisherName）是达人 handle，降为回落。
+        //   名称是平台口径的直接媒体标识，宁缺勿假——未命中主档时以名称建行，
+        //   domain 留空待补（pending: 前缀），不虚构域名。
+        if (!publisherId) {
+          const pubName = String(mirrored.mediaName ?? '').trim()
+            || String(mirrored.publisherName ?? '').trim();
+          if (pubName) {
+            const existingPub = await prisma.publisher.findFirst({ where: { name: pubName }, select: { id: true } });
+            publisherId = existingPub?.id
+              ?? (await prisma.publisher.create({
+                data: { name: pubName.slice(0, 190), domain: `pending:${pubName.slice(0, 80)}`, type: 'media_site' },
+              })).id;
+          }
+        }
+        //   优先级 3：clickRef 域名 -> Publisher upsert（Awin 口径）。
         if (!publisherId) {
           const refDomain = normPublisherDomain(mirrored.clickRef)
             || normPublisherDomain(mirrored.publisherUrl)  // clickRef 缺失时退回（宁可挂跟踪域名也不空）
@@ -1374,6 +1476,7 @@ export const importService = {
         }
         //   优先级 2 续：同 (campaign, publisher) 唯一链接且归因不冲突（LP.cc 空或=本单 cc）才挂，
         //   防张冠李戴（如 FB 群订单误挂 Fillmyfamily 的 facebook.com 链接）。宁缺勿假。
+        //   0916 补充：LinkSynergy 按 publisherName 建的 pending: 媒体（domain 非真实域名）不参与挂链。
         if (publisherId && !linkPerformanceId) {
           const lps = await prisma.linkPerformance.findMany({
             where: { campaignId, publisherId },
@@ -1456,7 +1559,7 @@ export const importService = {
       }
       try {
         const r2 = await recomputePublisherStats(cid);
-        logger.info(`[importOrders] publisher stats recomputed: campaign=${cid} rows=${r2.rows}`);
+        logger.info(`[importOrders] publisher stats recomputed (incl. cps slices): campaign=${cid} rows=${r2.rows}`);
       } catch (err) {
         logger.warn({ err, campaignId: cid }, '[importOrders] publisher stats recompute failed');
       }
@@ -1480,16 +1583,95 @@ export const importService = {
 //   成交类（orders/gmv/commission/spend/roas）← CampaignOrder 按 campaignCreatorId × orderDate 聚合（真源：逐单）
 //   流量类（clicks/impressions）← CpsPerformance 聚合列 + daily 期内切片（真源：联盟平台链接导出）
 //   ctr/cvr/epc 为派生值：ctr=clicks/impressions、cvr=orders/clicks、epc=gmv/clicks
-// ─── 合作行每日 CPS 现算（0827 整合：deliverable.cps JSON 冻结退役，浮窗只读真源） ──
+// ─── 合作行每日 CPS（0916 物化：CreatorCpsDailyStat 优先读表，无行 fallback 现算）──
 export const creatorCpsDailyService = {
   /**
-   * 单个合作行（campaignCreatorId）的每日 CPS 真源现算：
-   * 流量侧 LinkPerformance.daily + 成交侧订单 GROUP BY DATE(orderDate)。
-   * 返回按日 join 后的行（clicks/impressions/orders/gmv/commission），只读。
+   * 单个合作行（campaignCreatorId）的每日 CPS：
+   * 0916 起优先读物化表 CreatorCpsDailyStat（导入链自动重算）；
+   * 表内无该合作行（历史 campaign 未触发重算）时 fallback 现算并即时物化。
+   * 返回按日行（clicks/impressions/orders/gmv/commission），只读。
    */
   async getDaily(campaignId: string, campaignCreatorId: string) {
-    // 1:1 直接 FK 拿该合作的 LP 行（0826 闭环后必挂）
+    // 1) 主表切片直读（0917 合并：CreatorCpsDailyStat 并入 PublisherDailyStat，
+    //    CPS 视图 = campaignCreatorId 非空切片；totals 流量侧用 LP 聚合列真源）
+    const statRows = await prisma.publisherDailyStat.findMany({
+      where: { campaignId, campaignCreatorId },
+      orderBy: { statDate: 'asc' },
+    });
     const lp = await prisma.linkPerformance.findUnique({
+      where: { campaignCreatorId: campaignCreatorId },
+      select: { id: true, linkUrl: true, linkKey: true, clicks: true, impressions: true, spend: true },
+    });
+    if (statRows.length > 0) {
+      const ordersSum = statRows.reduce((s, r) => s + r.orders, 0);
+      const gmvSum = statRows.reduce((s, r) => s + Number(r.gmv), 0);
+      const commSum = statRows.reduce((s, r) => s + Number(r.commission), 0);
+      return {
+        campaignId,
+        campaignCreatorId,
+        link: lp ? { id: lp.id, linkUrl: lp.linkUrl, linkKey: lp.linkKey } : null,
+        totals: {
+          clicks: lp ? Number(lp.clicks ?? 0) : 0,
+          impressions: lp ? Number(lp.impressions ?? 0) : 0,
+          spend: lp ? Number(lp.spend ?? 0) : 0,
+          orders: ordersSum,
+          gmv: gmvSum,
+          commission: commSum,
+        },
+        daily: statRows.map((r) => ({
+          date: r.statDate,
+          clicks: r.clicks,
+          impressions: r.impressions,
+          orders: r.orders,
+          gmv: Number(r.gmv),
+          commission: Number(r.commission),
+          newCustomerOrders: r.newCustomerOrders,
+        })),
+        recomputedAt: statRows[statRows.length - 1].recomputedAt.toISOString(),
+        source: 'materialized' as const,
+      };
+    }
+
+    // 2) fallback：主表全粒度重算（含 cps 切片）后重查一次
+    const rc = await recomputePublisherStats(campaignId).catch(() => null);
+    if (rc && rc.rows > 0) {
+      const retry = await prisma.publisherDailyStat.findMany({
+        where: { campaignId, campaignCreatorId },
+        orderBy: { statDate: 'asc' },
+      });
+      if (retry.length > 0) {
+        const ordersSum2 = retry.reduce((s, r) => s + r.orders, 0);
+        const gmvSum2 = retry.reduce((s, r) => s + Number(r.gmv), 0);
+        const commSum2 = retry.reduce((s, r) => s + Number(r.commission), 0);
+        return {
+          campaignId,
+          campaignCreatorId,
+          link: lp ? { id: lp.id, linkUrl: lp.linkUrl, linkKey: lp.linkKey } : null,
+          totals: {
+            clicks: lp ? Number(lp.clicks ?? 0) : 0,
+            impressions: lp ? Number(lp.impressions ?? 0) : 0,
+            spend: lp ? Number(lp.spend ?? 0) : 0,
+            orders: ordersSum2,
+            gmv: gmvSum2,
+            commission: commSum2,
+          },
+          daily: retry.map((r) => ({
+            date: r.statDate,
+            clicks: r.clicks,
+            impressions: r.impressions,
+            orders: r.orders,
+            gmv: Number(r.gmv),
+            commission: Number(r.commission),
+            newCustomerOrders: r.newCustomerOrders,
+          })),
+          recomputedAt: retry[retry.length - 1].recomputedAt.toISOString(),
+          source: 'materialized' as const,
+        };
+      }
+    }
+    // 3) 重算也无行（该合作无流量无成交）——LP.daily 兜底直出（冷数据只读路径）
+    // 1:1 直接 FK 拿该合作的 LP 行（0826 闭环后必挂）
+    const lpFull = await prisma.linkPerformance.findUnique({
       where: { campaignCreatorId: campaignCreatorId },
       select: { id: true, linkUrl: true, linkKey: true, clicks: true, impressions: true, orders: true, gmv: true, commission: true, spend: true, daily: true },
     });
@@ -1503,8 +1685,8 @@ export const creatorCpsDailyService = {
       GROUP BY d`);
     // 流量侧：LP.daily 兼容双格式（数组式 [{date,clicks,...}] / 键值式 {"2026-11-20":{...}}）
     const lpDaily = new Map<string, { clicks: number; impressions: number; spend: number }>();
-    if (lp?.daily) {
-      const d = lp.daily as unknown;
+    if (lpFull?.daily) {
+      const d = lpFull.daily as unknown;
       if (Array.isArray(d)) {
         for (const row of d as Array<{ date?: string; clicks?: unknown; impressions?: unknown; spend?: unknown }>) {
           if (!row?.date) continue;
@@ -1546,11 +1728,11 @@ export const creatorCpsDailyService = {
     return {
       campaignId,
       campaignCreatorId,
-      link: lp ? { id: lp.id, linkUrl: lp.linkUrl, linkKey: lp.linkKey } : null,
+      link: lpFull ? { id: lpFull.id, linkUrl: lpFull.linkUrl, linkKey: lpFull.linkKey } : null,
       totals: {
-        clicks: lp ? Number(lp.clicks ?? 0) : 0,
-        impressions: lp ? Number(lp.impressions ?? 0) : 0,
-        spend: lp ? Number(lp.spend ?? 0) : 0,
+        clicks: lpFull ? Number(lpFull.clicks ?? 0) : 0,
+        impressions: lpFull ? Number(lpFull.impressions ?? 0) : 0,
+        spend: lpFull ? Number(lpFull.spend ?? 0) : 0,
         orders: ordersSum,
         gmv: gmvSum,
         commission: commSum,
