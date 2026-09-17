@@ -868,9 +868,17 @@ export interface CompetitorVoice {
 export interface MediaPlacement {
   /** 资源位名称，如 'DigChic Homepage Hero'。 */
   name: string;
-  /** 截图 URL（可选，空 → 占位）。 */
+  /** 截图 URL（可选，空 → 占位）。多图时的首图（向后兼容单图渲染）。 */
   screenshotUrl?: string;
-  /** 说明（投放时段 / 位置描述）。 */
+  /** 多张截图 URL（0916 新增）；为空或不填时回落 screenshotUrl 单图。 */
+  screenshotUrls?: string[];
+  /** 曝光时间点（0916 旧字段；0917 起改区间，读取时并入区间起点兼容）。 */
+  exposureAt?: string;
+  /** 曝光区间起点（0917 新增，ISO 日期）。 */
+  exposureStartAt?: string;
+  /** 曝光区间终点（0917 新增，ISO 日期）。 */
+  exposureEndAt?: string;
+  /** 说明（位置描述）。 */
   description?: string;
   /** 资源位可点链接（postUrl）——报告 placementGroups 卡片跳转用（0827 迭代）。 */
   postUrl?: string;

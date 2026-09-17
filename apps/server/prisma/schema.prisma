@@ -478,6 +478,8 @@ model CampaignCreator {
   orders        CampaignOrder[]
   /// 该合作的跟踪链接（1:1；数据闭环：链接来自媒体合作）。
   linkPerformance LinkPerformance?
+  /// 0917 合并：主表 PublisherDailyStat 的合作行切片（cpsDailyStats 语义并入主表）。
+  publisherDailyStatSlices PublisherDailyStat[]
 
   @@unique([campaignId, creatorId])
   @@index([campaignId])
@@ -485,6 +487,10 @@ model CampaignCreator {
   @@index([collabId])
 }
 
+/// 0917 合并：原 CreatorCpsDailyStat（达人 CPS 日统计物化表）已并入 PublisherDailyStat——
+/// 主表粒度细化为 (campaign, publisher, collab, date)，达人 CPS 视图 = 主表 campaignCreatorId
+/// 非空的切片；媒体视图 = 主表按 (publisher, date) GROUP BY。口径不变：
+///   流量侧 = LinkPerformance.daily；成交侧 = CampaignOrder 按日聚合（闭环归因：直接 FK 优先，LP 兜底）。
 // ─── Phase 3: CreatorPerformance / Collaboration ────────────────────────────
 // 达人执行效果 + 合作详情独立成表。
 // 均挂在 CampaignCreator 下 (1:1)，通过 campaignCreatorId 关联。
@@ -608,6 +614,10 @@ model CampaignOrder {
   source             String?
   /// 发布商跟踪 URL（业务线跟踪域名长链，TrackingLink 聚合真源）。
   publisherUrl       String?  @db.Text
+  /// 流量主名称（LinkSynergy 中文导出「流量主名称」；显式媒体归因用）。
+  publisherName      String?
+  /// 媒体/推广位名称（LinkSynergy 中文导出「媒体/推广位」）。
+  mediaName          String?
 
   items             CampaignOrderItem[]
 
@@ -859,6 +869,10 @@ model PublisherDailyStat {
   publisherId String
   publisher   Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
 
+  /// 0917 合并：合作行切片键。NULL = 纯媒体行；非空 = 合作行切片（达人 CPS 视图）。
+  campaignCreatorId String?
+  campaignCreator   CampaignCreator? @relation(fields: [campaignCreatorId], references: [id], onDelete: Cascade)
+
   /// 统计日（YYYY-MM-DD）。
   statDate    String
 
@@ -869,12 +883,15 @@ model PublisherDailyStat {
   orders      Int       @default(0)
   gmv         Decimal   @default(0) @db.Decimal(14, 2)
   commission  Decimal   @default(0) @db.Decimal(14, 2)
+  /// 新客单量（customerAcquisition 归一后 NEW 标签；0917 从 CreatorCpsDailyStat 并入）。
+  newCustomerOrders Int @default(0)
 
   recomputedAt DateTime @default(now())
 
-  @@unique([campaignId, publisherId, statDate])
+  @@unique([campaignId, publisherId, campaignCreatorId, statDate])
   @@index([campaignId, statDate])
   @@index([publisherId])
+  @@index([campaignCreatorId])
 }
 
 /// 商品主档：订单商品行的结构化归集（Top-Sales 排行 / 购物篮分析的基础）。
