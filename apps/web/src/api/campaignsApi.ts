@@ -7,7 +7,6 @@
  */
 import { api } from './client';
 import type { Campaign, Creator } from '@mediakit/shared';
-import { creatorAvatarUrl } from './creatorAvatar';
 
 // ─── DTO ─────────────────────────────────────────────────────────────────────
 
@@ -101,7 +100,9 @@ export function dtoToCreator(dto: CreatorDTO): Creator {
     engagement: dto.engagement,
     category: dto.category,
     region: dto.region,
-    avatar: dto.avatar ?? creatorAvatarUrl(dto.name),
+    // ★ 0917 拆除 demo 时代 picsum 兜底: DB 无头像就 undefined,
+    //   CreatorAvatar 组件原生首字母圆回落(宁空勿假,与报告指南「素材真实性」同口径)
+    avatar: dto.avatar ?? undefined,
     metrics: (dto.metrics as Creator['metrics']) ?? [],
     audience: (dto.audience as Creator['audience']) ?? undefined,
     works: (dto.works as Creator['works']) ?? undefined,
@@ -175,6 +176,16 @@ export const campaignsApi = {
           collaboration: { campaignCreatorId: string; deliverables: unknown } | null;
           /** DataRecord 旧通道回退数据（无则 null）。 */
           legacyCollab: Record<string, unknown> | null;
+          /** 0917：CPS 实绩汇总（主表 PublisherDailyStat 切片聚合）；null=无数据。 */
+          cpsTotals?: {
+            clicks?: number | null;
+            orders?: number | null;
+            gmv?: string | null;
+            commission?: string | null;
+            newCustomerOrders?: number | null;
+          } | null;
+          /** 0917：合作 tracking 链接（该合作 1:1 的 LinkPerformance.linkUrl）；null=缺链接。 */
+          trackingUrl?: string | null;
         }>;
       }>('/campaigns/collab-overview', { params: opts })
       .then((r) => r.data),
@@ -366,6 +377,14 @@ export interface StatsPageResp<T> {
   total: number;
   page: number;
   pageSize: number;
+  /** 0916 d3：筛选范围全量汇总（跨分页；仅媒体×日接口返回）。 */
+  summary?: {
+    clicks: number;
+    impressions: number;
+    orders: number;
+    gmv: number;
+    commission: number;
+  };
 }
 
 /** 订单日统计行（campaign 聚合或 creator×date）。 */

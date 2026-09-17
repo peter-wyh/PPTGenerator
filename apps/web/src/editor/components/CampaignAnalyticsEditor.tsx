@@ -12,7 +12,6 @@
  */
 import { useEffect, useState, useCallback } from 'react';
 import { campaignsApi } from '@/api/campaignsApi';
-import { uploadImage } from '@/api/uploads';
 import type {
   CampaignAnalytics,
   CampaignTrendPoint,
@@ -24,7 +23,6 @@ import type {
   ProductPerformance,
   MarketPerformance,
   PromotionOffer,
-  MediaPlacement,
   CompetitorVoice,
 } from '@mediakit/shared';
 
@@ -45,8 +43,6 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  /** 0909：截图上传中的行标识（'mp'+name → Media Placement 行）。 */
-  const [uploadingKey, setUploadingKey] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -264,41 +260,14 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
         )}
       />
 
-      {/* Media Placements — 媒体方站内资源位（定性展示） */}
-      <ListSection<MediaPlacement>
-        title="Media Placements" desc="媒体方站内资源位（Homepage Hero / Featured 等，定性截图展示）"
-        items={data.mediaPlacements ?? []}
-        onChange={(items) => setData({ ...data, mediaPlacements: items })}
-        newItem={() => ({ name: '', screenshotUrl: '', description: '' })}
-        renderRow={(item, onChange) => (
-          <div className="flex flex-col skin-gap-xs w-full">
-            <input className="border rounded px-1 py-0.5 text-[11px]" value={item.name}
-              onChange={(e) => onChange({ ...item, name: e.target.value })} placeholder="Placement name（达人组填「Creator — Title」格式，如 Yuki — IG Story 7/15）" />
-            <div className="flex skin-gap-xs">
-              <input className="flex-1 min-w-0 border rounded px-1 py-0.5 text-[11px]" value={item.screenshotUrl ?? ''}
-                onChange={(e) => onChange({ ...item, screenshotUrl: e.target.value })} placeholder="Screenshot URL (/uploads/... 或 https://...)" />
-              {/* 0909 截图上传按钮——自动传 OSS/local，回填 URL */}
-              <label className="shrink-0 border rounded px-2 py-0.5 text-[11px] text-foreground-muted hover:text-accent hover:border-accent cursor-pointer">
-                {uploadingKey === 'mp' + item.name ? '上传中…' : '上传截图'}
-                <input type="file" accept="image/*" className="hidden"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    setUploadingKey('mp' + item.name);
-                    try { onChange({ ...item, screenshotUrl: await uploadImage(f) }); }
-                    catch { setError('截图上传失败，请重试'); }
-                    finally { setUploadingKey(''); e.target.value = ''; }
-                  }} />
-              </label>
-            </div>
-            {/* 0827 迭代：资源位可点链接——报告 placementGroups 卡片跳转 */}
-            <input className="border rounded px-1 py-0.5 text-[11px]" value={item.postUrl ?? ''}
-              onChange={(e) => onChange({ ...item, postUrl: e.target.value })} placeholder="Post URL (https://... 资源位跳转链接，可选)" />
-            <input className="border rounded px-1 py-0.5 text-[11px]" value={item.description ?? ''}
-              onChange={(e) => onChange({ ...item, description: e.target.value })} placeholder="Description (投放时段 / 位置)" />
-          </div>
-        )}
-      />
+      {/* 0917 收敛：Media Placements 编辑入口移除——字段能力分叉（此处单图旧形态 vs 广告位截图页多图+曝光区间）
+          且整份 PUT 全量覆盖有冲掉他处改动风险。统一到 数据管理→广告位截图（读-改-写，能力超集）。 */}
+      <Section title="Media Placements" desc="媒体方站内资源位截图">
+        <p className="text-[11px] text-foreground-muted leading-5">
+          广告位截图请到 <b>数据管理 → 广告位截图</b> 维护（支持多图、曝光区间、平台字段）。
+          {data.mediaPlacements?.length ? `当前 ${data.mediaPlacements.length} 条（只读，随生成链生效）。` : '当前无条目。'}
+        </p>
+      </Section>
 
       {/* Competitor Share of Voice — 竞品声量（0909 新增，FT 提案 deck 竞品屏数据源） */}
       <ListSection<CompetitorVoice>

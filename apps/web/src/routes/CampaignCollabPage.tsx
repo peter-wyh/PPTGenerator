@@ -39,6 +39,10 @@ interface CollabRow {
   currency: string | null;
   totalPrice: string | null;
   collabData?: CollaborationData | null;
+  /** 0917：CPS 实绩汇总（后端主表 PublisherDailyStat 切片聚合）；null=无数据。 */
+  cpsTotals?: { clicks?: number | null; orders?: number | null; gmv?: string | null; commission?: string | null; newCustomerOrders?: number | null } | null;
+  /** 0917：合作 tracking 链接（该合作 1:1 的 LinkPerformance.linkUrl）；null=缺链接。 */
+  trackingUrl?: string | null;
 }
 
 /* ============================= 页面 ============================= */
@@ -114,6 +118,8 @@ export function CampaignCollabPage() {
             collabId: link.collabId,
             currency: link.currency,
             totalPrice: link.totalPrice,
+            cpsTotals: link.cpsTotals ?? null,
+            trackingUrl: link.trackingUrl ?? null,
             collabData,
           } satisfies CollabRow;
         });
@@ -326,11 +332,26 @@ export function CampaignCollabPage() {
     return <p className="text-sm text-foreground-muted">加载合作列表…</p>;
   }
 
+  // 0917 反馈①③：表头三段分组——达人基础信息 / 合作信息 / CPS 实绩。
+  // CPS 数据从「作品(截图+数据)」列拆出为独立列组；合作信息补发布时间/合作链接。
+  // groupStart 列加左分隔线，视觉区分三段。
   const heads = [
-    '#', 'Campaign', '合作方', 'Handle', '平台', '层级',
-    '粉丝/访问量', '互动率', '类目', '地区',
-    '合作方式', '作品(截图+数据)', '',
-    '状态', '',
+    { label: '#', cls: 'sticky left-0 z-10 bg-surface-hover' },
+    { label: 'Campaign' },
+    // 0917 布局优化：达人 9 列（Handle/平台/层级/粉丝/互动率/类目/地区/达人补充）合并为 1 列——
+    // 头像+名+@handle+平台·层级·粉丝·互动率元信息行；类目/地区/近90天/互动中位进 title 悬浮。
+    { label: '达人' },
+    { label: '合作方式', groupStart: true },
+    // 发布时间列取消——每个作品 pill 自带发布日期（原列与作品卡日期重复）。
+    { label: '作品与数据' },
+    { label: '合作链接' },
+    { label: '状态' },
+    { label: '点击', right: true, groupStart: true },
+    { label: '订单', right: true },
+    { label: 'GMV', right: true },
+    { label: '佣金', right: true },
+    { label: '新客', right: true },
+    { label: '操作', cls: 'sticky right-0 z-10 bg-surface-hover text-right' },
   ];
 
   return (
@@ -452,7 +473,7 @@ export function CampaignCollabPage() {
             <thead>
               <tr className="bg-surface-hover text-left text-[10px] text-foreground-muted">
                 {heads.map((h, i) => (
-                  <th key={i} className={`px-2 py-2 font-medium whitespace-nowrap ${i === 0 ? 'sticky left-0 z-10 bg-surface-hover' : ''} ${i === heads.length - 1 ? 'sticky right-0 z-10 bg-surface-hover text-right' : ''}`}>{h}</th>
+                  <th key={i} className={`px-2 py-2 font-medium whitespace-nowrap ${h.cls ?? ''} ${h.right ? 'text-right' : ''} ${h.groupStart ? 'border-l-2 border-border-default' : ''}`}>{h.label}</th>
                 ))}
               </tr>
             </thead>
@@ -460,84 +481,89 @@ export function CampaignCollabPage() {
               {filtered.map((r, idx) => {
                 const collabLabel = r.collabData ? collaborationLabel(r.collabData) : (r.collabType ?? '—');
                 const deliverables = r.collabData?.deliverables ?? [];
+                // 0917 反馈②：表格口径与详情对齐——互动指标一律 Σ deliverable.daily（真源），
+                // 不再读手填 metrics 快照（详情浮窗效果数据早已 daily 聚合，两处曾各说各话）。
+                const dailySum = (key: 'impressions' | 'likes' | 'comments' | 'shares' | 'saves') =>
+                  deliverables.reduce((s, d) => s + (d.daily ?? []).reduce((x, dd) => x + (parseFloat(dd[key]) || 0), 0), 0);
+                const hasDaily = deliverables.some((d) => (d.daily ?? []).length > 0);
+                const fmtK = (n: number) => (n >= 10000 ? `${(n / 1000).toFixed(1)}K` : Math.round(n).toLocaleString('en-US'));
+                // CPS 实绩（0917 反馈③独立列组；真源=主表切片聚合，无数据留 —）
+                const cps = r.cpsTotals;
                 return (
                   <tr key={r.linkId} className="border-t border-border-subtle hover:bg-surface-hover/50">
                     <td className="sticky left-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 font-mono text-[10px] tabular-nums text-foreground-muted hover:bg-surface-hover/50">{idx + 1}</td>
                     <td className="whitespace-nowrap px-2 py-2 font-medium text-foreground-primary">{r.campaign.name}</td>
-                    {/* 达人带头像 */}
-                    <td className="whitespace-nowrap px-2 py-2">
-                      <div className="flex items-center gap-1.5">
+                    {/* 达人列（0917 合并：头像+名+@handle+元信息行；类目/地区/近90天/互动中位 title 悬浮） */}
+                    <td className="px-2 py-1.5 max-w-[240px]">
+                      <div
+                        className="flex items-center gap-2"
+                        title={`类目 ${r.creator.category || '—'} · 地区 ${r.creator.region || '—'} · 近90天作品 ${r.creator.recentPostsCount ?? '—'} · 互动中位数 ${r.creator.engagementMedian ?? '—'}`}
+                      >
                         <CreatorAvatar name={r.creator.name} avatar={r.creator.avatar} size={28} />
-                        <span className="font-medium text-foreground-primary">{r.creator.name}</span>
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-medium text-foreground-primary">{r.creator.name}</div>
+                          <div className="truncate text-[10px] text-foreground-muted">{r.creator.handle}</div>
+                          <div className="truncate text-[10px] text-foreground-secondary">{r.creator.platform} · {r.creator.tier} · {r.creator.followers} · ER {r.creator.engagement}</div>
+                        </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.handle}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.platform}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.tier}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.followers}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.engagement}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.category || '—'}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.creator.region || '—'}</td>
                     <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{collabLabel}</td>
-                    {/* 作品列：每个作品一行（截图 + type + 单品数据） */}
-                    <td className="px-2 py-2 min-w-[320px]">
+                    {/* 作品列（0917 布局：横排紧凑——Σ 汇总行 + 每作品单行 pill（截图+类型+日期）；CPS 已拆出独立列组） */}
+                    <td className="px-2 py-1.5 min-w-[380px]">
                       {deliverables.length === 0 ? (
                         <span className="text-foreground-muted">—</span>
                       ) : (
-                        <div className="flex flex-col gap-1.5">
-                          {/* 汇总行 */}
-                          <div className="flex items-center gap-2 rounded bg-surface-hover px-1.5 py-1">
-                            <span className="text-[9px] text-foreground-muted">合计({deliverables.length}类型)</span>
-                            {(() => {
-                              const agg = aggregateAllMetrics(deliverables);
-                              return agg.map(([label, value]) => (
-                                <MetricBadge key={label} label={label} value={value} />
-                              ));
-                            })()}
-                          </div>
-                          {/* 每个作品一行 */}
+                        <div className="flex flex-col gap-1">
+                          {/* 汇总行：Σ 每日互动（与详情浮窗同口径；badge 多时自然换行） */}
+                          {hasDaily && (
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded bg-surface-hover px-1.5 py-1">
+                              <span className="text-[9px] text-foreground-muted">合计({deliverables.length}作品)</span>
+                              <MetricBadge label="曝光" value={fmtK(dailySum('impressions'))} />
+                              <MetricBadge label="点赞" value={fmtK(dailySum('likes'))} />
+                              <MetricBadge label="评论" value={fmtK(dailySum('comments'))} />
+                              <MetricBadge label="转发" value={fmtK(dailySum('shares'))} />
+                              <MetricBadge label="收藏" value={fmtK(dailySum('saves'))} />
+                            </div>
+                          )}
+                          {/* 每个作品一个横排 pill：截图 + 类型 + 发布日期（0917：竖堆改单行，压缩行高） */}
                           {deliverables.map((del, di) => {
                             const shots = (del.screenshots ?? []).filter((s) => s.src).slice(0, 3);
-                            const delMetrics = del.metrics ?? [];
                             return (
-                              <div key={`${del.contentType}-${di}`} className="flex items-center gap-2 rounded border border-border-subtle px-1.5 py-1">
-                                {/* 截图 */}
+                              <div key={`${del.contentType}-${di}`} className="flex items-center gap-1.5 whitespace-nowrap">
                                 {shots.length > 0 ? (
                                   <div className="flex gap-0.5">
                                     {shots.map((s, si) => (
                                       <a key={si} href={s.url ?? s.src} target="_blank" rel="noopener noreferrer" title={s.caption ?? ''}>
-                                        <img src={s.src} alt={s.caption ?? ''} className="h-8 w-8 rounded border border-border-subtle object-cover hover:opacity-80" />
+                                        <img src={s.src} alt={s.caption ?? ''} className="h-6 w-6 rounded border border-border-subtle object-cover hover:opacity-80" />
                                       </a>
                                     ))}
                                   </div>
                                 ) : (
-                                  <div className="flex h-8 w-8 items-center justify-center rounded bg-surface-hover text-[8px] text-foreground-muted">N/A</div>
+                                  <div className="flex h-6 w-6 items-center justify-center rounded bg-surface-hover text-[8px] text-foreground-muted">N/A</div>
                                 )}
-                                {/* type pill + 发布时间 */}
-                                <div className="flex flex-col gap-0.5">
-                                  <span className="rounded bg-surface-hover px-1 py-0.5 text-[10px] text-foreground-secondary">{del.contentType}</span>
-                                  {del.publishedAt && (
-                                    <span className="text-[8px] text-foreground-muted">{del.publishedAt}</span>
-                                  )}
-                                </div>
-                                {/* 动态指标（按平台×类型差异化） */}
-                                {delMetrics.map((m, mi) => (
-                                  <MetricBadge key={mi} label={m.label} value={m.value} dim />
-                                ))}
+                                <span className="rounded bg-surface-hover px-1 py-0.5 text-[10px] text-foreground-secondary">{del.contentType}</span>
+                                {del.publishedAt && <span className="text-[10px] text-foreground-muted">{del.publishedAt}</span>}
                               </div>
                             );
                           })}
                         </div>
                       )}
                     </td>
-                    {/* 达人补充数据 */}
-                    <td className="px-2 py-2 whitespace-nowrap text-foreground-secondary">
-                      <div className="text-[10px]">
-                        <div><span className="text-foreground-muted">近90天</span> {r.creator.recentPostsCount ?? '—'}</div>
-                        <div><span className="text-foreground-muted">互动中位</span> {r.creator.engagementMedian ?? '—'}</div>
-                      </div>
+                    {/* 合作链接（0917 反馈①：缺链接一眼可见） */}
+                    <td className="px-2 py-2 text-[10px]">
+                      {r.trackingUrl ? (
+                        <a href={r.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline break-all line-clamp-2 max-w-[160px]">{r.trackingUrl}</a>
+                      ) : (
+                        <span className="text-foreground-muted">缺失</span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-foreground-secondary">{r.status ?? '—'}</td>
+                    {/* CPS 实绩列组（0917 反馈③：独立字段，真源=主表切片） */}
+                    <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-foreground-secondary">{cps?.clicks != null ? cps.clicks.toLocaleString('en-US') : '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-foreground-secondary">{cps?.orders != null ? cps.orders.toLocaleString('en-US') : '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-foreground-secondary">{cps?.gmv != null ? formatUSD(parseFloat(cps.gmv)) : '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-foreground-secondary">{cps?.commission != null ? formatUSD(parseFloat(cps.commission)) : '—'}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-foreground-secondary">{cps?.newCustomerOrders != null ? cps.newCustomerOrders.toLocaleString('en-US') : '—'}</td>
                     <td className="sticky right-0 z-10 whitespace-nowrap bg-surface-primary px-2 py-2 text-right hover:bg-surface-hover/50">
                       <button onClick={() => setDrawerRow(r)} className="text-[10px] text-accent-primary hover:underline">详情</button>
                     </td>
@@ -677,7 +703,12 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
             <CreatorAvatar name={creator.name} avatar={creator.avatar} size={36} />
             <div className="min-w-0">
               <div className="font-headings text-sm font-semibold text-foreground-primary truncate">{creator.name}</div>
-              <div className="text-xs text-foreground-muted truncate">{row.campaign.name} · {creator.handle}</div>
+              {/* 0917 布局：合作方式/状态前移到头部（达人信息卡里的重复两格已删） */}
+              <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-foreground-muted">
+                <span className="truncate">{row.campaign.name} · {creator.handle}</span>
+                <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">{collabData ? collaborationLabel(collabData) : row.collabType ?? '—'}</span>
+                {row.status && <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-foreground-secondary">{row.status}</span>}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -707,18 +738,16 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
             return (
               <div className="mb-4">
                 <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">{L.title}</div>
-                <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-border-subtle">
+                <div className="grid grid-cols-4 gap-px rounded-lg overflow-hidden border border-border-subtle">
                   {([
-                    ['Platform', creator.platform],
-                    ['Tier', creator.tier],
+                    ['平台', creator.platform],
                     [L.followers, creator.followers],
                     [L.engagement, creator.engagement],
                     [L.category, creator.category],
-                    ['Region', creator.region],
+                    ['地区', creator.region],
                     [L.recent, String(creator.recentPostsCount ?? '—')],
                     [L.median, creator.engagementMedian ?? '—'],
-                    ['合作方式', collaborationLabel(collabData)],
-                    ['状态', row.status ?? '—'],
+                    ['Tier', creator.tier],
                   ] as const).map(([label, value]) => (
                     <div key={label} className="bg-surface-primary p-2">
                       <div className="text-[10px] uppercase tracking-wide text-foreground-muted">{label}</div>
@@ -764,8 +793,11 @@ function CollabDrawer({ row, onClose, onUpdate }: { row: CollabRow; onClose: () 
                   </div>
                 </>
               ) : (
+                // 0917 反馈：合作类型与表格「合作方式」同口径——Collaboration.deliverables 真源优先，
+                // 旧通道 cc.collabType 仅作回落（GlowLab 17 行 cc 字段全 NULL，此前抽屉空而表格有值）。
+                // 状态/总价无 deliverables 侧真源，维持 cc 字段（宁空勿假）。
                 ([
-                  ['合作类型', row.collabType],
+                  ['合作类型', collabData ? collaborationLabel(collabData) : row.collabType],
                   ['状态', row.status],
                   ['币种', row.currency],
                   ['总价', row.totalPrice],
@@ -1098,7 +1130,7 @@ function DeliverableCard({
         </div>
         {screenshots.length === 0 ? (
           <span className="text-foreground-muted">—</span>
-        ) : (
+        ) : editing ? (
           <div className="space-y-1">
             {screenshots.map((s, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -1107,35 +1139,31 @@ function DeliverableCard({
                 ) : (
                   <div className="h-12 w-12 shrink-0 rounded bg-surface-hover flex items-center justify-center text-[8px] text-foreground-muted">N/A</div>
                 )}
-                {editing ? (
-                  <div className="flex-1 min-w-0">
-                    <ImageInput
-                      value={s.src}
-                      onChange={(url) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, src: url } : x)))}
-                    />
-                    <input
-                      value={s.caption ?? ''}
-                      placeholder="说明"
-                      onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, caption: e.target.value } : x)))}
-                      className="w-full mt-0.5 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex-1 min-w-0">
-                    {s.caption && (
-                      <p className="text-xs text-foreground-secondary leading-tight line-clamp-2">{s.caption}</p>
-                    )}
-                    {s.src && (
-                      <a href={s.src} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-primary hover:underline break-all line-clamp-1">
-                        {s.src}
-                      </a>
-                    )}
-                  </div>
-                )}
-                {editing && (
-                  <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red text-[10px] shrink-0">✕</button>
-                )}
+                <div className="flex-1 min-w-0">
+                  <ImageInput
+                    value={s.src}
+                    onChange={(url) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, src: url } : x)))}
+                  />
+                  <input
+                    value={s.caption ?? ''}
+                    placeholder="说明"
+                    onChange={(e) => setScreenshots(screenshots.map((x, idx) => (idx === i ? { ...x, caption: e.target.value } : x)))}
+                    className="w-full mt-0.5 rounded border border-border-default bg-surface-primary px-1 py-0.5 text-xs"
+                  />
+                </div>
+                <button onClick={() => setScreenshots(screenshots.filter((_, idx) => idx !== i))} className="text-red text-[10px] shrink-0">✕</button>
               </div>
+            ))}
+          </div>
+        ) : (
+          /* 0917 布局：非编辑态截图横排缩略图条（caption 进 title），替代每图一行的竖排 */
+          <div className="flex flex-wrap gap-1">
+            {screenshots.map((s, i) => s.src ? (
+              <a key={i} href={s.src} target="_blank" rel="noopener noreferrer" title={s.caption ?? ''}>
+                <img src={s.src} alt={s.caption ?? ''} className="h-16 w-16 rounded border border-border-subtle object-cover hover:opacity-80" />
+              </a>
+            ) : (
+              <div key={i} className="flex h-16 w-16 items-center justify-center rounded bg-surface-hover text-[8px] text-foreground-muted">N/A</div>
             ))}
           </div>
         )}
@@ -1576,36 +1604,6 @@ function MetricBadge({ label, value, dim }: { label: string; value: string; dim?
 
 /* ============================= 工具函数 ============================= */
 
-/** 从所有 deliverables 的 metrics 中按 label 聚合（动态支持所有指标）。 */
-function aggregateAllMetrics(deliverables?: CollaborationDeliverable[]): [string, string][] {
-  if (!deliverables?.length) return [];
+/* 0917 反馈②：aggregateAllMetrics/parseMetricValue（手填 metrics 快照聚合）已移除——
+   表格互动指标统一 Σ deliverable.daily 真源，与详情浮窗同口径。 */
 
-  const sum = new Map<string, number>();
-  for (const del of deliverables) {
-    for (const m of del.metrics ?? []) {
-      const num = parseMetricValue(m.value);
-      if (num === null) continue;
-      sum.set(m.label, (sum.get(m.label) ?? 0) + num);
-    }
-  }
-
-  const fmt = (v: number) => {
-    if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M';
-    if (v >= 1_000) return (v / 1_000).toFixed(1) + 'K';
-    return String(Math.round(v));
-  };
-
-  return [...sum.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([label, value]) => [label, fmt(value)]);
-}
-
-/** 解析 metric value 字符串为数字（支持 "1.2M" / "45K" / "12,345" / "1234"） */
-function parseMetricValue(value: string): number | null {
-  if (!value || value === '—') return null;
-  const s = value.trim().replace(/,/g, '');
-  if (s.endsWith('M') || s.endsWith('m')) return parseFloat(s) * 1_000_000;
-  if (s.endsWith('K') || s.endsWith('k')) return parseFloat(s) * 1_000;
-  const n = parseFloat(s);
-  return isNaN(n) ? null : n;
-}
