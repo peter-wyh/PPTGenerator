@@ -29,7 +29,9 @@ const checkSchema = z.object({
 });
 
 const assetRefSchema = z.object({
-  kind: z.enum(['sample', 'tokens', 'checklist']),
+  // 'css' = 服务端 CSS 资产(GUIDE_CSS 占位符注入,guide-css-asset.ts 消费);
+  // 历史数据 kind:'css' 早已入库(FT 双指南 v1 起),枚举补齐防显式传 assets 时 400。
+  kind: z.enum(['sample', 'tokens', 'checklist', 'css']),
   ref: z.string().min(1).max(255),
   hash: z.string().max(128).optional(),
   name: z.string().max(191).optional(),

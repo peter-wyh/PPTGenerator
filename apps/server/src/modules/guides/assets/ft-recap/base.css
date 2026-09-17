@@ -1,5 +1,6 @@
-/* FT recap base.css — verbatim from Example/FT.html <style> (single source of truth)
- * DO NOT hand-edit: regenerate from source. Class usage contract in component-contract.json
+/* FT recap base.css — CURRENT visual source of truth (since 0917)
+ * Example/FT.html is a historical Canva snapshot (deprecated forms like FILL IN removed from contract);
+ * this file now evolves independently per guide clauses. Class usage contract in component-contract.json
  * Injected server-side via <!--GUIDE_CSS--> placeholder replacement. Color values NEVER pass through the LLM. */
 :root{
     /* Fonts */
@@ -173,6 +174,13 @@
   }
   .glass-kpi.accent .num{ color:var(--color-pink-soft); }
 
+  /* 0916: MoM 环比徽标——有基线时 MOM +x%(涨青柠/跌加 .down 粉),首期无基线占位 MoM — */
+  .mom-badge{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:999px;font-family:var(--font-body);font-weight:600;font-size:9px;line-height:1.4;letter-spacing:0.05em;text-transform:uppercase;color:var(--color-lime);background:rgba(43,43,43,0.35);border:1px solid rgba(213,239,154,0.25);}
+  .mom-badge.down{color:var(--color-pink-soft);border-color:rgba(243,198,211,0.25);}
+  .mom-badge.mom-na{ color:var(--color-muted); background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.18); }
+  /* 0916: avatar 真实头像——avatarUrl 必须渲染 <img>,首字母仅为 null 回落 */
+  .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}
+
   /* ---------- SECTION ---------- */
   .section{ padding:40px 44px 8px; }
   .section-head{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
@@ -277,10 +285,16 @@
   /* ---------- TREND CHART ---------- */
   .chart-card{
     background:var(--color-warm-white); border:1px solid var(--color-divider); border-radius:var(--radius-md);
-    padding:22px 24px 12px; margin:16px 44px 8px;
+    padding:22px 24px 12px; margin:16px 0 8px;
   }
-  .chart-legend{ display:flex; gap:22px; margin-bottom:10px; font-size:11.5px; font-weight:600; color:#5B5B63; }
+  /* 0916: 图卡说明文字样式(裸 p 曾以 16px 纯黑贴死图例) + 与图例间距 14px */
+  .chart-card > p:first-child{ font-size:12.5px; color:#5B5B63; font-weight:600; }
+  .chart-legend{ display:flex; gap:22px; margin-top:14px; margin-bottom:10px; font-size:11.5px; font-weight:600; color:#5B5B63; }
   .chart-legend .dot{ width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:6px; }
+  /* 图例标准结构: <span class="li"><span class="sw-bar|sw-line"></span>文案</span>（sw=swatch，与 prod 周报一致） */
+  .chart-legend .li{ display:flex; align-items:center; gap:8px; }
+  .chart-legend .sw-bar{ width:14px; height:9px; border-radius:3px; display:inline-block; background:var(--color-lime,#D5EF9A); }
+  .chart-legend .sw-line{ width:16px; height:3px; border-radius:2px; display:inline-block; background:var(--color-violet,#6F60A4); }
   .dot-bar{ background:var(--color-lime); }
   .dot-line{ background:var(--color-violet); border-radius:50%; }
   .chart-note{ font-size:11px; color:#7B7B82; text-align:right; margin-top:6px; }
@@ -300,7 +314,7 @@
   .compare-table th.us{ background:var(--color-lime); color:var(--color-aubergine-2); }
   .compare-table td.us{ background:var(--color-lime-bright); font-weight:700; color:var(--color-aubergine-2); }
   .compare-table tr:last-child td{ border-bottom:none; }
-  .compare-note{ font-size:11px; color:#8B8B93; margin-top:10px; }
+  .compare-note{ font-size:11px; color:#8B8B93; margin:12px 12px 24px; }
 
   /* ---------- PACKAGE RECOMMENDATION (benefit-card checkerboard) ---------- */
   .pkg-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:10px; }
@@ -404,5 +418,6 @@
 
   /* journey stage shots (04) */
   .placement-cols .pcol{ min-width:0; }
+  .pdays{ font-weight:700; color:var(--color-aubergine-2); }
   .jshot{ margin-top:12px; border-radius:12px; overflow:hidden; border:1px solid var(--color-divider); background:var(--color-warm-white); }
   .jshot img{ display:block; width:100%; height:150px; object-fit:cover; object-position:top; }

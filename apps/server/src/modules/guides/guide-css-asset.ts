@@ -2,7 +2,7 @@
  * ★ B2 指南 CSS 资产化(资产工程 v1):确定性视觉,不经过 LLM。
  *
  * 设计(对应 0910 架构评审):
- *   - L0 tokens / L1 CSS = 文件资产(git 版本化),真源=Example/FT.html 提取;
+ *   - L0 tokens / L1 CSS = 文件资产(git 版本化),真源=ft-recap/sample.html 提取(原 Example/FT.html);
  *   - GuideRevision.assets 快照引用 [{kind:'css', ref, hash, name}];
  *   - 生成时:系统提示词要求 LLM 输出 <!--GUIDE_CSS--> 占位符;
  *   - 生成后:postProcess 阶段把占位符替换为资产 CSS 原文(字节级)。

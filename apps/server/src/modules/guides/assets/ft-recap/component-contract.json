@@ -1,6 +1,7 @@
 {
-  "$schema": "pptgenerator/component-contract/v1",
-  "source": "Example/FT.html",
+  "$schema": "pptgenerator/component-contract/v2",
+  "generatedFrom": "ft-recap/base.css (auto-scan) + ft-recap/sample.html (usage counts; 原路径 Example/FT.html)",
+  "note": "类清单以 base.css 为真源自动生成——手工维护已废弃;usageInTemplate 为 FT.html 参考用量,可为 0(v4 新增类)。",
   "pageModel": {
     "singlePage": true,
     "width": 1120,
@@ -13,191 +14,309 @@
   },
   "classes": {
     "accent": {
-      "countInSource": 2
+      "definedInCss": 1,
+      "usageInTemplate": 2
+    },
+    "acol": {
+      "definedInCss": 17
+    },
+    "analysis-cols": {
+      "definedInCss": 1
     },
     "app-slot": {
-      "countInSource": 1
+      "definedInCss": 4,
+      "usageInTemplate": 1
     },
     "avatar": {
-      "countInSource": 2
+      "definedInCss": 4,
+      "usageInTemplate": 2
     },
     "badge": {
-      "countInSource": 5
+      "definedInCss": 4,
+      "usageInTemplate": 5
     },
     "chart-card": {
-      "countInSource": 1
+      "definedInCss": 2,
+      "usageInTemplate": 1
     },
     "chart-legend": {
-      "countInSource": 1
+      "definedInCss": 2,
+      "usageInTemplate": 1
     },
     "chart-note": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "chart-placeholder": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "chead": {
-      "countInSource": 2
+      "definedInCss": 4,
+      "usageInTemplate": 2
     },
     "chip": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "cmetrics": {
-      "countInSource": 2
+      "definedInCss": 9,
+      "usageInTemplate": 2
     },
     "compare-note": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "compare-table": {
-      "countInSource": 1
+      "definedInCss": 9,
+      "usageInTemplate": 1
     },
     "compare-wrap": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "creator-card": {
-      "countInSource": 2
+      "definedInCss": 5,
+      "usageInTemplate": 2
     },
     "creator-grid": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "cshot": {
-      "countInSource": 4
+      "definedInCss": 5,
+      "usageInTemplate": 4
     },
     "cshots": {
-      "countInSource": 2
+      "definedInCss": 1,
+      "usageInTemplate": 2
     },
     "cwho": {
-      "countInSource": 2
+      "definedInCss": 5,
+      "usageInTemplate": 2
     },
     "dot": {
-      "countInSource": 2
+      "definedInCss": 3,
+      "usageInTemplate": 2
     },
     "dot-bar": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "dot-line": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "down": {
+      "definedInCss": 2
     },
     "eyebrow": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "footer": {
-      "countInSource": 1
+      "definedInCss": 3,
+      "usageInTemplate": 1
     },
     "glass-kpi": {
-      "countInSource": 4
+      "definedInCss": 4,
+      "usageInTemplate": 4
+    },
+    "grad": {
+      "definedInCss": 1
     },
     "handle": {
-      "countInSource": 2
+      "definedInCss": 2,
+      "usageInTemplate": 2
     },
     "hero": {
-      "countInSource": 3
+      "definedInCss": 7,
+      "usageInTemplate": 3
     },
     "hero-left": {
-      "countInSource": 1
+      "definedInCss": 2,
+      "usageInTemplate": 1
     },
     "hero-right": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "jshot": {
+      "definedInCss": 2
     },
     "k": {
-      "countInSource": 6
+      "definedInCss": 3,
+      "usageInTemplate": 6
     },
     "kpi-row": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "lbl": {
-      "countInSource": 4
+      "definedInCss": 1,
+      "usageInTemplate": 4
     },
     "lilac": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "lime": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "m": {
-      "countInSource": 6
+      "definedInCss": 9,
+      "usageInTemplate": 6
+    },
+    "mom-badge": {
+      "definedInCss": 2
+    },
+    "next": {
+      "definedInCss": 4
     },
     "num": {
-      "countInSource": 4
+      "definedInCss": 2,
+      "usageInTemplate": 4
     },
     "page": {
-      "countInSource": 1
+      "definedInCss": 2,
+      "usageInTemplate": 1
+    },
+    "pcard": {
+      "definedInCss": 6
     },
     "pcol": {
-      "countInSource": 3
+      "definedInCss": 13,
+      "usageInTemplate": 3
+    },
+    "pdesc": {
+      "definedInCss": 1
     },
     "period-pill": {
-      "countInSource": 1
+      "definedInCss": 2,
+      "usageInTemplate": 1
+    },
+    "pgroup": {
+      "definedInCss": 3
+    },
+    "pgroup-head": {
+      "definedInCss": 2
     },
     "ph": {
-      "countInSource": 4
+      "definedInCss": 1,
+      "usageInTemplate": 4
+    },
+    "pimg": {
+      "definedInCss": 1
     },
     "pink": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "pkg-ai-note": {
-      "countInSource": 1
+      "definedInCss": 2,
+      "usageInTemplate": 1
     },
     "pkg-card": {
-      "countInSource": 3
+      "definedInCss": 12,
+      "usageInTemplate": 3
     },
     "pkg-grid": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "pkg-name": {
-      "countInSource": 3
+      "definedInCss": 3,
+      "usageInTemplate": 3
     },
     "pkg-price": {
-      "countInSource": 3
+      "definedInCss": 5,
+      "usageInTemplate": 3
     },
     "pkg-reco-tag": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "placeholder": {
-      "countInSource": 4
+      "definedInCss": 1,
+      "usageInTemplate": 4
     },
     "placement-card": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "placement-cols": {
-      "countInSource": 1
+      "definedInCss": 2,
+      "usageInTemplate": 1
     },
     "platform": {
-      "countInSource": 2
+      "definedInCss": 2,
+      "usageInTemplate": 2
+    },
+    "pt": {
+      "definedInCss": 2
+    },
+    "ptag": {
+      "definedInCss": 1
+    },
+    "punit": {
+      "definedInCss": 3
+    },
+    "pwall": {
+      "definedInCss": 2
     },
     "schedule-tag": {
-      "countInSource": 1
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "section": {
-      "countInSource": 15
+      "definedInCss": 6,
+      "usageInTemplate": 15
     },
     "section-head": {
-      "countInSource": 5
+      "definedInCss": 3,
+      "usageInTemplate": 5
     },
     "section-sub": {
-      "countInSource": 5
+      "definedInCss": 2,
+      "usageInTemplate": 5
+    },
+    "subtitle": {
+      "definedInCss": 2
     },
     "tag": {
-      "countInSource": 3
+      "definedInCss": 2,
+      "usageInTemplate": 3
     },
     "top": {
-      "countInSource": 1
+      "definedInCss": 4,
+      "usageInTemplate": 1
     },
     "us": {
-      "countInSource": 6
+      "definedInCss": 2,
+      "usageInTemplate": 6
     },
     "v": {
-      "countInSource": 6
+      "definedInCss": 9,
+      "usageInTemplate": 6
     },
     "violet": {
-      "countInSource": 2
+      "definedInCss": 7,
+      "usageInTemplate": 2
+    },
+    "warn": {
+      "definedInCss": 4
+    },
+    "win": {
+      "definedInCss": 4
     },
     "x": {
-      "countInSource": 1
+      "definedInCss": 3,
+      "usageInTemplate": 1
     }
   },
   "hardRules": [
-    "reuse class names exactly as defined in base.css; inventing new structural classes (e.g. pgroup/ptag) is a defect",
+    "reuse class names exactly as defined in base.css (see classes above); classes not present in base.css are defects",
     ".page card = white bg, radius from --radius token, generous padding",
     "hero/footer = dark plum (--bg-deep); body sections = light bg",
     "chart accent palette = --lime/--pink/--violet tokens"

@@ -1,6 +1,6 @@
 {
   "$schema": "pptgenerator/design-tokens/v1",
-  "source": "Example/FT.html (Fanstoshop 官网设计系统, 0910 真源)",
+  "source": "ft-recap/sample.html (Fanstoshop 官网设计系统, 0910 真源; 原路径 Example/FT.html)",
   "sourceHash": "sha256:0b25f1bf520d21b3",
   "cssVars": {
     "font-display": "\"Libre Baskerville\", Georgia, serif",

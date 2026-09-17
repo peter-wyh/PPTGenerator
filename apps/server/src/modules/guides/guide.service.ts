@@ -260,13 +260,18 @@ export const guideService = {
     });
     // 同步 Guide.content 冗余字段(兼容旧读取路径)
     await prisma.guide.update({ where: { id: guideId }, data: { content: data.content } });
+    // 0916 #4:保存即生效——提示词真源(Guide.content)与 CSS 资产指针(activeRevisionId)须同版,
+    // 否则「保存后仍注入旧版 CSS、内容却是新版」分叉。新保存版直接置为生效版。
+    await prisma.guide.update({ where: { id: guideId }, data: { activeRevisionId: rev.id } });
     return { revision: rev, deduped: false };
   },
 
   /** 激活指定版本(回滚 = 激活旧版本号)。 */
   async activateRevision(guideId: string, version: number) {
     const rev = await this.getRevision(guideId, version);
-    await prisma.guide.update({ where: { id: guideId }, data: { activeRevisionId: rev.id } });
+    // 0916 #4:回滚同步 Guide.content——生成注入读该冗余字段,只指指针不同步内容
+    // 会造成「回滚了 CSS 资产版,提示词却还是新内容」的分叉。
+    await prisma.guide.update({ where: { id: guideId }, data: { activeRevisionId: rev.id, content: rev.content } });
     return rev;
   },
 
