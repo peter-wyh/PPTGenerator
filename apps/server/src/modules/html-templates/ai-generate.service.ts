@@ -60,8 +60,11 @@ const SELF_HOST_BASE = devSafeBase(process.env.PUBLIC_BASE_URL || config.webUrl)
  * 无 baseUrl（PUBLIC_BASE_URL/webUrl 未配）时原样返回，不破坏。
  */
 export function rewriteExternalAssets(html: string, baseUrl: string): string {
+  // ★ localhost 防御(devSafeBase 返 '')后的 base 是相对路径前缀: '' 也必须重写。
+  //   旧守卫 `if (!base) return html` 导致本地 dev CDN 原样落库 → 国内网络加载不了
+  //   cdn.tailwindcss.com → utility 类全失效 → 报告样式全丢(0917 实锤)。
+  //   空前缀 = 相对路径 /vendor/...,经父页面同源反代任意环境都通,与 devSafeBase 意图一致。
   const base = (baseUrl || '').trim().replace(/\/+$/, '');
-  if (!base) return html;
   let out = html;
   // Tailwind Play CDN（runtime JS；可能带 query/fragment，整体替换）
   out = out.replace(
@@ -1482,9 +1485,30 @@ export const aiGenerateService = {
     //   name 形如 "Creator — Title" 且前缀精确命中达人名的归入该达人组，其余归站点组。
     const creatorByName = new Map(campaign.campaignCreators.map((c) => [c.creator?.name ?? '', c]));
     const analyticsPlacements = ((campaign.analytics as Record<string, unknown> | null)?.mediaPlacements as
-      | { name?: string; screenshotUrl?: string; description?: string; platform?: string; postUrl?: string }[]
+      | { name?: string; screenshotUrl?: string; screenshotUrls?: string[]; exposureAt?: string; exposureStartAt?: string; exposureEndAt?: string; description?: string; platform?: string; postUrl?: string }[]
       | undefined) ?? [];
-    type PlacementGroup = { group: string; platform: string | null; items: Array<{ title: string; screenshotUrl: string; postUrl: string | null; contentType: string | null; description: string | null }> };
+    /** ★ 0917 曝光区间: exposureStartAt/exposureEndAt (0916 单点 exposureAt 兼容读取=退化为单日区间)。
+     *  days = 区间与报告期(reportPeriod,缺省回落 campaign 起止)的交集天数——真实曝光天数。
+     *  宁缺勿假: 起止全缺 → days 省略不注入。 */
+    const expoStart = reportPeriod?.startDate || campaign.startDate;
+    const expoEnd = reportPeriod?.endDate || campaign.endDate;
+    /** 单条目归一为 [start, end]（均含）；兼容旧 exposureAt 单点。 */
+    const exposureWindowOf = (m: { exposureAt?: string; exposureStartAt?: string; exposureEndAt?: string }): [string, string] | null => {
+      const s = (m.exposureStartAt || m.exposureAt || '').slice(0, 10);
+      const e = (m.exposureEndAt || m.exposureAt || '').slice(0, 10);
+      if (!s && !e) return null;
+      return [s || e, e || s];
+    };
+    /** 区间 ∩ 报告期 的天数（自然日,含端点）；无交集/无报告期 → 0。 */
+    const exposureDaysOf = (m: { exposureAt?: string; exposureStartAt?: string; exposureEndAt?: string }): number | null => {
+      const w = exposureWindowOf(m);
+      if (!w || !expoStart || !expoEnd) return w ? 0 : null;
+      const s = w[0] > String(expoStart).slice(0, 10) ? w[0] : String(expoStart).slice(0, 10);
+      const e = w[1] < String(expoEnd).slice(0, 10) ? w[1] : String(expoEnd).slice(0, 10);
+      if (s > e) return 0;
+      return Math.round((Date.parse(e + 'T00:00:00Z') - Date.parse(s + 'T00:00:00Z')) / 86400000) + 1;
+    };
+    type PlacementGroup = { group: string; platform: string | null; items: Array<{ title: string; screenshotUrl: string; postUrl: string | null; contentType: string | null; description: string | null; exposureDate?: string; days?: number | null }> };
     let placementGroups: PlacementGroup[] = [];
     if (analyticsPlacements.length) {
       const byGroup = new Map<string, PlacementGroup>();
@@ -1496,12 +1520,15 @@ export const aiGenerateService = {
         const cc = creatorByName.get(groupName);
         const key = cc ? groupName : 'Site & Editorial Placements';
         const g = byGroup.get(key) ?? { group: key, platform: cc?.creator?.platform ?? m.platform ?? null, items: [] };
+        const d = m.exposureAt || m.exposureStartAt || m.exposureEndAt ? exposureDaysOf(m) : null;
         g.items.push({
           title: sep > 0 ? m.name.slice(sep + 3) : m.name,
           screenshotUrl: url,
           postUrl: m.postUrl ?? null,
           contentType: null,
           description: m.description ?? null,
+          // ★ 0917 曝光窗口: exposureStartAt~exposureEndAt 区间 + days(∩报告期天数);兼容旧 exposureAt 单点;全缺省略
+          ...(exposureWindowOf(m) ? { exposureWindow: exposureWindowOf(m)!.join(' ~ '), days: d } : {}),
         });
         byGroup.set(key, g);
       }
@@ -1517,7 +1544,12 @@ export const aiGenerateService = {
     const mediaPlacementsLite = analyticsPlacements.length
       ? analyticsPlacements
           .filter((m) => m?.name)
-          .map((m) => ({ name: m.name as string, description: m.description ?? null }))
+          .map((m) => ({
+            name: m.name as string,
+            description: m.description ?? null,
+            // ★ 0917 曝光排期真源: exposureStartAt~exposureEndAt 区间+days(∩报告期);兼容旧 exposureAt 单点;全缺省略
+            ...(exposureWindowOf(m) ? { exposureWindow: exposureWindowOf(m)!.join(' ~ '), days: exposureDaysOf(m) } : {}),
+          }))
       : null;
 
     // ★ 0909 竞品声量（analytics.competitors 白名单提取）：FT 提案 deck「COMPETITOR SHARE OF VOICE」屏。
@@ -1851,7 +1883,11 @@ export const aiGenerateService = {
           return {
             name: cc.creator?.name ?? 'Unknown',
             // ★ avatarUrl may be null — use initials circle fallback
-            avatarUrl: cc.creator?.avatar ?? null,
+            // ★ 0917 占位域过滤: 种子数据 avatar 可能为占位图服务(picsum/placehold)——视为无真图,
+            //   置 null 走首字母回落,禁止占位图进报告(指南「素材真实性」条款)。
+            avatarUrl: cc.creator?.avatar && !/picsum\.photos|placehold|via\.placeholder/i.test(cc.creator?.avatar)
+              ? cc.creator.avatar
+              : null,
             platform: cc.creator?.platform ?? null,
             // ★ 达人主页链接（0827 迭代）：Creator 表 schema 字段。报告指南 Creator Breakdown
             //   story 合作行跳主页用；无值保持 null，AI 端宁缺勿假不编造。

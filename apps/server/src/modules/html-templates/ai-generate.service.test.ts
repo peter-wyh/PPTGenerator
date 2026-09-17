@@ -63,6 +63,15 @@ describe('ai-generate.service · rewriteExternalAssets', () => {
     expect(out).not.toContain('cdn.tailwindcss.com');
   });
 
+  it('★0917 空 base(localhost dev 归一化)也重写为相对路径 — 修复本地 dev 样式全丢', () => {
+    const html = `<script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">`;
+    const out = rewriteExternalAssets(html, '');
+    expect(out).toContain(`<script src="/vendor/tailwind/play.min.js">`);
+    expect(out).toContain(`/vendor/fontawesome/css/all.min.css`);
+    expect(out).not.toContain('cdn.tailwindcss.com');
+    expect(out).not.toContain('cdnjs.cloudflare.com');
+  });
+
   it('改写 Chart.js UMD（jsdelivr）→ 自托管', () => {
     const html = `<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>`;
     const out = rewriteExternalAssets(html, base);
