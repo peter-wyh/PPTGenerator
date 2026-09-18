@@ -4,7 +4,6 @@ import { logger } from '../../logger';
 import { Prisma } from '@prisma/client';
 import { recomputeOrderStats } from './order-stats.service';
 import { recomputePublisherStats } from './publisher-stats.service';
-import { deriveAnalytics, DERIVABLE_KEYS } from './analytics-derive.service';
 // 0917 合并：recomputeCreatorCpsStats 退役——达人 CPS 切片由 recomputePublisherStats
 // 一并重算（主表 PublisherDailyStat 粒度 campaign × publisher × collab? × date）。
 
@@ -103,53 +102,18 @@ export const campaignService = {
     return bl?.code ?? null;
   },
   // ─── Analytics (Campaign 级分析数据) ──────────────────────────────────────
-  /**
-   * 获取 Campaign 分析数据（analytics JSON）+ 读时派生块。
-   * 返回三件套：
-   *   - analytics：手录 JSON 原样（不含派生值）
-   *   - derived：读时派生（OrderDailyStat/订单商品行现算，不落库），键同 analytics
-   *   - merged：手录优先合并后的最终视图（手录非空 > 派生 > 缺省）
-   * ★ 0918 派生不落快照：订单再导入后派生值自动更新；手录值永不被派生覆盖。
-   */
+  /** 获取 Campaign 分析数据（analytics JSON）。 */
   async getAnalytics(campaignId: string, ownerId: string, admin = false) {
     const c = await this.getOrThrow(campaignId, ownerId, admin);
-    const manual = (c.analytics as Record<string, unknown> | null) ?? {};
-    let derived: Record<string, { value: unknown; caliber: string }> | null = null;
-    try {
-      derived = await deriveAnalytics(campaignId);
-    } catch (e) {
-      logger.warn(`[getAnalytics] derive 失败（回落纯手录）: ${e instanceof Error ? e.message : e}`);
-    }
-    // 合并：手录非空优先，否则派生
-    const merged: Record<string, unknown> = { ...manual };
-    const auto: Record<string, boolean> = {};
-    if (derived) {
-      for (const k of DERIVABLE_KEYS) {
-        const dv = derived[k];
-        if (dv?.value === undefined || dv.value === null) continue;
-        const mv = manual[k];
-        const manualFilled = mv !== undefined && mv !== null && mv !== '' && !(Array.isArray(mv) && mv.length === 0);
-        if (!manualFilled) merged[k] = dv.value;
-        auto[k] = !manualFilled; // true = 当前生效值来自派生
-      }
-    }
-    return { analytics: manual, derived, merged, auto };
+    return (c.analytics as Record<string, unknown> | null) ?? null;
   },
 
   /** 更新 Campaign 分析数据（analytics JSON 全量覆盖）。 */
   async updateAnalytics(campaignId: string, ownerId: string, analytics: Record<string, unknown>, admin = false) {
     await this.getOrThrow(campaignId, ownerId, admin);
-    // 0918 清洗：可派生键的空值不入库（编辑器「恢复自动」= 删手录值，下次 GET 重新派生）
-    const cleaned: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(analytics)) {
-      const empty = v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0)
-        || (typeof v === 'object' && v !== null && Object.keys(v as object).length === 0 && k === 'customerSplit');
-      if (empty) continue;
-      cleaned[k] = v;
-    }
     return prisma.campaign.update({
       where: { id: campaignId },
-      data: { analytics: cleaned as Prisma.InputJsonValue },
+      data: { analytics: analytics as Prisma.InputJsonValue },
       select: { analytics: true },
     });
   },
