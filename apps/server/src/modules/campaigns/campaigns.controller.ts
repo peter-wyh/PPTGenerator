@@ -50,7 +50,7 @@ export const campaignController = {
   // ─── Analytics ───────────────────────────────────────────────────────────────
   getAnalytics: asyncHandler(async (req: Request, res: Response) => {
     const v = req.user as AuthPayload;
-    res.json({ analytics: await campaignService.getAnalytics(req.params.campaignId, v.id, v.role === 'ADMIN') });
+    res.json(await campaignService.getAnalytics(req.params.campaignId, v.id, v.role === 'ADMIN'));
   }),
 
   updateAnalytics: asyncHandler(async (req: Request, res: Response) => {
