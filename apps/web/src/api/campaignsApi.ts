@@ -235,8 +235,14 @@ export const campaignsApi = {
       .then((r) => r.data.collaboration),
 
   // Analytics (Campaign 级分析数据)
+  /** GET 三件套：analytics=手录 / derived=读时派生(不落库) / merged=手录优先合并视图 / auto=各键当前是否派生生效。 */
   getAnalytics: (campaignId: string) =>
-    api.get<{ analytics: Record<string, unknown> | null }>(`/campaigns/${campaignId}/analytics`).then((r) => r.data.analytics),
+    api.get<{
+      analytics: Record<string, unknown> | null;
+      derived: Record<string, { value: unknown; caliber: string }> | null;
+      merged: Record<string, unknown>;
+      auto: Record<string, boolean>;
+    }>(`/campaigns/${campaignId}/analytics`).then((r) => r.data),
   updateAnalytics: (campaignId: string, analytics: Record<string, unknown>) =>
     api.put<{ analytics: Record<string, unknown> }>(`/campaigns/${campaignId}/analytics`, { analytics }).then((r) => r.data.analytics),
 

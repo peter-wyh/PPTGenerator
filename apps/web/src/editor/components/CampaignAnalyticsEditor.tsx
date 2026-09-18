@@ -31,15 +31,18 @@ interface Props {
   campaignName?: string;
 }
 
-/** 空白 analytics 初始值。 */
-const EMPTY: CampaignAnalytics = {
-  trend: [],
-  weeklyTrend: [],
-  insights: [],
-};
+/** 空白 analytics 初始值（不再预置空数组——空键会挡住派生合并；必填字段由派生/手录填充）。 */
+const EMPTY: CampaignAnalytics = { trend: [], weeklyTrend: [], insights: [] } as const;
+
+/** 可派生键集合（与 server DERIVABLE_KEYS 对齐；auto=true 时保存跳过落库）。 */
+const DERIVABLE_KEY_SET = new Set(['trend', 'weeklyTrend', 'customerSplit', 'newCustomers', 'topMarkets', 'topProducts', 'topCategories', 'aov']);
 
 export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
   const [data, setData] = useState<CampaignAnalytics>(EMPTY);
+  /** 各派生键当前是否为派生生效（true=自动；false=手录覆盖）。 */
+  const [auto, setAuto] = useState<Record<string, boolean>>({});
+  /** 派生块口径注记（key → caliber 文案）。 */
+  const [calibers, setCalibers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -47,8 +50,15 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const raw = await campaignsApi.getAnalytics(campaignId);
-      setData((raw as unknown as CampaignAnalytics) ?? EMPTY);
+      const res = await campaignsApi.getAnalytics(campaignId);
+      const manual = (res.analytics as unknown as CampaignAnalytics) ?? EMPTY;
+      const merged = (res.merged as unknown as CampaignAnalytics) ?? manual;
+      // 展示用合并视图（派生生效的块显示派生值）；保存只提交手录字段
+      setData({ ...merged, competitors: manual.competitors, mediaPlacements: manual.mediaPlacements, promotionOffers: manual.promotionOffers, insights: manual.insights });
+      setAuto(res.auto ?? {});
+      const cb: Record<string, string> = {};
+      for (const [k, v] of Object.entries(res.derived ?? {})) cb[k] = v.caliber;
+      setCalibers(cb);
       setError('');
     } catch {
       setError('加载分析数据失败');
@@ -62,13 +72,38 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
   async function save() {
     setSaving(true);
     try {
-      await campaignsApi.updateAnalytics(campaignId, data as unknown as Record<string, unknown>);
+      // 保存 = 手录意图快照：全部键透传，仅排除「派生生效中」的键（auto=true 不落库，保持自动）
+      const payload: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(data as unknown as Record<string, unknown>)) {
+        if (v === undefined) continue;
+        if (DERIVABLE_KEY_SET.has(k) && auto[k]) continue;
+        payload[k] = v;
+      }
+      // mediaPlacements 由广告位截图页维护，编辑器只读透传（保存原样带回，防全量覆盖丢失）
+      if (data.mediaPlacements) payload.mediaPlacements = data.mediaPlacements;
+      await campaignsApi.updateAnalytics(campaignId, payload);
       setError('');
+      await load(); // 重载拿最新 auto 标记
     } catch {
       setError('保存失败');
     } finally {
       setSaving(false);
     }
+  }
+
+  /** 派生键转手填：清 auto 标记（当前派生值作为起始值可改），保存时落库。 */
+  function toManual(key: string) {
+    setAuto((a) => ({ ...a, [key]: false }));
+  }
+
+  /** 手填恢复自动：清本地值，保存（空值被 server 清洗）后重载派生。 */
+  function toAuto(key: string) {
+    setAuto((a) => ({ ...a, [key]: true }));
+    setData((d) => {
+      const next = { ...d } as unknown as Record<string, unknown>;
+      delete next[key];
+      return next as unknown as CampaignAnalytics;
+    });
   }
 
   if (loading) return <div className="py-8 text-center text-sm text-foreground-muted">加载中…</div>;
@@ -81,7 +116,7 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
           <h3 className="text-sm skin-fw-heading text-foreground">
             分析数据 · {campaignName ?? campaignId.slice(0, 8)}
           </h3>
-          <p className="text-xs text-foreground-muted mt-0.5">Campaign Analytics — 品类 / 产品 / 地域 / 优惠码 / 新客 / 客单价</p>
+          <p className="text-xs text-foreground-muted mt-0.5">Campaign Analytics — 品类 / 产品 / 地域 / 优惠码 / 新客 / 客单价 · <span className="text-emerald-600">绿标「自动」</span>= 从订单数据读时派生（订单更新自动刷新，不落快照）</p>
         </div>
         <button
           onClick={save}
@@ -96,10 +131,32 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
       {/* KPI 行：New Customers + AOV */}
       <Section title="KPI 补充" desc="DG 报告核心指标">
         <div className="grid grid-cols-2 skin-gap-md">
-          <Field label="New Customer Acquisition" value={String(data.newCustomers ?? '')}
-            onChange={(v) => setData({ ...data, newCustomers: parseInt(v) || 0 })} placeholder="1,604" />
-          <Field label="AOV（客单价）" value={data.aov ?? ''}
-            onChange={(v) => setData({ ...data, aov: v })} placeholder="$189" />
+          {auto.newCustomers ? (
+            <div>
+              <span className="text-[10px] text-foreground-muted mb-1 block">New Customer Acquisition</span>
+              <div className="border border-dashed border-border-subtle rounded px-2 py-1.5 text-xs skin-fw-heading">{data.newCustomers ?? '—'}</div>
+              <p className="text-[10px] text-foreground-muted mt-0.5">{calibers.newCustomers}</p>
+            </div>
+          ) : (
+            <Field label="New Customer Acquisition" value={String(data.newCustomers ?? '')}
+              onChange={(v) => setData({ ...data, newCustomers: parseInt(v) || 0 })} placeholder="1,604" />
+          )}
+          {auto.aov ? (
+            <div>
+              <span className="text-[10px] text-foreground-muted mb-1 block">AOV（客单价）</span>
+              <div className="border border-dashed border-border-subtle rounded px-2 py-1.5 text-xs skin-fw-heading">{data.aov ?? '—'}</div>
+              <p className="text-[10px] text-foreground-muted mt-0.5">{calibers.aov}</p>
+            </div>
+          ) : (
+            <Field label="AOV（客单价）" value={data.aov ?? ''}
+              onChange={(v) => setData({ ...data, aov: v })} placeholder="$189" />
+          )}
+        </div>
+        <div className="mt-2 flex gap-4">
+          <AutoBadge isAuto={!!auto.newCustomers} caliber={calibers.newCustomers}
+            onToManual={() => toManual('newCustomers')} onToAuto={() => toAuto('newCustomers')} />
+          <AutoBadge isAuto={!!auto.aov} caliber={calibers.aov}
+            onToManual={() => toManual('aov')} onToAuto={() => toAuto('aov')} />
         </div>
       </Section>
 
@@ -109,6 +166,11 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
         items={data.topCategories ?? []}
         onChange={(items) => setData({ ...data, topCategories: items })}
         newItem={() => ({ name: '', share: 0 })}
+        badge={<AutoBadge isAuto={!!auto.topCategories} caliber={calibers.topCategories}
+          onToManual={() => toManual('topCategories')} onToAuto={() => toAuto('topCategories')} />}
+        autoBody={auto.topCategories ? (
+          <DerivedRows rows={(data.topCategories ?? []).map((c) => ({ label: c.name, value: `${c.share ?? 0}% · ${c.revenue ?? ''}` }))} />
+        ) : undefined}
         renderRow={(item, onChange) => (
           <>
             <input className="flex-1 min-w-0 border rounded px-2 py-1 text-xs" value={item.name}
@@ -126,6 +188,11 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
         items={data.topProducts ?? []}
         onChange={(items) => setData({ ...data, topProducts: items })}
         newItem={() => ({ name: '', revenue: '' })}
+        badge={<AutoBadge isAuto={!!auto.topProducts} caliber={calibers.topProducts}
+          onToManual={() => toManual('topProducts')} onToAuto={() => toAuto('topProducts')} />}
+        autoBody={auto.topProducts ? (
+          <DerivedRows rows={(data.topProducts ?? []).map((p) => ({ label: `${p.name}${p.category ? ` · ${p.category}` : ''}`, value: p.revenue ?? '' }))} />
+        ) : undefined}
         renderRow={(item, onChange) => (
           <>
             <input className="flex-[2] min-w-0 border rounded px-2 py-1 text-xs" value={item.name}
@@ -142,6 +209,11 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
         items={data.topMarkets ?? []}
         onChange={(items) => setData({ ...data, topMarkets: items })}
         newItem={() => ({ name: '', revenue: '', share: 0 })}
+        badge={<AutoBadge isAuto={!!auto.topMarkets} caliber={calibers.topMarkets}
+          onToManual={() => toManual('topMarkets')} onToAuto={() => toAuto('topMarkets')} />}
+        autoBody={auto.topMarkets ? (
+          <DerivedRows rows={(data.topMarkets ?? []).map((m) => ({ label: m.name, value: `${m.share ?? 0}% · ${m.revenue ?? ''}` }))} />
+        ) : undefined}
         renderRow={(item, onChange) => (
           <>
             <input className="flex-[2] min-w-0 border rounded px-2 py-1 text-xs" value={item.name}
@@ -181,6 +253,19 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
         items={data.trend ?? []}
         onChange={(items) => setData({ ...data, trend: items })}
         newItem={() => ({ date: '', revenue: 0, spend: 0, commission: 0, orders: 0, roas: 0 })}
+        badge={<AutoBadge isAuto={!!auto.trend} caliber={calibers.trend}
+          onToManual={() => toManual('trend')} onToAuto={() => toAuto('trend')} />}
+        autoBody={auto.trend ? (
+          <div>
+            <DerivedRows rows={[
+              { label: '统计天数', value: (data.trend ?? []).length },
+              { label: '日期范围', value: (data.trend ?? []).length ? `${(data.trend ?? [])[0].date} ~ ${(data.trend ?? [])[(data.trend ?? []).length - 1].date}` : '—' },
+              { label: 'Σ 订单', value: (data.trend ?? []).reduce((s, p) => s + p.orders, 0).toLocaleString() },
+              { label: 'Σ 佣金（Revenue 口径）', value: '$' + Math.round((data.trend ?? []).reduce((s, p) => s + p.commission, 0)).toLocaleString() },
+            ]} />
+            <p className="text-[10px] text-foreground-muted mt-1.5">{calibers.trend} · 明细 { (data.trend ?? []).length } 天逐日序列随生成链注入（dailyTrend），此处只展示汇总。</p>
+          </div>
+        ) : undefined}
         renderRow={(item, onChange) => (
           <>
             <input className="w-28 border rounded px-2 py-1 text-xs" value={item.date}
@@ -199,17 +284,38 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
 
       {/* Customer Split — 新老客分析 */}
       <Section title="New Customer Analysis" desc="新老客占比与环比变化">
-        <div className="grid grid-cols-3 skin-gap-md">
-          <Field label="New Customers" value={String(data.customerSplit?.newCustomers ?? data.newCustomers ?? '')}
-            onChange={(v) => setData({ ...data, newCustomers: parseInt(v) || 0, customerSplit: { ...(data.customerSplit ?? { newCustomers: 0, returningCustomers: 0, newCustomerRate: '' }), newCustomers: parseInt(v) || 0 } })}
-            placeholder="1,604" />
-          <Field label="Returning Customers" value={String(data.customerSplit?.returningCustomers ?? '')}
-            onChange={(v) => setData({ ...data, customerSplit: { ...(data.customerSplit ?? { newCustomers: data.newCustomers ?? 0, returningCustomers: 0, newCustomerRate: '' }), returningCustomers: parseInt(v) || 0 } })}
-            placeholder="3,032" />
-          <Field label="New Customer Rate" value={data.customerSplit?.newCustomerRate ?? ''}
-            onChange={(v) => setData({ ...data, customerSplit: { ...(data.customerSplit ?? { newCustomers: data.newCustomers ?? 0, returningCustomers: 0, newCustomerRate: '' }), newCustomerRate: v } })}
-            placeholder="34.6%" />
-        </div>
+        {auto.customerSplit ? (
+          <div>
+            <DerivedRows rows={[
+              { label: 'New Customers', value: (data.customerSplit?.newCustomers ?? 0).toLocaleString() },
+              { label: 'Returning Customers', value: (data.customerSplit?.returningCustomers ?? 0).toLocaleString() },
+              { label: 'New Customer Rate', value: data.customerSplit?.newCustomerRate ?? '—' },
+            ]} />
+            <p className="text-[10px] text-foreground-muted mt-1.5">{calibers.customerSplit}</p>
+            <div className="mt-2">
+              <AutoBadge isAuto={!!auto.customerSplit} caliber={calibers.customerSplit}
+                onToManual={() => toManual('customerSplit')} onToAuto={() => toAuto('customerSplit')} />
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 skin-gap-md">
+              <Field label="New Customers" value={String(data.customerSplit?.newCustomers ?? data.newCustomers ?? '')}
+                onChange={(v) => setData({ ...data, newCustomers: parseInt(v) || 0, customerSplit: { ...(data.customerSplit ?? { newCustomers: 0, returningCustomers: 0, newCustomerRate: '' }), newCustomers: parseInt(v) || 0 } })}
+                placeholder="1,604" />
+              <Field label="Returning Customers" value={String(data.customerSplit?.returningCustomers ?? '')}
+                onChange={(v) => setData({ ...data, customerSplit: { ...(data.customerSplit ?? { newCustomers: data.newCustomers ?? 0, returningCustomers: 0, newCustomerRate: '' }), returningCustomers: parseInt(v) || 0 } })}
+                placeholder="3,032" />
+              <Field label="New Customer Rate" value={data.customerSplit?.newCustomerRate ?? ''}
+                onChange={(v) => setData({ ...data, customerSplit: { ...(data.customerSplit ?? { newCustomers: data.newCustomers ?? 0, returningCustomers: 0, newCustomerRate: '' }), newCustomerRate: v } })}
+                placeholder="34.6%" />
+            </div>
+            <div className="mt-2">
+              <AutoBadge isAuto={false} caliber={calibers.customerSplit}
+                onToManual={() => toManual('customerSplit')} onToAuto={() => toAuto('customerSplit')} />
+            </div>
+          </>
+        )}
       </Section>
 
       {/* Actionable Insights — DG 报告 5 列洞察卡片 */}
@@ -297,12 +403,52 @@ export function CampaignAnalyticsEditor({ campaignId, campaignName }: Props) {
 
 /* ─── Sub-components ─────────────────────────────────────────────────────── */
 
-function Section({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
+/** 自动/手录徽标 + 切换按钮（派生能力块通用）。 */
+function AutoBadge({ isAuto, caliber, onToManual, onToAuto }: {
+  isAuto: boolean;
+  caliber?: string;
+  onToManual: () => void;
+  onToAuto: () => void;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {isAuto ? (
+        <>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600" title={caliber}>自动</span>
+          <button type="button" className="text-[10px] text-accent hover:underline" onClick={onToManual}>转为手填</button>
+        </>
+      ) : (
+        <>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600" title={caliber}>手填</span>
+          <button type="button" className="text-[10px] text-accent hover:underline" onClick={onToAuto}>恢复自动</button>
+        </>
+      )}
+    </span>
+  );
+}
+
+/** 派生块只读渲染（自动模式下替代可编辑行——派生值不落库，避免手改出双源）。 */
+function DerivedRows({ rows }: { rows: { label: string; value: React.ReactNode }[] }) {
+  if (!rows.length) return <p className="text-[11px] text-foreground-muted">无可派生数据（订单未导入或无该维度）。</p>;
+  return (
+    <div className="space-y-1">
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center justify-between text-xs border border-dashed border-border-subtle rounded px-2 py-1">
+          <span className="truncate">{r.label}</span>
+          <span className="skin-fw-heading text-foreground shrink-0 ml-2">{r.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Section({ title, desc, children, badge }: { title: string; desc: string; children: React.ReactNode; badge?: React.ReactNode }) {
   return (
     <div className="border border-border-subtle rounded-lg p-4">
       <div className="flex items-baseline skin-gap-sm mb-3">
         <span className="text-xs skin-fw-heading text-foreground">{title}</span>
         <span className="text-[10px] text-foreground-muted">{desc}</span>
+        {badge && <span className="ml-auto">{badge}</span>}
       </div>
       {children}
     </div>
@@ -326,26 +472,31 @@ interface ListSectionProps<T> {
   onChange: (items: T[]) => void;
   newItem: () => T;
   renderRow: (item: T, onChange: (updated: T) => void) => React.ReactNode;
+  /** 自动模式：徽标节点 + 只读体（替代可编辑行）。 */
+  badge?: React.ReactNode;
+  autoBody?: React.ReactNode;
 }
 
-function ListSection<T>({ title, desc, items, onChange, newItem, renderRow }: ListSectionProps<T>) {
+function ListSection<T>({ title, desc, items, onChange, newItem, renderRow, badge, autoBody }: ListSectionProps<T>) {
   return (
-    <Section title={title} desc={desc}>
-      <div className="space-y-1.5">
-        {items.map((item, i) => (
-          <div key={i} className="flex items-center skin-gap-sm">
-            {renderRow(item, (updated) => {
-              const next = [...items];
-              next[i] = updated;
-              onChange(next);
-            })}
-            <button className="text-foreground-muted hover:text-red-500 text-xs px-1 shrink-0"
-              onClick={() => onChange(items.filter((_, j) => j !== i))}>✕</button>
-          </div>
-        ))}
-        <button className="text-xs text-accent hover:underline mt-1"
-          onClick={() => onChange([...items, newItem()])}>+ 添加</button>
-      </div>
+    <Section title={title} desc={desc} badge={badge}>
+      {autoBody ?? (
+        <div className="space-y-1.5">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center skin-gap-sm">
+              {renderRow(item, (updated) => {
+                const next = [...items];
+                next[i] = updated;
+                onChange(next);
+              })}
+              <button className="text-foreground-muted hover:text-red-500 text-xs px-1 shrink-0"
+                onClick={() => onChange(items.filter((_, j) => j !== i))}>✕</button>
+            </div>
+          ))}
+          <button className="text-xs text-accent hover:underline mt-1"
+            onClick={() => onChange([...items, newItem()])}>+ 添加</button>
+        </div>
+      )}
     </Section>
   );
 }
