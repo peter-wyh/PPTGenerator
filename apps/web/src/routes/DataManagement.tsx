@@ -33,6 +33,7 @@ const MENUS: { group: string; items: MenuItem[] }[] = [
         children: [
           { path: '/data/stats/orders', label: '订单按日' },
           { path: '/data/stats/publisher', label: '媒体×日' },
+          { path: '/data/campaign-analytics', label: '分析数据' },
         ],
       },
     ],

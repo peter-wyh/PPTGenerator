@@ -364,6 +364,12 @@ function CampaignList({
                     >
                       查看数据
                     </button>
+                    <button
+                      onClick={() => navigate(`/data/campaign-analytics?campaignId=${d.id}`)}
+                      className="text-xs text-accent-primary hover:underline"
+                    >
+                      分析数据
+                    </button>
                     <button onClick={() => onEdit(d)} className="text-xs text-accent-primary hover:underline">
                       编辑
                     </button>
