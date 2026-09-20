@@ -4,6 +4,24 @@
 --   cc 为空 = 纯媒体行（无合作挂载）；cc 非空 = 合作行切片。
 -- 媒体视图 = GROUP BY (publisher, date)；CPS 视图 = WHERE campaignCreatorId 非空。
 
+-- 可移植性补丁（0920）：CreatorCpsDailyStat 当年经 db push 临时建表、从未进迁移链，
+-- 全新库（如 mediakit_test 线性重放）无此表会 1146。已应用过本迁移的库不受影响
+-- （表存在则 IF NOT EXISTS 跳过；表不存在则建空桩，下方 INSERT...SELECT 自然 0 行，DROP 照常）。
+CREATE TABLE IF NOT EXISTS `CreatorCpsDailyStat` (
+  `id` VARCHAR(191) NOT NULL,
+  `campaignId` VARCHAR(191) NOT NULL,
+  `campaignCreatorId` VARCHAR(191) NULL,
+  `statDate` DATETIME(3) NOT NULL,
+  `clicks` INT NOT NULL DEFAULT 0,
+  `impressions` INT NOT NULL DEFAULT 0,
+  `orders` INT NOT NULL DEFAULT 0,
+  `gmv` DECIMAL(18,2) NOT NULL DEFAULT 0,
+  `commission` DECIMAL(18,2) NOT NULL DEFAULT 0,
+  `newCustomerOrders` INT NOT NULL DEFAULT 0,
+  `recomputedAt` DATETIME(3) NULL,
+  PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 ALTER TABLE `PublisherDailyStat`
   ADD COLUMN `campaignCreatorId` VARCHAR(191) NULL,
   ADD COLUMN `newCustomerOrders` INT NOT NULL DEFAULT 0,
