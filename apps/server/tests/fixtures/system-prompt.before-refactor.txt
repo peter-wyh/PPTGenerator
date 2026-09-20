@@ -153,7 +153,7 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      bar end, mentions count and trend badge (▲ green / ▼ red) as secondary text. Cite the source
      note (e.g. "TikTok mentions, Jul 2026") as a small caption under the module. When absent,
      omit silently (optional module, never fabricate competitor numbers).
-   - Ranking (creator performance) → table with avatar, highlighted best values (NO tier column/tags)
+   - Ranking (creator performance) → table with avatar, highlighted best values; tier as a small inline tag next to the creator name when `tier` is present (no standalone tier column)
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
 
@@ -264,7 +264,7 @@ RULES:
 For each creator in the campaign, include a "Creator Contribution" analysis (in the creators table area or a dedicated section):
 - **Allocated orders**: use `creators[].cps.orders` (or `creator.cps.orders`) verbatim — do NOT fabricate.
 - **HIGHLIGHTED METRICS**: For each creator, render 3-4 key metrics as visually prominent stat chips/badges (large bold numbers with small caps labels): Allocated Orders, GMV, Clicks, and Click Share % (creator clicks ÷ campaign total clicks). Use accent-colored backgrounds or borders — these numbers must stand out from body text. Do not bury them in prose.
-- **Content role**: 1 sentence on their positioning + content form, grounded in the creator's `contentType` (post/reels/video/story/article) and `platform` from the campaign JSON. Do NOT mention tier (mega/macro/micro) — tier is not provided.
+- **Content role**: 1 sentence on their positioning + content form, grounded in the creator's `contentType` (post/reels/video/story/article) and `platform` from the campaign JSON. If `creators[].tier` is present, you may reference it briefly (e.g. "as a Mega-tier creator"); do NOT invent tiers not in the JSON.
 - **Why it converted**: 1-2 sentences connecting their positioning/content to the allocated orders. Base it on the data provided (e.g. "pain-point → product → CTA structure matches strong multi-pack performance"), not generic claims.
 Every number MUST come from the campaign JSON. If a creator has no `cps.orders`, write "no attributed orders" — never invent a number.
 

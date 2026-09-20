@@ -241,7 +241,7 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      bar end, mentions count and trend badge (▲ green / ▼ red) as secondary text. Cite the source
      note (e.g. "TikTok mentions, Jul 2026") as a small caption under the module. When absent,
      omit silently (optional module, never fabricate competitor numbers).
-   - Ranking (creator performance) → table with avatar, highlighted best values (NO tier column/tags)
+   - Ranking (creator performance) → table with avatar, highlighted best values; tier as a small inline tag next to the creator name when \`tier\` is present (no standalone tier column)
    - Insights → card grid with icons, colored top borders
    - Footer (ALWAYS): brand attribution + generation date
 
@@ -347,7 +347,7 @@ RULES:
 For each creator in the campaign, include a "Creator Contribution" analysis (in the creators table area or a dedicated section):
 - **Allocated orders**: use \`creators[].cps.orders\` (or \`creator.cps.orders\`) verbatim — do NOT fabricate.
 - **HIGHLIGHTED METRICS**: For each creator, render 3-4 key metrics as visually prominent stat chips/badges (large bold numbers with small caps labels): Allocated Orders, GMV, Clicks, and Click Share % (creator clicks ÷ campaign total clicks). Use accent-colored backgrounds or borders — these numbers must stand out from body text. Do not bury them in prose.
-- **Content role**: 1 sentence on their positioning + content form, grounded in the creator's \`contentType\` (post/reels/video/story/article) and \`platform\` from the campaign JSON. Do NOT mention tier (mega/macro/micro) — tier is not provided.
+- **Content role**: 1 sentence on their positioning + content form, grounded in the creator's \`contentType\` (post/reels/video/story/article) and \`platform\` from the campaign JSON. If \`creators[].tier\` is present, you may reference it briefly (e.g. "as a Mega-tier creator"); do NOT invent tiers not in the JSON.
 - **Why it converted**: 1-2 sentences connecting their positioning/content to the allocated orders. Base it on the data provided (e.g. "pain-point → product → CTA structure matches strong multi-pack performance"), not generic claims.
 Every number MUST come from the campaign JSON. If a creator has no \`cps.orders\`, write "no attributed orders" — never invent a number.
 
@@ -535,7 +535,7 @@ IMPORTANT:
 - DATE RANGE: Use campaign.period EXACTLY as the report's date range (e.g. "2026-07-01 ~ 2026-08-31"). Do NOT use today's date.
 - For the Performance Trend chart, use the "dailyTrend" array directly as chart data (date labels + revenue/orders values).
 - The "creators" array provides creator PROFILES (name, avatar, platform, contentType, showcase screenshots) for cards/showcase sections. Do NOT render a standalone creator/social performance TABLE from creators[].performance.
-- MEDIA BREAKDOWN TABLE (the ONLY performance table): When "allMedia" array is present, it MUST be the table's data source — one row per media (ALL publishers: creators + media sites + communities + content sites). COLUMNS FOLLOW THE BUSINESS LINE GUIDE: if the guide specifies the table's columns (e.g. only Orders/Sales as metric columns), obey it EXACTLY — do not add extra metric columns the guide did not list. Where the guide is silent, default columns: Media name, Type, Platform, Clicks, Orders, GMV (or Revenue), Commission; creator-type rows may carry social fields (posts/engagement/impressions/engRate) as additional columns. Sort as given (by orders desc). Media with type "creator" show the creator name; others show the site name. When allMedia is absent, fall back to the creators array. NEVER add a Tier column. The report must contain EXACTLY ONE media/creator performance table — do NOT render a second table (e.g. "Content Performance") for the same media/creators; merge those social metrics into the single table instead.
+- MEDIA BREAKDOWN TABLE (the ONLY performance table): When "allMedia" array is present, it MUST be the table's data source — one row per media (ALL publishers: creators + media sites + communities + content sites). COLUMNS FOLLOW THE BUSINESS LINE GUIDE: if the guide specifies the table's columns (e.g. only Orders/Sales as metric columns), obey it EXACTLY — do not add extra metric columns the guide did not list. Where the guide is silent, default columns: Media name, Type, Platform, Clicks, Orders, GMV (or Revenue), Commission; creator-type rows may carry social fields (posts/engagement/impressions/engRate) as additional columns. Sort as given (by orders desc). Media with type "creator" show the creator name; others show the site name. When allMedia is absent, fall back to the creators array. For creator-type rows, when \`allMedia[].tier\` is present you MUST render a small inline tier tag next to the creator name (e.g. "Mega", uppercase form of the tier value); when it is null/absent, fall back to extracting a tier hint from the matched \`mediaPlacements[].description\` (guide rule), and if still none, omit the tag — never invent a tier. Do NOT add a standalone Tier column. The report must contain EXACTLY ONE media/creator performance table — do NOT render a second table (e.g. "Content Performance") for the same media/creators; merge those social metrics into the single table instead.
 - If avatarUrl is null, use a colored circle with the creator's first letter initial instead of a placeholder image URL.
 - If a creator's performance is null, still include them in the table with "—" for all metric values.
 
@@ -1609,7 +1609,7 @@ export const aiGenerateService = {
     //   含未挂达人合作行的 media_site/community/content_site。creator 类型标注达人名。
     const allMediaCps = syncSource; // 查询去重：allMedia 与 creators 聚合同源（LP 流量 + 订单归因）
     const allMedia = (() => {
-      const byPub = new Map<string, { name: string; type: string; platform: string | null; creatorName: string | null; clicks: number; orders: number; gmv: number; commission: number; posts?: number; engagement?: number; impressions?: number; engRate?: number }>();
+      const byPub = new Map<string, { name: string; type: string; platform: string | null; creatorName: string | null; tier?: string | null; clicks: number; orders: number; gmv: number; commission: number; posts?: number; engagement?: number; impressions?: number; engRate?: number }>();
       const inPeriod2 = (d: string) => (!reportPeriod?.startDate || d >= reportPeriod.startDate) && (!reportPeriod?.endDate || d <= reportPeriod.endDate);
       // ★ PLATFORM 修复（0827）：publisher.platform 常为 NULL（达人型媒体的平台真源在 Creator 表），
       //   经 LP.campaignCreatorId 闭环 FK 反查 cc.creator.platform 兜底；非达人型媒体保持 publisher.platform。
@@ -1655,6 +1655,10 @@ export const aiGenerateService = {
         if (target && target.creatorName === null) {
           target.orders += ccPeriod.orders; target.gmv += ccPeriod.gmv; target.commission += ccPeriod.commission;
           target.creatorName = name;
+          // ★ 0920 Slide2 tier-pill 真源（达人列表透出层级）：allMedia 创作者行注入
+          //   结构化 tier（Creator 表真值）。此前 Slide2 pill 只能从 mediaPlacements[].description
+          //   猜词提取，同名/缺词即漏标；结构化值优先，description 提取仅作兜底。
+          target.tier = cc.creator?.tier ?? null;
           // ★ 社媒列合并（0827 修双表）：creators[].performance.summary 的社媒指标
           //   （posts/engagement/impressions/engRate）并入 allMedia 行——一张表全含，
           //   AI 不再需要从 creators 数组派生第二张 "Content Performance" 表。
@@ -1898,7 +1902,9 @@ export const aiGenerateService = {
             engagementRate: cc.creator?.engagement ?? null,
             creatorCategory: cc.creator?.category ?? null,
             creatorRegion: cc.creator?.region ?? null,
-            // ★ tier 不再注入（0826 用户要求：报告不透出 TIER 字段）
+            // ★ 0920 tier 重新注入（用户指令放开 0826 禁令）：KPI 聚合（如 Mega Influencers 数量）
+            //   与 tier-pill 需要真源；行级展示口径由 prompt 约束（小标签，不加独立列）。
+            tier: cc.creator?.tier ?? null,
             contentType: cc.contentType,
             collabType: cc.collabType,
             totalPrice: cc.totalPrice,
