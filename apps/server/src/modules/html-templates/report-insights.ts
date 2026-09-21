@@ -211,7 +211,7 @@ export function buildExecSummary(input: ExecSummaryInput): { highlights: ExecCan
 
   // ── 峰值日 ──
   if (input.trendPeak) {
-    const label = new Date(input.trendPeak.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const label = new Date(`${input.trendPeak.date}T00:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
     highlights.push({
       key: 'peakDay', label: 'Peak Day',
       value: `${fmtMoneyL(input.trendPeak.revenue)} on ${label}`,
