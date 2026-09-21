@@ -491,7 +491,8 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
     expect(json).toContain('"date": "2026-08-02"');
     expect(json).toContain('"vsAvgMultiple": 1.7'); // 500 / ((100+500)/2)
     expect(json).toContain('"topCreator"');          // LP 路径可归因（Mia 100% ≥ 20%）
-    expect(json).toContain('"name": "Mia"');
+    // 归因真验证（scoped 到 trendPeak 块——creators[] 也叫 Mia，全文 contains 会假通过；T4 execSummary 注入 topCreator 后也需仍成立）
+    expect(json).toMatch(/"trendPeak"[\s\S]*?"topCreator"[\s\S]*?"sharePct": 100/);
   });
 
   it('★中间层路径 trendPeak 无 topCreator（口径门控）+ 上月序列走订单表', async () => {
@@ -512,9 +513,9 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
       ])
       .mockResolvedValueOnce([]);
     const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
-    // trendPeak 存在但无 topCreator（OrderDailyStat 无达人×日维度）
+    // trendPeak 存在但无 topCreator（OrderDailyStat 无达人×日维度）——scoped：T4 execSummary 也会带 topCreator，全文 not.toContain 会假失败
     expect(json).toContain('"trendPeak"');
-    expect(json).not.toContain('"topCreator"');
+    expect(json).not.toMatch(/"trendPeak"[\s\S]*?"topCreator"/);
     // 上月序列 revenue/orders 走订单表口径（7/5 commission=50）
     expect(json).toMatch(/"priorPeriod"[\s\S]*?"dailyTrend": \[[^]*?"date": "2026-07-05"[^]*?"revenue": 50/s);
   });
