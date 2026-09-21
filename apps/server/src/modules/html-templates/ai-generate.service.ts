@@ -9,7 +9,7 @@ import type { GuideCssBundle } from '../guides/guide-css-asset';
 import { extractGuideChecks, runGuideChecks } from './guide-checks.bridge';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { loadCreatorCps } from './cps-source';
-import { buildTrendPeak, peakDayTopCreator, resolvePriorWindow, type TrendPeak } from './report-insights';
+import { buildExecSummary, buildTrendPeak, peakDayTopCreator, resolvePriorWindow, type TrendPeak } from './report-insights';
 import { devSafeBase } from '../../utils/dev-safe-base';
 import { campaignService } from '../campaigns/campaigns.service';
 import { orderStatsService } from '../campaigns/order-stats.service';
@@ -1077,6 +1077,13 @@ export const aiGenerateService = {
         detail: hasPrior ? '前一期有数据，可计算环比' : '前一期无数据（首期报告属正常）',
       },
       {
+        // ★ 0921 月报迭代：Executive Summary 确定性候选（MoM / 达人 / 渠道 / 峰值 / pending / 缺口）
+        key: 'execSummary',
+        label: 'Executive Summary',
+        status: (hasPeriod ? cov.covered !== null || orderStatDays > 0 : activeCreators > 0) ? 'ok' : 'missing',
+        detail: hasPeriod ? '期内确定性候选（MoM / 达人 / 渠道 / 峰值）' : `${activeCreators} 位达人汇总口径候选`,
+      },
+      {
         // ★ 0827 口径对齐 placementGroups：无图条目剔除后无可用截图 → missing（模块隐藏）
         key: 'placementGroups',
         label: 'Campaign Placements',
@@ -1727,6 +1734,61 @@ export const aiGenerateService = {
       return [...byPub.values()].filter((p) => p.clicks > 0 || p.orders > 0).sort((a, b) => b.orders - a.orders || b.clicks - a.clicks);
     })();
 
+    // ★ 0921 Executive Summary 候选（spec §1.3）：全部确定性预计算，AI 只挑选与叙述。
+    //   creators 口径与 periodKpis 一致：中间层路径 gmv 换 commission（与下方 creators 上下文同款覆盖）。
+    const execCreators = (hasPeriod && cov.covered
+      ? campaign.campaignCreators.map((cc: any) => {
+          const s = perCreatorSums.get(cc.id) ?? { clicks: 0, gmv: 0, orders: 0 };
+          const oc = orderStats?.byCreator.get(cc.id);
+          return {
+            name: cc.creator?.name ?? 'Unknown',
+            platform: cc.creator?.platform ?? null,
+            clicks: s.clicks,
+            orders: oc ? oc.orders : s.orders,
+            gmv: oc ? oc.commission : s.gmv,
+          };
+        })
+      : // 汇总口径（无 period / 未覆盖）→ 聚合列候选（无 MoM/峰值/pending）
+        campaign.campaignCreators.map((cc: any) => {
+          const e = syncSource?.byCc.get(cc.id);
+          return {
+            name: cc.creator?.name ?? 'Unknown',
+            platform: cc.creator?.platform ?? null,
+            clicks: e?.clicks ?? 0,
+            orders: e?.orders ?? 0,
+            gmv: e?.gmv ?? 0,
+          };
+        })
+    );
+    const execCurrent = priorPeriod
+      ? {
+          revenue: orderStats ? orderStats.totals.commission : total.gmv,
+          orders: orderStats ? orderStats.totals.orders : total.orders,
+          clicks: (clicksKeySeen || clicksFallback) ? total.clicks : null,
+        }
+      : undefined;
+    const execPrior = priorPeriod
+      ? {
+          revenue: priorPeriod.priorKpis.revenues,
+          orders: priorPeriod.priorKpis.orders,
+          clicks: priorPeriod.priorKpis.clicks >= 0 ? priorPeriod.priorKpis.clicks : null, // -1 = 概念不适用
+        }
+      : undefined;
+    const execSummary = buildExecSummary({
+      creators: execCreators,
+      ...(execCurrent ? { current: execCurrent } : {}),
+      ...(execPrior ? { prior: execPrior } : {}),
+      trendPeak,
+      ...(orderStats?.totals.pendingOrders ? { pendingOrders: orderStats.totals.pendingOrders } : {}),
+      ...(orderStats?.totals.hasNewCustomerTag
+        ? { newCustomers: { count: orderStats.totals.newCustomers, orders: orderStats.totals.orders } }
+        : (!orderStats && total.orders > 0 && total.newCustomers > 0
+            ? { newCustomers: { count: total.newCustomers, orders: total.orders } }
+            : {})),
+      ...(periodDataGaps.length ? { dataGaps: [...periodDataGaps] } : {}),
+      ...(caliberCoveragePct !== null ? { caliberCoveragePct } : {}),
+    });
+
     const context = {
       campaign: {
         name: campaign.name,
@@ -1853,6 +1915,8 @@ export const aiGenerateService = {
       ...(priorPeriod ? { priorPeriod } : {}),
       // ★ 0921 峰值事实：趋势最高日 + vs 日均倍数（口径可导出时含峰日达人）。AI 只叙述。
       ...(trendPeak ? { trendPeak } : {}),
+      // ★ 0921 Executive Summary 候选块：highlights/concerns 确定性候选，AI 挑 2-3 + 1（空 → 空态卡）。
+      ...(execSummary ? { execSummary } : {}),
       // ★ 缺口④ 媒体资源位（定性）→ 0827 按达人分组：placementGroups（每组 = 达人/站点 + 其截图列表）。
       //   无图条目已在整形时剔除；全空时字段不注入 → AI 无该模块数据 → 整模块隐藏。
       ...(placementGroups.length ? { placementGroups } : {}),

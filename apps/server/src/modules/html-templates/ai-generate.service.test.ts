@@ -437,6 +437,7 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
       budget: 1, status: 'x', businessLineCode: 'FT', metrics: { clicks: 1 },
       analytics: null, businessLine: { title: 'FT' }, advertiser: { name: 'A' },
       campaignCreators: [{
+        id: 'cc_0', // 与 mockCreatorCps 的 cc.id ?? 'cc_'+i 对齐——execCreators/trendPeak 按 id join perCreatorSums
         creator: { name: 'Mia', platform: 'Instagram', partnerType: 'creator' },
         cpsPerformances: [{ clicks: 0, orders: 0, gmv: 0, spend: 0, commission: 0, impressions: 0,
           daily: [
@@ -492,7 +493,7 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
     expect(json).toContain('"vsAvgMultiple": 1.7'); // 500 / ((100+500)/2)
     expect(json).toContain('"topCreator"');          // LP 路径可归因（Mia 100% ≥ 20%）
     // 归因真验证（scoped 到 trendPeak 块——creators[] 也叫 Mia，全文 contains 会假通过；T4 execSummary 注入 topCreator 后也需仍成立）
-    expect(json).toMatch(/"trendPeak"[\s\S]*?"topCreator"[\s\S]*?"sharePct": 100/);
+    expect(json).toMatch(/"trendPeak": \{[^}]*?"topCreator"[\s\S]*?"sharePct": 100/);
   });
 
   it('★中间层路径 trendPeak 无 topCreator（口径门控）+ 上月序列走订单表', async () => {
@@ -515,7 +516,7 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
     const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
     // trendPeak 存在但无 topCreator（OrderDailyStat 无达人×日维度）——scoped：T4 execSummary 也会带 topCreator，全文 not.toContain 会假失败
     expect(json).toContain('"trendPeak"');
-    expect(json).not.toMatch(/"trendPeak"[\s\S]*?"topCreator"/);
+    expect(json).not.toMatch(/"trendPeak": \{[^}]*?"topCreator"/);
     // 上月序列 revenue/orders 走订单表口径（7/5 commission=50）
     expect(json).toMatch(/"priorPeriod"[\s\S]*?"dailyTrend": \[[^]*?"date": "2026-07-05"[^]*?"revenue": 50/s);
   });
@@ -529,5 +530,29 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
     const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
     expect(json).not.toContain('"priorPeriod"');
     expect(json).toContain('"trendPeak"'); // 当期峰值与上月无关
+  });
+
+  it('★execSummary 注入：topCreator/topPlatform/peakDay 候选 + concerns 块', async () => {
+    const camp = monthCampLp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]); // LP 路径
+    const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    expect(json).toContain('"execSummary"');
+    expect(json).toContain('"highlights"');
+    expect(json).toContain('"key": "topCreator"');   // Mia 期内 gmv 600 全部 → 100% ≥ 20%
+    expect(json).toContain('"key": "topPlatform"');  // Instagram 100% ≥ 30%
+    expect(json).toContain('"key": "peakDay"');
+    expect(json).toContain('"concerns"');
+  });
+
+  it('★getModuleCoverage 含 execSummary 条目', async () => {
+    const camp = monthCampLp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
+    const res = await aiGenerateService.getModuleCoverage('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    const entry = res?.modules.find((m) => m.key === 'execSummary');
+    expect(entry?.status).toBe('ok');
   });
 });
