@@ -88,7 +88,7 @@ describe('report-insights · buildExecSummary', () => {
   it('MoM 正增长(≥+5%)入 highlights；负增长(≤-5%)入 concerns；|pct|<5 不立候选', () => {
     const out = buildExecSummary({
       creators,
-      current: { revenue: 5800, orders: 1100, clicks: 34600 },
+      current: { revenue: 5800, orders: 1100, clicks: 9000 },
       prior: { revenue: 4770, orders: 904, clicks: 10400 },
       trendPeak,
       newCustomers: { count: 380, orders: 1100 },

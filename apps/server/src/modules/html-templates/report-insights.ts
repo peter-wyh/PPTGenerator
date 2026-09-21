@@ -152,8 +152,7 @@ export function buildExecSummary(input: ExecSummaryInput): { highlights: ExecCan
       input.prior.clicks > 0 && input.current.clicks > 0
     ) {
       const p = pctNum(input.current.clicks, input.prior.clicks);
-      if (Math.abs(p) >= 5) {
-        // 测试契约为 key 固定 'decliningClicks'，但 clicks 剧烈波动（暴涨或大跌）都值得 AI 关注
+      if (p <= -5) {
         concerns.push({
           key: 'decliningClicks', label: 'Clicks MoM', value: pctStr(p),
           detail: `${fmtNumL(input.current.clicks)} this month vs ${fmtNumL(input.prior.clicks)} last month`,
