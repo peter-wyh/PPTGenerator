@@ -125,8 +125,25 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
 
 2. MODULE SELECTION: Pick 4-8 modules prioritizing the richest data dimensions:
    - Header (ALWAYS): business line logo + advertiser logo + campaign name + date range
+   - Executive Summary (ALWAYS, FIRST section after the header): the month's key conclusions — 2-3
+     performance highlight cards + 1 concern card, built STRICTLY from the "execSummary" context block
+     (see EXECUTIVE SUMMARY RULES below). When "execSummary" is absent from the context, render a single
+     full-width muted card: "Automated summary unavailable — pending data import".
    - KPI Overview (ALWAYS): extract 3-6 core metrics from metrics/analytics, display as large brand-color number cards
    - Time series (dailyTrend/weeklyTrend) → line chart / area chart / bar chart (Chart.js)
+     * Prior-month overlay: when priorPeriod.dailyTrend is present, overlay the prior-period series in
+       the SAME chart as dashed lines (Chart.js borderDash: [6,6], lighter tint of the same color
+       family), aligned by day-of-month (day 1 of this month pairs with day 1 of last month). Add a
+       legend distinguishing "This Month" vs "Last Month", and next to or below the chart show last
+       month's Revenue/Orders totals with the mom % delta badges from priorPeriod.mom. Days that carry
+       clicks but zero revenue are REAL zeros (a no-sale day), not missing data — narrate them as such.
+       Days with neither clicks nor revenue may be missing data — do not narrate them as zeros.
+     * Peak highlight: when trendPeak is present, emphasize the peak revenue day on the chart (larger
+       pointRadius + a callout label with date and value) and render a "Peak Insight" card below the
+       chart: 1-3 sentences of analysis where every fact is copied from the trendPeak object (date,
+       revenue, vsAvgMultiple, and ONLY the fields actually present in the trendPeak object — missing
+       keys (e.g. clicks, topCreator) are omitted entirely: never mention them and never pad with zeros). When priorPeriod.dailyTrend or trendPeak is absent, omit
+       that enhancement silently (no placeholder).
    - Distribution (topProducts/topMarkets/categories) → doughnut chart / horizontal bar chart / progress bars
      * topProducts rows carry BOTH orders and qty (qty = units sold, ≥ orders for multi-packs) —
        render Top-Selling Products table with separate ORDERS and QTY columns when both exist.
@@ -146,6 +163,13 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      title in white bold text, and a small platform tag chip (top-left, semi-transparent dark pill).
      object-fit:cover, aspect-ratio ~16:10, responsive 2-4 per row. When postUrl exists, make the
      whole card clickable (open in new tab). Entries without screenshots are EXCLUDED server-side.
+     Hover large-image preview (pure CSS, no JavaScript): each card contains a hidden lightbox layer
+     that becomes visible on card :hover — a centered fixed overlay (semi-transparent dark backdrop)
+     showing the SAME screenshot URL at natural aspect ratio (object-fit:contain, max-width: 85vw,
+     max-height: 85vh) with the item title and platform chip. CSS only (:hover + position/opacity
+     transitions); no JavaScript, no navigation behavior. This overlay is exempt from the
+     no-fixed-position layout rule — it is a transient hover preview, not navigation chrome. The
+     card's normal hover-lift and postUrl click behavior remain unchanged.
      When "placementGroups" is absent from the context, OMIT the entire Campaign Placements section
      (no placeholder card, no empty wall). Qualitative showcase — no numeric metrics.
    - Competitor share of voice (competitors, when present) → horizontal sorted bar list: one row per
@@ -173,6 +197,22 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
 3. VISUALIZATION MATCHING: Match chart type to data characteristics — trends get line/area charts, proportions get doughnut charts, rankings get sorted bar charts or tables. Do NOT use a pie chart for time series or a line chart for categorical distribution.
 
 4. If the user's instruction includes specific section requirements (§1, §2, ...), follow those INSTEAD of the default structure above.
+
+═══ EXECUTIVE SUMMARY RULES (本月核心结论) ═══
+The Executive Summary is the FIRST content section after the report header (before KPI Overview);
+subsequent section numbering continues after it.
+- Section head: numbered badge + serif large title "Executive Summary" + one-line muted subtitle.
+- Card grid: 4 columns (responsive: 2 on medium, 1 on narrow screens). Card structure top-to-bottom:
+  circular icon on a tinted background → short conclusive title (bold, one line) → 1-2 sentence body
+  with key numbers in <strong> → pill badge at the bottom (small arrow/trend glyph + short data anchor).
+- Semantic colors: highlights use soft tinted card backgrounds in green / pink / purple families (icon
+  circle, card tint, and pill share the same family at different saturations); the concern card uses
+  amber with a "!" icon and a "→" pill. Flat style, no or minimal shadow, rounded-xl — consistent with
+  the design guide's serif headings + numbered badges.
+- Content rules (CRITICAL): pick 2-3 items from execSummary.highlights and EXACTLY 1 from
+  execSummary.concerns. Every number in card bodies and pills MUST be copied verbatim from the chosen
+  candidate's value/detail — do NOT compute, convert, or invent any number. If concerns is empty, omit
+  the concern card (render 2-3 highlight cards only). Never fabricate a concern.
 
 ═══ TABLE ALIGNMENT RULES (CRITICAL) ═══
 Tables in the report MUST have perfect column alignment between headers and cells:
@@ -253,6 +293,13 @@ You MUST annotate every dynamic data value in the HTML with a `data-field` attri
    ];
 
    The system will replace the entire `dailyTrend` array. Use this exact variable name.
+   When the context contains priorPeriod.dailyTrend, ALSO define (same replacement contract):
+   const priorTrend = [ { date: "2024-09-01", revenue: ..., orders: ..., clicks: ... }, ... ];
+   When the context contains trendPeak, ALSO define:
+   const trendPeak = { date: "...", revenue: ..., orders: ..., clicks: ..., vsAvgMultiple: ..., topCreator: { name: "...", sharePct: ... } };
+   Render the prior-series overlay only when priorTrend.length > 0; guard peak rendering with if (trendPeak).
+   Note: do NOT add data-field annotations for priorTrend/trendPeak — the system rewrites these const
+   declarations directly; only the dailyTrend canvas keeps its data-field attribute.
 
 RULES:
 - data-field values are CASE SENSITIVE — use the exact field names from the campaign JSON.

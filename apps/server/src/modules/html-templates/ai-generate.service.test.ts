@@ -93,10 +93,14 @@ describe('ai-generate.service · rewriteExternalAssets', () => {
     expect(out).not.toContain('@fortawesome/fontawesome-free');
   });
 
-  it('baseUrl 为空时 no-op（不破坏无 PUBLIC_BASE_URL 的场景）', () => {
+  it('baseUrl 为空时也重写为相对路径 /vendor/（0917 契约：空 base = 相对前缀，防 CDN 落库）', () => {
     const html = `<script src="https://cdn.tailwindcss.com"></script>`;
-    expect(rewriteExternalAssets(html, '')).toBe(html);
-    expect(rewriteExternalAssets(html, '   ')).toBe(html);
+    expect(rewriteExternalAssets(html, '')).toBe(
+      `<script src="/vendor/tailwind/play.min.js"></script>`,
+    );
+    expect(rewriteExternalAssets(html, '   ')).toBe(
+      `<script src="/vendor/tailwind/play.min.js"></script>`,
+    );
   });
 
   it('去掉 baseUrl 尾部斜杠，避免双斜杠', () => {
