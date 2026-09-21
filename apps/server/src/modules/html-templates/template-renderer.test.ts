@@ -238,4 +238,27 @@ const trendPeak = { date: "2026-08-01", revenue: 1, orders: 1, clicks: 1, vsAvgM
     expect(data.priorTrend).toEqual([]);
     expect(data.trendPeak).toBeNull();
   });
+
+  it('期内无数据（prior 有数据）→ 三常量改写为 []/[]/null，不留旧值', async () => {
+    const camp = monthCamp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    const html = `<!DOCTYPE html><html><body>
+<span data-field="period.start">x</span>
+<script>
+const dailyTrend = [{ date: "2026-08-01", revenue: 1, clicks: 1, orders: 1 }];
+const priorTrend = [{ date: "2026-06-01", revenue: 9, clicks: 9, orders: 9 }];
+const trendPeak = { date: "2026-08-01", revenue: 1, orders: 1, clicks: 1, vsAvgMultiple: 1 };
+</script></body></html>`;
+    // 7 月窗口：期内仅 7/5 有数据 → dailyTrend=[7/5]；6 月前窗无数据 → priorTrend=[]
+    const out = await renderTemplate(html, 'camp-m', { startDate: '2026-07-01', endDate: '2026-07-31' });
+    expect(out).toContain(`const dailyTrend = [{"date":"2026-07-05","revenue":50,"clicks":4,"orders":1}];`);
+    expect(out).toContain(`const priorTrend = [];`);
+    expect(out).toContain(`const trendPeak = {"date":"2026-07-05","revenue":50,"orders":1,"clicks":4,"vsAvgMultiple":1};`);
+    // 真·期内无数据（8/20-8/21）→ 三常量全空
+    const out2 = await renderTemplate(html, 'camp-m', { startDate: '2026-08-20', endDate: '2026-08-21' });
+    expect(out2).toContain(`const dailyTrend = [];`);
+    expect(out2).toContain(`const priorTrend = [];`);
+    expect(out2).toContain(`const trendPeak = null;`);
+  });
 });

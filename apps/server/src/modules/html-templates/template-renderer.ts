@@ -372,21 +372,23 @@ function escapeHtml(s: string): string {
  *   常量存在才动；priorTrend 改为空数组 / trendPeak 改为 null 时，AI 侧按 length/空值降级渲染。
  */
 function replaceTrendData(html: string, data: Pick<PeriodData, 'trend' | 'priorTrend' | 'trendPeak'>): string {
-  if (data.trend.length === 0) return html;
-  let out = html.replace(
+  let out = html;
+  // ★ replacement 必须用函数形式:JSON 值若含 $&/$' 等会被当反向引用（同 KPI 替换处的坑）。
+  // 期内无数据 → dailyTrend 也改写为 []（AI 侧按空数组降级，不留上期旧值）
+  out = out.replace(
     /(const\s+dailyTrend\s*=\s*)\[([\s\S]*?)\]\s*;/,
-    `$1${JSON.stringify(data.trend)};`,
+    (_m, p1: string) => `${p1}${JSON.stringify(data.trend)};`,
   );
   if (data.priorTrend) {
     out = out.replace(
       /(const\s+priorTrend\s*=\s*)\[([\s\S]*?)\]\s*;/,
-      `$1${JSON.stringify(data.priorTrend)};`,
+      (_m, p1: string) => `${p1}${JSON.stringify(data.priorTrend)};`,
     );
   }
   if (data.trendPeak !== undefined) {
     out = out.replace(
       /(const\s+trendPeak\s*=\s*)\{([\s\S]*?)\}\s*;/,
-      `$1${JSON.stringify(data.trendPeak)};`,
+      (_m, p1: string) => `${p1}${JSON.stringify(data.trendPeak)};`,
     );
   }
   return out;
