@@ -555,4 +555,41 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
     const entry = res?.modules.find((m) => m.key === 'execSummary');
     expect(entry?.status).toBe('ok');
   });
+
+  it('★无 period 汇总路径：execSummary 走 syncSource 聚合列（topCreator 候选）', async () => {
+    const camp = monthCampLp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
+    // 不带 reportPeriod → 汇总口径：execCreators 落 else 分支（syncSource 全周期聚合，Mia 100% ≥ 20%）
+    const json = await aiGenerateService.buildCampaignContext('c9');
+    expect(json).toContain('"execSummary"');
+    expect(json).toContain('"key": "topCreator"'); // syncSource 聚合列来源（非期内 perCreatorSums）
+  });
+
+  it('★clicks 缺源（期内 daily clicks 全 0）→ decliningClicks 不立 + topPlatform 降级 gmv 口径', async () => {
+    // 局部 fixture：daily clicks 全 '0'（key 存在但无正数、无 fromLp）→ clicksKeySeen=false → current.clicks=null，
+    // 即使上月有 clicks 也不做 clicks 环比（0921 审查修正 3：fallback/缺源时环比不可比）。
+    const camp = JSON.parse(JSON.stringify(monthCampLp())) as any;
+    for (const cc of camp.campaignCreators) {
+      for (const pp of cc.cpsPerformances) for (const d of pp.daily) d.clicks = '0';
+    }
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]); // LP 路径
+    const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    expect(json).not.toContain('"key": "decliningClicks"'); // current.clicks=0/null → 不满足 >0 门槛，宁缺勿假
+    // 实际行为断言：totalClicks=0 → topPlatform 降级 gmv 口径出候选（"of GMV" 单位证明降级生效）
+    expect(json).toContain('"key": "topPlatform"');
+    expect(json).toContain('of GMV"');
+  });
+
+  it('★execSummary 空（无 period + 无达人 + 无峰值）→ 整块不注入', async () => {
+    const camp = { ...monthCampLp(), campaignCreators: [] } as any;
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]);
+    const json = await aiGenerateService.buildCampaignContext('c9'); // 无 period
+    expect(json).not.toContain('"execSummary"'); // highlights/concerns 双空 → null → 字段不注入
+  });
 });

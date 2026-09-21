@@ -1736,7 +1736,9 @@ export const aiGenerateService = {
 
     // ★ 0921 Executive Summary 候选（spec §1.3）：全部确定性预计算，AI 只挑选与叙述。
     //   creators 口径与 periodKpis 一致：中间层路径 gmv 换 commission（与下方 creators 上下文同款覆盖）。
-    const execCreators = (hasPeriod && cov.covered
+    //   门控（0921 审查修正）：期内口径在「CPS daily 已覆盖」或「中间层有行」任一成立时生效——
+    //   否则中间层-only 状态下 execCurrent 走订单表期内数、execCreators 却落汇总分支，同报告口径矛盾。
+    const execCreators = (hasPeriod && (cov.covered || orderStats)
       ? campaign.campaignCreators.map((cc: any) => {
           const s = perCreatorSums.get(cc.id) ?? { clicks: 0, gmv: 0, orders: 0 };
           const oc = orderStats?.byCreator.get(cc.id);
@@ -1744,8 +1746,11 @@ export const aiGenerateService = {
             name: cc.creator?.name ?? 'Unknown',
             platform: cc.creator?.platform ?? null,
             clicks: s.clicks,
-            orders: oc ? oc.orders : s.orders,
-            gmv: oc ? oc.commission : s.gmv,
+            // ★ 缺行达人置零（0921 审查修正）：中间层存在但该达人无 byCreator 行时，
+            //   orders/gmv 置 0 而非保留 CPS daily 口径残留（与下方 creators 上下文同款）。
+            //   clicks 仍走 s.clicks——clicks 只有 daily 源。
+            orders: oc ? oc.orders : (orderStats ? 0 : s.orders),
+            gmv: oc ? oc.commission : (orderStats ? 0 : s.gmv),
           };
         })
       : // 汇总口径（无 period / 未覆盖）→ 聚合列候选（无 MoM/峰值/pending）
@@ -1764,7 +1769,8 @@ export const aiGenerateService = {
       ? {
           revenue: orderStats ? orderStats.totals.commission : total.gmv,
           orders: orderStats ? orderStats.totals.orders : total.orders,
-          clicks: (clicksKeySeen || clicksFallback) ? total.clicks : null,
+          // ★ clicksFallback 时 total.clicks 是全周期聚合、prior 是上月切片，环比不可比 → 跳过（0921 审查修正）。
+          clicks: (clicksKeySeen && !clicksFallback) ? total.clicks : null,
         }
       : undefined;
     const execPrior = priorPeriod
