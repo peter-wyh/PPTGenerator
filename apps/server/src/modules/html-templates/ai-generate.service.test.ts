@@ -425,3 +425,108 @@ describe('ai-generate.service · buildCampaignContext 订单中间层口径', ()
     expect(kpiJson(json, 'Orders', '1')).toBe(true);
   });
 });
+
+describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗/上月序列/峰值）', () => {
+  const dec = (v: string) => ({ toString: () => v, toNumber: () => Number(v) });
+  beforeEach(() => vi.clearAllMocks());
+
+  /** LP 路径 fixture：8 月两天 + 7 月一天，Mia 单达人。$queryRaw 清空 → 强制非中间层路径。 */
+  function monthCampLp() {
+    return {
+      id: 'c9', name: 'MR', platform: 'Instagram', startDate: '2026-07-01', endDate: '2026-08-31',
+      budget: 1, status: 'x', businessLineCode: 'FT', metrics: { clicks: 1 },
+      analytics: null, businessLine: { title: 'FT' }, advertiser: { name: 'A' },
+      campaignCreators: [{
+        creator: { name: 'Mia', platform: 'Instagram', partnerType: 'creator' },
+        cpsPerformances: [{ clicks: 0, orders: 0, gmv: 0, spend: 0, commission: 0, impressions: 0,
+          daily: [
+            { date: '2026-08-01', clicks: '10', orders: '2', gmv: '100', impressions: '0', spend: '0', commission: '100', newCustomers: '1' },
+            { date: '2026-08-02', clicks: '5', orders: '1', gmv: '500', impressions: '0', spend: '0', commission: '500', newCustomers: '0' },
+            { date: '2026-07-05', clicks: '4', orders: '1', gmv: '50', impressions: '0', spend: '0', commission: '50', newCustomers: '0' },
+          ] }],
+        performance: { summary: {} },
+      }],
+    };
+  }
+
+  it('★整自然月 → 前窗=上一自然月全月（period 字符串证明）+ 上月日级序列注入', async () => {
+    const camp = monthCampLp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]); // 无中间层行 → LP 路径（gmv/orders 来自 fixture 订单 raw 行）
+    const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    // 8 月整月 → 7 月全月（等长窗口也是 7/1-7/31，但此断言锁定口径不被回归破坏）
+    expect(json).toContain('"period": "2026-07-01 ~ 2026-07-31"');
+    // 上月序列：7/5 一天，LP 口径 gmv=50 orders=1 clicks=4
+    expect(json).toContain('"priorPeriod"');
+    expect(json).toMatch(/"dailyTrend": \[[^]*?"date": "2026-07-05"[^]*?"revenue": 50[^]*?"clicks": 4/s);
+  });
+
+  it('★30 天月不再截断上月：9 月整月 → 前窗 8 月全月（8/1 起）', async () => {
+    const camp = { ...monthCampLp() } as any;
+    camp.campaignCreators = [{
+      creator: { name: 'Mia', platform: 'Instagram', partnerType: 'creator' },
+      cpsPerformances: [{ clicks: 0, orders: 0, gmv: 0, spend: 0, commission: 0, impressions: 0,
+        daily: [
+          { date: '2026-09-01', clicks: '10', orders: '2', gmv: '100', impressions: '0', spend: '0', commission: '100', newCustomers: '0' },
+          { date: '2026-08-01', clicks: '4', orders: '1', gmv: '50', impressions: '0', spend: '0', commission: '50', newCustomers: '0' },
+        ] }],
+      performance: { summary: {} },
+    }];
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]); // 无中间层行 → LP 路径（gmv/orders 来自 fixture 订单 raw 行）
+    const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-09-01', endDate: '2026-09-30' });
+    // 旧等长口径会是 "2026-08-02 ~ 2026-08-31"（截断 8/1）——修正后为 8 月全月
+    expect(json).toContain('"period": "2026-08-01 ~ 2026-08-31"');
+  });
+
+  it('★LP 路径 trendPeak：峰值日 + vsAvgMultiple + 峰日达人归因', async () => {
+    const camp = monthCampLp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]); // 无中间层行 → LP 路径（gmv/orders 来自 fixture 订单 raw 行）
+    const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    expect(json).toContain('"trendPeak"');
+    expect(json).toContain('"date": "2026-08-02"');
+    expect(json).toContain('"vsAvgMultiple": 1.7'); // 500 / ((100+500)/2)
+    expect(json).toContain('"topCreator"');          // LP 路径可归因（Mia 100% ≥ 20%）
+    expect(json).toContain('"name": "Mia"');
+  });
+
+  it('★中间层路径 trendPeak 无 topCreator（口径门控）+ 上月序列走订单表', async () => {
+    const camp = monthCampLp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    // getRange 调两次（主周期 + 前期窗口），每次消费 2 个 findMany（聚合行 → creator 行）
+    prismaMock.orderDailyStat.findMany
+      .mockResolvedValueOnce([
+        { statDate: '2026-08-01', campaignCreatorId: '', totalOrders: 2, approvedOrders: 2, pendingOrders: 0, otherOrders: 0, totalCommission: dec('100.00'), approvedCommission: dec('100.00'), pendingCommission: dec('0.00'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: [], topDevices: [] },
+        { statDate: '2026-08-02', campaignCreatorId: '', totalOrders: 1, approvedOrders: 1, pendingOrders: 0, otherOrders: 0, totalCommission: dec('500.00'), approvedCommission: dec('500.00'), pendingCommission: dec('0.00'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: [], topDevices: [] },
+      ])
+      .mockResolvedValueOnce([
+        { statDate: '2026-08-02', campaignCreatorId: 'cc_0', totalOrders: 1, approvedOrders: 1, pendingOrders: 0, otherOrders: 0, totalCommission: dec('500.00'), approvedCommission: dec('500.00'), pendingCommission: dec('0.00'), newCustomerOrders: 0, hasNewCustomerTag: false },
+      ])
+      .mockResolvedValueOnce([
+        { statDate: '2026-07-05', campaignCreatorId: '', totalOrders: 1, approvedOrders: 1, pendingOrders: 0, otherOrders: 0, totalCommission: dec('50.00'), approvedCommission: dec('50.00'), pendingCommission: dec('0.00'), newCustomerOrders: 0, hasNewCustomerTag: false, topCountries: [], topDevices: [] },
+      ])
+      .mockResolvedValueOnce([]);
+    const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    // trendPeak 存在但无 topCreator（OrderDailyStat 无达人×日维度）
+    expect(json).toContain('"trendPeak"');
+    expect(json).not.toContain('"topCreator"');
+    // 上月序列 revenue/orders 走订单表口径（7/5 commission=50）
+    expect(json).toMatch(/"priorPeriod"[\s\S]*?"dailyTrend": \[[^]*?"date": "2026-07-05"[^]*?"revenue": 50/s);
+  });
+
+  it('前窗无数据 → priorPeriod 不注入（现状回归保障）', async () => {
+    const camp = monthCampLp();
+    camp.campaignCreators[0].cpsPerformances[0].daily = camp.campaignCreators[0].cpsPerformances[0].daily.filter((d: any) => d.date >= '2026-08-01');
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    prismaMock.orderDailyStat.findMany.mockResolvedValue([]); // 无中间层行 → LP 路径（gmv/orders 来自 fixture 订单 raw 行）
+    const json = await aiGenerateService.buildCampaignContext('c9', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    expect(json).not.toContain('"priorPeriod"');
+    expect(json).toContain('"trendPeak"'); // 当期峰值与上月无关
+  });
+});

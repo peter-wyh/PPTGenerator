@@ -9,6 +9,7 @@ import type { GuideCssBundle } from '../guides/guide-css-asset';
 import { extractGuideChecks, runGuideChecks } from './guide-checks.bridge';
 import { computeCoverage } from './recipe/campaign-report/coverage';
 import { loadCreatorCps } from './cps-source';
+import { buildTrendPeak, peakDayTopCreator, resolvePriorWindow, type TrendPeak } from './report-insights';
 import { devSafeBase } from '../../utils/dev-safe-base';
 import { campaignService } from '../campaigns/campaigns.service';
 import { orderStatsService } from '../campaigns/order-stats.service';
@@ -1189,6 +1190,7 @@ export const aiGenerateService = {
     //   ★ 聚合列是全周期口径：period != campaign 全周期时标尺失真（子区间 LP 单量未知），
     //   不做覆盖度比较——宁缺勿假，只在口径匹配（全周期报告）时裁决。
     let caliberAdvisory: 'use-order-table' | 'fall-back-to-lp' | null = null;
+    let caliberCoveragePct: number | null = null; // ★ 0921：订单表覆盖度 %（ExecSummary concern 候选，Task 4 用）
     let caliber: { basis: string; note: string } | null = null;
 
     // ★ 当指定 reportPeriod 且有 CPS daily 数据时，按日期切片重新计算 KPI / trend / creators CPS
@@ -1204,7 +1206,11 @@ export const aiGenerateService = {
       kpis: { revenues: number; clicks: number; orders: number; newCustomers: number };
       priorKpis: { revenues: number; clicks: number; orders: number; newCustomers: number };
       mom: { revenues: string | null; clicks: string | null; orders: string | null; newCustomers: string | null };
+      /** ★ 0921：上月日级序列（前窗有数据时注入，同口径） */
+      dailyTrend?: { date: string; revenue: number; orders: number; clicks?: number }[];
     } | null = null;
+    // ★ 0921 月报迭代：峰值事实（趋势最高日）——AI 只叙述不计算
+    let trendPeak: TrendPeak | null = null;
     // ★ clicks 缺失判定:期内 daily 记录是否出现过 clicks key(导入通道从未写入 = 数据源缺失,
     //   与「有 key 但值为 0」区分——前者渲染 N/A,后者是真实 0)。提升到块外:MoM/creators 区共用。
     let clicksKeySeen = false;
@@ -1296,6 +1302,10 @@ export const aiGenerateService = {
           lpAgg = lpScale({ orders: o, gmv: g });
         }
         caliberAdvisory = lpAgg ? coverageAdvisory(orderStats.totals.orders, lpAgg.orders) : null;
+        if (lpAgg) {
+          caliberCoveragePct = (orderStats.totals.orders / lpAgg.orders) * 100;
+          logger.info(`[buildCampaignContext] order-table coverage: ${caliberCoveragePct.toFixed(1)}% (orderTable=${orderStats.totals.orders}, lp=${lpAgg.orders})`);
+        }
         if (caliberAdvisory === 'fall-back-to-lp') {
           const ot = orderStats.totals;
           const aovL = lpAgg!.orders ? lpAgg!.gmv / lpAgg!.orders : 0;
@@ -1383,24 +1393,48 @@ export const aiGenerateService = {
         logger.info(`[buildCampaignContext] Period-aware data computed: ${dates.length} days, GMV=$${total.gmv.toFixed(0)}, orders=${total.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
       }
 
-      // ── 缺口① MoM 环比：前一期 = 报告周期往前推同样长度（宁缺勿假：前一期无数据不注入）──
-      if (reportPeriod?.startDate && reportPeriod.endDate) {
-        const dayMs = 86_400_000;
-        const s = new Date(reportPeriod.startDate).getTime();
-        const e = new Date(reportPeriod.endDate).getTime();
-        const len = Math.max(e - s + dayMs, dayMs);
-        const pStart = new Date(s - len).toISOString().slice(0, 10);
-        const pEnd = new Date(s - dayMs).toISOString().slice(0, 10);
+      // ★ 0921 峰值事实（spec §1.2）：与 dailyTrend 同序列同口径（中间层=commission，非中间层=gmv）。
+      //   中间层路径无「达人×日」维度 → 不归因 topCreator（宁缺勿假，prompt 约束 AI 不提达人）。
+      if (dailyTrend && dailyTrend.length) {
+        let topCreator: { name: string; sharePct: number } | null = null;
+        if (!orderStats && cpsSource) {
+          const peakDate = (dailyTrend as any[]).reduce((a, b) => (b.revenue > a.revenue ? b : a)).date;
+          // ★ 用 cpsSource.ccList（loadCreatorCps 查询的合作行 id→name 真源）而非 campaign.campaignCreators
+          //   ——fixture/真实行上后者无 id 时会与 byCc 键错位，归因失联。
+          const byCreatorDaily = cpsSource!.ccList.map((cc) => {
+            const daily = cpsSource!.byCc.get(cc.id)?.daily;
+            return {
+              name: cc.creatorName,
+              daily: new Map([...(daily ?? [])].map(([d, c]: [string, any]) => [d, c.gmv])),
+            };
+          });
+          topCreator = peakDayTopCreator(byCreatorDaily, peakDate);
+        }
+        trendPeak = buildTrendPeak(dailyTrend as any[], topCreator ? { topCreator } : undefined);
+      }
+
+      // ── 缺口① MoM 环比：前一期窗口（宁缺勿假：前一期无数据不注入）──
+      //   ★ 0921 月报迭代：整自然月报告 → 上一自然月全月（等长窗口在 30/28 天月会截断上月）；
+      //   非整月区间保持等长前窗口（历史口径兼容）。无效日期 → 跳过（防 RangeError）。
+      const priorStartMs = reportPeriod?.startDate ? new Date(reportPeriod.startDate).getTime() : NaN;
+      if (reportPeriod?.startDate && reportPeriod.endDate
+        && !Number.isNaN(priorStartMs) && !Number.isNaN(new Date(reportPeriod.endDate).getTime())) {
+        const { pStart, pEnd } = resolvePriorWindow({ startDate: reportPeriod.startDate, endDate: reportPeriod.endDate });
         const inPrior = (d: string) => d >= pStart && d <= pEnd;
         const pt: typeof total = { clicks: 0, impressions: 0, orders: 0, gmv: 0, spend: 0, commission: 0, newCustomers: 0 };
         let priorDays = 0;
         // ★ 真源切换(cps-daily 废弃)：前一期切片与当期同源——直接复用主查询（cpsSource 全量日数据，
         //   inPrior 只是切片），不再二次 loadCreatorCps（省一次 LP+订单全表查询）。
+        // ★ 0921：前窗按日聚合（上月序列 + 中间层路径 clicks 并集日期）
+        const priorByDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
         for (const [, e] of cpsSource.byCc) {
           for (const [date, cell] of e.daily) {
             if (!inPrior(date)) continue;
             pt.clicks += cell.clicks; pt.orders += cell.orders; pt.gmv += cell.gmv;
             pt.newCustomers += cell.newCustomers; priorDays++;
+            const entry = priorByDate.get(date) ?? { revenue: 0, clicks: 0, orders: 0 };
+            entry.revenue += cell.gmv; entry.clicks += cell.clicks; entry.orders += cell.orders;
+            priorByDate.set(date, entry);
           }
         }
         // ★ 中间层口径：orders/revenue 前一期从 OrderDailyStat 取（订单真源），clicks 保持 daily
@@ -1414,6 +1448,25 @@ export const aiGenerateService = {
         }
         const hasPrior = priorOrderStats ? priorOrderStats.days.length > 0 : priorDays > 0;
         if (hasPrior) {
+          // ★ 0921 上月日级序列（spec §1.1）：中间层 → revenue/orders=订单表日值 ∪ clicks=daily 前窗；
+          //   非中间层 → cpsSource 前窗切片（gmv 口径）。宁缺勿假：clicks 无日级源不带字段。
+          const priorDailyTrend: { date: string; revenue: number; orders: number; clicks?: number }[] = priorOrderStats
+            ? [...new Set([
+                ...priorOrderStats.days.map((d) => d.date),
+                ...(clicksKeySeen ? [...priorByDate.keys()] : []),
+              ])].sort().map((d) => {
+                const od = priorOrderStats!.days.find((x) => x.date === d);
+                return {
+                  date: d,
+                  revenue: od?.commission ?? 0,
+                  orders: od?.orders ?? 0,
+                  ...(clicksKeySeen ? { clicks: priorByDate.get(d)?.clicks ?? 0 } : {}),
+                };
+              })
+            : [...priorByDate.keys()].sort().map((d) => {
+                const e2 = priorByDate.get(d)!;
+                return { date: d, revenue: e2.revenue, orders: e2.orders, ...(clicksKeySeen ? { clicks: e2.clicks } : {}) };
+              });
           const mom = (cur: number, prev: number) =>
             prev > 0 ? `${cur >= prev ? '+' : ''}${Math.round(((cur - prev) / prev) * 1000) / 10}%` : null;
           // 当前期/前一期数值：中间层存在时以订单表为准
@@ -1446,6 +1499,7 @@ export const aiGenerateService = {
                 ? null
                 : mom(curNew, prevNew),
             },
+            ...(priorDailyTrend.length ? { dailyTrend: priorDailyTrend } : {}),
           };
         }
       }
@@ -1797,6 +1851,8 @@ export const aiGenerateService = {
       // ★ 缺口① MoM 环比：前一期 KPI 对比（前一期有 daily 数据时注入）。
       //   mom 字段 = (cur-prior)/prior 百分比字符串（如 "+27.6%"）；null = 前一期为 0，无法计算。
       ...(priorPeriod ? { priorPeriod } : {}),
+      // ★ 0921 峰值事实：趋势最高日 + vs 日均倍数（口径可导出时含峰日达人）。AI 只叙述。
+      ...(trendPeak ? { trendPeak } : {}),
       // ★ 缺口④ 媒体资源位（定性）→ 0827 按达人分组：placementGroups（每组 = 达人/站点 + 其截图列表）。
       //   无图条目已在整形时剔除；全空时字段不注入 → AI 无该模块数据 → 整模块隐藏。
       ...(placementGroups.length ? { placementGroups } : {}),
