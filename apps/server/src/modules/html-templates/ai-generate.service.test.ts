@@ -607,6 +607,8 @@ describe('SYSTEM_PROMPT · 0921 月报迭代模块规则', () => {
     expect(SYSTEM_PROMPT).toContain('Peak Insight');
     expect(SYSTEM_PROMPT).toContain('const priorTrend');
     expect(SYSTEM_PROMPT).toContain('const trendPeak');
+    expect(SYSTEM_PROMPT).toContain('borderDash: [6,6]');
+    expect(SYSTEM_PROMPT).toContain('exempt from the');
   });
   it('exposure：纯 CSS hover 大图（无 JS）', () => {
     expect(SYSTEM_PROMPT).toContain('object-fit:contain');

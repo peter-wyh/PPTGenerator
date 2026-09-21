@@ -226,11 +226,12 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
        legend distinguishing "This Month" vs "Last Month", and next to or below the chart show last
        month's Revenue/Orders totals with the mom % delta badges from priorPeriod.mom. Days that carry
        clicks but zero revenue are REAL zeros (a no-sale day), not missing data — narrate them as such.
+       Days with neither clicks nor revenue may be missing data — do not narrate them as zeros.
      * Peak highlight: when trendPeak is present, emphasize the peak revenue day on the chart (larger
        pointRadius + a callout label with date and value) and render a "Peak Insight" card below the
        chart: 1-3 sentences of analysis where every fact is copied from the trendPeak object (date,
-       revenue, vsAvgMultiple, that day's orders/clicks, topCreator when present — never mention a
-       creator when topCreator is absent). When priorPeriod.dailyTrend or trendPeak is absent, omit
+       revenue, vsAvgMultiple, and ONLY the fields actually present in the trendPeak object — missing
+       keys (e.g. clicks, topCreator) are omitted entirely: never mention them and never pad with zeros). When priorPeriod.dailyTrend or trendPeak is absent, omit
        that enhancement silently (no placeholder).
    - Distribution (topProducts/topMarkets/categories) → doughnut chart / horizontal bar chart / progress bars
      * topProducts rows carry BOTH orders and qty (qty = units sold, ≥ orders for multi-packs) —
@@ -381,6 +382,8 @@ You MUST annotate every dynamic data value in the HTML with a \`data-field\` att
    When the context contains trendPeak, ALSO define:
    const trendPeak = { date: "...", revenue: ..., orders: ..., clicks: ..., vsAvgMultiple: ..., topCreator: { name: "...", sharePct: ... } };
    Render the prior-series overlay only when priorTrend.length > 0; guard peak rendering with if (trendPeak).
+   Note: do NOT add data-field annotations for priorTrend/trendPeak — the system rewrites these const
+   declarations directly; only the dailyTrend canvas keeps its data-field attribute.
 
 RULES:
 - data-field values are CASE SENSITIVE — use the exact field names from the campaign JSON.
@@ -501,8 +504,8 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
    - 内联 canvas（无 Chart.js）同样用 \`Array.from(...)\` 生成刻度——禁止写死 \`[0, 70, 140, 210, 280, 350]\`
    - 坐标轴必须随数据缩放：换一个 campaign 数据不同，图表自适应
 7. **脚本位置 & 存活性（关键）**：所有 Chart.js 初始化代码（每个 \`new Chart(...)\`）必须放在**单一内联 \`<script>\`** 块中，作为 \`</body>\` 前的最后一个元素。报告 HTML 可能被可视化编辑器处理（提取/剥离脚本），单一的、正确放置的脚本块比分散的更容易存活。禁止将 Chart.js 初始化代码放在 \`<head>\` 或分散在多个 script 标签中。
-8. **上月叠加（0921）**：\`priorPeriod.dailyTrend\` 存在时，同图叠加上月序列虚线（\`borderDash: [6,6]\`、同色系浅色），按月内日对齐，图例区分 This Month / Last Month，图旁配上月 Revenue/Orders 汇总 + MoM 徽标；有 clicks 无 revenue 的日期是真 0（无销售日），不是缺数据
-9. **峰值高亮（0921）**：\`trendPeak\` 存在时，峰值日放大圆点 + 标注气泡，图下渲染 Peak Insight 卡（事实只能来自 trendPeak 字段；无 topCreator 不提达人）
+8. **上月叠加（0921）**：\`priorPeriod.dailyTrend\` 存在时，同图叠加上月序列虚线（\`borderDash: [6,6]\`、同色系浅色），按月内日对齐，图例区分 This Month / Last Month，图旁配上月 Revenue/Orders 汇总 + MoM 徽标；有 clicks 无 revenue 的日期是真 0（无销售日），不是缺数据（priorTrend/trendPeak 不加 data-field 标注，系统直接改写 const 声明）
+9. **峰值高亮（0921）**：\`trendPeak\` 存在时，峰值日放大圆点 + 标注气泡，图下渲染 Peak Insight 卡（事实只能来自 trendPeak 里实际存在的字段，缺的字段如 clicks/topCreator 不提、不补 0）
 
 ## 🔧 CSS 类系统
 
