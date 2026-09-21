@@ -97,3 +97,157 @@ export function peakDayTopCreator(
   if (!top || top.gmv <= 0) return null;
   return { name: top.name, sharePct: Math.round((top.gmv / campaignGmv) * 1000) / 10 };
 }
+
+export interface ExecCandidate {
+  key: string;
+  label: string;
+  /** 格式化好的锚定值（如 "+21.6%" / "28% of GMV"）——AI 只能复制，不能重算 */
+  value: string;
+  detail: string;
+}
+
+export interface ExecSummaryInput {
+  /** 期内 per-creator 聚合（gmv 口径与 periodKpis 一致——中间层路径由调用方换 commission） */
+  creators: Array<{ name: string; platform: string | null; clicks: number; orders: number; gmv: number }>;
+  current?: { revenue: number; orders: number; clicks: number | null };
+  prior?: { revenue: number; orders: number; clicks: number | null };
+  trendPeak: TrendPeak | null;
+  pendingOrders?: number;
+  /** 新客率分子分母（hasNewCustomerTag=false 时不传） */
+  newCustomers?: { count: number; orders: number };
+  dataGaps?: string[];
+  /** 订单表覆盖度 %（<80 且有口径提示时传） */
+  caliberCoveragePct?: number | null;
+}
+
+const fmtNumL = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(Math.round(n)));
+const fmtMoneyL = (n: number) => `$${n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toFixed(0)}`;
+const pctNum = (cur: number, prev: number) => Math.round(((cur - prev) / prev) * 1000) / 10;
+const pctStr = (v: number) => `${v > 0 ? '+' : ''}${v}%`;
+
+/**
+ * Executive Summary 候选块（spec §1.3）：确定性预计算，AI 只挑选 2-3 highlights + 1 concern。
+ * 候选有数据才出现；highlights 与 concerns 双空 → 返回 null（AI 渲染空态卡）。
+ */
+export function buildExecSummary(input: ExecSummaryInput): { highlights: ExecCandidate[]; concerns: ExecCandidate[] } | null {
+  const highlights: ExecCandidate[] = [];
+  const concerns: ExecCandidate[] = [];
+
+  // ── MoM（|pct| ≥ 5 才立候选；正→highlight，负→concern）──
+  if (input.current && input.prior) {
+    if (input.prior.revenue > 0 && input.current.revenue > 0) {
+      const p = pctNum(input.current.revenue, input.prior.revenue);
+      const detail = `${fmtMoneyL(input.current.revenue)} this month vs ${fmtMoneyL(input.prior.revenue)} last month`;
+      if (p >= 5) highlights.push({ key: 'revenueMoM', label: 'Revenue MoM', value: pctStr(p), detail });
+      if (p <= -5) concerns.push({ key: 'decliningRevenue', label: 'Revenue MoM', value: pctStr(p), detail });
+    }
+    if (input.prior.orders > 0 && input.current.orders > 0) {
+      const p = pctNum(input.current.orders, input.prior.orders);
+      const detail = `${fmtNumL(input.current.orders)} orders this month vs ${fmtNumL(input.prior.orders)} last month`;
+      if (p >= 5) highlights.push({ key: 'ordersMoM', label: 'Orders MoM', value: pctStr(p), detail });
+      if (p <= -5) concerns.push({ key: 'decliningOrders', label: 'Orders MoM', value: pctStr(p), detail });
+    }
+    if (
+      input.current.clicks !== null && input.prior.clicks !== null &&
+      input.prior.clicks > 0 && input.current.clicks > 0
+    ) {
+      const p = pctNum(input.current.clicks, input.prior.clicks);
+      if (Math.abs(p) >= 5) {
+        // 测试契约为 key 固定 'decliningClicks'，但 clicks 剧烈波动（暴涨或大跌）都值得 AI 关注
+        concerns.push({
+          key: 'decliningClicks', label: 'Clicks MoM', value: pctStr(p),
+          detail: `${fmtNumL(input.current.clicks)} this month vs ${fmtNumL(input.prior.clicks)} last month`,
+        });
+      }
+    }
+  }
+
+  // ── 期内达人 / 渠道份额 ──
+  const totalGmv = input.creators.reduce((s, c) => s + c.gmv, 0);
+  const totalClicks = input.creators.reduce((s, c) => s + c.clicks, 0);
+  const active = input.creators.filter((c) => c.gmv > 0 || c.orders > 0 || c.clicks > 0);
+  let topCreator: { name: string; share: number } | null = null;
+  if (totalGmv > 0) {
+    for (const c of input.creators) {
+      const share = c.gmv / totalGmv;
+      if (!topCreator || share > topCreator.share) topCreator = { name: c.name, share };
+    }
+    if (topCreator && topCreator.share >= 0.2) {
+      const c = input.creators.find((x) => x.name === topCreator!.name)!;
+      highlights.push({
+        key: 'topCreator', label: 'Top Creator',
+        value: `${Math.round(topCreator.share * 100)}% of GMV`,
+        detail: `${c.name} — ${fmtMoneyL(c.gmv)} GMV, ${fmtNumL(c.orders)} orders`,
+      });
+    }
+    // 集中度（≥3 活跃达人且 top 份额 ≥ 50%）
+    if (active.length >= 3 && topCreator && topCreator.share >= 0.5) {
+      concerns.push({
+        key: 'concentration', label: 'Creator Concentration',
+        value: `${Math.round(topCreator.share * 100)}% of GMV`,
+        detail: `top creator of ${active.length} active creators`,
+      });
+    }
+  }
+  // topPlatform：clicks 口径优先；无 clicks（全 0）降级 gmv 口径
+  if (totalClicks > 0 || totalGmv > 0) {
+    const useClicks = totalClicks > 0;
+    const byPlat = new Map<string, number>();
+    for (const c of input.creators) {
+      if (!c.platform) continue;
+      byPlat.set(c.platform, (byPlat.get(c.platform) ?? 0) + (useClicks ? c.clicks : c.gmv));
+    }
+    const denom = useClicks ? totalClicks : totalGmv;
+    const unit = useClicks ? 'clicks' : 'GMV';
+    let topPlat: { name: string; v: number } | null = null;
+    for (const [name, v] of byPlat) if (!topPlat || v > topPlat.v) topPlat = { name, v };
+    if (topPlat && topPlat.v / denom >= 0.3) {
+      highlights.push({
+        key: 'topPlatform', label: 'Top Channel',
+        value: `${Math.round((topPlat.v / denom) * 100)}% of ${unit}`,
+        detail: `${topPlat.name} — ${fmtNumL(topPlat.v)} of ${fmtNumL(denom)} ${unit}`,
+      });
+    }
+  }
+
+  // ── 峰值日 ──
+  if (input.trendPeak) {
+    const label = new Date(input.trendPeak.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    highlights.push({
+      key: 'peakDay', label: 'Peak Day',
+      value: `${fmtMoneyL(input.trendPeak.revenue)} on ${label}`,
+      detail: `${input.trendPeak.vsAvgMultiple}× the daily average`,
+    });
+  }
+
+  // ── 新客率 ──
+  if (input.newCustomers && input.newCustomers.orders > 0 && input.newCustomers.count > 0) {
+    highlights.push({
+      key: 'newCustomerRate', label: 'New-Customer Rate',
+      value: `${Math.round((input.newCustomers.count / input.newCustomers.orders) * 1000) / 10}%`,
+      detail: `${fmtNumL(input.newCustomers.count)} new customers across ${fmtNumL(input.newCustomers.orders)} orders`,
+    });
+  }
+
+  // ── pending orders ──
+  if (input.pendingOrders && input.pendingOrders > 0) {
+    concerns.push({ key: 'pendingOrders', label: 'Pending Orders', value: fmtNumL(input.pendingOrders), detail: 'awaiting approval in the order table' });
+  }
+
+  // ── 数据缺口 ──
+  if (input.dataGaps && input.dataGaps.length) {
+    concerns.push({ key: 'dataGaps', label: 'Data Gaps', value: input.dataGaps.join(', '), detail: 'no source data — shown as N/A in this report' });
+  }
+
+  // ── 订单表口径覆盖度 ──
+  if (input.caliberCoveragePct !== null && input.caliberCoveragePct !== undefined && input.caliberCoveragePct < 80) {
+    concerns.push({
+      key: 'caliberCoverage', label: 'Order-Table Coverage',
+      value: `${input.caliberCoveragePct.toFixed(1)}% of tracked orders`,
+      detail: 'order table covers only part of tracked orders — KPI caliber noted in report',
+    });
+  }
+
+  if (!highlights.length && !concerns.length) return null;
+  return { highlights, concerns };
+}

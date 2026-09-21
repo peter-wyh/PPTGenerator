@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTrendPeak, peakDayTopCreator, resolvePriorWindow } from './report-insights';
+import { buildExecSummary, buildTrendPeak, peakDayTopCreator, resolvePriorWindow } from './report-insights';
 
 describe('report-insights · resolvePriorWindow', () => {
   it('整自然月（31 天月）→ 上一自然月全月', () => {
@@ -74,5 +74,59 @@ describe('report-insights · peakDayTopCreator', () => {
   it('峰日无数据 / 全 0 → null', () => {
     expect(peakDayTopCreator(byCreatorDaily, '2026-08-05')).toBeNull();
     expect(peakDayTopCreator([{ name: 'X', daily: new Map([['2026-08-02', 0]]) }], '2026-08-02')).toBeNull();
+  });
+});
+
+describe('report-insights · buildExecSummary', () => {
+  const creators = [
+    { name: 'Mia', platform: 'Instagram', clicks: 4000, orders: 179, gmv: 1600 },
+    { name: 'Leo', platform: 'TikTok', clicks: 2000, orders: 50, gmv: 600 },
+    { name: 'Ash', platform: 'Instagram', clicks: 1000, orders: 30, gmv: 400 },
+  ];
+  const trendPeak = { date: '2026-08-14', revenue: 820, orders: 9, clicks: 120, vsAvgMultiple: 3.2 };
+
+  it('MoM 正增长(≥+5%)入 highlights；负增长(≤-5%)入 concerns；|pct|<5 不立候选', () => {
+    const out = buildExecSummary({
+      creators,
+      current: { revenue: 5800, orders: 1100, clicks: 34600 },
+      prior: { revenue: 4770, orders: 904, clicks: 10400 },
+      trendPeak,
+      newCustomers: { count: 380, orders: 1100 },
+      pendingOrders: 809,
+    })!;
+    const revMoM = out.highlights.find((h) => h.key === 'revenueMoM')!;
+    expect(revMoM.value).toBe('+21.6%');
+    expect(out.highlights.some((h) => h.key === 'ordersMoM')).toBe(true);
+    expect(out.concerns.some((c) => c.key === 'decliningClicks')).toBe(true); // clicks 环比大跌
+  });
+
+  it('topCreator 份额≥20% / topPlatform 份额≥30% / peakDay / newCustomerRate 候选', () => {
+    const out = buildExecSummary({ creators, current: undefined, prior: undefined, trendPeak, newCustomers: { count: 380, orders: 1100 } })!;
+    expect(out.highlights.find((h) => h.key === 'topCreator')).toMatchObject({ value: '62% of GMV' });
+    expect(out.highlights.find((h) => h.key === 'topPlatform')).toMatchObject({ value: '71% of clicks' });
+    expect(out.highlights.find((h) => h.key === 'peakDay')).toMatchObject({ value: '$820 on Aug 14' });
+    expect(out.highlights.find((h) => h.key === 'newCustomerRate')).toMatchObject({ value: '34.5%' });
+  });
+
+  it('集中度：≥3 活跃达人且 top 份额≥50% → concern', () => {
+    const out = buildExecSummary({ creators, trendPeak })!;
+    expect(out.concerns.some((c) => c.key === 'concentration')).toBe(true); // 62% ≥ 50%
+  });
+
+  it('pendingOrders>0 / dataGaps / caliberCoverage<80 → concerns；clicks 缺源(null) 不产生 MoM 候选', () => {
+    const out = buildExecSummary({
+      creators, trendPeak,
+      current: { revenue: 5800, orders: 1100, clicks: null },
+      prior: { revenue: 4770, orders: 904, clicks: null },
+      pendingOrders: 809, dataGaps: ['clicks', 'newCustomers'], caliberCoveragePct: 1.8,
+    })!;
+    expect(out.concerns.find((c) => c.key === 'pendingOrders')).toMatchObject({ value: '809' });
+    expect(out.concerns.find((c) => c.key === 'dataGaps')).toMatchObject({ value: 'clicks, newCustomers' });
+    expect(out.concerns.find((c) => c.key === 'caliberCoverage')).toMatchObject({ value: '1.8% of tracked orders' });
+    expect(out.concerns.some((c) => c.key === 'decliningClicks')).toBe(false);
+  });
+
+  it('全空输入 → null（AI 渲染空态卡）', () => {
+    expect(buildExecSummary({ creators: [], trendPeak: null })).toBeNull();
   });
 });
