@@ -14,6 +14,7 @@
 
 import { prisma } from '../../prisma';
 import { loadCreatorCps } from './cps-source';
+import { buildTrendPeak, resolvePriorWindow } from './report-insights';
 
 type Any = Record<string, any>;
 
@@ -54,6 +55,10 @@ interface PeriodData {
   kpisRaw: Record<string, number>;         // field name → raw number
   creators: CreatorRow[];
   trend: { date: string; revenue: number; clicks: number; orders: number }[];
+  /** ★ 0921：上月日级序列（自然月/等长前窗，cps 口径）；无前窗数据为空数组 */
+  priorTrend: { date: string; revenue: number; clicks: number; orders: number }[];
+  /** ★ 0921：峰值事实（与 trend 同序列）；revenue 全 0 / 序列空 → null */
+  trendPeak: ReturnType<typeof buildTrendPeak>;
   period: { start: string; end: string; display: string };
 }
 
@@ -229,6 +234,19 @@ export async function extractPeriodData(
     orders: byDate.get(d)!.orders,
   }));
 
+  // ★ 0921 月报迭代：上月序列（自然月/等长前窗）+ 峰值（与 trend 同序列；cps 口径无达人归因）
+  let priorTrend: PeriodData['priorTrend'] = [];
+  if (reportPeriod?.startDate && reportPeriod.endDate) {
+    const { pStart, pEnd } = resolvePriorWindow({ startDate: reportPeriod.startDate, endDate: reportPeriod.endDate });
+    const pByDate = new Map<string, { revenue: number; clicks: number; orders: number }>();
+    for (const [date, cell] of cps.campaignDaily) {
+      if (date < pStart || date > pEnd) continue;
+      pByDate.set(date, { revenue: cell.gmv, clicks: cell.clicks, orders: cell.orders });
+    }
+    priorTrend = [...pByDate.keys()].sort().map((d) => ({ date: d, ...pByDate.get(d)! }));
+  }
+  const trendPeak = buildTrendPeak(trend);
+
   // 7) Period display
   const start = reportPeriod?.startDate ?? campaign.startDate ?? '';
   const end = reportPeriod?.endDate ?? campaign.endDate ?? '';
@@ -238,7 +256,7 @@ export async function extractPeriodData(
     display: start && end ? `${shortDate(start)} - ${shortDate(end)}` : '',
   };
 
-  return { kpis, kpisRaw, creators, trend, period };
+  return { kpis, kpisRaw, creators, trend, priorTrend, trendPeak, period };
 }
 
 // ═══ HTML 渲染 ═══
@@ -349,17 +367,29 @@ function escapeHtml(s: string): string {
 }
 
 /**
- * 替换 script 中 dailyTrend 数组。
+ * 替换 script 中 dailyTrend / priorTrend / trendPeak 数据。
+ * ★ 0921：priorTrend/trendPeak 命名常量同款改写（AI 按 prompt 约定使用精确变量名、无 data-field 标注）。
+ *   常量存在才动；priorTrend 改为空数组 / trendPeak 改为 null 时，AI 侧按 length/空值降级渲染。
  */
-function replaceTrendData(html: string, trend: PeriodData['trend']): string {
-  if (trend.length === 0) return html;
-
-  // 匹配 const dailyTrend = [ ... ];
-  const trendJson = JSON.stringify(trend);
-  return html.replace(
+function replaceTrendData(html: string, data: Pick<PeriodData, 'trend' | 'priorTrend' | 'trendPeak'>): string {
+  if (data.trend.length === 0) return html;
+  let out = html.replace(
     /(const\s+dailyTrend\s*=\s*)\[([\s\S]*?)\]\s*;/,
-    `$1${trendJson};`,
+    `$1${JSON.stringify(data.trend)};`,
   );
+  if (data.priorTrend) {
+    out = out.replace(
+      /(const\s+priorTrend\s*=\s*)\[([\s\S]*?)\]\s*;/,
+      `$1${JSON.stringify(data.priorTrend)};`,
+    );
+  }
+  if (data.trendPeak !== undefined) {
+    out = out.replace(
+      /(const\s+trendPeak\s*=\s*)\{([\s\S]*?)\}\s*;/,
+      `$1${JSON.stringify(data.trendPeak)};`,
+    );
+  }
+  return out;
 }
 
 /**
@@ -425,13 +455,15 @@ export async function renderTemplate(
     }
   }
 
-  // 4) 替换 trend 数据
-  result = replaceTrendData(result, data.trend);
-
-  // 5) 通用日期正则替换（覆盖未标注 data-field 的日期）
+  // 4) 通用日期正则替换（覆盖未标注 data-field 的日期）
+  //    ★ 0921：先于 trend 常量改写——replaceDates 是全文朴素替换，后跑会把刚注入的 dailyTrend/
+  //    priorTrend/trendPeak 日期再改写成 period 端点（图表脱锚）。
   if (reportPeriod) {
     result = replaceDates(result, reportPeriod);
   }
+
+  // 5) 替换 trend 数据（最后跑，注入的 JSON 为最终态）
+  result = replaceTrendData(result, data);
 
   return result;
 }

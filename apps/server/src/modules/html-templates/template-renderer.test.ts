@@ -178,3 +178,64 @@ describe('template-renderer · $ 值替换回归(反斜杠/捕获组注入)', ()
     expect(html).not.toContain('$old');
   });
 });
+
+describe('template-renderer · 0921 priorTrend/trendPeak 快路径', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /** LP fixture：8 月两天 + 7 月一天（7/5 gmv 50 clicks 4 orders 1）。 */
+  function monthCamp() {
+    return {
+      id: 'camp-m', platform: 'instagram', startDate: '2026-07-01', endDate: '2026-08-31',
+      metrics: {},
+      campaignCreators: [{
+        creator: { name: 'Mia', platform: 'Instagram' },
+        cpsPerformances: [{ clicks: 0, orders: 0, gmv: 0, spend: 0, commission: 0, impressions: 0,
+          daily: [
+            { date: '2026-08-01', clicks: '10', orders: '2', gmv: '100', impressions: '0', spend: '0', commission: '100', newCustomers: '1' },
+            { date: '2026-08-02', clicks: '5', orders: '1', gmv: '500', impressions: '0', spend: '0', commission: '500', newCustomers: '0' },
+            { date: '2026-07-05', clicks: '4', orders: '1', gmv: '50', impressions: '0', spend: '0', commission: '50', newCustomers: '0' },
+          ] }],
+      }],
+      performance: { summary: {} },
+      linkPerformances: [],
+    } as any;
+  }
+
+  it('extractPeriodData：整月窗口 → priorTrend 含 7/5；trendPeak 峰值 8/2', async () => {
+    const camp = monthCamp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    const data = await extractPeriodData('camp-m', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    expect(data.trend).toHaveLength(2);
+    expect(data.priorTrend).toEqual([{ date: '2026-07-05', revenue: 50, clicks: 4, orders: 1 }]);
+    expect(data.trendPeak).toMatchObject({ date: '2026-08-02', revenue: 500, vsAvgMultiple: 1.7 });
+  });
+
+  it('renderTemplate：三个命名常量都被改写', async () => {
+    const camp = monthCamp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    const html = `<!DOCTYPE html><html><body>
+<span data-field="period.start">x</span>
+<script>
+const dailyTrend = [{ date: "2026-08-01", revenue: 1, clicks: 1, orders: 1 }];
+const priorTrend = [{ date: "2026-07-01", revenue: 9, clicks: 9, orders: 9 }];
+const trendPeak = { date: "2026-08-01", revenue: 1, orders: 1, clicks: 1, vsAvgMultiple: 1 };
+</script></body></html>`;
+    const out = await renderTemplate(html, 'camp-m', { startDate: '2026-08-01', endDate: '2026-08-31' });
+    expect(out).toContain(`const dailyTrend = [{"date":"2026-08-01","revenue":100,"clicks":10,"orders":2},{"date":"2026-08-02","revenue":500,"clicks":5,"orders":1}];`);
+    expect(out).toContain(`const priorTrend = [{"date":"2026-07-05","revenue":50,"clicks":4,"orders":1}];`);
+    expect(out).toMatch(/const trendPeak = \{"date":"2026-08-02"[^}]*"vsAvgMultiple":1\.7\};/);
+  });
+
+  it('非整月窗口 → priorTrend 等长前窗；前窗无数据 → priorTrend 空数组 + trendPeak 仍可算', async () => {
+    const camp = monthCamp();
+    prismaMock.campaign.findUnique.mockResolvedValue(camp);
+    mockCreatorCps(camp);
+    // 8/20-8/21（等长前窗 8/18-8/19 无数据）
+    const data = await extractPeriodData('camp-m', { startDate: '2026-08-20', endDate: '2026-08-21' });
+    expect(data.trend).toEqual([]); // 期内无 daily
+    expect(data.priorTrend).toEqual([]);
+    expect(data.trendPeak).toBeNull();
+  });
+});
