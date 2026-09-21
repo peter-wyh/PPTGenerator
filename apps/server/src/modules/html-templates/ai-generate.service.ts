@@ -214,8 +214,24 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
 
 2. MODULE SELECTION: Pick 4-8 modules prioritizing the richest data dimensions:
    - Header (ALWAYS): business line logo + advertiser logo + campaign name + date range
+   - Executive Summary (ALWAYS, FIRST section after the header): the month's key conclusions — 2-3
+     performance highlight cards + 1 concern card, built STRICTLY from the "execSummary" context block
+     (see EXECUTIVE SUMMARY RULES below). When "execSummary" is absent from the context, render a single
+     full-width muted card: "Automated summary unavailable — pending data import".
    - KPI Overview (ALWAYS): extract 3-6 core metrics from metrics/analytics, display as large brand-color number cards
    - Time series (dailyTrend/weeklyTrend) → line chart / area chart / bar chart (Chart.js)
+     * Prior-month overlay: when priorPeriod.dailyTrend is present, overlay the prior-period series in
+       the SAME chart as dashed lines (Chart.js borderDash: [6,6], lighter tint of the same color
+       family), aligned by day-of-month (day 1 of this month pairs with day 1 of last month). Add a
+       legend distinguishing "This Month" vs "Last Month", and next to or below the chart show last
+       month's Revenue/Orders totals with the mom % delta badges from priorPeriod.mom. Days that carry
+       clicks but zero revenue are REAL zeros (a no-sale day), not missing data — narrate them as such.
+     * Peak highlight: when trendPeak is present, emphasize the peak revenue day on the chart (larger
+       pointRadius + a callout label with date and value) and render a "Peak Insight" card below the
+       chart: 1-3 sentences of analysis where every fact is copied from the trendPeak object (date,
+       revenue, vsAvgMultiple, that day's orders/clicks, topCreator when present — never mention a
+       creator when topCreator is absent). When priorPeriod.dailyTrend or trendPeak is absent, omit
+       that enhancement silently (no placeholder).
    - Distribution (topProducts/topMarkets/categories) → doughnut chart / horizontal bar chart / progress bars
      * topProducts rows carry BOTH orders and qty (qty = units sold, ≥ orders for multi-packs) —
        render Top-Selling Products table with separate ORDERS and QTY columns when both exist.
@@ -235,6 +251,13 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
      title in white bold text, and a small platform tag chip (top-left, semi-transparent dark pill).
      object-fit:cover, aspect-ratio ~16:10, responsive 2-4 per row. When postUrl exists, make the
      whole card clickable (open in new tab). Entries without screenshots are EXCLUDED server-side.
+     Hover large-image preview (pure CSS, no JavaScript): each card contains a hidden lightbox layer
+     that becomes visible on card :hover — a centered fixed overlay (semi-transparent dark backdrop)
+     showing the SAME screenshot URL at natural aspect ratio (object-fit:contain, max-width: 85vw,
+     max-height: 85vh) with the item title and platform chip. CSS only (:hover + position/opacity
+     transitions); no JavaScript, no navigation behavior. This overlay is exempt from the
+     no-fixed-position layout rule — it is a transient hover preview, not navigation chrome. The
+     card's normal hover-lift and postUrl click behavior remain unchanged.
      When "placementGroups" is absent from the context, OMIT the entire Campaign Placements section
      (no placeholder card, no empty wall). Qualitative showcase — no numeric metrics.
    - Competitor share of voice (competitors, when present) → horizontal sorted bar list: one row per
@@ -262,6 +285,22 @@ Unless the user's instruction specifies a fixed section layout, generate a repor
 3. VISUALIZATION MATCHING: Match chart type to data characteristics — trends get line/area charts, proportions get doughnut charts, rankings get sorted bar charts or tables. Do NOT use a pie chart for time series or a line chart for categorical distribution.
 
 4. If the user's instruction includes specific section requirements (§1, §2, ...), follow those INSTEAD of the default structure above.
+
+═══ EXECUTIVE SUMMARY RULES (本月核心结论) ═══
+The Executive Summary is the FIRST content section after the report header (before KPI Overview);
+subsequent section numbering continues after it.
+- Section head: numbered badge + serif large title "Executive Summary" + one-line muted subtitle.
+- Card grid: 4 columns (responsive: 2 on medium, 1 on narrow screens). Card structure top-to-bottom:
+  circular icon on a tinted background → short conclusive title (bold, one line) → 1-2 sentence body
+  with key numbers in <strong> → pill badge at the bottom (small arrow/trend glyph + short data anchor).
+- Semantic colors: highlights use soft tinted card backgrounds in green / pink / purple families (icon
+  circle, card tint, and pill share the same family at different saturations); the concern card uses
+  amber with a "!" icon and a "→" pill. Flat style, no or minimal shadow, rounded-xl — consistent with
+  the design guide's serif headings + numbered badges.
+- Content rules (CRITICAL): pick 2-3 items from execSummary.highlights and EXACTLY 1 from
+  execSummary.concerns. Every number in card bodies and pills MUST be copied verbatim from the chosen
+  candidate's value/detail — do NOT compute, convert, or invent any number. If concerns is empty, omit
+  the concern card (render 2-3 highlight cards only). Never fabricate a concern.
 
 {{ASSET:table-alignment}}
 
@@ -337,6 +376,11 @@ You MUST annotate every dynamic data value in the HTML with a \`data-field\` att
    ];
 
    The system will replace the entire \`dailyTrend\` array. Use this exact variable name.
+   When the context contains priorPeriod.dailyTrend, ALSO define (same replacement contract):
+   const priorTrend = [ { date: "2024-09-01", revenue: ..., orders: ..., clicks: ... }, ... ];
+   When the context contains trendPeak, ALSO define:
+   const trendPeak = { date: "...", revenue: ..., orders: ..., clicks: ..., vsAvgMultiple: ..., topCreator: { name: "...", sharePct: ... } };
+   Render the prior-series overlay only when priorTrend.length > 0; guard peak rendering with if (trendPeak).
 
 RULES:
 - data-field values are CASE SENSITIVE — use the exact field names from the campaign JSON.
@@ -457,6 +501,8 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
    - 内联 canvas（无 Chart.js）同样用 \`Array.from(...)\` 生成刻度——禁止写死 \`[0, 70, 140, 210, 280, 350]\`
    - 坐标轴必须随数据缩放：换一个 campaign 数据不同，图表自适应
 7. **脚本位置 & 存活性（关键）**：所有 Chart.js 初始化代码（每个 \`new Chart(...)\`）必须放在**单一内联 \`<script>\`** 块中，作为 \`</body>\` 前的最后一个元素。报告 HTML 可能被可视化编辑器处理（提取/剥离脚本），单一的、正确放置的脚本块比分散的更容易存活。禁止将 Chart.js 初始化代码放在 \`<head>\` 或分散在多个 script 标签中。
+8. **上月叠加（0921）**：\`priorPeriod.dailyTrend\` 存在时，同图叠加上月序列虚线（\`borderDash: [6,6]\`、同色系浅色），按月内日对齐，图例区分 This Month / Last Month，图旁配上月 Revenue/Orders 汇总 + MoM 徽标；有 clicks 无 revenue 的日期是真 0（无销售日），不是缺数据
+9. **峰值高亮（0921）**：\`trendPeak\` 存在时，峰值日放大圆点 + 标注气泡，图下渲染 Peak Insight 卡（事实只能来自 trendPeak 字段；无 topCreator 不提达人）
 
 ## 🔧 CSS 类系统
 
@@ -479,6 +525,13 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 
 **固定结构模式**——用户提示词中指定 §1~§N 时，严格遵循用户指令
 
+### 0921 新增：Executive Summary（本月核心结论 · 首屏常驻）
+
+- **位置**：Header 之后、KPI 之前的首个内容模块，后续章节编号顺延；\`execSummary\` 缺失时渲染单张全宽空态卡
+- **卡片**：4 列网格（响应式 2/1 列）——圆底图标 + 结论式标题 + 粗体数字正文 + 胶囊徽标
+- **配色**：highlight 绿/粉/紫浅底同色系；concern 琥珀底 + "!" 图标
+- **铁律**：从 \`execSummary.highlights\` 选 2-3 个 + \`execSummary.concerns\` 恰好 1 个；数字只能从候选 value/detail 复制，禁止自行计算；concerns 为空则省略 concern 卡
+
 ## 🚧 布局禁令 (LAYOUT PROHIBITIONS — 零容忍)
 
 这是单页**静态报告**，嵌入在 iframe 中。任何交互式导航都会破坏宿主页面。
@@ -495,6 +548,8 @@ CRITICAL OUTPUT RULE: Your response must start directly with <!DOCTYPE html>. Do
 **正确模式**：单连续滚动，每个 section 用编号标题开头，无导航链接：
 - ❌ nav.anchor-nav + a[href="#kpi"] + section#kpi
 - ✅ section > h2 "01 Overall KPI"
+
+> **0921 豁免**：资源位卡片 hover 大图预览（纯 CSS :hover overlay，\`object-fit:contain\` 展示同一截图原图）不算导航 chrome——零 JS、零导航行为，允许 position:fixed；卡片点击跳转 postUrl 行为不变
 
 ## 🌐 语言规则 (LANGUAGE RULES)
 

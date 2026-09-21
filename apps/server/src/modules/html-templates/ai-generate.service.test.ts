@@ -593,3 +593,30 @@ describe('ai-generate.service · buildCampaignContext 0921 月报迭代（前窗
     expect(json).not.toContain('"execSummary"'); // highlights/concerns 双空 → null → 字段不注入
   });
 });
+
+describe('SYSTEM_PROMPT · 0921 月报迭代模块规则', () => {
+  it('Executive Summary：ALWAYS 首屏 + execSummary 锚定铁律', () => {
+    expect(SYSTEM_PROMPT).toContain('EXECUTIVE SUMMARY RULES');
+    expect(SYSTEM_PROMPT).toContain('Executive Summary (ALWAYS');
+    expect(SYSTEM_PROMPT).toContain('EXACTLY 1');
+    expect(SYSTEM_PROMPT).toContain('Automated summary unavailable');
+  });
+  it('趋势：上月虚线叠加 + 峰值高亮 + priorTrend/trendPeak 命名常量', () => {
+    expect(SYSTEM_PROMPT).toContain('borderDash');
+    expect(SYSTEM_PROMPT).toContain('This Month');
+    expect(SYSTEM_PROMPT).toContain('Peak Insight');
+    expect(SYSTEM_PROMPT).toContain('const priorTrend');
+    expect(SYSTEM_PROMPT).toContain('const trendPeak');
+  });
+  it('exposure：纯 CSS hover 大图（无 JS）', () => {
+    expect(SYSTEM_PROMPT).toContain('object-fit:contain');
+    expect(SYSTEM_PROMPT).toContain(':hover');
+    expect(SYSTEM_PROMPT).toContain('no JavaScript');
+  });
+  it('CN 镜像同步', () => {
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('Executive Summary');
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('上月');
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('峰值');
+    expect(SYSTEM_PROMPT_DISPLAY).toContain('大图');
+  });
+});
