@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-21 — 月报迭代:ExecSummary 确定性四卡 + 上月虚线对比 + 峰值洞察卡 + 换周期不脱锚
+
+围绕「AI 月报可信度」做一轮数据层与 prompt 契约的配套迭代:执行摘要从 AI 自由发挥改为**确定性候选块注入**,趋势图补**上月同期虚线**与**峰值标注**,换周期快路径改写**三命名常量**保证重算不脱锚。
+
+- **report-insights 纯函数层**(`apps/server/src/modules/html-templates/report-insights.ts`):前窗解析(自然月修正——10 月的前窗=9 月而非 -30 天)、峰值事实(峰值日/金额/倍数)、峰日达人归因,全部可单测。
+- **buildExecSummary 确定性候选块**(`exec-summary.ts`):MoM/达人/渠道/峰值/新客五类 highlight + pending/下滑/集中度/缺口/口径五类 concern,AI 只做挑选与措辞,数字不许编。
+- **execCreators 口径对齐**:中间层门控/缺行置零/clicksFallback 环比跳过,汇总路径与降级路径测试补齐。
+- **上月趋势对比数据层**:priorPeriod.dailyTrend + trendPeak 注入 AI 上下文(`c8c9f03`),trendPeak 缺失键不提不补 0、priorTrend/trendPeak 不加 data-field(快路径独占改写权)。
+- **SYSTEM_PROMPT 月报规则**(`cdf7dac`):ExecSummary 四卡铁律/上月虚线叠加/峰值洞察卡/CSS hover 大图。
+- **换周期快路径三常量改写**(`cd0177c`+`6874bbb`):dailyTrend/priorTrend/trendPeak 以函数形式整体替换,防 `$` 注入、空期不留旧值。
+- **杂修**:peakDay 日期标签固定 UTC 时区(防美区服务器差一天)、decliningClicks 回归负增长语义(fixture clicks 大涨不再误标 concern)。
+
+**验证**:server 46 文件/486 用例全绿 + tsc 0 错;真月报实测(camp-glowlab-q4,10 月周期,SSE 47.7K tokens):四卡真实环比(Rev +85.4%/Orders +81.5%/Peak 1.5×/新客 26.8%)、双 dataset+borderDash 虚线、峰值卡 10-25/$281.58、三常量×7/3/5 处原样保留、dataCoverage 缺 11 天诚实标注。
+
 ## 2026-08-18 — 修复:html-report 模板新建报告被归入 PPT 类型 + ADMIN 复制他人报告 404
 
 两个用户可直接感知的 bug,根因都在服务端 projects 模块:

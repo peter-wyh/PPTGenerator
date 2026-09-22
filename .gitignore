@@ -43,6 +43,8 @@ uploads/
 .claude/
 .superpowers/
 test-output.html
+# Example/a.html = 竞品参考页(KreatorNow console, 外部 CDN 依赖, 不入库)
+Example/a.html
 # AI/recipe 报告导出产物(根目录散落的报告 HTML)
 duomai_review_report_en_visual.html
 apps/server/scripts/*
@@ -53,6 +55,9 @@ apps/server/scripts/*
 scripts/.db-sync/
 # 本地 DB 备份 dump（含真实数据，不入库）
 backups/
+# 本地素材与案例数据(含客户原始数据, 不入库)
+Cases/*.xlsx
+Cases/*.csv
 # 工具脚本入库例外（drift 补列/测试库重建）
 !apps/server/scripts/*.mjs
 !apps/server/scripts/*.cjs
