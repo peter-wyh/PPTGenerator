@@ -56,6 +56,9 @@ function parseAssertion(dsl: string): { op: string; arg: string; num?: number; n
   if (m) return { op: 'no_element', arg: m[1].trim() };
   m = s.match(/^contains_text\s+(.+)$/);
   if (m) return { op: 'contains_text', arg: m[1].trim() };
+  // ★ 0922: 反向包含断言 not_contains X → 全文(含 style/script 文本)不含 X 即过;severity:block 用于硬拦编造口径(如 SOV mentions)
+  m = s.match(/^not_contains\s+(.+)$/);
+  if (m) return { op: 'not_contains', arg: m[1].trim() };
   // ★ 章节标题序列契约:h2_texts == ['A','B','C'] → 文档 h2 文本须与序列完全一致(顺序+数量)
   m = s.match(/^h2_texts\s*==\s*\[(.+)\]$/);
   if (m) return { op: 'h2_texts', arg: m[1].trim() };
@@ -172,6 +175,10 @@ function runCheck(html: string, check: GuideCheck): CheckResult {
     case 'contains_text': {
       const got = html.toLowerCase().includes(parsed.arg.toLowerCase());
       return { ...base, passed: got, actual: got ? 'found' : 'not found', message: check.message };
+    }
+    case 'not_contains': {
+      const got = html.toLowerCase().includes(parsed.arg.toLowerCase());
+      return { ...base, passed: !got, actual: got ? 'found (should be absent)' : 'absent', message: check.message };
     }
     case 'h2_texts': {
       // arg 形如 'A','B','C' → 解析期望序列;提取文档 h2 文本(去内联标签+解码常见实体)比对顺序+数量

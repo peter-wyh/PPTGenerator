@@ -91,6 +91,17 @@ describe('validateHtml · 4 类断言', () => {
     const fail = validateHtml(deckHtml, [{ assert: 'contains_text watermark', severity: 'report' }]);
     expect(fail.results[0].passed).toBe(false);
   });
+
+  it('not_contains 反向包含(0922: SOV 编造硬拦)', () => {
+    const blocked = validateHtml(deckHtml, [{ assert: 'not_contains share of voice', severity: 'block' }]);
+    expect(blocked.results[0].passed).toBe(!deckHtml.toLowerCase().includes('share of voice'));
+    const absent = validateHtml(deckHtml, [{ assert: 'not_contains definitely-not-present-token', severity: 'block' }]);
+    expect(absent.results[0].passed).toBe(true);
+    expect(absent.ok).toBe(true);
+    const present = validateHtml(deckHtml, [{ assert: 'not_contains CONFIDENTIAL', severity: 'block' }]);
+    expect(present.results[0].passed).toBe(false);
+    expect(present.blocked).toBe(1);
+  });
 });
 
 describe('severity 语义', () => {
