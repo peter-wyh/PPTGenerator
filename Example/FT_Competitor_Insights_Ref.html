@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FT Competitor Analysis — Five-Card Design Reference (0924)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========= preview-only stand-ins(非资产,仅供独立预览章节上下文) ========= */
+body{ background:#ECECF2; font-family:"Inter",Arial,sans-serif; margin:0; padding:28px; }
+.page{ max-width:1120px; margin:0 auto; background:#F9F8F5; border-radius:20px; padding:36px 44px; }
+.section-head{ display:flex; align-items:center; gap:12px; margin:0 0 10px; }
+.badge.violet{ width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;background:#6F60A4; }
+h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; color:#1E1E1E; }
+.section-sub{ color:#8B8B93; font-size:13px; margin:0 0 4px; }
+.ref-banner{ max-width:1120px;margin:0 auto 14px;padding:10px 16px;border-radius:12px;background:#FFF6E8;border:1px solid #EAD4A8;color:#8A5A13;font-size:12px; }
+:root{
+  --font-display:"Libre Baskerville", Georgia, serif;
+  --font-body:"Inter", Arial, sans-serif;
+  --font-legacy:"Poppins","Inter", sans-serif;
+  --color-aubergine:#28223D;
+  --color-aubergine-2:#2C2242;
+  --color-lime:#D5EF9A;
+  --color-lime-bright:#E5FFAA;
+  --color-violet:#6F60A4;
+  --color-lilac:#B798BF;
+  --color-pink:#FFA8CD;
+  --color-pink-active:#FF6B9B;
+  --color-mint:#88DBA5;
+  --color-lavender:#DEACEF;
+  --color-pink-soft:#FEA4CA;
+  --color-white:#FFFFFF;
+  --color-warm-white:#F9F8F5;
+  --color-black:#000000;
+  --color-ink:#1E1E1E;
+  --color-muted:#C4C3CA;
+  --color-chip:#D9D9D9;
+  --color-surface-soft:#EBEBEB;
+  --color-border:#979797;
+  --color-border-dark:#6E6E6E;
+  --color-divider:#F0F0F0;
+  --radius-sm:8px;
+  --radius-md:16px;
+  --radius-lg:20px;
+  --radius-pill-sm:32px;
+  --radius-pill:999px;
+}
+
+/* ========= ↓↓↓ 0924 资产块(与 ft-recap/base.css 追加块字节一致,提取区间标记) ↓↓↓ ========= */
+.comp-board{
+  margin-top:18px; border-radius:var(--radius-md); padding:22px;
+  background:linear-gradient(150deg, var(--color-aubergine) 0%, #1E1730 100%);
+  border:1px solid rgba(213,239,154,.10);
+}
+.comp-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+@media (max-width:1100px){ .comp-grid{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:760px){ .comp-grid{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:480px){ .comp-grid{ grid-template-columns:1fr; } }
+.comp-card{
+  position:relative; display:flex; flex-direction:column; gap:10px;
+  background:var(--color-white); border-radius:12px; padding:14px 12px 12px;
+  box-shadow:0 4px 12px rgba(0,0,0,.25); min-width:0;
+}
+.cc-no{
+  position:absolute; top:6px; right:10px; font-family:var(--font-display);
+  font-size:30px; line-height:1; color:var(--color-aubergine); opacity:.08; font-weight:700;
+}
+.cc-title{ margin:0; font-family:var(--font-body); font-size:12.5px; font-weight:700; color:var(--color-aubergine-2); }
+.cc-sub{ margin:2px 0 0; font-family:var(--font-body); font-size:9.5px; line-height:1.4; color:#8B8B93; }
+.cc-seg{ border-radius:10px; padding:9px 10px; }
+.cc-seg .cc-tag{
+  display:flex; align-items:center; gap:5px; margin-bottom:6px;
+  font-family:var(--font-body); font-size:8.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+}
+.cc-seg .cc-tag::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.cc-data{ background:var(--color-warm-white); border:1px solid var(--color-divider); }
+.cc-data .cc-tag{ color:var(--color-violet); }
+.cc-insight{ background:rgba(136,219,165,.18); border:1px solid rgba(136,219,165,.5); }
+.cc-insight .cc-tag{ color:#2E6B49; }
+.cc-action{ background:rgba(255,168,205,.16); border:1px solid rgba(255,168,205,.5); }
+.cc-action .cc-tag{ color:#A33B6C; }
+.cc-seg p{ margin:0; font-family:var(--font-body); font-size:10.5px; line-height:1.55; color:var(--color-ink); }
+.cc-seg p b{ font-weight:700; color:var(--color-aubergine-2); }
+.cc-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:10px; }
+.cc-table th, .cc-table td{ padding:6px 7px; text-align:right; border-bottom:1px solid var(--color-divider); white-space:nowrap; }
+.cc-table tr:last-child td{ border-bottom:none; }
+.cc-table th{ font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#8B8B93; border-bottom:1px solid var(--color-border); }
+.cc-table th:first-child, .cc-table td:first-child{ text-align:left; color:var(--color-ink); font-weight:600; }
+.cc-table td.us{ font-weight:700; color:var(--color-aubergine-2); }
+.cc-table td.rival{ color:#B9B9C0; }
+.cc-chart{ position:relative; height:130px; }
+.cc-chart canvas{ max-height:130px; }
+.cc-kv{ display:flex; align-items:baseline; justify-content:space-between; margin-top:8px; }
+.cc-kv .cc-kv-v{ font-family:var(--font-body); font-size:20px; font-weight:700; color:var(--color-aubergine-2); }
+.cc-kv .cc-kv-k{ font-family:var(--font-body); font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#8B8B93; }
+.cc-bars{ display:flex; flex-direction:column; gap:8px; }
+.cbar .cbar-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px; }
+.cbar .cbar-label{ font-family:var(--font-body); font-size:9.5px; font-weight:600; color:var(--color-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cbar .cbar-val{ font-family:var(--font-body); font-size:9.5px; font-weight:700; color:var(--color-aubergine-2); flex:none; margin-left:6px; }
+.cbar .cbar-track{ height:7px; border-radius:99px; background:var(--color-surface-soft); overflow:hidden; }
+.cbar .cbar-fill{ height:100%; border-radius:99px; background:linear-gradient(90deg, var(--color-violet), var(--color-pink-active)); }
+.cbar.top .cbar-fill{ background:linear-gradient(90deg, var(--color-pink), var(--color-pink-active)); }
+.cc-kpis{ display:grid; grid-template-columns:repeat(2,1fr); gap:7px; }
+.ckpi{ background:var(--color-white); border:1px solid var(--color-divider); border-radius:9px; padding:7px 8px; }
+.ckpi .ckpi-v{ font-family:var(--font-body); font-size:15px; font-weight:700; color:var(--color-aubergine-2); }
+.ckpi .ckpi-k{ display:block; font-family:var(--font-body); font-size:8.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#8B8B93; margin-top:2px; }
+.ckpi .ckpi-delta{ display:inline-block; margin-left:5px; font-size:9px; font-weight:700; }
+.ckpi .ckpi-delta.up{ color:#2E7D4F; }
+.ckpi .ckpi-delta.down{ color:#C0392B; }
+.cc-pool{ display:flex; flex-direction:column; gap:6px; }
+.cc-pool .cpool-head{ font-family:var(--font-body); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#8B8B93; }
+.cpool-row{ display:flex; align-items:center; gap:7px; }
+.cpool-row .avatar{ width:20px; height:20px; font-size:9px; }
+.cpool-row .cpool-name{ flex:1; min-width:0; font-family:var(--font-body); font-size:10px; font-weight:600; color:var(--color-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cpool-row .cpool-metric{ font-family:var(--font-body); font-size:9.5px; font-weight:700; color:var(--color-aubergine-2); flex:none; }
+.comp-note{ font-size:11px; color:rgba(249,248,245,.55); margin:14px 6px 0; }
+/* ========= ↑↑↑ 0924 资产块结束 ========= */
+</style>
+</head>
+<body>
+<div class="ref-banner">DESIGN REFERENCE (0924) — Cards 01/02/04 use real GlowLab Oct-2026 values; Card 03 percentages and Card 05 radar values are SAMPLES (render only when real data exists). Review annotations from the source mockup (green "fixed module" pills, demo stickers, signature) are intentionally excluded.</div>
+<div class="page">
+  <div class="section">
+    <div class="section-head"><div class="badge violet">06</div><h2>Competitor Analysis</h2></div>
+    <p class="section-sub">How GlowLab's campaign on FANSTOSHOP compares against similar brands / channels in the same category.</p>
+    <div class="comp-board">
+      <div class="comp-grid">
+
+        <div class="comp-card">
+          <div class="cc-no">01</div>
+          <h4 class="cc-title">Commercial Commission</h4>
+          <p class="cc-sub">Commission model &amp; spend efficiency</p>
+          <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
+            <table class="cc-table">
+              <thead><tr><th>Metric</th><th>Our</th><th>Rival</th></tr></thead>
+              <tbody>
+                <tr><td>Commission Model</td><td class="us">CPA 16%</td><td class="rival">—</td></tr>
+                <tr><td>Avg. CPA</td><td class="us">$5.19</td><td class="rival">—</td></tr>
+                <tr><td>Est. Monthly Spend</td><td class="us">$300K</td><td class="rival">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>CPA commission (16%) is the only spend lever; blended CPA of <b>$5.19</b> stays well below the $300K monthly cap.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Hold the CPA model; renegotiate volume tiers before Q1.</p></div>
+        </div>
+
+        <div class="comp-card">
+          <div class="cc-no">02</div>
+          <h4 class="cc-title">Creator Strategy</h4>
+          <p class="cc-sub">Concentration of the creator portfolio</p>
+          <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
+            <div class="cc-chart"><canvas id="compCreatorMix"></canvas></div>
+            <div class="cc-kv"><span class="cc-kv-v">17</span><span class="cc-kv-k">Creators</span></div>
+          </div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Top 2 creators drive <b>20%</b> of 1.1K orders; the long tail of 15 delivers the rest.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Re-book Mia Chen &amp; Iris Lin; brief 3 lookalikes in November.</p></div>
+        </div>
+
+        <div class="comp-card">
+          <div class="cc-no">03</div>
+          <h4 class="cc-title">Content Strategy</h4>
+          <p class="cc-sub">Share of top-creator content by theme (SAMPLE)</p>
+          <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
+            <div class="cc-bars">
+              <div class="cbar top"><div class="cbar-head"><span class="cbar-label">Honest Review</span><span class="cbar-val">34%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:34%"></div></div></div>
+              <div class="cbar"><div class="cbar-head"><span class="cbar-label">Routine Format</span><span class="cbar-val">27%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:27%"></div></div></div>
+              <div class="cbar"><div class="cbar-head"><span class="cbar-label">Unboxing</span><span class="cbar-val">22%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:22%"></div></div></div>
+              <div class="cbar"><div class="cbar-head"><span class="cbar-label">Tutorial</span><span class="cbar-val">17%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:17%"></div></div></div>
+            </div>
+          </div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>"Honest Review" and routine formats dominate this month's top creator content.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Scale both formats into the Xiaohongshu rotation.</p></div>
+        </div>
+
+        <div class="comp-card">
+          <div class="cc-no">04</div>
+          <h4 class="cc-title">Performance</h4>
+          <p class="cc-sub">Efficiency &amp; conversion vs last month</p>
+          <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
+            <div class="cc-kpis">
+              <div class="ckpi"><span class="ckpi-v">1.1%<span class="ckpi-delta up">▲</span></span><span class="ckpi-k">Avg. CTR</span></div>
+              <div class="ckpi"><span class="ckpi-v">$5.19</span><span class="ckpi-k">Avg. CPA</span></div>
+              <div class="ckpi"><span class="ckpi-v">1.1K<span class="ckpi-delta up">+23.4%</span></span><span class="ckpi-k">Orders</span></div>
+              <div class="ckpi"><span class="ckpi-v">47%</span><span class="ckpi-k">New-Customer</span></div>
+            </div>
+            <div class="cc-pool">
+              <span class="cpool-head">Top Creators Pool</span>
+              <div class="cpool-row"><span class="avatar">M</span><span class="cpool-name">Mia Chen</span><span class="cpool-metric">116 orders</span></div>
+              <div class="cpool-row"><span class="avatar">I</span><span class="cpool-name">Iris Lin</span><span class="cpool-metric">106 orders</span></div>
+            </div>
+          </div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Orders <b>+23.4% MoM</b> on 30.6K clicks; new-customer rate at 47%.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Shift budget to back-half peaks — top 5 revenue days all landed on or after Oct 17.</p></div>
+        </div>
+
+        <div class="comp-card">
+          <div class="cc-no">05</div>
+          <h4 class="cc-title">Gap &amp; Opportunity</h4>
+          <p class="cc-sub">SAMPLE — renders only with real multi-dim competitor data</p>
+          <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
+            <div class="cc-chart"><canvas id="compRadar"></canvas></div>
+          </div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Rival leads on Spend &amp; Creator breadth; Our wins on Commission efficiency.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Close the creator-breadth gap via Influencer Hub packages.</p></div>
+        </div>
+
+      </div>
+      <p class="comp-note">Data source: Fanstoshop campaign dashboard &amp; order table, Oct 2026. Competitor channel metrics pending third-party verification — shown as "—".</p>
+    </div>
+  </div>
+</div>
+<script src="../apps/web/public/vendor/chartjs/chart.umd.min.js"></script>
+<script>
+Chart.defaults.font.family = 'Inter,Arial,sans-serif';
+Chart.defaults.color = '#8B8B93';
+new Chart(document.getElementById('compCreatorMix'), {
+  type: 'doughnut',
+  data: { labels: ['Mia Chen', 'Iris Lin', 'Others'],
+    datasets: [{ data: [116, 106, 878], backgroundColor: ['#D5EF9A', '#6F60A4', '#FFA8CD'], borderWidth: 0 }] },
+  options: { cutout: '62%', maintainAspectRatio: false, plugins: { legend: { display: false } } }
+});
+new Chart(document.getElementById('compRadar'), {
+  type: 'radar',
+  data: { labels: ['Commission', 'Creator Mix', 'Content', 'Performance', 'Spend'],
+    datasets: [
+      { label: 'Our', data: [82, 74, 68, 77, 65], borderColor: '#FF6B9B', backgroundColor: 'rgba(255,107,155,.18)', pointRadius: 2 },
+      { label: 'Rival (sample)', data: [58, 80, 72, 60, 85], borderColor: '#6F60A4', backgroundColor: 'rgba(111,96,164,.14)', pointRadius: 2 }
+    ] },
+  options: { maintainAspectRatio: false, scales: { r: { ticks: { display: false }, pointLabels: { font: { size: 8 } }, suggestedMin: 0, suggestedMax: 100 } }, plugins: { legend: { display: false } } }
+});
+</script>
+</body>
+</html>
