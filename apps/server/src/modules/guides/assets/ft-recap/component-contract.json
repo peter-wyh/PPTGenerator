@@ -1,7 +1,7 @@
 {
   "$schema": "pptgenerator/component-contract/v2",
   "generatedFrom": "ft-recap/base.css (auto-scan) + ft-recap/sample.html (usage counts; 原路径 Example/FT.html)",
-  "note": "类清单以 base.css 为真源自动生成——手工维护已废弃;usageInTemplate 为 FT.html 参考用量,可为 0(v4 新增类)。",
+  "note": "类清单以 base.css 为真源自动生成——手工维护已废弃;usageInTemplate 为 FT.html 参考用量,可为 0(v4 新增类)。;0924 新增 .comp-*/.cc-* 竞品五卡类(条目由 base.css 计数生成)",
   "pageModel": {
     "singlePage": true,
     "width": 1120,
@@ -35,6 +35,74 @@
       "definedInCss": 4,
       "usageInTemplate": 5
     },
+    "cbar": {
+      "definedInCss": 6,
+      "usageInTemplate": 4
+    },
+    "cc-action": {
+      "definedInCss": 2,
+      "usageInTemplate": 5
+    },
+    "cc-bars": {
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "cc-chart": {
+      "definedInCss": 2,
+      "usageInTemplate": 2
+    },
+    "cc-data": {
+      "definedInCss": 2,
+      "usageInTemplate": 5
+    },
+    "cc-insight": {
+      "definedInCss": 2,
+      "usageInTemplate": 5
+    },
+    "cc-kpis": {
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "cc-kv": {
+      "definedInCss": 3,
+      "usageInTemplate": 1
+    },
+    "cc-kv-k": {
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "cc-kv-v": {
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "cc-no": {
+      "definedInCss": 1,
+      "usageInTemplate": 5
+    },
+    "cc-pool": {
+      "definedInCss": 2,
+      "usageInTemplate": 1
+    },
+    "cc-seg": {
+      "definedInCss": 5,
+      "usageInTemplate": 15
+    },
+    "cc-sub": {
+      "definedInCss": 1,
+      "usageInTemplate": 5
+    },
+    "cc-table": {
+      "definedInCss": 9,
+      "usageInTemplate": 1
+    },
+    "cc-tag": {
+      "definedInCss": 5,
+      "usageInTemplate": 15
+    },
+    "cc-title": {
+      "definedInCss": 1,
+      "usageInTemplate": 5
+    },
     "chart-card": {
       "definedInCss": 2,
       "usageInTemplate": 1
@@ -59,9 +127,41 @@
       "definedInCss": 1,
       "usageInTemplate": 1
     },
+    "ckpi": {
+      "definedInCss": 6,
+      "usageInTemplate": 4
+    },
+    "ckpi-delta": {
+      "definedInCss": 3,
+      "usageInTemplate": 2
+    },
+    "ckpi-k": {
+      "definedInCss": 1,
+      "usageInTemplate": 4
+    },
+    "ckpi-v": {
+      "definedInCss": 1,
+      "usageInTemplate": 4
+    },
     "cmetrics": {
       "definedInCss": 9,
       "usageInTemplate": 2
+    },
+    "comp-board": {
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "comp-card": {
+      "definedInCss": 1,
+      "usageInTemplate": 5
+    },
+    "comp-grid": {
+      "definedInCss": 4,
+      "usageInTemplate": 1
+    },
+    "comp-note": {
+      "definedInCss": 1,
+      "usageInTemplate": 1
     },
     "compare-note": {
       "definedInCss": 1,
@@ -74,6 +174,22 @@
     "compare-wrap": {
       "definedInCss": 1,
       "usageInTemplate": 1
+    },
+    "cpool-head": {
+      "definedInCss": 1,
+      "usageInTemplate": 1
+    },
+    "cpool-metric": {
+      "definedInCss": 1,
+      "usageInTemplate": 2
+    },
+    "cpool-name": {
+      "definedInCss": 1,
+      "usageInTemplate": 2
+    },
+    "cpool-row": {
+      "definedInCss": 4,
+      "usageInTemplate": 2
     },
     "creator-card": {
       "definedInCss": 5,
