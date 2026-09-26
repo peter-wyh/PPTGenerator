@@ -48,9 +48,8 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
 
 /* ========= ↓↓↓ 0924 资产块(与 ft-recap/base.css 追加块字节一致,提取区间标记) ↓↓↓ ========= */
 .comp-board{
-  margin-top:18px; border-radius:var(--radius-md); padding:22px;
-  background:linear-gradient(150deg, var(--color-aubergine) 0%, #1E1730 100%);
-  border:1px solid rgba(213,239,154,.10);
+  /* 0926:画板透明化——卡片直接落在页面底色上,保卡宽 */
+  margin-top:18px;
 }
 .comp-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
 @media (max-width:1100px){ .comp-grid{ grid-template-columns:repeat(3,1fr); } }
@@ -59,7 +58,7 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
 .comp-card{
   position:relative; display:flex; flex-direction:column; gap:10px;
   background:var(--color-white); border-radius:12px; padding:14px 12px 12px;
-  box-shadow:0 4px 12px rgba(0,0,0,.25); min-width:0;
+  border:1px solid var(--color-chip); min-width:0;
 }
 .cc-no{
   position:absolute; top:6px; right:10px; font-family:var(--font-display);
@@ -79,6 +78,16 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
 .cc-insight .cc-tag{ color:#2E6B49; }
 .cc-action{ background:rgba(255,168,205,.16); border:1px solid rgba(255,168,205,.5); }
 .cc-action .cc-tag{ color:#A33B6C; }
+/* 0926:Insight/Action 段标签配扁平图标(灯泡/闪电,mask 上色);Data 段保留圆点 */
+.cc-insight .cc-tag::before, .cc-action .cc-tag::before{ width:11px; height:11px; border-radius:0; }
+.cc-insight .cc-tag::before{
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 .8C3.9.8 2.2 2.5 2.2 4.6c0 1.2.6 2.3 1.5 3 .3.3.5.6.5 1v.6h3.6v-.6c0-.4.2-.8.5-1 .9-.7 1.5-1.8 1.5-3C9.8 2.5 8.1.8 6 .8zM4.6 10h2.8v.7H4.6zM4.9 11.2h2.2v.7H4.9z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 .8C3.9.8 2.2 2.5 2.2 4.6c0 1.2.6 2.3 1.5 3 .3.3.5.6.5 1v.6h3.6v-.6c0-.4.2-.8.5-1 .9-.7 1.5-1.8 1.5-3C9.8 2.5 8.1.8 6 .8zM4.6 10h2.8v.7H4.6zM4.9 11.2h2.2v.7H4.9z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.cc-action .cc-tag::before{
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6.8.6L2.2 6.8h2.9L4.4 11.4 9 5.2H6.1L6.8.6z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6.8.6L2.2 6.8h2.9L4.4 11.4 9 5.2H6.1L6.8.6z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
 .cc-seg p{ margin:0; font-family:var(--font-body); font-size:10.5px; line-height:1.55; color:var(--color-ink); }
 .cc-seg p b{ font-weight:700; color:var(--color-aubergine-2); }
 .cc-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:10px; }
@@ -149,27 +158,39 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
           <h4 class="cc-title">Creator Strategy</h4>
           <p class="cc-sub">Concentration of the creator portfolio</p>
           <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
-            <div class="cc-chart"><canvas id="compCreatorMix"></canvas></div>
-            <div class="cc-kv"><span class="cc-kv-v">17</span><span class="cc-kv-k">Creators</span></div>
+            <div class="cc-chartrow">
+              <div class="cc-chart-sm"><canvas id="compCreatorMix"></canvas></div>
+              <div class="cc-legend-col"><span class="li"><span class="dot" style="background:var(--color-lime)"></span>Mega 4 · 24%</span><span class="li"><span class="dot" style="background:var(--color-violet)"></span>Macro 9 · 53%</span><span class="li"><span class="dot" style="background:var(--color-pink)"></span>Micro 4 · 24%</span></div>
+            </div>
+            <div class="cc-kv"><span class="cc-kv-v">Beauty</span><span class="cc-kv-k">Top niche</span></div>
+            <div class="cc-kv"><span class="cc-kv-v">88%</span><span class="cc-kv-k">Repeat collab rate (15/17)</span></div>
           </div>
-          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Top 2 creators drive <b>20%</b> of 1.1K orders; the long tail of 15 delivers the rest.</p></div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Beauty is the top niche (<b>6 of 17</b>); <b>15 of 17 (88%)</b> creators have repeated collaborations with us across campaigns.</p></div>
           <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Re-book Mia Chen &amp; Iris Lin; brief 3 lookalikes in November.</p></div>
         </div>
 
         <div class="comp-card">
           <div class="cc-no">03</div>
-          <h4 class="cc-title">Content Strategy</h4>
-          <p class="cc-sub">Share of top-creator content by theme (SAMPLE)</p>
+          <h4 class="cc-title">Content Format Split</h4>
+          <p class="cc-sub">Formats, CTAs &amp; cadence vs rivals</p>
           <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
+            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Format Split</span><span class="cc-kv-k" style="text-transform:none;letter-spacing:0">20 tracked posts</span></div>
             <div class="cc-bars">
-              <div class="cbar top"><div class="cbar-head"><span class="cbar-label">Honest Review</span><span class="cbar-val">34%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:34%"></div></div></div>
-              <div class="cbar"><div class="cbar-head"><span class="cbar-label">Routine Format</span><span class="cbar-val">27%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:27%"></div></div></div>
-              <div class="cbar"><div class="cbar-head"><span class="cbar-label">Unboxing</span><span class="cbar-val">22%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:22%"></div></div></div>
-              <div class="cbar"><div class="cbar-head"><span class="cbar-label">Tutorial</span><span class="cbar-val">17%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:17%"></div></div></div>
+              <div class="cbar top"><div class="cbar-head"><span class="cbar-label">Video</span><span class="cbar-val">10 · 50%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:50%"></div></div></div>
+              <div class="cbar"><div class="cbar-head"><span class="cbar-label">Static</span><span class="cbar-val">10 · 50%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:50%"></div></div></div>
             </div>
+            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Top CTA Keywords</span></div>
+            <div class="cc-cta-tags"><span>Shop now</span><span>Use code</span><span>Link in bio</span><span>Limited time</span><span>Get 20% off</span></div>
+            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Discount / Code Usage</span></div>
+            <div class="cc-duo">
+              <div class="cc-duo-cell"><span class="cc-kv-v" style="font-size:16px">65%</span><span class="cc-kv-k" style="text-transform:none;letter-spacing:0">Competitor A</span></div>
+              <div class="cc-duo-cell"><span class="cc-kv-k" style="text-transform:none;letter-spacing:0">Competitor B</span><span class="cc-kv-v" style="font-size:16px">48%</span></div>
+            </div>
+            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Posting Rhythm</span></div>
+            <div class="cc-kv"><span class="cc-kv-v">3-5 / week</span><span class="cc-kv-k">per creator</span></div>
           </div>
-          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>"Honest Review" and routine formats dominate this month's top creator content.</p></div>
-          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Scale both formats into the Xiaohongshu rotation.</p></div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Content splits evenly <b>video / static 10 : 10</b>; rivals lean harder on discount codes (<b>A 65%</b> vs <b>B 48%</b>), our CTA mix stays promo-light.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Hold the 3–5 / week cadence; A/B one code-led CTA against the current promo-light mix.</p></div>
         </div>
 
         <div class="comp-card">
