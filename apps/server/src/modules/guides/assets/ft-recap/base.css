@@ -465,9 +465,8 @@
 
 /* ===== 0924: Competitor Analysis 五卡(Data→Insight→Action 固定三段) ===== */
 .comp-board{
-  margin-top:18px; border-radius:var(--radius-md); padding:22px;
-  background:linear-gradient(150deg, var(--color-aubergine) 0%, #1E1730 100%);
-  border:1px solid rgba(213,239,154,.10);
+  /* 0926:画板透明化——不加背景色/内边距,卡片直接落在页面底色上,保卡宽 */
+  margin-top:18px;
 }
 .comp-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
 @media (max-width:1100px){ .comp-grid{ grid-template-columns:repeat(3,1fr); } }
@@ -476,7 +475,7 @@
 .comp-card{
   position:relative; display:flex; flex-direction:column; gap:10px;
   background:var(--color-white); border-radius:12px; padding:14px 12px 12px;
-  box-shadow:0 4px 12px rgba(0,0,0,.25); min-width:0;
+  border:1px solid var(--color-chip); min-width:0;
 }
 .cc-no{
   position:absolute; top:6px; right:10px; font-family:var(--font-display);
@@ -496,6 +495,16 @@
 .cc-insight .cc-tag{ color:#2E6B49; }
 .cc-action{ background:rgba(255,168,205,.16); border:1px solid rgba(255,168,205,.5); }
 .cc-action .cc-tag{ color:#A33B6C; }
+/* 0926:Insight/Action 段标签配扁平图标(灯泡/闪电,mask 上色);Data 段保留圆点 */
+.cc-insight .cc-tag::before, .cc-action .cc-tag::before{ width:11px; height:11px; border-radius:0; }
+.cc-insight .cc-tag::before{
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 .8C3.9.8 2.2 2.5 2.2 4.6c0 1.2.6 2.3 1.5 3 .3.3.5.6.5 1v.6h3.6v-.6c0-.4.2-.8.5-1 .9-.7 1.5-1.8 1.5-3C9.8 2.5 8.1.8 6 .8zM4.6 10h2.8v.7H4.6zM4.9 11.2h2.2v.7H4.9z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 .8C3.9.8 2.2 2.5 2.2 4.6c0 1.2.6 2.3 1.5 3 .3.3.5.6.5 1v.6h3.6v-.6c0-.4.2-.8.5-1 .9-.7 1.5-1.8 1.5-3C9.8 2.5 8.1.8 6 .8zM4.6 10h2.8v.7H4.6zM4.9 11.2h2.2v.7H4.9z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.cc-action .cc-tag::before{
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6.8.6L2.2 6.8h2.9L4.4 11.4 9 5.2H6.1L6.8.6z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6.8.6L2.2 6.8h2.9L4.4 11.4 9 5.2H6.1L6.8.6z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
 .cc-seg p{ margin:0; font-family:var(--font-body); font-size:10.5px; line-height:1.55; color:var(--color-ink); }
 .cc-seg p b{ font-weight:700; color:var(--color-aubergine-2); }
 .cc-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:10px; }
@@ -530,4 +539,17 @@
 .cpool-row .avatar{ flex:none; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-legacy); font-weight:700; font-size:9px; color:var(--color-white); background:var(--color-violet); }
 .cpool-row .cpool-name{ flex:1; min-width:0; font-family:var(--font-body); font-size:10px; font-weight:600; color:var(--color-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cpool-row .cpool-metric{ font-family:var(--font-body); font-size:9.5px; font-weight:700; color:var(--color-aubergine-2); flex:none; }
-.comp-note{ font-size:11px; color:rgba(249,248,245,.55); margin:14px 6px 0; }
+.comp-note{ font-size:11px; color:#8B8B93; margin:14px 6px 0; }
+
+/* 0926 追加:卡02 小环+竖排图例并排 / 卡03 分组标题+CTA 胶囊+双列数值 */
+.cc-chartrow{ display:flex; align-items:center; gap:10px; }
+.cc-chart-sm{ position:relative; width:96px; height:96px; flex:none; }
+.cc-legend-col{ display:flex; flex-direction:column; gap:5px; font-family:var(--font-body); font-size:9px; font-weight:600; color:#5B5B63; }
+.cc-legend-col .li{ display:flex; align-items:center; gap:4px; }
+.cc-legend-col .dot{ width:7px; height:7px; border-radius:2px; flex:none; }
+.cc-cta-tags{ display:flex; flex-wrap:wrap; gap:4px; }
+.cc-cta-tags span{ font-family:var(--font-body); font-size:9px; font-weight:600; color:var(--color-ink); padding:2px 7px; border-radius:999px; background:var(--color-surface-soft); border:1px solid var(--color-border); white-space:nowrap; }
+.cc-kv-head{ margin-top:12px; padding-top:8px; border-top:1px solid var(--color-border); }
+.cc-kv-head:first-of-type{ border-top:none; margin-top:0; padding-top:0; }
+.cc-duo{ display:flex; gap:10px; margin-top:2px; }
+.cc-duo-cell{ flex:1; display:flex; align-items:baseline; justify-content:space-between; padding:6px 10px; border-radius:8px; background:var(--color-surface-soft); }
