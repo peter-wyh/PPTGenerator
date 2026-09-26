@@ -273,6 +273,12 @@ export interface ProjectMeta {
   /** AI HTML 生成状态：'generated'=已生成, 'generating'=生成中, 'pending'=未生成。 */
   aiHtmlStatus?: 'generated' | 'generating' | 'pending';
 
+  /** ★ 0926 k3：AI HTML 上次生成参数（autoSave 持久化，重开报告配置面板回填）。 */
+  aiPrompt?: string;
+  designMd?: string;
+  /** 上次生成选的结构指南 id（null=未用结构指南）。 */
+  guideId?: string | null;
+
   /** Agent 对话历史（Report Agent 模式，存于 meta JSON）。 */
   agentHistory?: Array<{
     role: 'user' | 'assistant';

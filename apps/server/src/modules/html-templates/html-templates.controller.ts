@@ -288,8 +288,9 @@ export const htmlTemplateController = {
   autoSave: asyncHandler(async (req: Request, res: Response) => {
     const auth = req.user as AuthPayload; // 0905 P0-1：归属校验需要请求者身份
     const { projectId } = req.params;
-    const { html, agentHistory, aiPrompt, designMd } = req.body;
-    const result = await htmlTemplateService.autoSaveHtml(auth.id, projectId, html, agentHistory, aiPrompt, designMd);
+    // ★ 0926 k3：guideId 随存（重开报告配置面板回填断链修复）
+    const { html, agentHistory, aiPrompt, designMd, guideId } = req.body;
+    const result = await htmlTemplateService.autoSaveHtml(auth.id, projectId, html, agentHistory, aiPrompt, designMd, guideId);
     res.json(result);
   }),
 

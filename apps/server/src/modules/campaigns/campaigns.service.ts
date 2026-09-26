@@ -1225,29 +1225,37 @@ export const importService = {
   async importCreatorAudience(ownerId: string, items: Record<string, unknown>[]) {
     let updated = 0;
     let skipped = 0;
+    // ★ 0926 k2：占比字段语义校验——负值/非数值跳过该字段（百分比不可能为负，
+    //   脏 Excel 导入会让报告渲染出 "-3%" 类不可能占比）。字段级跳过，不影响同行其它字段。
+    const pctNum = (v: unknown): number | null => {
+      const n = Number(v);
+      return v !== '' && v !== null && v !== undefined && Number.isFinite(n) && n >= 0 ? n : null;
+    };
     for (const item of items) {
       const creatorId = String(item.creatorId ?? '');
       if (!creatorId) { skipped++; continue; }
       try {
         const creator = await prisma.creator.findFirst({ where: { id: creatorId, ownerId } });
         if (!creator) { skipped++; continue; }
+        const gMale = pctNum(item.genderMale);
+        const gFemale = pctNum(item.genderFemale);
         const audience = {
           ...(creator.audience as object | null ?? {}),
           genderSplit: [
-            ...(item.genderMale ? [{ label: 'Male', value: Number(item.genderMale) }] : []),
-            ...(item.genderFemale ? [{ label: 'Female', value: Number(item.genderFemale) }] : []),
+            ...(gMale !== null ? [{ label: 'Male', value: gMale }] : []),
+            ...(gFemale !== null ? [{ label: 'Female', value: gFemale }] : []),
           ],
           ageRange: [
-            ...(item.age13_17 ? [{ label: '13-17', value: Number(item.age13_17) }] : []),
-            ...(item.age18_24 ? [{ label: '18-24', value: Number(item.age18_24) }] : []),
-            ...(item.age25_34 ? [{ label: '25-34', value: Number(item.age25_34) }] : []),
-            ...(item.age35_44 ? [{ label: '35-44', value: Number(item.age35_44) }] : []),
-            ...(item.age45_64 ? [{ label: '45-64', value: Number(item.age45_64) }] : []),
+            ...(pctNum(item.age13_17) !== null ? [{ label: '13-17', value: pctNum(item.age13_17)! }] : []),
+            ...(pctNum(item.age18_24) !== null ? [{ label: '18-24', value: pctNum(item.age18_24)! }] : []),
+            ...(pctNum(item.age25_34) !== null ? [{ label: '25-34', value: pctNum(item.age25_34)! }] : []),
+            ...(pctNum(item.age35_44) !== null ? [{ label: '35-44', value: pctNum(item.age35_44)! }] : []),
+            ...(pctNum(item.age45_64) !== null ? [{ label: '45-64', value: pctNum(item.age45_64)! }] : []),
           ],
           topCities: [
-            ...(item.topCity1 ? [{ label: String(item.topCity1), value: Number(item.topCity1Pct ?? 0) }] : []),
-            ...(item.topCity2 ? [{ label: String(item.topCity2), value: Number(item.topCity2Pct ?? 0) }] : []),
-            ...(item.topCity3 ? [{ label: String(item.topCity3), value: Number(item.topCity3Pct ?? 0) }] : []),
+            ...(item.topCity1 ? [{ label: String(item.topCity1), value: pctNum(item.topCity1Pct) ?? 0 }] : []),
+            ...(item.topCity2 ? [{ label: String(item.topCity2), value: pctNum(item.topCity2Pct) ?? 0 }] : []),
+            ...(item.topCity3 ? [{ label: String(item.topCity3), value: pctNum(item.topCity3Pct) ?? 0 }] : []),
           ],
         };
         await prisma.creator.update({ where: { id: creatorId }, data: { audience: audience as unknown as Prisma.InputJsonValue } });

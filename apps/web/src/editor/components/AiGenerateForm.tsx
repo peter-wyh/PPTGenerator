@@ -14,9 +14,13 @@ interface Props {
   generating?: boolean;
   generateLabel?: string;
   error?: string;
+  /** ★ 0926 k3：重开报告回填——上次生成用的提示词/结构指南（project.meta.aiPrompt/guideId）。
+   *  未传或空串 = 首次进入，走预设逻辑不变。 */
+  initialPrompt?: string;
+  initialGuideId?: string;
 }
 
-export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generating, generateLabel, error }: Props) {
+export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generating, generateLabel, error, initialPrompt, initialGuideId }: Props) {
   const [mode, setMode] = useState<Mode>('ai');
   const [prompt, setPrompt] = useState('');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
@@ -46,7 +50,8 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
 
   useEffect(() => {
     if (presets.length > 0) {
-      setPrompt(presets[0].requirement);
+      // ★ 0926 k3：重开报告回填——有上次 prompt 则优先（不覆盖为预设）；首次进入走预设
+      setPrompt(initialPrompt || presets[0].requirement);
       setSelectedPresetIdx(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,7 +66,13 @@ export function AiGenerateForm({ campaignId, reportPeriod, onGenerate, generatin
     }
     htmlTemplatesApi
       .getStructuralGuides(campaignId)
-      .then(setStructuralGuides)
+      .then((gs) => {
+        setStructuralGuides(gs);
+        // ★ 0926 k3：重开报告回填——上次用的结构指南重新选中
+        if (initialGuideId && gs.some((g) => g.id === initialGuideId)) {
+          setStructuralGuideId(initialGuideId);
+        }
+      })
       .catch(() => setStructuralGuides([]));
   }, [campaignId]);
 

@@ -131,6 +131,30 @@ function assembleSystemPromptTemplate(): string {
   return tpl;
 }
 
+/**
+ * ★ 0926 k2：受众画像清洗——性别/年龄/城市占比数组剔除负值与非数值项（百分比语义不可能为负）。
+ * 脏导入数据（Excel 手填）会让 AI 渲染出 "-3%" 类不可能占比；清洗后为空的数组键整键删除
+ * （宁缺勿假：整组无有效数据 → 该维度不注入，AI 端不渲染）。trend 等其它键原样保留。
+ */
+function sanitizeAudienceInsight(aud: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const PCT_KEYS = ['genderSplit', 'ageRange', 'topCities'];
+  for (const [k, v] of Object.entries(aud)) {
+    if (!PCT_KEYS.includes(k) || !Array.isArray(v)) {
+      out[k] = v;
+      continue;
+    }
+    const cleaned = (v as unknown[]).filter(
+      (it): it is Record<string, unknown> =>
+        !!it && typeof it === 'object' && !Array.isArray(it)
+        && Number.isFinite(Number((it as Record<string, unknown>).value))
+        && Number((it as Record<string, unknown>).value) >= 0,
+    );
+    if (cleaned.length) out[k] = cleaned;
+  }
+  return out;
+}
+
 // ★ 模板先声明、后拼装(const 模板字面量必须在使用前初始化)
 const SYSTEM_PROMPT_TEMPLATE_RAW = `You are a senior front-end engineer. You produce beautiful, self-contained B2B marketing report pages in pure HTML, styled like a modern SaaS dashboard.
 
@@ -938,10 +962,18 @@ export const aiGenerateService = {
     });
     if (!campaign) return undefined;
     const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
+    // ★ 0926 k1：订单表日期并入覆盖判定（同 buildCampaignContext）——LP 无 daily 但订单表
+    //   有行时 covered 不再为 null，否则 done chunk 误报「无数据」、前端 toast 误导。
+    let orderDays: Set<string> | undefined;
+    try {
+      const os = await orderStatsService.getRange(campaignId, reportPeriod?.startDate, reportPeriod?.endDate);
+      if (os) orderDays = new Set(os.days.map((d: any) => d.date));
+    } catch { /* 订单查询失败 → 保持 LP 口径 */ }
     const cov = computeCoverage(
       campaign,
       hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined,
       campaign.endDate,
+      orderDays,
     );
     return {
       requested: {
@@ -975,10 +1007,17 @@ export const aiGenerateService = {
     if (!campaign) return undefined;
 
     const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
+    // ★ 0926 k1：订单表日期并入覆盖判定（同 getDataCoverage / buildCampaignContext）
+    let orderDays: Set<string> | undefined;
+    try {
+      const os = await orderStatsService.getRange(campaignId, reportPeriod?.startDate, reportPeriod?.endDate);
+      if (os) orderDays = new Set(os.days.map((d: any) => d.date));
+    } catch { /* 订单查询失败 → 保持 LP 口径 */ }
     const cov = computeCoverage(
       campaign,
       hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined,
       campaign.endDate,
+      orderDays,
     );
     const requested = {
       start: reportPeriod?.startDate ?? campaign.startDate,
@@ -1223,7 +1262,21 @@ export const aiGenerateService = {
     // ★ 宁缺勿假：daily 是唯一数字真源；analytics blob 不再进 prompt。
     // 顶层仅保留有真实数据的维度（dailyTrend 仅在周期切片后非空）；null 维度不再序列化进上下文。
     const hasPeriod = !!(reportPeriod && (reportPeriod.startDate || reportPeriod.endDate));
-    const cov = computeCoverage(campaign, hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined, campaign.endDate);
+    // ★ 0925 k1：覆盖计算延后——需先查 orderStats 才能把订单表日期并入覆盖判定
+    //   （LP 无 daily 但订单表有行时 covered 不再为 null，避免下游 prompt 铁律误渲染 Data Unavailable）。
+    let orderStats: Awaited<ReturnType<typeof orderStatsService.getRange>> = null;
+    try {
+      orderStats = await orderStatsService.getRange(campaignId, reportPeriod?.startDate, reportPeriod?.endDate);
+    } catch {
+      orderStats = null;
+    }
+    const cov = computeCoverage(
+      campaign,
+      hasPeriod ? { start: reportPeriod!.startDate, end: reportPeriod!.endDate } : undefined,
+      campaign.endDate,
+      // ★ 订单表日期并入：orderStats.days 只含「有行」的天（非全区间）——正是覆盖语义
+      orderStats ? new Set(orderStats.days.map((d: any) => d.date)) : undefined,
+    );
     const dataCoverage = {
       requested: { start: reportPeriod?.startDate ?? campaign.startDate, end: reportPeriod?.endDate ?? campaign.endDate },
       ...cov,
@@ -1236,14 +1289,7 @@ export const aiGenerateService = {
     // 不再作为 AI 上下文——常过期、与周期不符。需要时序/分布，请导入真实 CPS daily。
     let dailyTrend: any[] | null = null;
 
-    // ★ 中间层订单统计（OrderDailyStat）：订单表为真源——orders/revenue/commission 换此来源，
-    //   clicks/newCustomers 等中间层没有的维度保持 daily。该 campaign 无中间层行 → null → 走 daily 老路。
-    let orderStats: Awaited<ReturnType<typeof orderStatsService.getRange>> = null;
-    try {
-      orderStats = await orderStatsService.getRange(campaignId, reportPeriod?.startDate, reportPeriod?.endDate);
-    } catch {
-      orderStats = null;
-    }
+    // ★ 0925 k1：orderStats 查询已上移至覆盖计算之前（订单日期并入 covered 判定）
     if (orderStats) {
       logger.info(`[buildCampaignContext] orderStats available: ${orderStats.days.length} days, orders=${orderStats.totals.orders} (order-table sourced)`);
     }
@@ -1292,7 +1338,14 @@ export const aiGenerateService = {
     //   hasPeriod && cov.covered 时主链路必查；否则延迟到 syncSource/allMedia 按需查。
     let cpsSource: Awaited<ReturnType<typeof loadCreatorCps>> | null = null;
 
-    if (hasPeriod && cov.covered) {
+    if (hasPeriod && (cov.covered || orderStats)) {
+      // ★ 0925 k1 修复：gate 放宽——LP 无 daily（cov.covered=null）但订单表有行（orderStats）
+      //   时不再整块跳过（旧逻辑下 KN LP=0 行导致订单 31 天全满也不注入任何 trend/KPI）。
+      //   与 recipe mapper L392-393 逃生门同口径：订单真源不被 LP daily 覆盖判定误杀。
+      //   订单侧数据走 orderStats 天轴；LP 侧 byDate/clicksKeySeen 自然为空集（clicks N/A）。
+      if (!cov.covered && orderStats) {
+        logger.info(`[buildCampaignContext] LP daily empty but orderStats present (${orderStats.days.length} days) — proceeding with order-table source`);
+      }
       // ★ 真源切换(cps-daily 废弃)：期内汇总统一从 cpsSource（LP 流量 daily + 订单表成交/新客日）。
       //   旧 CpsPerformance.daily 已全部复制/重建进 LP——扫旧表双计,删除。
       cpsSource = await loadCreatorCps(campaignId);
@@ -1432,18 +1485,25 @@ export const aiGenerateService = {
       // ★ 中间层存在时：revenue/orders 用订单表按日值，clicks 保持 daily（日期并集，缺侧 0）
       //   clicks 数据源缺失时 trend 不带 clicks 字段（宁缺勿假——0 序列会被 AI 画成贴地零线）
       if (orderStats) {
-        const dates = orderStats.days.map((d) => d.date).sort();
+        // ★ 0925 k1 修复：日期轴改「订单表 ∪ LP daily」并集（与上月 L1519 对称）。
+        //   旧逻辑只取订单表天——订单侧缺天时该日整行消失（trend 断档），而 LP 侧有 clicks
+        //   的日子也被丢弃。并集后缺侧 0 兜底：订单缺天 revenue/orders=0（真实断档显式为 0，
+        //   不伪装成有值），clicks 无日级源时不带字段（宁缺勿假不变）。
+        const dates = [...new Set([
+          ...orderStats.days.map((d) => d.date),
+          ...(clicksKeySeen ? [...byDate.keys()] : []),
+        ])].sort();
         dailyTrend = dates.map((d) => {
-          const od = orderStats.days.find((x) => x.date === d)!;
+          const od = orderStats.days.find((x) => x.date === d);
           return {
             date: d,
-            revenue: od.commission,
-            orders: od.orders,
+            revenue: od?.commission ?? 0,
+            orders: od?.orders ?? 0,
             // clicks 有数据源才带(daily 侧 byDate;缺失不带——0 序列会被画成贴地零线)
             ...(clicksKeySeen ? { clicks: byDate.get(d)?.clicks ?? 0 } : {}),
           };
         });
-        logger.info(`[buildCampaignContext] Period-aware data (order-table sourced): ${dates.length} days, revenue=$${orderStats.totals.commission.toFixed(0)}, orders=${orderStats.totals.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
+        logger.info(`[buildCampaignContext] Period-aware data (order-table sourced): ${dates.length} days (${orderStats.days.length} order-table + ${dates.length - orderStats.days.length} lp-only), revenue=$${orderStats.totals.commission.toFixed(0)}, orders=${orderStats.totals.orders}${clicksKeySeen ? '' : ', clicks=N/A(no source)'}`);
       } else {
         const dates = [...byDate.keys()].sort();
         dailyTrend = dates.map((d) => {
@@ -2122,12 +2182,17 @@ export const aiGenerateService = {
             })(),
             // ★ 0827 迭代：受众画像 + 评论词云注入（此前编辑 UI 有完整入口但报告侧 0 消费——断头）。
             //   宁缺勿假：无数据置 null，AI 端不渲染对应模块。
+            //   ★ 0926 k2：占比数组清洗——性别/年龄/城市是百分比语义，负值/非数值项剔除
+            //   （脏导入数据会让 AI 渲染出 "-3%" 之类不可能占比）；trend 等其它键原样保留。
             audienceInsight: (() => {
               const dels = (cc.collaboration?.deliverables ?? []) as unknown as Array<Record<string, unknown>>;
               const auds = dels
                 .map((d) => d.audience)
                 .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object' && !Array.isArray(a) && Object.keys(a).length > 0);
-              return auds.length ? auds[auds.length - 1] : null;
+              const raw = auds.length ? auds[auds.length - 1] : null;
+              if (!raw) return null;
+              const clean = sanitizeAudienceInsight(raw);
+              return Object.keys(clean).length ? clean : null;
             })(),
             commentWordcloud: (() => {
               const dels = (cc.collaboration?.deliverables ?? []) as unknown as Array<Record<string, unknown>>;

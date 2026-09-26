@@ -30,11 +30,17 @@ export function computeCoverage(
   requested: { start?: string; end?: string } | undefined,
   /** 半开区间兜底用的 campaign.endDate(与 mapper MoM guard 同口径)。 */
   campaignEndFallback?: string,
+  /** ★ 0925 k1：订单表日期集合（OrderDailyStat.days）——成交侧覆盖并入判定。
+   *  LP 无 daily 但订单表有行时 covered 不再为 null（否则下游 prompt 铁律会对满血订单数据
+   *  误渲染 Data Unavailable）。不传 → 行为与旧版完全一致（mapper recipe 路径不受影响）。 */
+  extraDates?: Set<string>,
 ): DailyCoverage {
   // 1) 收集全部 daily 日期集合(仅匹配 ISO YYYY-MM-DD;非 ISO 日期视为缺失(计入 missingDays))
   //    ★ 真源切换(cps-daily 废弃)：日期集合来自 LinkPerformance.daily（旧 CpsPerformance.daily
   //      已全部复制/重建进 LP——migratedFromCpsId 溯源，无遗漏);成交侧日期不进覆盖判定
   //      (报告 trend 的 revenue/orders 由订单表现算，与流量覆盖正交)。
+  //      ★ 0925 k1：正交归正交，但当 LP 无任何 daily 而订单表有行时，覆盖判定必须并入订单
+  //        日期——「流量无覆盖」不该连带判死「成交无覆盖」（两个维度各自有真源各自声明）。
   const dailyDates = new Set<string>();
   for (const lp of campaign?.linkPerformances ?? []) {
     for (const d of (lp?.daily as Any[] | null | undefined) ?? []) {
@@ -42,6 +48,7 @@ export function computeCoverage(
       if (date) dailyDates.add(date);
     }
   }
+  for (const d of extraDates ?? []) dailyDates.add(d);
 
   // 2) 请求区间(无 → daily 全集即"请求",全集必全覆盖)
   if (!requested?.start && !requested?.end) {

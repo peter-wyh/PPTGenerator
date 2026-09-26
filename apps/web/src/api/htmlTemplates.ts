@@ -426,12 +426,13 @@ export const htmlTemplatesApi = {
     projectId: string,
     html?: string,
     agentHistory?: AgentChatMessage[],
-    genParams?: { prompt: string; designMd: string },
+    genParams?: { prompt: string; designMd: string; guideId?: string },
   ) =>
     api
       .patch<{ ok: boolean; updatedAt: string }>(
         `/html-templates/projects/${projectId}/auto-save`,
-        { html, agentHistory, aiPrompt: genParams?.prompt, designMd: genParams?.designMd },
+        // ★ 0926 k3：guideId 随存——重开报告配置面板回填用
+        { html, agentHistory, aiPrompt: genParams?.prompt, designMd: genParams?.designMd, guideId: genParams?.guideId },
       )
       .then((r) => r.data),
 

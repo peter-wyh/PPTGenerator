@@ -1028,6 +1028,8 @@ const GENDER_DESIGN_W = 320;
 export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
   const { title, subtitle, center, slices = [] } = data;
   const palette = useChartColors();
+  // ★ 0926 k2：渲染防护——饼图 slices 剔除负值/非数值项（负值进 recharts 会画出反向扇区）
+  const safe = slices.filter((s) => Number.isFinite(s.value) && s.value >= 0);
   // 测量渲染宽度，按相对设计宽 320 的比例缩放文案；下限 0.6 保证仍可读。
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(GENDER_DESIGN_W);
@@ -1047,7 +1049,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
 
   return (
     <CreatorChartShell title={title} subtitle={subtitle}>
-      {slices.length === 0 ? (
+      {safe.length === 0 ? (
         <EmptyChart />
       ) : (
         <div ref={ref} className="flex h-full w-full flex-col">
@@ -1055,7 +1057,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={slices}
+                  data={safe}
                   dataKey="value"
                   nameKey="label"
                   cx="50%"
@@ -1064,7 +1066,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
                   outerRadius="80%"
                   label={(e: { label?: string }) => e.label ?? ''}
                 >
-                  {slices.map((s, i) => (
+                  {safe.map((s, i) => (
                     <Cell key={i} fill={resolveColor(s.color, i, palette)} />
                   ))}
                 </Pie>
@@ -1085,7 +1087,7 @@ export function CreatorFanGender({ data }: { data: CreatorFanGenderData }) {
             className="mt-1 flex flex-none flex-wrap justify-center gap-x-3 gap-y-0.5 text-foreground-secondary"
             style={{ fontSize: legendFont }}
           >
-            {slices.map((s, i) => (
+            {safe.map((s, i) => (
               <span key={i} className="inline-flex items-center skin-gap-xs">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: resolveColor(s.color, i, palette) }} />
                 <span>{s.label}</span>
@@ -1103,7 +1105,9 @@ export function CreatorFanCity({ data }: { data: CreatorFanCityData }) {
   const { title, subtitle, bars = [] } = data;
   const cs = useChartStyle();
   const palette = useChartColors();
-  const sorted = [...bars].sort((a, b) => b.value - a.value);
+  // ★ 0926 k2：渲染防护——占比组件剔除负值/非数值项（脏数据会让 pct 算出负数、其他条被放大）
+  const safe = bars.filter((b) => Number.isFinite(b.value) && b.value >= 0);
+  const sorted = [...safe].sort((a, b) => b.value - a.value);
   const sum = sorted.reduce((acc, b) => acc + b.value, 0) || 1;
   const withPct = sorted.map((b) => ({ ...b, pct: Math.round((b.value / sum) * 100) }));
   return (
@@ -1135,13 +1139,15 @@ export function CreatorFanAge({ data }: { data: CreatorFanAgeData }) {
   const { title, subtitle, bars = [] } = data;
   const cs = useChartStyle();
   const palette = useChartColors();
+  // ★ 0926 k2：渲染防护——同 FanCity，剔除负值/非数值项
+  const safe = bars.filter((b) => Number.isFinite(b.value) && b.value >= 0);
   return (
     <CreatorChartShell title={title} subtitle={subtitle}>
-      {bars.length === 0 ? (
+      {safe.length === 0 ? (
         <EmptyChart />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={bars} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+          <BarChart data={safe} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             {cs.showGrid && <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle, #F3F4F6)" />}
             <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} hide={!cs.showAxis} />
             <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={32} hide={!cs.showAxis} />

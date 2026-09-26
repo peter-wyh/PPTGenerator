@@ -181,6 +181,8 @@ export const htmlTemplateService = {
     agentHistory?: unknown[],
     aiPrompt?: string,
     designMd?: string,
+    /** ★ 0926 k3：结构指南 id——重开报告时配置面板回填（此前只存 prompt/designMd，断链） */
+    guideId?: string,
   ): Promise<{ ok: true; updatedAt: string }> {
     await assertProjectManageable(ownerId, projectId); // 0905 P0-1：归属校验
     const project = await prisma.project.findUnique({ where: { id: projectId } });
@@ -201,6 +203,10 @@ export const htmlTemplateService = {
     }
     if (designMd !== undefined) {
       newMeta.designMd = designMd;
+    }
+    // ★ 0926 k3：guideId 空串存 null（清除），非空存储——重开报告回填
+    if (guideId !== undefined) {
+      newMeta.guideId = guideId || null;
     }
 
     await prisma.project.update({

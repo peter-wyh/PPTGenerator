@@ -394,6 +394,9 @@ export function HtmlStudio() {
               await htmlTemplatesApi.autoSave(id, streamingHtml, [userMsg, genMsg], {
                 prompt: vals.prompt,
                 designMd: vals.designMd,
+                // ★ 0926 k3：guideId 持久化——重开报告时配置面板回填断链（此前只存 prompt/designMd，
+                //   重新打开后 AiGenerateForm 全空，用户不知道上次用了哪份结构指南）
+                guideId: vals.guideId,
               });
               setSaved(true);
             } catch {}
@@ -515,6 +518,9 @@ export function HtmlStudio() {
             onGenerate={handleGenerate}
             generating={generating}
             error=""
+            /* ★ 0926 k3：重开报告回填上次生成参数（meta.aiPrompt/guideId） */
+            initialPrompt={project?.meta?.aiPrompt as string | undefined}
+            initialGuideId={(project?.meta?.guideId as string | null) ?? undefined}
           />
           {/* ★ 取消按钮 */}
           {generating && (

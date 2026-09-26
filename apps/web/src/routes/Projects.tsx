@@ -270,6 +270,7 @@ export function Projects() {
                   <th className="px-3 py-2 text-left font-medium">报告名称</th>
                   <th className="px-3 py-2 text-left font-medium">业务线</th>
                   <th className="px-3 py-2 text-left font-medium">场景</th>
+                  <th className="px-3 py-2 text-left font-medium">Campaign</th>
                   <th className="px-3 py-2 text-left font-medium">广告主</th>
                   <th className="px-3 py-2 text-left font-medium">创建人</th>
                   {/* 尺寸/页数是 PPT 编辑器概念（ai-html 的 width/height 是创建路径遗留值、pages 是 0/1 副作用，均无意义）——ai-html tab 不渲染 */}
@@ -307,6 +308,10 @@ export function Projects() {
                     </td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.businessLine ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{scenarioText(p.meta)}</td>
+                    {/* ★ 0926 k3：Campaign 透出（meta.campaignInfo.campaignName，无则 meta.campaignId 短码） */}
+                    <td className="px-3 py-2 text-foreground-secondary">
+                      {p.meta?.campaignInfo?.campaignName ?? (p.meta?.campaignId ? p.meta.campaignId.replace(/^camp-/, '').slice(0, 24) : '—')}
+                    </td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.advertiser ?? '—'}</td>
                     <td className="px-3 py-2 text-foreground-secondary">{p.meta?.creator ?? '—'}</td>
                     {activeTab !== 'ai-html' && (
