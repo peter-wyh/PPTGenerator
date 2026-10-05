@@ -555,3 +555,29 @@
 .cc-duo-cell{ flex:1; display:flex; align-items:baseline; justify-content:space-between; padding:6px 10px; border-radius:8px; background:var(--color-surface-soft); }
 .cc-duo-v{ font-family:var(--font-body); font-size:16px; font-weight:700; color:var(--color-aubergine-2); }
 .cc-duo-k{ font-family:var(--font-body); font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#8B8B93; }
+
+/* 0926 追加:卡04 Top Post 帖卡(avatar+handle+engagements+胶囊组) */
+.cc-chartrow-lg{ display:flex; align-items:center; gap:10px; }
+.cc-chartrow-lg .cc-chart-sm{ width:110px; height:110px; }
+.cc-postcard{ display:flex; gap:8px; align-items:flex-start; margin-top:8px; padding-top:8px; border-top:1px solid var(--color-divider); }
+.cc-postcard .avatar{ flex:none; width:26px; height:26px; border-radius:50%; overflow:hidden; }
+.cc-postcard .avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+.cc-postcard .avatar .fallback{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-legacy); font-weight:700; font-size:10px; color:var(--color-white); background:var(--color-violet); }
+.cc-post-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.cc-post-handle{ font-family:var(--font-body); font-size:10px; font-weight:700; color:var(--color-ink); }
+.cc-post-eng{ font-family:var(--font-body); font-size:12px; font-weight:700; color:var(--color-aubergine-2); }
+.cc-post-eng small{ font-size:9px; font-weight:600; color:#8B8B93; margin-left:2px; }
+.cc-post-caps{ display:flex; flex-wrap:wrap; gap:3px; margin-top:2px; }
+.cc-post-caps span{ font-family:var(--font-body); font-size:8px; font-weight:600; color:#5B5B63; padding:2px 7px; border-radius:999px; background:var(--color-surface-soft); white-space:nowrap; }
+
+/* 0927 追加:五卡窄列适配(1120px 页宽下卡内宽 ~167px,防横向溢出) */
+.comp-grid .cc-table th, .comp-grid .cc-table td{ white-space:normal; padding:5px 4px; font-size:9px; }
+.cc-duo-vcol{ flex-direction:column; }
+.cc-duo-cell{ padding:5px 8px; }
+.cc-duo-v{ font-size:14px; }
+.cc-chartcol{ display:flex; flex-direction:column; gap:8px; align-items:center; }
+.cc-chartcol .cc-kpis{ width:100%; gap:5px; }
+.cc-chartcol .ckpi{ min-width:0; }
+.cc-chartcol .ckpi-v{ font-size:13px; }
+.cc-chartcol .ckpi-k{ font-size:7.5px; word-break:break-word; hyphens:auto; }
+.cc-data{ overflow:hidden; }
