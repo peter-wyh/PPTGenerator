@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>FT Competitor Analysis — Five-Card Design Reference (0924)</title>
+<title>FT Competitor Analysis — Five-Card Design Reference (0927)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -47,8 +47,9 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
 }
 
 /* ========= ↓↓↓ 0924 资产块(与 ft-recap/base.css 追加块字节一致,提取区间标记) ↓↓↓ ========= */
+/* ===== 0924: Competitor Analysis 五卡(Data→Insight→Action 固定三段) ===== */
 .comp-board{
-  /* 0926:画板透明化——卡片直接落在页面底色上,保卡宽 */
+  /* 0926:画板透明化——不加背景色/内边距,卡片直接落在页面底色上,保卡宽 */
   margin-top:18px;
 }
 .comp-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
@@ -122,12 +123,53 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
 .cpool-row .avatar{ flex:none; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-legacy); font-weight:700; font-size:9px; color:var(--color-white); background:var(--color-violet); }
 .cpool-row .cpool-name{ flex:1; min-width:0; font-family:var(--font-body); font-size:10px; font-weight:600; color:var(--color-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cpool-row .cpool-metric{ font-family:var(--font-body); font-size:9.5px; font-weight:700; color:var(--color-aubergine-2); flex:none; }
-.comp-note{ font-size:11px; color:rgba(249,248,245,.55); margin:14px 6px 0; }
+.comp-note{ font-size:11px; color:#8B8B93; margin:14px 6px 0; }
+
+/* 0926 追加:卡02 小环+竖排图例并排 / 卡03 分组标题+CTA 胶囊+双列数值 */
+.cc-chartrow{ display:flex; align-items:center; gap:10px; }
+.cc-chart-sm{ position:relative; width:96px; height:96px; flex:none; }
+.cc-legend-col{ display:flex; flex-direction:column; gap:5px; font-family:var(--font-body); font-size:9px; font-weight:600; color:#5B5B63; }
+.cc-legend-col .li{ display:flex; align-items:center; gap:4px; }
+.cc-legend-col .dot{ width:7px; height:7px; border-radius:2px; flex:none; }
+.cc-cta-tags{ display:flex; flex-wrap:wrap; gap:4px; }
+.cc-cta-tags span{ font-family:var(--font-body); font-size:9px; font-weight:600; color:var(--color-ink); padding:2px 7px; border-radius:999px; background:var(--color-surface-soft); border:1px solid var(--color-border); white-space:nowrap; }
+.cc-kv-head{ margin-top:12px; padding-top:8px; border-top:1px solid var(--color-border); }
+.cc-kv-head:first-of-type{ border-top:none; margin-top:0; padding-top:0; }
+.cc-duo{ display:flex; gap:10px; margin-top:2px; }
+.cc-duo-cell{ flex:1; display:flex; align-items:baseline; justify-content:space-between; padding:6px 10px; border-radius:8px; background:var(--color-surface-soft); }
+.cc-duo-v{ font-family:var(--font-body); font-size:16px; font-weight:700; color:var(--color-aubergine-2); }
+.cc-duo-k{ font-family:var(--font-body); font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#8B8B93; }
+
+/* 0926 追加:卡04 Top Post 帖卡(avatar+handle+engagements+胶囊组) */
+.cc-chartrow-lg{ display:flex; align-items:center; gap:10px; }
+.cc-chartrow-lg .cc-chart-sm{ width:110px; height:110px; }
+.cc-postcard{ display:flex; gap:8px; align-items:flex-start; margin-top:8px; padding-top:8px; border-top:1px solid var(--color-divider); }
+.cc-postcard .avatar{ flex:none; width:26px; height:26px; border-radius:50%; overflow:hidden; }
+.cc-postcard .avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+.cc-postcard .avatar .fallback{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-legacy); font-weight:700; font-size:10px; color:var(--color-white); background:var(--color-violet); }
+.cc-post-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.cc-post-handle{ font-family:var(--font-body); font-size:10px; font-weight:700; color:var(--color-ink); }
+.cc-post-eng{ font-family:var(--font-body); font-size:12px; font-weight:700; color:var(--color-aubergine-2); }
+.cc-post-eng small{ font-size:9px; font-weight:600; color:#8B8B93; margin-left:2px; }
+.cc-post-caps{ display:flex; flex-wrap:wrap; gap:3px; margin-top:2px; }
+.cc-post-caps span{ font-family:var(--font-body); font-size:8px; font-weight:600; color:#5B5B63; padding:2px 7px; border-radius:999px; background:var(--color-surface-soft); white-space:nowrap; }
+
+/* 0927 追加:五卡窄列适配(1120px 页宽下卡内宽 ~167px,防横向溢出) */
+.comp-grid .cc-table th, .comp-grid .cc-table td{ white-space:normal; padding:5px 4px; font-size:9px; }
+.cc-duo-vcol{ flex-direction:column; }
+.cc-duo-cell{ padding:5px 8px; }
+.cc-duo-v{ font-size:14px; }
+.cc-chartcol{ display:flex; flex-direction:column; gap:8px; align-items:center; }
+.cc-chartcol .cc-kpis{ width:100%; gap:5px; }
+.cc-chartcol .ckpi{ min-width:0; }
+.cc-chartcol .ckpi-v{ font-size:13px; }
+.cc-chartcol .ckpi-k{ font-size:7.5px; word-break:break-word; hyphens:auto; }
+.cc-data{ overflow:hidden; }
 /* ========= ↑↑↑ 0924 资产块结束 ========= */
 </style>
 </head>
 <body>
-<div class="ref-banner">DESIGN REFERENCE (0924) — Cards 01/02/04 use real GlowLab Oct-2026 values; Card 03 percentages and Card 05 radar values are SAMPLES (render only when real data exists). Review annotations from the source mockup (green "fixed module" pills, demo stickers, signature) are intentionally excluded.</div>
+<div class="ref-banner">DESIGN REFERENCE (0927 v2) — Cards 01/02/04/05 synced to report v5.5 (real GlowLab Oct-2026 values: tier 4/9/4, ER 8.6%, SOV radar). Card 03 percentages & discount-usage duo are SAMPLES (render only when real data exists).</div>
 <div class="page">
   <div class="section">
     <div class="section-head"><div class="badge violet">06</div><h2>Competitor Analysis</h2></div>
@@ -137,26 +179,27 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
 
         <div class="comp-card">
           <div class="cc-no">01</div>
-          <h4 class="cc-title">Commercial Commission</h4>
-          <p class="cc-sub">Commission model &amp; spend efficiency</p>
+          <h4 class="cc-title">Commercial / Commission</h4>
+          <p class="cc-sub">Commission &amp; partnership terms vs rivals</p>
           <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
             <table class="cc-table">
-              <thead><tr><th>Metric</th><th>Our</th><th>Rival</th></tr></thead>
+              <thead><tr><th>Metric</th><th>Own</th><th>A</th><th>B</th></tr></thead>
               <tbody>
-                <tr><td>Commission Model</td><td class="us">CPA 16%</td><td class="rival">—</td></tr>
-                <tr><td>Avg. CPA</td><td class="us">$5.19</td><td class="rival">—</td></tr>
-                <tr><td>Est. Monthly Spend</td><td class="us">$300K</td><td class="rival">—</td></tr>
+                <tr><td>CPA / CPS</td><td class="us">$5.19</td><td class="rival">—</td><td class="rival">—</td></tr>
+                <tr><td>Commission</td><td class="us">—</td><td class="rival">—</td><td class="rival">—</td></tr>
+                <tr><td>Cookie</td><td class="us">—</td><td class="rival">—</td><td class="rival">—</td></tr>
+                <tr><td>Flat Fee</td><td class="us">—</td><td class="rival">—</td><td class="rival">—</td></tr>
               </tbody>
             </table>
           </div>
-          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>CPA commission (16%) is the only spend lever; blended CPA of <b>$5.19</b> stays well below the $300K monthly cap.</p></div>
-          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Hold the CPA model; renegotiate volume tiers before Q1.</p></div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Blended CPA of <b>$5.19</b> is the only verified spend lever; commission, cookie and flat-fee terms await third-party verification.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Hold the CPA model; benchmark commission &amp; cookie terms once rival data lands.</p></div>
         </div>
 
         <div class="comp-card">
           <div class="cc-no">02</div>
           <h4 class="cc-title">Creator Strategy</h4>
-          <p class="cc-sub">Concentration of the creator portfolio</p>
+          <p class="cc-sub">Tier mix &amp; partnership depth</p>
           <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
             <div class="cc-chartrow">
               <div class="cc-chart-sm"><canvas id="compCreatorMix"></canvas></div>
@@ -165,8 +208,8 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
             <div class="cc-kv"><span class="cc-kv-v">Beauty</span><span class="cc-kv-k">Top niche</span></div>
             <div class="cc-kv"><span class="cc-kv-v">88%</span><span class="cc-kv-k">Repeat collab rate (15/17)</span></div>
           </div>
-          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Beauty is the top niche (<b>6 of 17</b>); <b>15 of 17 (88%)</b> creators have repeated collaborations with us across campaigns.</p></div>
-          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Re-book Mia Chen &amp; Iris Lin; brief 3 lookalikes in November.</p></div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Portfolio is <b>Macro-heavy (9 of 17, 53%)</b>; beauty-family creators make up 11 of 17, and 15 of 17 (88%) are repeat collaborators.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Expand the Mega–Micro tails; convert repeat partners into always-on ambassadors.</p></div>
         </div>
 
         <div class="comp-card">
@@ -174,19 +217,19 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
           <h4 class="cc-title">Content Format Split</h4>
           <p class="cc-sub">Formats, CTAs &amp; cadence vs rivals</p>
           <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
-            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Format Split</span><span class="cc-kv-k" style="text-transform:none;letter-spacing:0">20 tracked posts</span></div>
+            <div class="cc-kv cc-kv-head cc-kv-group"><span class="cc-kv-v" style="font-size:11px">Format Split</span><span class="cc-kv-k" style="text-transform:none;letter-spacing:0">20 tracked posts</span></div>
             <div class="cc-bars">
               <div class="cbar top"><div class="cbar-head"><span class="cbar-label">Video</span><span class="cbar-val">10 · 50%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:50%"></div></div></div>
               <div class="cbar"><div class="cbar-head"><span class="cbar-label">Static</span><span class="cbar-val">10 · 50%</span></div><div class="cbar-track"><div class="cbar-fill" style="width:50%"></div></div></div>
             </div>
-            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Top CTA Keywords</span></div>
+            <div class="cc-kv cc-kv-head cc-kv-group"><span class="cc-kv-v" style="font-size:11px">Top CTA Keywords</span></div>
             <div class="cc-cta-tags"><span>Shop now</span><span>Use code</span><span>Link in bio</span><span>Limited time</span><span>Get 20% off</span></div>
-            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Discount / Code Usage</span></div>
-            <div class="cc-duo">
+            <div class="cc-kv cc-kv-head cc-kv-group"><span class="cc-kv-v" style="font-size:11px">Discount / Code Usage</span></div>
+            <div class="cc-duo cc-duo-vcol">
               <div class="cc-duo-cell"><span class="cc-duo-v">65%</span><span class="cc-duo-k">Competitor A</span></div>
               <div class="cc-duo-cell"><span class="cc-duo-v">48%</span><span class="cc-duo-k">Competitor B</span></div>
             </div>
-            <div class="cc-kv cc-kv-head"><span class="cc-kv-v" style="font-size:11px">Posting Rhythm</span></div>
+            <div class="cc-kv cc-kv-head cc-kv-group"><span class="cc-kv-v" style="font-size:11px">Posting Rhythm</span></div>
             <div class="cc-kv"><span class="cc-kv-v">3-5 / week</span><span class="cc-kv-k">per creator</span></div>
           </div>
           <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Content splits evenly <b>video / static 10 : 10</b>; rivals lean harder on discount codes (<b>A 65%</b> vs <b>B 48%</b>), our CTA mix stays promo-light.</p></div>
@@ -196,33 +239,38 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
         <div class="comp-card">
           <div class="cc-no">04</div>
           <h4 class="cc-title">Performance</h4>
-          <p class="cc-sub">Efficiency &amp; conversion vs last month</p>
+          <p class="cc-sub">Engagement &amp; conversion benchmarks</p>
           <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
-            <div class="cc-kpis">
-              <div class="ckpi"><span class="ckpi-v">1.1%<span class="ckpi-delta up">▲</span></span><span class="ckpi-k">Avg. CTR</span></div>
-              <div class="ckpi"><span class="ckpi-v">$5.19</span><span class="ckpi-k">Avg. CPA</span></div>
-              <div class="ckpi"><span class="ckpi-v">1.1K<span class="ckpi-delta up">+23.4%</span></span><span class="ckpi-k">Orders</span></div>
-              <div class="ckpi"><span class="ckpi-v">47%</span><span class="ckpi-k">New-Customer</span></div>
+            <div class="cc-chartcol">
+              <div class="cc-chart-sm"><canvas id="compTierPerf"></canvas></div>
+              <div class="cc-kpis">
+                <div class="ckpi"><span class="ckpi-v">8.6%</span><span class="ckpi-k">Avg. ER</span></div>
+                <div class="ckpi"><span class="ckpi-v">39.1K</span><span class="ckpi-k">Avg. Engagement</span></div>
+                <div class="ckpi"><span class="ckpi-v">—</span><span class="ckpi-k">Est. Conversion</span></div>
+                <div class="ckpi"><span class="ckpi-v">1.1K</span><span class="ckpi-k">Orders (total)</span></div>
+              </div>
             </div>
-            <div class="cc-pool">
-              <span class="cpool-head">Top Creators Pool</span>
-              <div class="cpool-row"><span class="avatar">M</span><span class="cpool-name">Mia Chen</span><span class="cpool-metric">116 orders</span></div>
-              <div class="cpool-row"><span class="avatar">I</span><span class="cpool-name">Iris Lin</span><span class="cpool-metric">106 orders</span></div>
+            <div class="cc-postcard"><span class="avatar"><span class="fallback">M</span></span>
+              <div class="cc-post-main">
+                <span class="cc-post-handle">@miaglowup</span>
+                <span class="cc-post-eng">111.4K<small>engagements</small></span>
+                <div class="cc-post-caps"><span>Honest Review</span><span>Video</span><span>Skincare</span><span>Use code</span></div>
+              </div>
             </div>
           </div>
-          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Orders <b>+23.4% MoM</b> on 30.6K clicks; new-customer rate at 47%.</p></div>
-          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Shift budget to back-half peaks — top 5 revenue days all landed on or after Oct 17.</p></div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Instagram-tier creators average <b>8.6% ER</b>; the top post (@miaglowup, 1.28M followers) pulled <b>111.4K engagements</b>.</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Replicate the review + code format; scale proven creators into Q1.</p></div>
         </div>
 
         <div class="comp-card">
           <div class="cc-no">05</div>
           <h4 class="cc-title">Gap &amp; Opportunity</h4>
-          <p class="cc-sub">SAMPLE — renders only with real multi-dim competitor data</p>
+          <p class="cc-sub">Share of voice &amp; upside levers</p>
           <div class="cc-seg cc-data"><div class="cc-tag">Data</div>
             <div class="cc-chart"><canvas id="compRadar"></canvas></div>
           </div>
-          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>Rival leads on Spend &amp; Creator breadth; Our wins on Commission efficiency.</p></div>
-          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Close the creator-breadth gap via Influencer Hub packages.</p></div>
+          <div class="cc-seg cc-insight"><div class="cc-tag">Insight</div><p>We lead share of voice at <b>32%</b> (+18% trend), ahead of CeraVe (24%) and The Ordinary (19%).</p></div>
+          <div class="cc-seg cc-action"><div class="cc-tag">Action</div><p>Convert SOV lead into conversion: 1) commission competitiveness 2) Mega–Micro pool expansion 3) stronger CTA offers.</p></div>
         </div>
 
       </div>
@@ -234,20 +282,53 @@ h2{ font-family:"Libre Baskerville",Georgia,serif; font-size:24px; margin:0; col
 <script>
 Chart.defaults.font.family = 'Inter,Arial,sans-serif';
 Chart.defaults.color = '#8B8B93';
+/* 扇区内嵌百分比插件(卡02) */
+const pctPlugin = {
+  id: 'segPct',
+  afterDatasetsDraw(chart, args, opts) {
+    if (!opts || !opts.enabled) return;
+    const ctx = chart.ctx;
+    const meta = chart.getDatasetMeta(0);
+    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+    meta.data.forEach((arc, i) => {
+      const v = chart.data.datasets[0].data[i];
+      const pct = Math.round(v / total * 100);
+      const { startAngle, endAngle } = arc.getProps(['startAngle', 'endAngle'], true);
+      const mid = (startAngle + endAngle) / 2;
+      const rIn = arc.outerRadius * 0.80;
+      const x = arc.x + Math.cos(mid) * rIn, y = arc.y + Math.sin(mid) * rIn;
+      ctx.save();
+      ctx.font = '700 10px Inter,Arial,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = (i === 1) ? '#FFFFFF' : '#2C2242';
+      ctx.fillText(pct + '%', x, y);
+      ctx.restore();
+    });
+  }
+};
+/* 卡02:达人层级环(与图例一致:Mega4/Macro9/Micro4) */
 new Chart(document.getElementById('compCreatorMix'), {
   type: 'doughnut',
-  data: { labels: ['Mia Chen', 'Iris Lin', 'Others'],
-    datasets: [{ data: [116, 106, 878], backgroundColor: ['#D5EF9A', '#6F60A4', '#FFA8CD'], borderWidth: 0 }] },
+  data: { labels: ['Mega', 'Macro', 'Micro'], datasets: [{ data: [4, 9, 4], backgroundColor: ['#D5EF9A', '#6F60A4', '#FFA8CD'], borderWidth: 0 }] },
+  options: { cutout: '62%', maintainAspectRatio: false, plugins: { legend: { display: false }, segPct: { enabled: true } } },
+  plugins: [pctPlugin]
+});
+/* 卡04:层级 engagement 环 */
+new Chart(document.getElementById('compTierPerf'), {
+  type: 'doughnut',
+  data: { labels: ['Mega', 'Macro', 'Micro'], datasets: [{ data: [4, 9, 4], backgroundColor: ['#D5EF9A', '#6F60A4', '#FFA8CD'], borderWidth: 0 }] },
   options: { cutout: '62%', maintainAspectRatio: false, plugins: { legend: { display: false } } }
 });
+/* 卡05:SOV 雷达(五品牌真值) */
 new Chart(document.getElementById('compRadar'), {
   type: 'radar',
-  data: { labels: ['Commission', 'Creator Mix', 'Content', 'Performance', 'Spend'],
+  data: {
+    labels: ['GlowLab', 'CeraVe', 'The Ordinary', "Paula's Choice", 'La Roche-Posay'],
     datasets: [
-      { label: 'Our', data: [82, 74, 68, 77, 65], borderColor: '#FF6B9B', backgroundColor: 'rgba(255,107,155,.18)', pointRadius: 2 },
-      { label: 'Rival (sample)', data: [58, 80, 72, 60, 85], borderColor: '#6F60A4', backgroundColor: 'rgba(111,96,164,.14)', pointRadius: 2 }
-    ] },
-  options: { maintainAspectRatio: false, scales: { r: { ticks: { display: false }, pointLabels: { font: { size: 8 } }, suggestedMin: 0, suggestedMax: 100 } }, plugins: { legend: { display: false } } }
+      { label: 'SOV %', data: [32, 24, 19, 14, 11], borderColor: '#FF6B9B', backgroundColor: 'rgba(255,107,155,.18)', pointRadius: 2 }
+    ]
+  },
+  options: { maintainAspectRatio: false, scales: { r: { ticks: { display: false }, pointLabels: { font: { size: 8 } }, suggestedMin: 0, suggestedMax: 35 } }, plugins: { legend: { display: false } } }
 });
 </script>
 </body>
