@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Competitor Insights — Requirements Demo</title>
+<style>
+:root{
+  --purple:#36184f; --purple2:#7b2dd4; --lav:#f5efff; --lime:#d7f79b;
+  --green:#16a34a; --orange:#ff7a00; --pink:#ffd7e9; --line:#e9e4ef;
+  --ink:#282333; --muted:#6b6574; --cream:#fffdf9;
+}
+*{box-sizing:border-box} body{margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:var(--ink)}
+.topbar{height:70px;background:linear-gradient(90deg,#3b173e 0%,#4a2248 45%,#35163a 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 40px}
+.brand{font-family:Georgia,serif;font-size:30px;font-weight:700}.tag{font-size:12px;letter-spacing:.12em;text-align:right;opacity:.92}
+.page{padding:26px 28px 0}
+.hero{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.hero h1{font-family:Georgia,serif;font-size:58px;line-height:1.04;margin:0;color:#2b0c35;font-weight:700}
+.hero p{font-size:20px;margin:8px 0 0;color:#697080}
+.legend{display:flex;gap:18px;align-items:center;border:1px solid #ddd;border-radius:10px;padding:10px 16px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.03)}
+.legend b{margin-right:4px}.dot{width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:-4px;margin-right:6px}.g{background:var(--green)}.o{background:var(--orange)}.p{background:var(--purple2)}
+.section-label{display:inline-block;padding:7px 14px;border-radius:8px;color:#fff;font-weight:700;font-size:16px;margin:18px 0 4px}.green{background:var(--green)}.orange{background:var(--orange)}.purple{background:var(--purple2)}
+.modules-wrap{position:relative;border:3px dashed var(--green);border-radius:12px;padding:14px 10px 12px;margin-top:2px}
+.modules{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.module{position:relative;border:1px solid #e6e0e8;border-radius:18px;padding:14px 12px;background:linear-gradient(#fff,#fdfcff);box-shadow:0 2px 8px rgba(60,30,70,.04)}
+.module:nth-child(odd){background:linear-gradient(180deg,#fff8fc,#fff)}
+.module:nth-child(even){background:linear-gradient(180deg,#f8fff3,#fff)}
+.mod-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.num{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;background:#ffd6e9;font-weight:800;font-size:18px;color:#35163a}.module:nth-child(even) .num{background:#dcf9a9}
+.mod-title{font-family:Georgia,serif;font-size:20px;font-weight:700;color:#372142;line-height:1.08}.mod-sub{font-size:13px;color:#656070;margin-top:4px}
+.box{position:relative;border:2px dashed var(--orange);border-radius:9px;padding:12px;margin:9px 0;background:#fff}.edit-pill{position:absolute;right:5px;top:-14px;background:var(--orange);color:#fff;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:700}
+.box h3{font-size:14px;margin:0 0 8px;color:#3e2853}.muted{color:#8f8798;font-size:11px}.insight{background:#f4ffe9;border:1px solid #e0f4cb;border-radius:10px;padding:12px;margin:10px 0;font-size:12px;line-height:1.45}.action{background:#fff2f7;border:1px solid #f5d9e6;border-radius:10px;padding:12px;font-size:12px;line-height:1.45}.cap{font-weight:700;color:#38512e;margin-bottom:5px}.action .cap{color:#a32157}
+.table{width:100%;border-collapse:collapse;font-size:11px}.table th,.table td{border:1px solid #eee;padding:6px;text-align:center}.table th{background:#faf9fb}.table td:first-child{text-align:left}
+.donut{width:110px;height:110px;border-radius:50%;margin:8px auto;background:conic-gradient(#54206f 0 58%,#ed9ac8 58% 90%,#f7c5df 90% 100%);position:relative}.donut:after{content:'1.2K';position:absolute;inset:25px;background:white;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#442256}
+.bars .row{margin:8px 0}.bar{height:10px;border-radius:8px;background:#f8d4e7;overflow:hidden}.fill{height:100%;background:#6a2a84}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{padding:4px 8px;border-radius:12px;background:#f3f0f7;font-size:10px}.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.metric{border-right:1px solid #eee;padding-right:4px}.metric:last-child{border-right:0}.metric b{font-size:22px;color:#4b225f}.metric small{display:block;color:#777;font-size:10px}
+.radar{height:170px;display:grid;place-items:center;position:relative}.radar:before,.radar:after{content:'';position:absolute;border:1px solid #d8d0df;width:130px;height:130px;transform:rotate(45deg);border-radius:18px}.radar:after{width:90px;height:90px}.radar span{z-index:1;width:90px;height:90px;background:rgba(121,47,143,.36);clip-path:polygon(50% 0,88% 28%,75% 78%,28% 88%,4% 35%)}
+.topflow{position:absolute;right:95px;top:-128px;border:2px dashed var(--purple2);border-radius:10px;padding:12px 16px;background:#fff;display:flex;gap:10px;align-items:center;font-weight:700;color:#3d1b50}.topflow:before{content:'可删减：顶部流程图';position:absolute;top:-28px;left:-2px;background:var(--purple2);color:#fff;padding:5px 9px;border-radius:6px;font-size:12px}.scribble{position:absolute;right:10px;top:-125px;width:95px;height:88px;border:2px dashed var(--purple2);border-radius:8px;display:grid;place-items:center;color:#52226b;font-family:Georgia,serif;font-style:italic;background:white;transform:rotate(-2deg)}
+.bottom{margin-top:12px;background:linear-gradient(90deg,#35173f,#54234b,#35173f);color:#fff;border-radius:24px 24px 0 0;padding:20px 28px;display:grid;grid-template-columns:1.2fr .9fr .6fr;gap:20px;align-items:center}.remove{border:2px dashed #b861ff;padding:10px;border-radius:10px;position:relative}.remove:before{content:'可删减';position:absolute;top:-16px;left:10px;background:#9a31dd;padding:4px 8px;border-radius:5px;font-size:12px}.footer-logo{text-align:right;font-family:Georgia,serif;font-size:24px}
+.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0 24px}.note{border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.55}.note.green-bg{background:#effcf1;border:1px solid #cdeed4}.note.orange-bg{background:#fff5e9;border:1px solid #ffd4aa}.note.purple-bg{background:#f7efff;border:1px solid #e4c9ff}.note h4{margin:0 0 6px;font-size:15px}
+@media(max-width:1100px){.modules{grid-template-columns:1fr 1fr}.module:last-child{grid-column:1/-1}.hero{display:block}.legend{margin-top:14px}.topflow,.scribble{display:none}.bottom{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="brand">FansToShop</div><div class="tag">AI-POWERED<br>BRAND GROWTH</div></div>
+<div class="page">
+  <div class="hero">
+    <div><h1>Competitor Insights <span style="font-size:.62em">— AI-assisted Demo</span></h1><p>Fixed modules · Data → Insight → Action · Missing data can be hidden</p></div>
+    <div class="legend"><b>需求标记：</b><span><i class="dot g"></i>必备</span><span><i class="dot o"></i>可编辑模块</span><span><i class="dot p"></i>可删减元素</span></div>
+  </div>
+  <div class="section-label green">必备：固定 5 大模块（顺序与数量固定）</div>
+  <div class="modules-wrap">
+    <div class="topflow">◉ Data → 💡 Insight → 🎯 Action</div><div class="scribble">From Data<br>to Growth</div>
+    <div class="modules">
+      <section class="module"><div class="mod-head"><div class="num">01</div><div><div class="mod-title">Commercial / Commission</div><div class="mod-sub">佣金与合作政策对比</div></div></div>
+        <div class="box"><span class="edit-pill">可编辑：数据内容 / 表格形式</span><h3>Data</h3><table class="table"><tr><th>Metric</th><th>Own</th><th>A</th><th>B</th></tr><tr><td>CPA / CPS</td><td>$8.5</td><td>$6.0</td><td>$7.0</td></tr><tr><td>Commission</td><td>8%</td><td>12%</td><td>10%</td></tr><tr><td>Cookie</td><td>30d</td><td>30d</td><td>60d</td></tr><tr><td>Flat Fee</td><td>$100</td><td>$150</td><td>$120</td></tr></table></div>
+        <div class="insight"><div class="cap">💡 Insight</div>Our commission (8%) is below competitor benchmark (10–12%).</div><div class="action"><div class="cap">🎯 Action</div>Evaluate higher commission or tiered incentives.</div>
+      </section>
+      <section class="module"><div class="mod-head"><div class="num">02</div><div><div class="mod-title">Creator Strategy</div><div class="mod-sub">达人策略与合作结构</div></div></div>
+        <div class="box"><span class="edit-pill">可编辑：图表形式 / 指标内容</span><h3>Data</h3><div class="donut"></div><div style="font-size:11px">Micro 58% · Mid 32% · Macro 10%</div><div class="chips" style="margin-top:8px"><span class="chip">Beauty & Skincare</span><span class="chip">Repeat 28%</span></div></div>
+        <div class="insight"><div class="cap">💡 Insight</div>Competitor A prefers Micro–Mid creators, especially in core niches.</div><div class="action"><div class="cap">🎯 Action</div>Expand priority creator pool and build long-term partnerships.</div>
+      </section>
+      <section class="module"><div class="mod-head"><div class="num">03</div><div><div class="mod-title">Content Strategy</div><div class="mod-sub">内容策略与互动方式</div></div></div>
+        <div class="box"><span class="edit-pill">可编辑：指标 / 图表 / 文案</span><h3>Data</h3><div class="bars"><div class="row">Video 72%<div class="bar"><div class="fill" style="width:72%"></div></div></div><div class="row">Static 28%<div class="bar"><div class="fill" style="width:28%;background:#ef8dbf"></div></div></div></div><div class="chips"><span class="chip">Shop now</span><span class="chip">Use code</span><span class="chip">Link in bio</span><span class="chip">Get 20% off</span></div></div>
+        <div class="insight"><div class="cap">💡 Insight</div>Competitors focus on short-form video with clear CTA and discount codes.</div><div class="action"><div class="cap">🎯 Action</div>Test more short-form video and stronger conversion CTAs.</div>
+      </section>
+      <section class="module"><div class="mod-head"><div class="num">04</div><div><div class="mod-title">Performance</div><div class="mod-sub">内容表现与转化效果</div></div></div>
+        <div class="box"><span class="edit-pill">可编辑：数据字段 / 展示形式</span><h3>Data</h3><div class="metric-grid"><div class="metric"><b>4.2%</b><small>ER</small></div><div class="metric"><b>12.5K</b><small>Avg. Engagement</small></div><div class="metric"><b>2.8%</b><small>Est. Conversion</small></div></div><div style="margin-top:12px;font-size:11px"><b>Top Creator / Post</b><br>@beauty.liv · 125K engagements</div></div>
+        <div class="insight"><div class="cap">💡 Insight</div>Video content with review + discount code performs better.</div><div class="action"><div class="cap">🎯 Action</div>Replicate winning formats and scale proven creators.</div>
+      </section>
+      <section class="module"><div class="mod-head"><div class="num">05</div><div><div class="mod-title">Gap & Opportunity</div><div class="mod-sub">差异分析与机会点</div></div></div>
+        <div class="box"><span class="edit-pill">可编辑：对比维度 / 图表形式</span><h3>Data</h3><div class="radar"><span></span></div></div>
+        <div class="insight"><div class="cap">💡 Insight</div>Strong content performance, but lower creator scale and commercial competitiveness.</div><div class="action"><div class="cap">🎯 Top Opportunities</div>1. Improve commission competitiveness<br>2. Expand Micro–Mid pool<br>3. Test stronger CTA offers</div>
+      </section>
+    </div>
+  </div>
+  <div class="bottom"><div class="remove">Auto-fill where data exists · Allow manual supplement where data is unavailable.</div><div class="remove" style="text-align:center;font-family:Georgia,serif;font-style:italic;font-size:22px">Smarter Insights<br>Bigger Opportunities</div><div class="footer-logo">FansToShop</div></div>
+  <div class="notes"><div class="note green-bg"><h4>🟢 必备内容（固定结构）</h4>固定 5 个竞品分析模块；每块统一 Data → Insight → Action；整体顺序固定。</div><div class="note orange-bg"><h4>🟠 可编辑模块（内容可配置）</h4>字段、指标、图表形式、Insight / Action 文案可根据实际数据调整。</div><div class="note purple-bg"><h4>🟣 可删减元素（非核心）</h4>顶部流程图、装饰文案、底部说明及非必要视觉元素可按页面空间删减。</div></div>
+</div>
+</body></html>
