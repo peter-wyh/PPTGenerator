@@ -400,6 +400,12 @@ export function AgentChatPanel({
       const abortCtrl = new AbortController();
       abortRef.current = abortCtrl;
       let finalHtml = '';
+      // ★ 1013 残件防线：SSE 中途 error（含服务端完整性守卫拦截）时，
+      //   finalHtml 里已累积流式残件且以 '<' 开头——若照旧走 autoSave 会用
+      //   残件覆写已入库的好版本（「改完图表没了」的另一半根因）。
+      //   gotError=true 时跳过保存并把画布回滚到编辑前的 currentHtml。
+      let gotError = false;
+      let errMsg = '';
       // ★ 思考过程累积在局部变量（setReasoning 的 state 在闭包中读不到最新值，
       // 旧代码 `reasoning || undefined` 永远取到初始 ''，导致消息里从未带过思考）
       let reasoningAcc = '';
@@ -433,11 +439,26 @@ export function AgentChatPanel({
               finalHtml = chunk.html;
               onHtmlChange(finalHtml);
             } else if (chunk.type === 'error') {
+              gotError = true;
+              errMsg = chunk.message;
               setError(chunk.message);
             }
           },
           abortCtrl.signal,
         );
+
+        // ★ 1013 残件防线：error（含守卫拦截/网络中断）时不落库残件，画布回滚编辑前版本
+        if (gotError) {
+          if (finalHtml && finalHtml !== currentHtml) onHtmlChange(currentHtml);
+          const failMsg: AgentChatMessage = {
+            role: 'assistant',
+            content: `❌ 本次编辑未生效（已保留原版本）：${errMsg || '编辑失败'}`,
+            ts: new Date().toISOString(),
+          };
+          onHistoryChange([...newHistory, failMsg]);
+          await htmlTemplatesApi.autoSave(projectId, currentHtml, [...newHistory, failMsg] as AgentChatMessage[]);
+          return;
+        }
 
         if (finalHtml && finalHtml.startsWith('<')) {
           const aiMsg: AgentChatMessage = {

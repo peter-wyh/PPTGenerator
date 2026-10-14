@@ -1,3 +1,5 @@
+import { normalizeOrderRow } from '@mediakit/shared';
+
 /** 数据管理导入工具:字段定义、预览构造、模板下载。
  *
  * 支持的导入类型:
@@ -146,7 +148,13 @@ function checkRequired(kind: ImportKind, data: Record<string, unknown>): string[
 /** CSV/XLSX 行(Record<string,string>)→ 按表头取核心字段,校验必填。 */
 export function buildPreviewFromRows(kind: ImportKind, rows: Record<string, string>[]): PreviewItem[] {
   const fields = FIELDS[kind];
-  return rows.map((row) => {
+  return rows.map((rawRow) => {
+    // ★ 1013 修复误报：orders 行先做表头别名归一（与服务端 normalizeOrderRow 同字典，
+    //   真源 @mediakit/shared ORDER_HEADER_ALIASES）——平台原始 CSV（Awin snake_case /
+    //   LinkSynergy 中文表头）预览不再误判「缺字段」，预览列与导入行为一致。
+    const row = kind === 'orders'
+      ? normalizeOrderRow(rawRow) as Record<string, string>
+      : rawRow;
     const data: Record<string, unknown> = {};
     for (const f of fields) {
       const v = row[f];

@@ -940,6 +940,36 @@ function postProcessHtml(html: string): string {
   return result;
 }
 
+// ─── ★ 1013 编辑完整性守卫 ────────────────────────────────────────────────────
+// agent 编辑要求模型重输完整 HTML，大报告（>10 万字符）常被 max_tokens 截断——
+// 模型「自觉」提前补 </html> 收尾（truncated 检测漏判）或截断在 <script> 内被
+// postProcessHtml 第 7 步硬补闭合，两种残件都会丢尾部模块/图表脚本，再经前端
+// autoSave 覆写好版本 → 「改完图表直接没了」。
+// 规则：图表锚点（new Chart / <canvas）数量不得无故减少；大文档长度骤降（>40%）
+// 视为截断。指令含删除语义时放行（用户主动要求删模块/图表）。
+const EDIT_REMOVAL_RE = /删|移除|去掉|不要|remove|delete|drop|eliminate/i;
+
+export function checkEditIntegrity(currentHtml: string, newHtml: string, instruction = ''): string | null {
+  if (!currentHtml) return null; // 无基线不校验
+  if (EDIT_REMOVAL_RE.test(instruction)) return null;
+  const count = (s: string, re: RegExp) => (s.match(re) || []).length;
+  const curCharts = count(currentHtml, /new Chart\s*\(/g);
+  const newCharts = count(newHtml, /new Chart\s*\(/g);
+  if (curCharts > 0 && newCharts < curCharts) {
+    return `编辑产出丢失图表（原 ${curCharts} 个 Chart 实例，产出仅 ${newCharts} 个）——疑似输出截断，已拒绝采用，请重试或把指令拆小`;
+  }
+  const curCanvas = count(currentHtml, /<canvas/gi);
+  const newCanvas = count(newHtml, /<canvas/gi);
+  if (curCanvas > 0 && newCanvas < curCanvas) {
+    return `编辑产出丢失图表容器（原 ${curCanvas} 个 canvas，产出仅 ${newCanvas} 个）——疑似输出截断，已拒绝采用，请重试或把指令拆小`;
+  }
+  if (currentHtml.length > 50_000 && newHtml.length < currentHtml.length * 0.6) {
+    const drop = Math.round((1 - newHtml.length / currentHtml.length) * 100);
+    return `编辑产出长度骤降（${currentHtml.length} → ${newHtml.length} 字符，-${drop}%）——疑似输出截断，已拒绝采用，请重试或把指令拆小`;
+  }
+  return null;
+}
+
 export const aiGenerateService = {
   /**
    * 计算指定 campaign + 周期的数据覆盖(与 buildCampaignContext 内部同口径)。
@@ -2708,6 +2738,17 @@ Rules:
     // 海外公共 CDN → 自托管（同 generateHtml）
     content = rewriteExternalAssets(content, SELF_HOST_BASE);
 
+    // ★ 1013 编辑完整性守卫：截断残件（丢图表/长度骤降）拒绝采用，保护已入库的好版本
+    const integrityErr = checkEditIntegrity(params.currentHtml, content, params.instruction);
+    if (integrityErr) {
+      logger.warn({
+        curLen: params.currentHtml.length,
+        newLen: content.length,
+        instruction: params.instruction.slice(0, 120),
+      }, '[AI Edit] 完整性守卫拦截');
+      throw ApiError.internal(integrityErr);
+    }
+
     return content;
   },
 
@@ -3000,6 +3041,20 @@ Rules:
 
     if (!processedHtml || !processedHtml.startsWith('<')) {
       yield { type: 'error', message: `AI 编辑后的 HTML 格式异常${truncated ? '（输出被截断）' : ''}` };
+      return;
+    }
+
+    // ★ 1013 编辑完整性守卫：截断残件（丢图表/长度骤降）拒绝下发 done——
+    //   前端只在收到 done/new html 时 autoSave，此处 error 即可保住已入库的好版本
+    const integrityErr = checkEditIntegrity(params.currentHtml, processedHtml, params.instruction);
+    if (integrityErr) {
+      logger.warn({
+        curLen: params.currentHtml.length,
+        newLen: processedHtml.length,
+        truncated,
+        instruction: params.instruction.slice(0, 120),
+      }, '[AI Edit Stream] 完整性守卫拦截');
+      yield { type: 'error', message: integrityErr };
       return;
     }
 
